@@ -30,7 +30,6 @@ export function TodayDashboard() {
     <div className="today">
       <header className="today__header">
         <div>
-          <p className="eyebrow">CURRENT VECTOR</p>
           <h1>좋은 아침입니다, 사용자님.</h1>
           <div className="today__date">
             <CalendarDays aria-hidden size={20} />
@@ -54,7 +53,7 @@ export function TodayDashboard() {
           <div className="hero-card__event">
             <div className="accent-line" />
             <div>
-              <p>Next Sync Protocol</p>
+              <p>다음 일정</p>
               <h2>팀 주간 회의</h2>
               <span>Design Review & Sprint Allocation</span>
             </div>
@@ -165,7 +164,6 @@ export function TodayDashboard() {
 
         <SectionCard className="system-log">
           <div>
-            <p className="eyebrow">SYSTEM LOG</p>
             <h2>하루 운영 로그</h2>
             <ul>
               <li>오늘 일정 3개 중 2개가 활성 상태입니다.</li>

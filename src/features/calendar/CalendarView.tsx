@@ -54,7 +54,17 @@ function summarizeEventsByType(events: typeof calendarEvents) {
     .filter((summary) => summary.count > 0);
 }
 
-export function CalendarView() {
+type CalendarViewProps = {
+  addButtonLabel?: string;
+  description?: string;
+  title?: string;
+};
+
+export function CalendarView({
+  addButtonLabel = "일정 추가",
+  description = "일정, 할 일, 건강, 취업 날짜를 한 번에 봅니다.",
+  title = "캘린더",
+}: CalendarViewProps) {
   const [activeCategory, setActiveCategory] = useState<EventType>("schedule");
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
@@ -81,15 +91,15 @@ export function CalendarView() {
     <div className="calendar-page">
       <header className="calendar-header page-header">
         <div>
-          <h1>캘린더</h1>
+          <h1>{title}</h1>
           <div className="today__date">
             <CalendarDays aria-hidden size={20} />
-            <span>일정, 할 일, 건강, 취업 날짜를 한 번에 봅니다.</span>
+            <span>{description}</span>
           </div>
         </div>
         <button className="header-action" onClick={() => setIsEventSheetOpen(true)}>
           <Plus aria-hidden size={18} />
-          일정 추가
+          {addButtonLabel}
         </button>
       </header>
 

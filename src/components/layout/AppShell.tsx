@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "캘린더", href: "/calendar", key: "calendar", icon: CalendarDays },
+  { label: "일정", href: "/schedule", key: "schedule", icon: CalendarDays },
   { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "취업", href: "/career", key: "career", icon: BriefcaseBusiness },

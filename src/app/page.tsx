@@ -1,10 +1,10 @@
 import { AppShell } from "@/components/layout/AppShell";
-import { TodayDashboard } from "@/features/today/TodayDashboard";
+import { TodayView } from "@/features/today/TodayView";
 
 export default function Home() {
   return (
     <AppShell activeKey="today">
-      <TodayDashboard />
+      <TodayView />
     </AppShell>
   );
 }

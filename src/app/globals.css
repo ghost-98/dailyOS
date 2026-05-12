@@ -212,6 +212,40 @@ button {
   gap: 34px;
 }
 
+.today-home {
+  display: grid;
+  gap: 24px;
+}
+
+.today-mode-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 5px;
+}
+
+.today-mode-tabs__item {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.today-mode-tabs__item--active {
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--violet);
+}
+
 .today__header {
   display: flex;
   align-items: flex-end;
@@ -1952,6 +1986,15 @@ button {
   .today__header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .today-mode-tabs {
+    width: 100%;
+  }
+
+  .today-mode-tabs__item {
+    flex: 1;
+    justify-content: center;
   }
 
   .page-header {

@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { CalendarView } from "@/features/calendar/CalendarView";
+import { redirect } from "next/navigation";
 
 export default function CalendarPage() {
-  return (
-    <AppShell activeKey="calendar">
-      <CalendarView />
-    </AppShell>
-  );
+  redirect("/schedule");
 }
