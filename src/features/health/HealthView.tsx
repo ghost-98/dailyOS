@@ -11,10 +11,10 @@ import { weightRecords, workoutSessions } from "./data";
 const initialDate = "2026-05-12";
 
 const workoutTypeLabels: Record<WorkoutType, string> = {
-  strength: "근력",
-  cardio: "유산소",
+  running: "러닝",
   stretching: "스트레칭",
-  sports: "스포츠",
+  bodyweight: "맨몸운동",
+  weight: "웨이트",
   etc: "기타",
 };
 
@@ -38,28 +38,12 @@ function formatSelectedDay(date: string) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-function groupSetsByExercise(session: WorkoutSession) {
-  return Object.values(
-    session.sets.reduce<Record<string, { exerciseName: string; bodyPart: string; sets: typeof session.sets }>>((groups, set) => {
-      groups[set.exerciseName] ??= { exerciseName: set.exerciseName, bodyPart: set.bodyPart, sets: [] };
-      groups[set.exerciseName].sets.push(set);
-      return groups;
-    }, {}),
-  );
-}
-
 export function HealthView() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sheetType, setSheetType] = useState<"weight" | "workout" | null>(null);
   const weight = useMemo(() => weightRecords.find((record) => record.date === selectedDate), [selectedDate]);
   const sessions = useMemo(() => workoutSessions.filter((session) => session.date === selectedDate), [selectedDate]);
-  const totalSets = sessions.reduce((sum, session) => sum + session.sets.length, 0);
-  const totalMinutes = sessions.reduce((sum, session) => {
-    if (!session.startsAt || !session.endsAt) return sum;
-    const start = Number(session.startsAt.slice(0, 2)) * 60 + Number(session.startsAt.slice(3, 5));
-    const end = Number(session.endsAt.slice(0, 2)) * 60 + Number(session.endsAt.slice(3, 5));
-    return sum + Math.max(end - start, 0);
-  }, 0);
+  const totalMinutes = sessions.reduce((sum, session) => sum + session.durationMinutes, 0);
 
   return (
     <div className="health-page">
@@ -98,7 +82,7 @@ export function HealthView() {
         <SectionCard className="health-metric-card">
           <span>운동 세션</span>
           <strong>{sessions.length}</strong>
-          <p>{totalSets}세트 · {totalMinutes}분 기록</p>
+          <p>총 {totalMinutes}분 기록</p>
         </SectionCard>
         <SectionCard className="health-metric-card">
           <span>최근 추이</span>
@@ -117,7 +101,6 @@ export function HealthView() {
             <Dumbbell aria-hidden size={20} />
             <span>운동 세션</span>
           </div>
-          <button>이전 루틴 복사</button>
         </div>
 
         <div className="workout-session-list">
@@ -176,43 +159,14 @@ function WeightCard({ weight }: { weight?: WeightRecord }) {
 }
 
 function WorkoutSessionCard({ session }: { session: WorkoutSession }) {
-  const groupedSets = groupSetsByExercise(session);
-
   return (
     <article className="workout-session-card">
       <div className="workout-session-card__header">
         <div>
-          <Badge tone={session.type === "strength" ? "pink" : "green"}>{workoutTypeLabels[session.type]}</Badge>
-          <h3>{session.title}</h3>
-          <p>{session.startsAt && session.endsAt ? `${session.startsAt} - ${session.endsAt}` : "시간 미기록"} · 컨디션 {conditionLabels[session.condition]}</p>
+          <Badge tone={session.type === "weight" ? "pink" : "green"}>{workoutTypeLabels[session.type]}</Badge>
+          <h3>{workoutTypeLabels[session.type]}</h3>
+          <p>{session.durationMinutes}분 · 컨디션 {conditionLabels[session.condition]}</p>
         </div>
-        <button>세트 추가</button>
-      </div>
-
-      <div className="exercise-group-list">
-        {groupedSets.map((group) => (
-          <div className="exercise-group" key={group.exerciseName}>
-            <div className="exercise-group__title">
-              <strong>{group.exerciseName}</strong>
-              <span>{group.bodyPart}</span>
-            </div>
-            <div className="set-list">
-              {group.sets.map((set) => (
-                <div className="set-row" key={set.id}>
-                  <span>{set.order}세트</span>
-                  <strong>
-                    {set.weightKg ? `${set.weightKg}kg` : ""}
-                    {set.weightKg && set.reps ? " x " : ""}
-                    {set.reps ? `${set.reps}회` : ""}
-                    {set.distanceKm ? `${set.distanceKm}km` : ""}
-                    {set.durationMinutes ? ` · ${set.durationMinutes}분` : ""}
-                  </strong>
-                  {set.memo ? <small>{set.memo}</small> : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
       {session.memo ? <p className="workout-session-card__memo">{session.memo}</p> : null}
     </article>
@@ -265,12 +219,8 @@ function WorkoutRecordSheet({ selectedDate, onClose }: { selectedDate: string; o
     <HealthSheet title="운동 기록" onClose={onClose}>
       <div className="event-form-card event-form-card--title">
         <label>
-          <span>세션명</span>
-          <input autoFocus placeholder="상체 근력, 러닝, 하체 운동..." />
-        </label>
-        <label>
           <span>메모</span>
-          <input placeholder="오늘 운동의 핵심 메모" />
+          <input autoFocus placeholder="오늘 운동 내용을 자유롭게 적어두세요" />
         </label>
       </div>
       <div className="event-form-card">
@@ -280,13 +230,17 @@ function WorkoutRecordSheet({ selectedDate, onClose }: { selectedDate: string; o
         </label>
         <label className="event-form-row event-form-row--select">
           <span>운동 종류</span>
-          <select defaultValue="strength">
-            <option value="strength">근력</option>
-            <option value="cardio">유산소</option>
+          <select defaultValue="weight">
+            <option value="running">러닝</option>
             <option value="stretching">스트레칭</option>
-            <option value="sports">스포츠</option>
+            <option value="bodyweight">맨몸운동</option>
+            <option value="weight">웨이트</option>
             <option value="etc">기타</option>
           </select>
+        </label>
+        <label className="event-form-row event-form-row--field">
+          <span>수행시간</span>
+          <input inputMode="numeric" placeholder="분 단위" />
         </label>
         <label className="event-form-row event-form-row--select">
           <span>컨디션</span>
@@ -295,20 +249,6 @@ function WorkoutRecordSheet({ selectedDate, onClose }: { selectedDate: string; o
             <option value="normal">보통</option>
             <option value="low">낮음</option>
           </select>
-        </label>
-      </div>
-      <div className="event-form-card">
-        <label className="event-form-row event-form-row--field">
-          <span>운동명</span>
-          <input placeholder="벤치프레스" />
-        </label>
-        <label className="event-form-row event-form-row--field">
-          <span>부위</span>
-          <input placeholder="가슴, 등, 유산소..." />
-        </label>
-        <label className="event-form-row event-form-row--field">
-          <span>1세트</span>
-          <input placeholder="40kg x 12회 또는 3km · 20분" />
         </label>
       </div>
     </HealthSheet>

@@ -65,28 +65,13 @@ export type WeightRecord = {
 
 export type WorkoutCondition = "good" | "normal" | "low";
 
-export type WorkoutType = "strength" | "cardio" | "stretching" | "sports" | "etc";
-
-export type WorkoutSet = {
-  id: string;
-  order: number;
-  exerciseName: string;
-  bodyPart: string;
-  weightKg?: number;
-  reps?: number;
-  distanceKm?: number;
-  durationMinutes?: number;
-  memo?: string;
-};
+export type WorkoutType = "running" | "stretching" | "bodyweight" | "weight" | "etc";
 
 export type WorkoutSession = {
   id: string;
   date: string;
-  title: string;
   type: WorkoutType;
   condition: WorkoutCondition;
-  startsAt?: string;
-  endsAt?: string;
+  durationMinutes: number;
   memo?: string;
-  sets: WorkoutSet[];
 };
