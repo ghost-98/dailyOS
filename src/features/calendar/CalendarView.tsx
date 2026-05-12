@@ -45,6 +45,15 @@ function formatSelectedDate(dateKey: string) {
   }).format(new Date(`${dateKey}T00:00:00`));
 }
 
+function summarizeEventsByType(events: typeof calendarEvents) {
+  return (Object.keys(calendarTypeLabels) as EventType[])
+    .map((type) => ({
+      type,
+      count: events.filter((event) => event.type === type).length,
+    }))
+    .filter((summary) => summary.count > 0);
+}
+
 export function CalendarView() {
   const [activeCategory, setActiveCategory] = useState<EventType>("schedule");
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
@@ -116,6 +125,7 @@ export function CalendarView() {
           <div className="calendar-grid">
             {monthDays.map((cell) => {
               const events = cell.date ? calendarEvents.filter((event) => event.date === cell.date) : [];
+              const eventSummaries = summarizeEventsByType(events);
               return (
                 <button
                   className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
@@ -125,8 +135,16 @@ export function CalendarView() {
                 >
                   {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
                   <div className="calendar-day__events">
-                    {events.slice(0, 3).map((event) => (
-                      <span className={`calendar-dot calendar-dot--${event.type}`} key={event.id} title={event.title} />
+                    {eventSummaries.slice(0, 3).map((summary) => (
+                      <span
+                        aria-label={`${calendarTypeLabels[summary.type]} ${summary.count}개`}
+                        className="calendar-day__event-chip"
+                        key={summary.type}
+                        title={`${calendarTypeLabels[summary.type]} ${summary.count}개`}
+                      >
+                        <span className={`calendar-dot calendar-dot--${summary.type}`} />
+                        {summary.count > 1 ? <span className="calendar-day__event-count">+{summary.count}</span> : null}
+                      </span>
                     ))}
                   </div>
                 </button>

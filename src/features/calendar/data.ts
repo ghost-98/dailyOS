@@ -19,6 +19,14 @@ export const calendarEvents: CalendarEvent[] = [
     meta: "컨퍼런스 룸 B",
   },
   {
+    id: "schedule-1-2",
+    date: "2026-05-12",
+    type: "schedule",
+    title: "제품 디자인 리뷰",
+    time: "13:30",
+    meta: "Google Meet",
+  },
+  {
     id: "todo-1",
     date: "2026-05-12",
     type: "todo",
