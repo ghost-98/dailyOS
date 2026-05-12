@@ -3,7 +3,7 @@ import { TodayDashboard } from "@/features/today/TodayDashboard";
 
 export default function Home() {
   return (
-    <AppShell>
+    <AppShell activeKey="today">
       <TodayDashboard />
     </AppShell>
   );

@@ -9,24 +9,26 @@ import {
   Plus,
   Settings,
 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const primaryNav = [
-  { label: "오늘", icon: Grid2X2, active: true },
-  { label: "캘린더", icon: CalendarDays },
-  { label: "시간관리", icon: Clock3 },
-  { label: "건강", icon: HeartPulse },
-  { label: "취업", icon: BriefcaseBusiness },
-  { label: "설정", icon: Settings },
+  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
+  { label: "캘린더", href: "/calendar", key: "calendar", icon: CalendarDays },
+  { label: "시간관리", href: "/time", key: "time", icon: Clock3 },
+  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
+  { label: "취업", href: "/career", key: "career", icon: BriefcaseBusiness },
+  { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 const mobileNav = primaryNav.slice(0, 5);
 
 type AppShellProps = {
+  activeKey?: string;
   children: ReactNode;
 };
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ activeKey = "today", children }: AppShellProps) {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="주요 메뉴">
@@ -40,10 +42,10 @@ export function AppShell({ children }: AppShellProps) {
             {primaryNav.map((item) => {
               const Icon = item.icon;
               return (
-                <button className={`nav-item ${item.active ? "nav-item--active" : ""}`} key={item.label}>
+                <Link className={`nav-item ${item.key === activeKey ? "nav-item--active" : ""}`} href={item.href} key={item.label}>
                   <Icon aria-hidden size={22} />
                   <span>{item.label}</span>
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -74,10 +76,10 @@ export function AppShell({ children }: AppShellProps) {
         {mobileNav.map((item) => {
           const Icon = item.icon;
           return (
-            <button className={`bottom-nav__item ${item.active ? "bottom-nav__item--active" : ""}`} key={item.label}>
+            <Link className={`bottom-nav__item ${item.key === activeKey ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.label}>
               <Icon aria-hidden size={20} />
               <span>{item.label}</span>
-            </button>
+            </Link>
           );
         })}
         <button className="bottom-nav__item">
