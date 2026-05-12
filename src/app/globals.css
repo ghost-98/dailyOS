@@ -73,20 +73,39 @@ button {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand__mark {
   display: grid;
-  gap: 3px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .brand__name {
+  display: block;
   color: var(--violet);
-  font-size: 32px;
+  font-size: 25px;
   font-weight: 850;
   line-height: 1;
 }
 
-.brand__version {
+.brand__subtitle {
+  display: block;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .sidebar__nav {
@@ -663,18 +682,18 @@ button {
   gap: 34px;
 }
 
-.calendar-header {
+.page-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
 }
 
-.calendar-header h1 {
+.page-header h1 {
   margin: 0;
-  font-size: clamp(40px, 5vw, 72px);
+  font-size: clamp(34px, 4.2vw, 58px);
   font-weight: 850;
-  line-height: 1;
+  line-height: 1.05;
 }
 
 .calendar-layout {
@@ -1264,20 +1283,6 @@ button {
   gap: 30px;
 }
 
-.tasks-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.tasks-header h1 {
-  margin: 0;
-  font-size: clamp(40px, 5vw, 72px);
-  font-weight: 850;
-  line-height: 1;
-}
-
 .task-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1579,20 +1584,6 @@ button {
 .health-page {
   display: grid;
   gap: 30px;
-}
-
-.health-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.health-header h1 {
-  margin: 0;
-  font-size: clamp(40px, 5vw, 72px);
-  font-weight: 850;
-  line-height: 1;
 }
 
 .health-actions {
@@ -1963,17 +1954,7 @@ button {
     flex-direction: column;
   }
 
-  .calendar-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .tasks-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .health-header {
+  .page-header {
     align-items: stretch;
     flex-direction: column;
   }
@@ -2181,16 +2162,8 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .calendar-header h1 {
-    font-size: 44px;
-  }
-
-  .tasks-header h1 {
-    font-size: 44px;
-  }
-
-  .health-header h1 {
-    font-size: 44px;
+  .page-header h1 {
+    font-size: 40px;
   }
 
   .weight-detail-grid,

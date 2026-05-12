@@ -89,9 +89,8 @@ export function TasksView() {
 
   return (
     <div className="tasks-page">
-      <header className="tasks-header">
+      <header className="tasks-header page-header">
         <div>
-          <p className="eyebrow">TASK OPERATIONS</p>
           <h1>할 일</h1>
           <div className="today__date">
             <ListTodo aria-hidden size={20} />

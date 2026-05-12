@@ -79,9 +79,8 @@ export function CalendarView() {
 
   return (
     <div className="calendar-page">
-      <header className="calendar-header">
+      <header className="calendar-header page-header">
         <div>
-          <p className="eyebrow">CALENDAR MATRIX</p>
           <h1>캘린더</h1>
           <div className="today__date">
             <CalendarDays aria-hidden size={20} />

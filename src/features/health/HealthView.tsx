@@ -63,9 +63,8 @@ export function HealthView() {
 
   return (
     <div className="health-page">
-      <header className="health-header">
+      <header className="health-header page-header">
         <div>
-          <p className="eyebrow">HEALTH LOG</p>
           <h1>건강</h1>
           <div className="today__date">
             <HeartPulse aria-hidden size={20} />

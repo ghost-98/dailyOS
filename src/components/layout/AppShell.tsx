@@ -33,8 +33,11 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
       <aside className="sidebar" aria-label="주요 메뉴">
         <div>
           <div className="brand">
-            <span className="brand__name">dailyOS</span>
-            <span className="brand__version">v1.0.4-alpha</span>
+            <span className="brand__mark">d</span>
+            <div>
+              <span className="brand__name">dailyOS</span>
+              <span className="brand__subtitle">Personal dashboard</span>
+            </div>
           </div>
 
           <nav className="sidebar__nav">
