@@ -1576,6 +1576,284 @@ button {
   width: min(620px, 100%);
 }
 
+.health-page {
+  display: grid;
+  gap: 30px;
+}
+
+.health-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.health-header h1 {
+  margin: 0;
+  font-size: clamp(40px, 5vw, 72px);
+  font-weight: 850;
+  line-height: 1;
+}
+
+.health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.health-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.15fr) repeat(2, minmax(220px, 0.75fr));
+  gap: 18px;
+}
+
+.weight-card,
+.health-metric-card,
+.workout-section {
+  padding: 24px;
+}
+
+.weight-card {
+  display: grid;
+  gap: 18px;
+}
+
+.weight-card > strong {
+  font-size: 52px;
+  line-height: 0.95;
+}
+
+.weight-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.weight-flag {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.weight-flag--active {
+  border-color: rgba(72, 214, 160, 0.36);
+  background: rgba(72, 214, 160, 0.12);
+  color: var(--green);
+}
+
+.weight-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.weight-detail-grid div {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.weight-detail-grid span,
+.health-metric-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.weight-detail-grid strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.weight-card p,
+.health-metric-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.health-metric-card {
+  display: grid;
+  align-content: space-between;
+  gap: 14px;
+  min-height: 210px;
+}
+
+.health-metric-card strong {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.weight-sparkline {
+  display: flex;
+  height: 58px;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.weight-sparkline span {
+  width: 100%;
+  min-height: 14px;
+  border-radius: 999px 999px 4px 4px;
+  background: linear-gradient(180deg, var(--pink), rgba(255, 156, 175, 0.26));
+}
+
+.workout-section {
+  display: grid;
+  gap: 20px;
+}
+
+.workout-session-list {
+  display: grid;
+  gap: 16px;
+}
+
+.workout-session-card {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 20px;
+}
+
+.workout-session-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workout-session-card__header h3 {
+  margin: 12px 0 6px;
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.workout-session-card__header p,
+.workout-session-card__memo {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.workout-session-card__header button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 13px;
+  white-space: nowrap;
+}
+
+.exercise-group-list {
+  display: grid;
+  gap: 12px;
+}
+
+.exercise-group {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  padding: 16px;
+}
+
+.exercise-group__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.exercise-group__title strong {
+  font-size: 18px;
+}
+
+.exercise-group__title span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.set-list {
+  display: grid;
+  gap: 8px;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px 12px;
+}
+
+.set-row span,
+.set-row small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.set-row strong {
+  font-size: 15px;
+}
+
+.health-empty {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 24px;
+  text-align: center;
+}
+
+.health-empty--compact {
+  min-height: 150px;
+}
+
+.health-empty svg {
+  color: var(--violet);
+}
+
+.health-empty strong {
+  margin-top: 8px;
+  font-size: 18px;
+}
+
+.health-empty p {
+  max-width: 260px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.health-sheet {
+  width: min(640px, 100%);
+}
+
 .date-picker-sheet {
   width: min(520px, 100%);
 }
@@ -1695,6 +1973,19 @@ button {
     flex-direction: column;
   }
 
+  .health-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .health-actions {
+    justify-content: stretch;
+  }
+
+  .health-actions .header-action {
+    flex: 1 1 180px;
+  }
+
   .today__header h1 {
     font-size: 42px;
   }
@@ -1729,11 +2020,18 @@ button {
   .calendar-board,
   .date-detail-card,
   .task-column,
-  .task-stat-card {
+  .task-stat-card,
+  .weight-card,
+  .health-metric-card,
+  .workout-section {
     padding: 22px;
   }
 
   .task-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .health-summary-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1835,7 +2133,7 @@ button {
   }
 
   .event-sheet-backdrop {
-    align-items: end;
+    align-items: flex-end;
     padding: 0;
   }
 
@@ -1889,6 +2187,19 @@ button {
 
   .tasks-header h1 {
     font-size: 44px;
+  }
+
+  .health-header h1 {
+    font-size: 44px;
+  }
+
+  .weight-detail-grid,
+  .set-row {
+    grid-template-columns: 1fr;
+  }
+
+  .workout-session-card__header {
+    flex-direction: column;
   }
 
   .calendar-filters {

@@ -52,3 +52,41 @@ export type CareerEvent = {
   dday: string;
   status: "urgent" | "normal" | "muted";
 };
+
+export type WeightRecord = {
+  id: string;
+  date: string;
+  weightKg: number;
+  measuredFasted: boolean;
+  muscleMassKg?: number;
+  bodyFatPercent?: number;
+  memo?: string;
+};
+
+export type WorkoutCondition = "good" | "normal" | "low";
+
+export type WorkoutType = "strength" | "cardio" | "stretching" | "sports" | "etc";
+
+export type WorkoutSet = {
+  id: string;
+  order: number;
+  exerciseName: string;
+  bodyPart: string;
+  weightKg?: number;
+  reps?: number;
+  distanceKm?: number;
+  durationMinutes?: number;
+  memo?: string;
+};
+
+export type WorkoutSession = {
+  id: string;
+  date: string;
+  title: string;
+  type: WorkoutType;
+  condition: WorkoutCondition;
+  startsAt?: string;
+  endsAt?: string;
+  memo?: string;
+  sets: WorkoutSet[];
+};
