@@ -18,6 +18,22 @@ export type TodoSummary = {
   dueLabel: string;
 };
 
+export type TaskStatus = "todo" | "inProgress" | "done";
+
+export type TaskPriority = "high" | "normal" | "low";
+
+export type TaskItem = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  scheduledDate: string;
+  dueDate?: string;
+  completedAt?: string;
+  deferredCount: number;
+  memo?: string;
+};
+
 export type HealthSummary = {
   vitalsIndex: number;
   weightKg: number;

@@ -3,7 +3,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  Clock3,
   Grid2X2,
   HeartPulse,
   Plus,
@@ -15,7 +14,7 @@ import type { ReactNode } from "react";
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "캘린더", href: "/calendar", key: "calendar", icon: CalendarDays },
-  { label: "시간관리", href: "/time", key: "time", icon: Clock3 },
+  { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "취업", href: "/career", key: "career", icon: BriefcaseBusiness },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
