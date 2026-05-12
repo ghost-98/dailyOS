@@ -75,6 +75,7 @@ function groupTasksByStatus(items: TaskItem[]) {
 
 export function TasksView() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
   const visibleTasks = useMemo(() => tasks.filter((task) => task.scheduledDate === selectedDate), [selectedDate]);
   const completedCount = visibleTasks.filter((task) => task.status === "done").length;
@@ -107,10 +108,9 @@ export function TasksView() {
         <button aria-label="이전 날짜" onClick={() => setSelectedDate((date) => addDays(date, -1))}>
           <ChevronLeft aria-hidden size={20} />
         </button>
-        <div>
-          <span>관리 날짜</span>
-          <strong>{formatSelectedDay(selectedDate)}</strong>
-        </div>
+        <button className="task-date-trigger" onClick={() => setIsDatePickerOpen(true)}>
+          {formatSelectedDay(selectedDate)}
+        </button>
         <button aria-label="다음 날짜" onClick={() => setSelectedDate((date) => addDays(date, 1))}>
           <ChevronRight aria-hidden size={20} />
         </button>
@@ -159,6 +159,16 @@ export function TasksView() {
       </div>
 
       {isTaskSheetOpen ? <TaskCreateSheet selectedDate={selectedDate} onClose={() => setIsTaskSheetOpen(false)} /> : null}
+      {isDatePickerOpen ? (
+        <TaskDatePickerSheet
+          selectedDate={selectedDate}
+          onClose={() => setIsDatePickerOpen(false)}
+          onSelect={(date) => {
+            setSelectedDate(date);
+            setIsDatePickerOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -293,6 +303,75 @@ function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onCl
         <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose}>
           <X aria-hidden size={18} />
         </button>
+      </section>
+    </div>
+  );
+}
+
+function TaskDatePickerSheet({
+  selectedDate,
+  onClose,
+  onSelect,
+}: {
+  selectedDate: string;
+  onClose: () => void;
+  onSelect: (date: string) => void;
+}) {
+  const [year, setYear] = useState(Number(selectedDate.slice(0, 4)));
+  const [month, setMonth] = useState(Number(selectedDate.slice(5, 7)));
+  const [day, setDay] = useState(Number(selectedDate.slice(8, 10)));
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const safeDay = Math.min(day, daysInMonth);
+
+  const applyDate = () => {
+    onSelect(`${year}-${String(month).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`);
+  };
+
+  return (
+    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-labelledby="task-date-picker-title"
+        aria-modal="true"
+        className="event-sheet date-picker-sheet"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="event-sheet__grabber" aria-hidden />
+        <header className="event-sheet__header">
+          <button className="event-sheet__text-button" onClick={onClose}>취소</button>
+          <h2 id="task-date-picker-title">날짜 선택</h2>
+          <button className="event-sheet__done-button" onClick={applyDate}>완료</button>
+        </header>
+
+        <div className="date-picker-body">
+          <div className="date-picker-preview">{formatSelectedDay(`${year}-${String(month).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`)}</div>
+          <div className="date-picker-grid">
+            <label>
+              <span>연도</span>
+              <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
+                {Array.from({ length: 11 }, (_, index) => 2021 + index).map((value) => (
+                  <option key={value} value={value}>{value}년</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>월</span>
+              <select value={month} onChange={(event) => setMonth(Number(event.target.value))}>
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
+                  <option key={value} value={value}>{value}월</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>일</span>
+              <select value={safeDay} onChange={(event) => setDay(Number(event.target.value))}>
+                {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((value) => (
+                  <option key={value} value={value}>{value}일</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
       </section>
     </div>
   );
