@@ -8,7 +8,7 @@ import type { EventType } from "@/types/domain";
 import { calendarEvents, calendarTypeLabels } from "./data";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-const selectedDate = "2026-05-12";
+const initialMonth = new Date(2026, 4, 1);
 
 const eventTone: Record<EventType, "violet" | "green" | "pink" | "amber" | "muted"> = {
   schedule: "violet",
@@ -33,11 +33,39 @@ function getMonthDays(year: number, monthIndex: number) {
   ];
 }
 
+function formatDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatSelectedDate(dateKey: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  }).format(new Date(`${dateKey}T00:00:00`));
+}
+
 export function CalendarView() {
+  const [activeCategory, setActiveCategory] = useState<EventType>("schedule");
+  const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
-  const monthDays = getMonthDays(2026, 4);
-  const selectedEvents = calendarEvents.filter((event) => event.date === selectedDate);
-  const monthEventCount = calendarEvents.length;
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
+  const selectedEvents = selectedDate
+    ? calendarEvents.filter((event) => event.date === selectedDate && event.type === activeCategory)
+    : [];
+  const selectedDateAllEvents = selectedDate ? calendarEvents.filter((event) => event.date === selectedDate) : [];
+
+  const moveMonth = (direction: -1 | 1) => {
+    setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
+    setSelectedDate(null);
+    setActiveCategory("schedule");
+  };
+
+  const handleDateClick = (date: string) => {
+    setSelectedDate((current) => (current === date ? null : date));
+    setActiveCategory("schedule");
+  };
 
   return (
     <div className="calendar-page">
@@ -56,17 +84,17 @@ export function CalendarView() {
         </button>
       </header>
 
-      <div className="calendar-layout">
+      <div className={`calendar-layout ${selectedDate ? "calendar-layout--detail-open" : ""}`}>
         <SectionCard className="calendar-board">
           <div className="calendar-toolbar">
-            <button aria-label="이전 달">
+            <button aria-label="이전 달" onClick={() => moveMonth(-1)}>
               <ChevronLeft aria-hidden size={20} />
             </button>
             <div>
-              <span>2026</span>
-              <strong>5월</strong>
+              <span>{currentMonth.getFullYear()}</span>
+              <strong>{currentMonth.getMonth() + 1}월</strong>
             </div>
-            <button aria-label="다음 달">
+            <button aria-label="다음 달" onClick={() => moveMonth(1)}>
               <ChevronRight aria-hidden size={20} />
             </button>
           </div>
@@ -89,7 +117,12 @@ export function CalendarView() {
             {monthDays.map((cell) => {
               const events = cell.date ? calendarEvents.filter((event) => event.date === cell.date) : [];
               return (
-                <button className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`} disabled={!cell.date} key={cell.key}>
+                <button
+                  className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
+                  disabled={!cell.date}
+                  key={cell.key}
+                  onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
+                >
                   {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
                   <div className="calendar-day__events">
                     {events.slice(0, 3).map((event) => (
@@ -102,37 +135,55 @@ export function CalendarView() {
           </div>
         </SectionCard>
 
+        {selectedDate ? (
         <aside className="calendar-detail">
-          <SectionCard className="calendar-summary">
-            <div className="card-title">
-              <ListFilter aria-hidden size={20} />
-              <span>월간 상태</span>
-            </div>
-            <strong>{monthEventCount}</strong>
-            <p>이번 달 기록된 날짜 기반 항목</p>
-          </SectionCard>
-
           <SectionCard className="date-detail-card">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">SELECTED DATE</p>
-                <h2>5월 12일 화요일</h2>
+                <h2>{formatSelectedDate(selectedDate)}</h2>
               </div>
             </div>
 
+            <div className="date-category-tabs" aria-label="상세 카테고리">
+              {(Object.keys(calendarTypeLabels) as EventType[]).map((type) => {
+                const count = selectedDateAllEvents.filter((event) => event.type === type).length;
+                return (
+                  <button
+                    className={`date-category-tab ${activeCategory === type ? "date-category-tab--active" : ""}`}
+                    key={type}
+                    onClick={() => setActiveCategory(type)}
+                  >
+                    <span className={`calendar-dot calendar-dot--${type}`} />
+                    {calendarTypeLabels[type]}
+                    <strong>{count}</strong>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="date-event-list">
-              {selectedEvents.map((event) => (
-                <article className={`date-event date-event--${event.type}`} key={event.id}>
-                  <div>
-                    <Badge tone={eventTone[event.type]}>{calendarTypeLabels[event.type]}</Badge>
-                    <h3>{event.title}</h3>
-                    <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
-                  </div>
-                </article>
-              ))}
+              {selectedEvents.length > 0 ? (
+                selectedEvents.map((event) => (
+                  <article className={`date-event date-event--${event.type}`} key={event.id}>
+                    <div>
+                      <Badge tone={eventTone[event.type]}>{calendarTypeLabels[event.type]}</Badge>
+                      <h3>{event.title}</h3>
+                      <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="date-empty-state">
+                  <ListFilter aria-hidden size={24} />
+                  <strong>{calendarTypeLabels[activeCategory]} 항목이 없습니다.</strong>
+                  <p>이 날짜에 기록된 다른 카테고리를 선택해보세요.</p>
+                </div>
+              )}
             </div>
           </SectionCard>
         </aside>
+        ) : null}
       </div>
 
       {isEventSheetOpen ? <EventCreateSheet onClose={() => setIsEventSheetOpen(false)} /> : null}
