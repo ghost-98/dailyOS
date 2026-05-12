@@ -1,21 +1,21 @@
 :root {
-  --bg: #111113;
-  --bg-deep: #09090b;
-  --panel: rgba(31, 30, 34, 0.92);
-  --panel-soft: rgba(39, 38, 43, 0.76);
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(200, 182, 255, 0.42);
-  --text: #f8f7fb;
-  --muted: #a7a1b5;
-  --muted-dark: #6f6979;
-  --violet: #c8b6ff;
-  --violet-deep: #8b5cf6;
+  --bg: #0e0e11;
+  --bg-deep: #08090b;
+  --panel: rgba(28, 28, 33, 0.92);
+  --panel-soft: rgba(36, 36, 42, 0.72);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(194, 170, 255, 0.34);
+  --text: #f4f2f7;
+  --muted: #aaa5b6;
+  --muted-dark: #7a7486;
+  --violet: #c9b8ff;
+  --violet-deep: #9b7cff;
   --pink: #ff9caf;
-  --green: #3ddc97;
-  --amber: #f6ad45;
-  --blue: #7aa2ff;
-  --shadow: 14px 20px 0 rgba(0, 0, 0, 0.42);
-  --radius: 8px;
+  --green: #48d6a0;
+  --amber: #f3b562;
+  --blue: #8aa8ff;
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+  --radius: 18px;
 }
 
 * {
@@ -30,12 +30,13 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 82% 12%, rgba(200, 182, 255, 0.08), transparent 30%),
-    linear-gradient(110deg, #101012 0%, #171518 48%, #0b0b0d 100%);
+    radial-gradient(circle at 82% 10%, rgba(154, 124, 255, 0.12), transparent 30%),
+    linear-gradient(135deg, #111115 0%, #19171d 52%, #0b0c0f 100%);
   color: var(--text);
   font-family:
-    Inter, Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    Pretendard, Inter, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
   letter-spacing: 0;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -63,19 +64,12 @@ button {
   flex-direction: column;
   justify-content: space-between;
   border-right: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(18, 18, 20, 0.96), rgba(13, 13, 15, 0.98));
+  background: linear-gradient(180deg, rgba(18, 18, 22, 0.96), rgba(13, 14, 17, 0.98));
   padding: 34px 28px;
 }
 
 .sidebar::after {
-  position: absolute;
-  inset: 6px -12px auto auto;
-  z-index: -1;
-  width: 34px;
-  height: calc(100% - 28px);
-  border-radius: 0 14px 14px 0;
-  background: rgba(0, 0, 0, 0.36);
-  content: "";
+  display: none;
 }
 
 .brand {
@@ -85,14 +79,13 @@ button {
 
 .brand__name {
   color: var(--violet);
-  font-size: 34px;
-  font-weight: 900;
+  font-size: 32px;
+  font-weight: 850;
   line-height: 1;
 }
 
 .brand__version {
   color: var(--muted);
-  font-family: "Courier New", monospace;
   font-size: 14px;
 }
 
@@ -115,25 +108,25 @@ button {
 .nav-item {
   gap: 18px;
   min-height: 46px;
-  padding: 0 2px;
-  text-transform: uppercase;
+  border-radius: 12px;
+  padding: 0 12px;
 }
 
 .nav-item span {
-  font-family: "Courier New", monospace;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.16em;
 }
 
 .nav-item--active {
+  background: rgba(201, 184, 255, 0.1);
   color: var(--violet);
 }
 
 .nav-item--active::after {
-  width: 3px;
-  height: 44px;
+  width: 4px;
+  height: 28px;
   margin-left: auto;
+  border-radius: 999px;
   background: var(--violet);
   content: "";
 }
@@ -151,9 +144,9 @@ button {
   gap: 8px;
   border: 1px solid var(--line-strong);
   background: var(--violet);
-  box-shadow: 0 12px 24px rgba(200, 182, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(200, 182, 255, 0.18);
   color: #17121f;
-  font-family: "Courier New", monospace;
   font-weight: 800;
 }
 
@@ -178,7 +171,6 @@ button {
 
 .profile strong {
   display: block;
-  font-family: "Courier New", monospace;
   font-size: 14px;
 }
 
@@ -211,10 +203,9 @@ button {
 .eyebrow {
   margin: 0 0 13px;
   color: var(--violet);
-  font-family: "Courier New", monospace;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.28em;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -223,7 +214,7 @@ button {
   margin: 0;
   color: var(--text);
   font-size: clamp(40px, 5vw, 78px);
-  font-weight: 950;
+  font-weight: 850;
   line-height: 0.98;
 }
 
@@ -242,6 +233,7 @@ button {
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--violet);
   padding: 0 16px;
@@ -258,7 +250,7 @@ button {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(110deg, rgba(29, 28, 31, 0.96), rgba(34, 32, 37, 0.9));
+  background: linear-gradient(145deg, rgba(30, 30, 36, 0.96), rgba(24, 24, 29, 0.9));
   box-shadow: var(--shadow);
 }
 
@@ -680,9 +672,9 @@ button {
 
 .calendar-header h1 {
   margin: 0;
-  font-size: clamp(52px, 7vw, 96px);
-  font-weight: 950;
-  line-height: 0.92;
+  font-size: clamp(40px, 5vw, 72px);
+  font-weight: 850;
+  line-height: 1;
 }
 
 .calendar-layout {
@@ -697,7 +689,7 @@ button {
 
 .calendar-board {
   min-height: 720px;
-  padding: 30px;
+  padding: 28px;
 }
 
 .calendar-toolbar {
@@ -706,7 +698,7 @@ button {
   align-items: center;
   gap: 16px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 24px;
+  padding-bottom: 22px;
 }
 
 .calendar-toolbar button {
@@ -715,6 +707,7 @@ button {
   height: 44px;
   place-items: center;
   border: 1px solid var(--line);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--violet);
 }
@@ -726,15 +719,16 @@ button {
 .calendar-toolbar span {
   display: block;
   color: var(--muted);
-  font-family: "Courier New", monospace;
-  font-size: 13px;
-  letter-spacing: 0.22em;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
 }
 
 .calendar-toolbar strong {
   display: block;
   margin-top: 2px;
-  font-size: 42px;
+  font-size: 38px;
+  font-weight: 850;
   line-height: 1;
 }
 
@@ -753,7 +747,7 @@ button {
   border-radius: 999px;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 750;
   padding: 0 12px;
 }
 
@@ -799,10 +793,9 @@ button {
 
 .calendar-weekdays span {
   color: var(--muted);
-  font-family: "Courier New", monospace;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   text-align: center;
 }
 
@@ -814,11 +807,12 @@ button {
 
 .calendar-day {
   display: flex;
-  min-height: 92px;
+  min-height: 94px;
   flex-direction: column;
   align-items: stretch;
   justify-content: space-between;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
   padding: 10px;
@@ -832,18 +826,18 @@ button {
 
 .calendar-day:not(:disabled):hover {
   border-color: var(--line-strong);
+  background: rgba(201, 184, 255, 0.06);
 }
 
 .calendar-day--selected {
   border-color: var(--violet);
-  background: rgba(200, 182, 255, 0.12);
+  background: rgba(201, 184, 255, 0.13);
   box-shadow: inset 0 0 0 1px rgba(200, 182, 255, 0.32);
 }
 
 .calendar-day__number {
-  font-family: "Courier New", monospace;
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .calendar-day__events {
@@ -862,16 +856,15 @@ button {
 
 .calendar-day__event-count {
   color: var(--muted);
-  font-family: "Courier New", monospace;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 850;
   line-height: 1;
 }
 
 .calendar-dot {
   display: block;
-  width: 28px;
-  height: 5px;
+  width: 24px;
+  height: 6px;
   border-radius: 999px;
 }
 
@@ -887,7 +880,8 @@ button {
 
 .date-detail-card h2 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
+  font-weight: 850;
 }
 
 .date-category-tabs {
@@ -916,7 +910,7 @@ button {
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 750;
   padding: 0 12px;
 }
 
@@ -950,6 +944,7 @@ button {
 .date-event {
   border: 1px solid var(--line);
   border-left-width: 5px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.045);
   padding: 18px 18px 18px 16px;
 }
@@ -977,6 +972,7 @@ button {
 .date-event h3 {
   margin: 12px 0 5px;
   font-size: 20px;
+  font-weight: 800;
 }
 
 .date-event p {
@@ -1041,7 +1037,7 @@ button {
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 28px;
+  border-radius: 24px;
   background:
     linear-gradient(180deg, rgba(41, 40, 46, 0.96), rgba(25, 24, 29, 0.98)),
     #1c1b20;
@@ -1067,7 +1063,7 @@ button {
 .event-sheet__header h2 {
   margin: 0;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 850;
   text-align: center;
 }
 
@@ -1100,7 +1096,7 @@ button {
 .event-form-card {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.07);
 }
 
