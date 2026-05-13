@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  Bell,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
@@ -17,6 +16,11 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+const timeChildren = [
+  { label: "일정", href: "/schedule", key: "schedule" },
+  { label: "할 일", href: "/tasks", key: "tasks" },
+];
+
 const careerChildren = [
   { label: "지원한 공기업", href: "/career/applied", key: "applied" },
   { label: "지원 예정", href: "/career/planned", key: "planned" },
@@ -25,15 +29,19 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "일정", href: "/schedule", key: "schedule", icon: CalendarDays },
-  { label: "이벤트", href: "/events", key: "events", icon: Bell },
-  { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
+  { label: "시간관리", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
-const mobileNav = primaryNav.filter((item) => item.key !== "settings");
+const mobileNav = [
+  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
+  { label: "일정", href: "/schedule", key: "schedule", icon: CalendarDays },
+  { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
+  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
+  { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
+];
 
 type AppShellProps = {
   activeKey?: string;
@@ -42,6 +50,8 @@ type AppShellProps = {
 
 export function AppShell({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
+  const isTimeActive = activeKey === "schedule" || activeKey === "tasks" || activeKey === "time";
+  const [isTimeOpen, setIsTimeOpen] = useState(isTimeActive);
   const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
 
   return (
@@ -59,33 +69,35 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
           <nav className="sidebar__nav">
             {primaryNav.map((item) => {
               const Icon = item.icon;
-              const isActive = item.key === activeKey;
+              const isActive = item.key === activeKey || (item.key === "time" && isTimeActive);
+
+              if (item.key === "time") {
+                return (
+                  <NavGroup
+                    icon={<Icon aria-hidden size={22} />}
+                    isActive={isActive}
+                    isOpen={isTimeOpen}
+                    items={timeChildren}
+                    key={item.key}
+                    label={item.label}
+                    pathname={pathname}
+                    setIsOpen={setIsTimeOpen}
+                  />
+                );
+              }
 
               if (item.key === "career") {
                 return (
-                  <div className={`nav-group ${isCareerOpen ? "nav-group--open" : ""}`} key={item.key}>
-                    <button
-                      aria-expanded={isCareerOpen}
-                      className={`nav-item nav-item--button ${isActive ? "nav-item--active" : ""}`}
-                      onClick={() => setIsCareerOpen((current) => !current)}
-                      type="button"
-                    >
-                      <Icon aria-hidden size={22} />
-                      <span>{item.label}</span>
-                      <ChevronDown aria-hidden className="nav-item__chevron" size={17} />
-                    </button>
-
-                    <div className="nav-submenu">
-                      {careerChildren.map((child) => {
-                        const isChildActive = pathname === child.href;
-                        return (
-                          <Link className={`nav-subitem ${isChildActive ? "nav-subitem--active" : ""}`} href={child.href} key={child.key}>
-                            <span>{child.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <NavGroup
+                    icon={<Icon aria-hidden size={22} />}
+                    isActive={isActive}
+                    isOpen={isCareerOpen}
+                    items={careerChildren}
+                    key={item.key}
+                    label={item.label}
+                    pathname={pathname}
+                    setIsOpen={setIsCareerOpen}
+                  />
                 );
               }
 
@@ -131,6 +143,47 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
           );
         })}
       </nav>
+    </div>
+  );
+}
+
+function NavGroup({
+  icon,
+  isActive,
+  isOpen,
+  items,
+  label,
+  pathname,
+  setIsOpen,
+}: {
+  icon: ReactNode;
+  isActive: boolean;
+  isOpen: boolean;
+  items: Array<{ href: string; key: string; label: string }>;
+  label: string;
+  pathname: string;
+  setIsOpen: (updater: (current: boolean) => boolean) => void;
+}) {
+  return (
+    <div className={`nav-group ${isOpen ? "nav-group--open" : ""}`}>
+      <button
+        aria-expanded={isOpen}
+        className={`nav-item nav-item--button ${isActive ? "nav-item--active" : ""}`}
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        {icon}
+        <span>{label}</span>
+        <ChevronDown aria-hidden className="nav-item__chevron" size={17} />
+      </button>
+
+      <div className="nav-submenu">
+        {items.map((child) => (
+          <Link className={`nav-subitem ${pathname === child.href ? "nav-subitem--active" : ""}`} href={child.href} key={child.key}>
+            <span>{child.label}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

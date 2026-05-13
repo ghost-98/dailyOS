@@ -6,7 +6,9 @@ export default function SchedulePage() {
     <AppShell activeKey="schedule">
       <CalendarView
         addButtonLabel="일정 추가"
-        description="일정, 할 일, 건강, 취업 날짜를 달력에서 확인합니다."
+        allowedTypes={["schedule", "event", "todo"]}
+        description="일정, 이벤트, 할 일을 한 캘린더에서 관리합니다."
+        showEventAddButton
         title="일정"
       />
     </AppShell>
