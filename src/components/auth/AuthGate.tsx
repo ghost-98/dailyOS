@@ -18,17 +18,37 @@ export function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setIsLoading(false);
-    });
+    let isMounted = true;
+    const loadingFallback = window.setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 2500);
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!isMounted) return;
+        setSession(data.session);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setSession(null);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        window.clearTimeout(loadingFallback);
+        setIsLoading(false);
+      });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setIsLoading(false);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      window.clearTimeout(loadingFallback);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   if (!isSupabaseConfigured) {
