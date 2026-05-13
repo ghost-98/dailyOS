@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  Bell,
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
@@ -26,13 +27,14 @@ const careerChildren = [
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "일정", href: "/schedule", key: "schedule", icon: CalendarDays },
+  { label: "이벤트", href: "/events", key: "events", icon: Bell },
   { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
-const mobileNav = primaryNav.slice(0, 5);
+const mobileNav = primaryNav.filter((item) => item.key !== "settings");
 
 type AppShellProps = {
   activeKey?: string;
@@ -129,10 +131,6 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
             </Link>
           );
         })}
-        <button className="bottom-nav__item">
-          <CheckCircle2 aria-hidden size={20} />
-          <span>추가</span>
-        </button>
       </nav>
     </div>
   );

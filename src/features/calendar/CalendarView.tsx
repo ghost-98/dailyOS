@@ -13,6 +13,7 @@ const initialMonth = new Date(2026, 4, 1);
 const eventTone: Record<EventType, "violet" | "green" | "pink" | "amber" | "muted"> = {
   schedule: "violet",
   todo: "green",
+  event: "pink",
   health: "pink",
   weight: "muted",
   career: "amber",
@@ -414,6 +415,7 @@ function EventCreateSheet({
               <select value={type} onChange={(changeEvent) => setType(changeEvent.target.value as EventType)}>
                 <option value="schedule">일정</option>
                 <option value="todo">할 일</option>
+                <option value="event">이벤트</option>
                 <option value="health">운동</option>
                 <option value="career">취업</option>
               </select>

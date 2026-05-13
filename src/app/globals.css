@@ -938,6 +938,11 @@ button {
   background: var(--green);
 }
 
+.calendar-filter--event::before,
+.calendar-dot--event {
+  background: var(--pink);
+}
+
 .calendar-filter--health::before,
 .calendar-dot--health {
   background: var(--pink);
@@ -1128,6 +1133,10 @@ button {
 
 .date-event--todo {
   border-left-color: var(--green);
+}
+
+.date-event--event {
+  border-left-color: var(--pink);
 }
 
 .date-event--health {
@@ -2034,6 +2043,49 @@ button {
   gap: 28px;
 }
 
+.events-page {
+  display: grid;
+  gap: 28px;
+}
+
+.events-card {
+  padding: 24px;
+}
+
+.event-record-list {
+  display: grid;
+  gap: 14px;
+}
+
+.event-record-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--pink);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 18px;
+}
+
+.event-record-card h3 {
+  margin: 12px 0 6px;
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.event-record-card p,
+.event-record-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.event-record-card small {
+  margin-top: 8px;
+}
+
 .career-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2458,6 +2510,10 @@ button {
   }
 
   .career-record-card {
+    flex-direction: column;
+  }
+
+  .event-record-card {
     flex-direction: column;
   }
 

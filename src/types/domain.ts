@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "health" | "weight" | "career";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career";
 
 export type ScheduleSummary = {
   id: string;

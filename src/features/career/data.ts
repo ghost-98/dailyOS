@@ -37,7 +37,7 @@ export const careerRecords: CareerRecord[] = [
     resultDate: "2026-07-05",
     url: "https://recruit.kepco.co.kr",
     resumeName: "공기업 ICT 기본 이력서 v2",
-    memo: "NCS 전공 비중 확인, 경험기술서 보완 필요",
+    memo: "관리 데이터: 공고 URL, 직무, 지원일, 마감일, 시험일, 면접일, 결과 발표일, 상태, 사용 이력서, 필요 서류",
   },
   {
     id: "career-applied-2",
@@ -61,7 +61,7 @@ export const careerRecords: CareerRecord[] = [
     requiredCerts: "정보처리기사, SQLD",
     requiredDocs: "경험기술서, 자격증 사본",
     priority: "high",
-    memo: "상반기 공고 직무기술서 기준으로 키워드 정리",
+    memo: "관리 데이터: 예상 채용 시기, 준비 상태, 필요 자격증, 필요 서류, 우선순위, 공고 URL",
   },
   {
     id: "career-cert-1",
@@ -75,6 +75,7 @@ export const careerRecords: CareerRecord[] = [
     issuer: "한국산업인력공단",
     grade: "기사",
     url: "https://www.q-net.or.kr",
+    memo: "관리 데이터: 자격증명, 번호, 발급 기관, 취득일, 만료일, 점수, 등급, PDF 파일/URL",
   },
   {
     id: "career-resume-1",
