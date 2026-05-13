@@ -1,4 +1,4 @@
-export type CareerTab = "applied" | "planned" | "certificates" | "resumes";
+export type CareerTab = "applied" | "planned" | "certificates";
 
 export type ApplicationEventStage = "document" | "written" | "interview";
 
@@ -98,15 +98,5 @@ export const careerRecords: CareerRecord[] = [
     grade: "기사",
     url: "https://www.q-net.or.kr",
     memo: "관리 데이터: 자격증명, 번호, 발급 기관, 취득일, 만료일, 점수, 등급, PDF 파일/URL",
-  },
-  {
-    id: "career-resume-1",
-    tab: "resumes",
-    title: "공기업 ICT 기본 이력서 v2",
-    subtitle: "전산직 공통",
-    status: "사용 중",
-    primaryDate: "2026-05-13",
-    url: "https://drive.example.com/resume-public-ict",
-    memo: "프로젝트 경험 2번 문항을 기관별로 교체",
   },
 ];

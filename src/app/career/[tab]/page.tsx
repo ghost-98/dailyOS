@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { CareerView } from "@/features/career/CareerView";
 import type { CareerTab } from "@/features/career/data";
 
-const careerTabs: CareerTab[] = ["applied", "planned", "certificates", "resumes"];
+const careerTabs: CareerTab[] = ["applied", "planned", "certificates"];
 
 type CareerTabPageProps = {
   params: Promise<{

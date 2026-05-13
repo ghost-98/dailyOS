@@ -7,7 +7,6 @@ import {
   CalendarClock,
   ClipboardList,
   FileBadge,
-  FileText,
   LinkIcon,
   Pencil,
   Plus,
@@ -31,21 +30,18 @@ const tabLabels: Record<CareerTab, string> = {
   applied: "지원한 공기업",
   planned: "지원 예정",
   certificates: "자격증",
-  resumes: "이력서",
 };
 
 const tabDescriptions: Record<CareerTab, string> = {
   applied: "기업별 지원 상태와 서류, 필기, 면접 이벤트를 함께 관리합니다.",
   planned: "관심 기업과 준비해야 할 자격증, 서류를 미리 정리합니다.",
   certificates: "보유 자격증, 번호, 발급 기관, 만료일, PDF 링크를 관리합니다.",
-  resumes: "공기업 지원용 이력서와 자기소개서 버전을 관리합니다.",
 };
 
 const tabIcons = {
   applied: BriefcaseBusiness,
   planned: Target,
   certificates: FileBadge,
-  resumes: FileText,
 };
 
 const priorityLabels = {
@@ -58,7 +54,6 @@ const tabRoutes: Record<CareerTab, string> = {
   applied: "/career/applied",
   planned: "/career/planned",
   certificates: "/career/certificates",
-  resumes: "/career/resumes",
 };
 
 export function CareerView({ activeTab }: { activeTab: CareerTab }) {
@@ -212,13 +207,7 @@ function CareerMeta({ record }: { record: CareerRecord }) {
     );
   }
 
-  return (
-    <div className="career-meta-grid">
-      <MetaItem label="용도" value={record.subtitle} />
-      <MetaItem label="최근 수정" value={record.primaryDate} />
-      <MetaItem label="상태" value={record.status} />
-    </div>
-  );
+  return null;
 }
 
 function ApplicationEventList({ events }: { events: ApplicationEvent[] }) {
@@ -303,7 +292,6 @@ function CareerRecordSheet({
                 <option value="applied">지원한 공기업</option>
                 <option value="planned">지원 예정</option>
                 <option value="certificates">자격증</option>
-                <option value="resumes">이력서</option>
               </select>
             </label>
           </div>
@@ -393,12 +381,7 @@ function CareerSpecificFields({
     );
   }
 
-  return (
-    <>
-      <Field label="최근 수정일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
-      <Field label="파일/URL" value={form.url} onChange={(value) => updateField("url", value)} />
-    </>
-  );
+  return null;
 }
 
 function ApplicationEventEditor({ events, onChange }: { events: ApplicationEvent[]; onChange: (events: ApplicationEvent[]) => void }) {
@@ -466,45 +449,38 @@ function renderTabIcon(tab: CareerTab) {
 
 function getBadgeTone(record: CareerRecord) {
   if (record.tab === "certificates") return "green";
-  if (record.tab === "resumes") return "violet";
   if (record.status.includes("마감") || record.status.includes("준비")) return "amber";
   return "muted";
 }
 
 function getDefaultSubtitle(tab: CareerTab) {
   if (tab === "applied" || tab === "planned") return "직무 미정";
-  if (tab === "certificates") return "발급 기관 미입력";
-  return "이력서 용도 미입력";
+  return "발급 기관 미입력";
 }
 
 function getDefaultStatus(tab: CareerTab) {
   if (tab === "applied") return "지원 준비";
   if (tab === "planned") return "관심";
-  if (tab === "certificates") return "보유";
-  return "작성 중";
+  return "보유";
 }
 
 function getTitleLabel(tab: CareerTab) {
   if (tab === "certificates") return "자격증명";
-  if (tab === "resumes") return "문서명";
   return "기업명";
 }
 
 function getTitlePlaceholder(tab: CareerTab) {
   if (tab === "certificates") return "정보처리기사";
-  if (tab === "resumes") return "공기업 ICT 기본 이력서 v3";
   return "한국전력공사";
 }
 
 function getSubtitleLabel(tab: CareerTab) {
   if (tab === "certificates") return "발급 기관";
-  if (tab === "resumes") return "용도";
   return "직무 / 공고명";
 }
 
 function getSubtitlePlaceholder(tab: CareerTab) {
   if (tab === "certificates") return "한국산업인력공단";
-  if (tab === "resumes") return "전산직 공통";
   return "ICT 운영 / 전산직";
 }
 

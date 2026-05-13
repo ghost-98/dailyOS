@@ -21,7 +21,6 @@ const careerChildren = [
   { label: "지원한 공기업", href: "/career/applied", key: "applied" },
   { label: "지원 예정", href: "/career/planned", key: "planned" },
   { label: "자격증", href: "/career/certificates", key: "certificates" },
-  { label: "이력서", href: "/career/resumes", key: "resumes" },
 ];
 
 const primaryNav = [
