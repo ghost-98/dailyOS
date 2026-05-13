@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bell, CalendarClock, Check, ChevronLeft, ChevronRight, Clock3, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
-import { tasks } from "./data";
+import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "./api";
 
-const initialDate = "2026-05-12";
-const yearOptions = Array.from({ length: 101 }, (_, index) => new Date().getFullYear() - 50 + index);
+const initialDate = new Date().toISOString().slice(0, 10);
+const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 
 const statusLabels: Record<TaskStatus, string> = {
   todo: "할 일",
@@ -61,7 +61,7 @@ function getDeadlineState(task: TaskItem, baseDate: string) {
   const diff = getDaysBetween(baseDate, task.dueDate);
   const scheduledAfterDeadline = getDaysBetween(task.dueDate, task.scheduledDate) > 0;
 
-  if (diff < 0 || scheduledAfterDeadline) return { label: "기한 지남", tone: "danger" as const };
+  if (diff < 0 || scheduledAfterDeadline) return { label: "마감 지남", tone: "danger" as const };
   if (diff === 0) return { label: "오늘 마감", tone: "danger" as const };
   if (diff <= 3) return { label: `D-${diff}`, tone: "warning" as const };
   return { label: `D-${diff}`, tone: "quiet" as const };
@@ -75,11 +75,30 @@ function groupTasksByStatus(items: TaskItem[]) {
 }
 
 export function TasksView() {
-  const [items, setItems] = useState<TaskItem[]>(tasks);
+  const [items, setItems] = useState<TaskItem[]>([]);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchTasksFromDb()
+      .then((dbTasks) => {
+        if (isMounted) setItems(dbTasks ?? []);
+      })
+      .catch((error) => console.error("Failed to load tasks from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLoadingTasks(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const visibleTasks = useMemo(() => items.filter((task) => task.scheduledDate === selectedDate), [items, selectedDate]);
   const completedCount = visibleTasks.filter((task) => task.status === "done").length;
   const todayScheduledCount = visibleTasks.filter((task) => task.status !== "done").length;
@@ -90,6 +109,41 @@ export function TasksView() {
   const completionRate = visibleTasks.length > 0 ? Math.round((completedCount / visibleTasks.length) * 100) : 0;
   const columns = groupTasksByStatus(visibleTasks);
 
+  const saveTask = async (task: TaskItem) => {
+    const exists = items.some((item) => item.id === task.id);
+    const savedTask = exists ? await updateTaskInDb(task) : await createTaskInDb(task);
+    const nextTask = savedTask ?? task;
+
+    setItems((current) => (exists ? current.map((item) => (item.id === task.id ? nextTask : item)) : [nextTask, ...current]));
+    setIsTaskSheetOpen(false);
+    setEditingTask(null);
+  };
+
+  const deleteTask = async (id: string) => {
+    await deleteTaskFromDb(id);
+    setItems((current) => current.filter((item) => item.id !== id));
+  };
+
+  const deferTask = async (id: string) => {
+    const target = items.find((item) => item.id === id);
+    if (!target) return;
+    const nextTask = { ...target, scheduledDate: addDays(target.scheduledDate, 1), deferredCount: target.deferredCount + 1 };
+    const savedTask = await updateTaskInDb(nextTask);
+    setItems((current) => current.map((item) => (item.id === id ? savedTask ?? nextTask : item)));
+  };
+
+  const toggleTaskDone = async (id: string) => {
+    const target = items.find((item) => item.id === id);
+    if (!target) return;
+    const nextTask = {
+      ...target,
+      status: target.status === "done" ? "todo" as const : "done" as const,
+      completedAt: target.status === "done" ? undefined : new Date().toISOString(),
+    };
+    const savedTask = await updateTaskInDb(nextTask);
+    setItems((current) => current.map((item) => (item.id === id ? savedTask ?? nextTask : item)));
+  };
+
   return (
     <div className="tasks-page">
       <header className="tasks-header page-header">
@@ -97,7 +151,7 @@ export function TasksView() {
           <h1>할 일</h1>
           <div className="today__date">
             <ListTodo aria-hidden size={20} />
-            <span>예정일은 오늘의 배치, 마감일은 지켜야 할 기한입니다.</span>
+            <span>오늘 처리할 일과 마감일이 있는 일을 관리합니다.</span>
           </div>
         </div>
         <button className="header-action" onClick={() => {
@@ -123,14 +177,14 @@ export function TasksView() {
 
       <div className="task-stats">
         <SectionCard className="task-stat-card">
-          <span>오늘 예정</span>
+          <span>예정된 일</span>
           <strong>{todayScheduledCount}</strong>
-          <p>오늘 처리하도록 배치된 미완료 작업</p>
+          <p>{isLoadingTasks ? "불러오는 중입니다." : "선택한 날짜에 남아 있는 할 일입니다."}</p>
         </SectionCard>
         <SectionCard className="task-stat-card task-stat-card--urgent">
-          <span>마감 압박</span>
+          <span>마감 임박</span>
           <strong>{urgentCount}</strong>
-          <p>오늘 마감, 기한 지남, D-3 이내</p>
+          <p>오늘 마감 또는 D-3 이내 항목</p>
         </SectionCard>
         <SectionCard className="task-stat-card">
           <span>완료율</span>
@@ -149,7 +203,7 @@ export function TasksView() {
                 <span>{statusLabels[column.status]}</span>
                 <strong>{column.items.length}</strong>
               </div>
-              <button aria-label={`${statusLabels[column.status]} 필터`}>
+              <button aria-label={`${statusLabels[column.status]} 접기`}>
                 <ChevronRight aria-hidden size={18} />
               </button>
             </div>
@@ -158,13 +212,13 @@ export function TasksView() {
               {column.items.length > 0 ? column.items.map((task) => (
                 <TaskCard
                   key={task.id}
-                  onDelete={(id) => setItems((current) => current.filter((item) => item.id !== id))}
-                  onDefer={(id) => setItems((current) => current.map((item) => item.id === id ? { ...item, scheduledDate: addDays(item.scheduledDate, 1), deferredCount: item.deferredCount + 1 } : item))}
+                  onDelete={deleteTask}
+                  onDefer={deferTask}
                   onEdit={(target) => {
                     setEditingTask(target);
                     setIsTaskSheetOpen(true);
                   }}
-                  onToggleDone={(id) => setItems((current) => current.map((item) => item.id === id ? { ...item, status: item.status === "done" ? "todo" : "done", completedAt: item.status === "done" ? undefined : new Date().toISOString() } : item))}
+                  onToggleDone={toggleTaskDone}
                   selectedDate={selectedDate}
                   task={task}
                 />
@@ -182,14 +236,7 @@ export function TasksView() {
             setIsTaskSheetOpen(false);
             setEditingTask(null);
           }}
-          onSave={(task) => {
-            setItems((current) => {
-              const exists = current.some((item) => item.id === task.id);
-              return exists ? current.map((item) => item.id === task.id ? task : item) : [task, ...current];
-            });
-            setIsTaskSheetOpen(false);
-            setEditingTask(null);
-          }}
+          onSave={saveTask}
         />
       ) : null}
       {isDatePickerOpen ? (
@@ -250,7 +297,7 @@ function TaskCard({
       {task.memo ? <p>{task.memo}</p> : null}
 
       <div className="task-card__footer">
-        {task.deferredCount > 0 ? <span className="defer-count">미룸 {task.deferredCount}회</span> : <span />}
+        {task.deferredCount > 0 ? <span className="defer-count">넘김 {task.deferredCount}회</span> : <span />}
         <div className="task-card__actions">
           <button aria-label="수정" onClick={() => onEdit(task)}>
             <Pencil aria-hidden size={15} />
@@ -277,7 +324,7 @@ function EmptyTaskColumn({ status }: { status: TaskStatus }) {
     <div className="task-empty-column">
       <ListTodo aria-hidden size={22} />
       <strong>{statusLabels[status]} 항목이 없습니다.</strong>
-      <p>선택한 날짜의 작업만 표시됩니다.</p>
+      <p>할 일을 추가하면 이곳에 표시됩니다.</p>
     </div>
   );
 }
@@ -329,7 +376,7 @@ function TaskCreateSheet({
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
           <button className="event-sheet__text-button" onClick={onClose}>취소</button>
-          <h2 id="task-sheet-title">{task ? "할 일 수정" : "새로운 할 일"}</h2>
+          <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
           <button className="event-sheet__done-button" onClick={saveTask}>{task ? "저장" : "추가"}</button>
         </header>
 
@@ -341,7 +388,7 @@ function TaskCreateSheet({
             </label>
             <label>
               <span>메모</span>
-              <input placeholder="필요한 내용을 짧게 적어두세요" value={memo} onChange={(event) => setMemo(event.target.value)} />
+              <input placeholder="필요한 내용을 적어두세요" value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
           </div>
 
@@ -378,13 +425,6 @@ function TaskCreateSheet({
             <label className="event-form-row event-form-row--field">
               <span>마감일</span>
               <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
-            </label>
-          </div>
-
-          <div className="event-form-card">
-            <label className="event-note">
-              <span>상세 메모</span>
-              <textarea placeholder="작업 기준, 링크, 체크할 내용을 적어두세요." rows={4} />
             </label>
           </div>
         </div>

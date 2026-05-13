@@ -8,7 +8,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import type { WeightRecord, WorkoutCondition, WorkoutSession, WorkoutType } from "@/types/domain";
 import { weightRecords, workoutSessions } from "./data";
 
-const initialDate = "2026-05-12";
+const initialDate = new Date().toISOString().slice(0, 10);
 
 const workoutTypeLabels: Record<WorkoutType, string> = {
   running: "러닝",
