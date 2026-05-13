@@ -6,13 +6,10 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
-  FileBadge,
-  FileText,
   Grid2X2,
   HeartPulse,
   Plus,
   Settings,
-  Target,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,10 +17,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 const careerChildren = [
-  { label: "지원한 공기업", href: "/career/applied", key: "applied", icon: BriefcaseBusiness },
-  { label: "지원 예정", href: "/career/planned", key: "planned", icon: Target },
-  { label: "자격증", href: "/career/certificates", key: "certificates", icon: FileBadge },
-  { label: "이력서", href: "/career/resumes", key: "resumes", icon: FileText },
+  { label: "지원한 공기업", href: "/career/applied", key: "applied" },
+  { label: "지원 예정", href: "/career/planned", key: "planned" },
+  { label: "자격증", href: "/career/certificates", key: "certificates" },
+  { label: "이력서", href: "/career/resumes", key: "resumes" },
 ];
 
 const primaryNav = [
@@ -79,11 +76,9 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 
                     <div className="nav-submenu">
                       {careerChildren.map((child) => {
-                        const ChildIcon = child.icon;
                         const isChildActive = pathname === child.href;
                         return (
                           <Link className={`nav-subitem ${isChildActive ? "nav-subitem--active" : ""}`} href={child.href} key={child.key}>
-                            <ChildIcon aria-hidden size={16} />
                             <span>{child.label}</span>
                           </Link>
                         );

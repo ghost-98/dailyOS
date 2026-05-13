@@ -15,7 +15,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -62,13 +61,6 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const visibleRecords = useMemo(() => records.filter((record) => record.tab === activeTab), [activeTab, records]);
-  const nextDeadline = useMemo(
-    () =>
-      records
-        .filter((record) => record.tab === "applied" && record.deadlineDate)
-        .sort((a, b) => String(a.deadlineDate).localeCompare(String(b.deadlineDate)))[0],
-    [records],
-  );
 
   const openNewSheet = () => {
     setEditingRecord(null);
@@ -79,10 +71,10 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     <div className="career-page">
       <header className="page-header career-header">
         <div>
-          <h1>취업</h1>
+          <h1>{tabLabels[activeTab]}</h1>
           <div className="today__date">
-            <BriefcaseBusiness aria-hidden size={20} />
-            <span>자격증, 공기업 지원 현황, 지원 예정 기업, 이력서를 관리합니다.</span>
+            {renderTabIcon(activeTab)}
+            <span>{tabDescriptions[activeTab]}</span>
           </div>
         </div>
         <button className="header-action" onClick={() => openNewSheet()}>
@@ -90,38 +82,6 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           항목 추가
         </button>
       </header>
-
-      <section className="career-overview" aria-label="취업 관리 요약">
-        <SectionCard className="career-overview-card">
-          <span>진행 중 지원</span>
-          <strong>{records.filter((record) => record.tab === "applied").length}</strong>
-          <p>{nextDeadline ? `${nextDeadline.title} 마감 ${formatDisplayDate(nextDeadline.deadlineDate)}` : "다가오는 마감 없음"}</p>
-        </SectionCard>
-        <SectionCard className="career-overview-card">
-          <span>보유 자격증</span>
-          <strong>{records.filter((record) => record.tab === "certificates").length}</strong>
-          <p>번호, 만료일, PDF 링크까지 함께 보관</p>
-        </SectionCard>
-        <SectionCard className="career-overview-card">
-          <span>이력서 버전</span>
-          <strong>{records.filter((record) => record.tab === "resumes").length}</strong>
-          <p>지원 기업별로 연결해서 추적</p>
-        </SectionCard>
-      </section>
-
-      <div className="career-tabs" aria-label="취업 관리 분류">
-        {(Object.keys(tabLabels) as CareerTab[]).map((tab) => {
-          const Icon = tabIcons[tab];
-          const count = records.filter((record) => record.tab === tab).length;
-          return (
-            <Link className={activeTab === tab ? "career-tab career-tab--active" : "career-tab"} href={tabRoutes[tab]} key={tab}>
-              <Icon aria-hidden size={18} />
-              {tabLabels[tab]}
-              <strong>{count}</strong>
-            </Link>
-          );
-        })}
-      </div>
 
       <SectionCard className="career-management-card">
         <div className="section-heading">
