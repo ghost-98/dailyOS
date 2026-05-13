@@ -48,13 +48,13 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
     <div className="app-shell">
       <aside className="sidebar" aria-label="주요 메뉴">
         <div>
-          <div className="brand">
+          <Link className="brand" href="/" aria-label="dailyOS 메인화면으로 이동">
             <span className="brand__mark">d</span>
             <div>
               <span className="brand__name">dailyOS</span>
               <span className="brand__subtitle">Personal dashboard</span>
             </div>
-          </div>
+          </Link>
 
           <nav className="sidebar__nav">
             {primaryNav.map((item) => {
