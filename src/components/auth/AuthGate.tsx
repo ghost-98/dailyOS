@@ -89,6 +89,20 @@ function AuthScreen() {
     }
   };
 
+  const sendResetEmail = async () => {
+    if (!supabase || !email.trim()) {
+      setMessage("비밀번호를 재설정할 이메일을 입력해 주세요.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window === "undefined" ? undefined : window.location.origin,
+    });
+    setIsSubmitting(false);
+    setMessage(error ? error.message : "비밀번호 재설정 메일을 보냈습니다.");
+  };
+
   return (
     <main className="auth-page">
       <section className="auth-hero" aria-label="dailyOS 소개">
@@ -148,6 +162,11 @@ function AuthScreen() {
           {isSubmitting ? <Loader2 aria-hidden size={18} /> : <ArrowRight aria-hidden size={18} />}
           {mode === "login" ? "로그인" : "회원가입"}
         </button>
+        {mode === "login" ? (
+          <button className="auth-link-button" disabled={isSubmitting} onClick={sendResetEmail} type="button">
+            비밀번호 재설정 메일 받기
+          </button>
+        ) : null}
       </section>
     </main>
   );

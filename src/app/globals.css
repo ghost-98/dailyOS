@@ -279,6 +279,21 @@ button {
   animation: none;
 }
 
+.auth-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.auth-link-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 @keyframes auth-spin {
   to {
     transform: rotate(360deg);
@@ -2688,6 +2703,33 @@ a:focus-visible {
   padding: 12px;
 }
 
+.settings-account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 13px;
+}
+
+.settings-account-row svg {
+  color: var(--violet);
+}
+
+.settings-account-row span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.settings-account-row strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;
@@ -2700,7 +2742,11 @@ a:focus-visible {
 }
 
 .settings-command {
+  display: inline-flex;
   min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
