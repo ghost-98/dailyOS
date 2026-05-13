@@ -160,6 +160,10 @@ button {
   content: "";
 }
 
+.nav-item--group-active::after {
+  display: none;
+}
+
 .nav-item__chevron {
   margin-left: auto;
   transition: transform 180ms ease;

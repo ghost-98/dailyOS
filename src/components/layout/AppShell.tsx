@@ -168,7 +168,7 @@ function NavGroup({
     <div className={`nav-group ${isOpen ? "nav-group--open" : ""}`}>
       <button
         aria-expanded={isOpen}
-        className={`nav-item nav-item--button ${isActive ? "nav-item--active" : ""}`}
+        className={`nav-item nav-item--button ${isActive ? "nav-item--active nav-item--group-active" : ""}`}
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
