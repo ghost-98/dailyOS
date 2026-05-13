@@ -2017,6 +2017,37 @@ button {
   padding: 24px;
 }
 
+.career-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.career-overview-card {
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+}
+
+.career-overview-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.career-overview-card strong {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.career-overview-card p,
+.section-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .career-record-list {
   display: grid;
   gap: 14px;
@@ -2031,6 +2062,10 @@ button {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.045);
   padding: 18px;
+}
+
+.career-record-main {
+  min-width: 0;
 }
 
 .career-record-card h3 {
@@ -2051,8 +2086,65 @@ button {
   margin-top: 8px;
 }
 
+.career-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.career-meta-item {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 7px 10px;
+}
+
+.career-meta-item b {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.career-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.career-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  padding: 36px 20px;
+  text-align: center;
+}
+
+.career-empty strong {
+  color: var(--text);
+}
+
+.career-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .career-sheet {
   width: min(640px, 100%);
+}
+
+.career-field-card {
+  overflow: hidden;
 }
 
 .settings-page {
@@ -2300,6 +2392,10 @@ button {
   }
 
   .health-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .career-overview {
     grid-template-columns: 1fr;
   }
 
