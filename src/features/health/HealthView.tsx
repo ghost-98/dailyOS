@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Activity, CalendarDays, Check, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, Pencil, Plus, Scale, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { WeightRecord, WorkoutCondition, WorkoutSession, WorkoutType } from "@/types/domain";
-import { weightRecords, workoutSessions } from "./data";
+import {
+  createWeightRecordInDb,
+  createWorkoutSessionInDb,
+  deleteWeightRecordFromDb,
+  deleteWorkoutSessionFromDb,
+  fetchWeightRecordsFromDb,
+  fetchWorkoutSessionsFromDb,
+  updateWeightRecordInDb,
+  updateWorkoutSessionInDb,
+} from "./api";
 
 const initialDate = new Date().toISOString().slice(0, 10);
 
@@ -39,15 +48,70 @@ function formatSelectedDay(date: string) {
 }
 
 export function HealthView() {
-  const [weights, setWeights] = useState<WeightRecord[]>(weightRecords);
-  const [workouts, setWorkouts] = useState<WorkoutSession[]>(workoutSessions);
+  const [weights, setWeights] = useState<WeightRecord[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sheetType, setSheetType] = useState<"weight" | "workout" | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
   const [editingWorkout, setEditingWorkout] = useState<WorkoutSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
+      .then(([dbWeights, dbWorkouts]) => {
+        if (!isMounted) return;
+        setWeights(dbWeights ?? []);
+        setWorkouts(dbWorkouts ?? []);
+      })
+      .catch((error) => console.error("Failed to load health records from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const weight = useMemo(() => weights.find((record) => record.date === selectedDate), [selectedDate, weights]);
   const sessions = useMemo(() => workouts.filter((session) => session.date === selectedDate), [selectedDate, workouts]);
   const totalMinutes = sessions.reduce((sum, session) => sum + session.durationMinutes, 0);
+  const latestWeight = weights[0];
+
+  const saveWeight = async (record: WeightRecord) => {
+    const exists = weights.some((item) => item.id === record.id);
+    const savedRecord = exists ? await updateWeightRecordInDb(record) : await createWeightRecordInDb(record);
+    const nextRecord = savedRecord ?? record;
+
+    setWeights((current) => {
+      const next = exists ? current.map((item) => (item.id === record.id ? nextRecord : item)) : [nextRecord, ...current];
+      return next.sort((a, b) => b.date.localeCompare(a.date));
+    });
+    setEditingWeight(null);
+    setSheetType(null);
+  };
+
+  const saveWorkout = async (session: WorkoutSession) => {
+    const exists = workouts.some((item) => item.id === session.id);
+    const savedSession = exists ? await updateWorkoutSessionInDb(session) : await createWorkoutSessionInDb(session);
+    const nextSession = savedSession ?? session;
+
+    setWorkouts((current) => (exists ? current.map((item) => (item.id === session.id ? nextSession : item)) : [nextSession, ...current]));
+    setEditingWorkout(null);
+    setSheetType(null);
+  };
+
+  const deleteWeight = async (id: string) => {
+    await deleteWeightRecordFromDb(id);
+    setWeights((current) => current.filter((record) => record.id !== id));
+  };
+
+  const deleteWorkout = async (id: string) => {
+    await deleteWorkoutSessionFromDb(id);
+    setWorkouts((current) => current.filter((session) => session.id !== id));
+  };
 
   return (
     <div className="health-page">
@@ -56,21 +120,21 @@ export function HealthView() {
           <h1>건강</h1>
           <div className="today__date">
             <HeartPulse aria-hidden size={20} />
-            <span>날짜별 몸무게와 운동 세션을 함께 기록합니다.</span>
+            <span>날짜별 몸무게와 운동 기록을 관리합니다.</span>
           </div>
         </div>
         <div className="health-actions">
           <button className="header-action" onClick={() => {
             setEditingWeight(null);
             setSheetType("weight");
-          }}>
+          }} type="button">
             <Scale aria-hidden size={18} />
             몸무게 기록
           </button>
           <button className="header-action" onClick={() => {
             setEditingWorkout(null);
             setSheetType("workout");
-          }}>
+          }} type="button">
             <Plus aria-hidden size={18} />
             운동 기록
           </button>
@@ -78,18 +142,18 @@ export function HealthView() {
       </header>
 
       <SectionCard className="task-day-switcher">
-        <button aria-label="이전 날짜" onClick={() => setSelectedDate((date) => addDays(date, -1))}>
+        <button aria-label="이전 날짜" onClick={() => setSelectedDate((date) => addDays(date, -1))} type="button">
           <ChevronLeft aria-hidden size={20} />
         </button>
-        <button className="task-date-trigger">{formatSelectedDay(selectedDate)}</button>
-        <button aria-label="다음 날짜" onClick={() => setSelectedDate((date) => addDays(date, 1))}>
+        <button className="task-date-trigger" type="button">{formatSelectedDay(selectedDate)}</button>
+        <button aria-label="다음 날짜" onClick={() => setSelectedDate((date) => addDays(date, 1))} type="button">
           <ChevronRight aria-hidden size={20} />
         </button>
       </SectionCard>
 
       <div className="health-summary-grid">
         <WeightCard
-          onDelete={(id) => setWeights((current) => current.filter((record) => record.id !== id))}
+          onDelete={deleteWeight}
           onEdit={(record) => {
             setEditingWeight(record);
             setSheetType("weight");
@@ -97,15 +161,15 @@ export function HealthView() {
           weight={weight}
         />
         <SectionCard className="health-metric-card">
-          <span>운동 세션</span>
+          <span>운동 기록</span>
           <strong>{sessions.length}</strong>
-          <p>총 {totalMinutes}분 기록</p>
+          <p>{isLoading ? "불러오는 중입니다." : `총 ${totalMinutes}분 기록`}</p>
         </SectionCard>
         <SectionCard className="health-metric-card">
-          <span>최근 추이</span>
-          <strong>{weight ? `${weight.weightKg}kg` : "--"}</strong>
+          <span>최근 몸무게</span>
+          <strong>{latestWeight ? `${latestWeight.weightKg}kg` : "--"}</strong>
           <div className="weight-sparkline" aria-hidden>
-            {weights.map((record) => (
+            {weights.slice(0, 12).reverse().map((record) => (
               <span key={record.id} style={{ height: `${Math.max(20, 100 - (record.weightKg - 70) * 16)}%` }} />
             ))}
           </div>
@@ -116,7 +180,7 @@ export function HealthView() {
         <div className="section-heading">
           <div className="card-title">
             <Dumbbell aria-hidden size={20} />
-            <span>운동 세션</span>
+            <span>운동 기록</span>
           </div>
         </div>
 
@@ -124,7 +188,7 @@ export function HealthView() {
           {sessions.length > 0 ? sessions.map((session) => (
             <WorkoutSessionCard
               key={session.id}
-              onDelete={(id) => setWorkouts((current) => current.filter((item) => item.id !== id))}
+              onDelete={deleteWorkout}
               onEdit={(target) => {
                 setEditingWorkout(target);
                 setSheetType("workout");
@@ -135,7 +199,7 @@ export function HealthView() {
             <div className="health-empty">
               <Activity aria-hidden size={24} />
               <strong>운동 기록이 없습니다.</strong>
-              <p>운동 기록 버튼으로 오늘 세션을 남겨보세요.</p>
+              <p>{isLoading ? "불러오는 중입니다." : "운동을 기록하면 이 날짜에 표시됩니다."}</p>
             </div>
           )}
         </div>
@@ -149,14 +213,7 @@ export function HealthView() {
             setEditingWeight(null);
             setSheetType(null);
           }}
-          onSave={(record) => {
-            setWeights((current) => {
-              const exists = current.some((item) => item.id === record.id);
-              return exists ? current.map((item) => item.id === record.id ? record : item) : [record, ...current];
-            });
-            setEditingWeight(null);
-            setSheetType(null);
-          }}
+          onSave={saveWeight}
         />
       ) : null}
       {sheetType === "workout" ? (
@@ -167,14 +224,7 @@ export function HealthView() {
             setEditingWorkout(null);
             setSheetType(null);
           }}
-          onSave={(session) => {
-            setWorkouts((current) => {
-              const exists = current.some((item) => item.id === session.id);
-              return exists ? current.map((item) => item.id === session.id ? session : item) : [session, ...current];
-            });
-            setEditingWorkout(null);
-            setSheetType(null);
-          }}
+          onSave={saveWorkout}
         />
       ) : null}
     </div>
@@ -198,11 +248,11 @@ function WeightCard({ onDelete, onEdit, weight }: { onDelete: (id: string) => vo
             </span>
           </div>
           <div className="record-actions">
-            <button onClick={() => onEdit(weight)}>
+            <button onClick={() => onEdit(weight)} type="button">
               <Pencil aria-hidden size={15} />
               수정
             </button>
-            <button onClick={() => onDelete(weight.id)}>
+            <button onClick={() => onDelete(weight.id)} type="button">
               <Trash2 aria-hidden size={15} />
               삭제
             </button>
@@ -239,11 +289,11 @@ function WorkoutSessionCard({ onDelete, onEdit, session }: { onDelete: (id: stri
           <p>{session.durationMinutes}분 · 컨디션 {conditionLabels[session.condition]}</p>
         </div>
         <div className="record-actions">
-          <button onClick={() => onEdit(session)}>
+          <button onClick={() => onEdit(session)} type="button">
             <Pencil aria-hidden size={15} />
             수정
           </button>
-          <button onClick={() => onDelete(session.id)}>
+          <button onClick={() => onDelete(session.id)} type="button">
             <Trash2 aria-hidden size={15} />
             삭제
           </button>
@@ -320,7 +370,7 @@ function WeightRecordSheet({
         </label>
         <label className="event-note">
           <span>메모</span>
-          <textarea rows={3} placeholder="수면, 식사, 컨디션 메모" value={memo} onChange={(event) => setMemo(event.target.value)} />
+          <textarea rows={3} placeholder="측정 시간, 컨디션, 참고사항" value={memo} onChange={(event) => setMemo(event.target.value)} />
         </label>
       </div>
     </HealthSheet>
@@ -363,7 +413,7 @@ function WorkoutRecordSheet({
       <div className="event-form-card event-form-card--title">
         <label>
           <span>메모</span>
-          <input autoFocus placeholder="오늘 운동 내용을 자유롭게 적어두세요" value={memo} onChange={(event) => setMemo(event.target.value)} />
+          <input autoFocus placeholder="운동 내용, 강도, 특이사항" value={memo} onChange={(event) => setMemo(event.target.value)} />
         </label>
       </div>
       <div className="event-form-card">
@@ -410,12 +460,12 @@ function HealthSheet({ children, onClose, onSave, title }: { children: ReactNode
       >
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose}>취소</button>
+          <button className="event-sheet__text-button" onClick={onClose} type="button">취소</button>
           <h2 id="health-sheet-title">{title}</h2>
-          <button className="event-sheet__done-button" onClick={onSave}>저장</button>
+          <button className="event-sheet__done-button" onClick={onSave} type="button">저장</button>
         </header>
         <div className="event-sheet__body">{children}</div>
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose}>
+        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
           <X aria-hidden size={18} />
         </button>
       </section>
