@@ -2229,6 +2229,103 @@ button {
   text-decoration: none;
 }
 
+.application-event-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.application-event-chip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 9px 10px;
+}
+
+.application-event-chip b {
+  color: var(--violet);
+}
+
+.application-event-chip em {
+  overflow: hidden;
+  color: var(--text);
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.application-event-editor {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px;
+}
+
+.application-event-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.application-event-editor__header span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.application-event-editor__header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.application-event-editor p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.application-event-row {
+  display: grid;
+  grid-template-columns: 100px 145px minmax(0, 1fr) 34px;
+  gap: 8px;
+}
+
+.application-event-row select,
+.application-event-row input {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 10px;
+}
+
+.application-event-row button {
+  display: grid;
+  width: 34px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
 .career-empty {
   display: grid;
   justify-items: center;
@@ -2515,6 +2612,14 @@ button {
 
   .event-record-card {
     flex-direction: column;
+  }
+
+  .application-event-row {
+    grid-template-columns: 1fr;
+  }
+
+  .application-event-row button {
+    width: 100%;
   }
 
   .settings-grid {

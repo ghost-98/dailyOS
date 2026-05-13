@@ -1,5 +1,14 @@
 export type CareerTab = "applied" | "planned" | "certificates" | "resumes";
 
+export type ApplicationEventStage = "document" | "written" | "interview";
+
+export type ApplicationEvent = {
+  id: string;
+  stage: ApplicationEventStage;
+  date: string;
+  memo?: string;
+};
+
 export type CareerRecord = {
   id: string;
   tab: CareerTab;
@@ -20,7 +29,14 @@ export type CareerRecord = {
   score?: string;
   grade?: string;
   priority?: "high" | "normal" | "low";
+  applicationEvents?: ApplicationEvent[];
   memo?: string;
+};
+
+export const applicationEventStageLabels: Record<ApplicationEventStage, string> = {
+  document: "서류",
+  written: "필기",
+  interview: "면접",
 };
 
 export const careerRecords: CareerRecord[] = [
@@ -37,7 +53,12 @@ export const careerRecords: CareerRecord[] = [
     resultDate: "2026-07-05",
     url: "https://recruit.kepco.co.kr",
     resumeName: "공기업 ICT 기본 이력서 v2",
-    memo: "관리 데이터: 공고 URL, 직무, 지원일, 마감일, 시험일, 면접일, 결과 발표일, 상태, 사용 이력서, 필요 서류",
+    applicationEvents: [
+      { id: "app-event-1", stage: "document", date: "2026-05-26", memo: "경험기술서와 자격증 PDF 최종 확인" },
+      { id: "app-event-2", stage: "written", date: "2026-06-08", memo: "NCS 40문항, 전공 40문항 예상" },
+      { id: "app-event-3", stage: "interview", date: "2026-06-24", memo: "프로젝트 경험 답변 정리" },
+    ],
+    memo: "기업 관리 데이터: 공고 URL, 직무, 지원일, 마감일, 상태, 사용 이력서, 필요 서류, 전형 이벤트",
   },
   {
     id: "career-applied-2",
@@ -49,6 +70,7 @@ export const careerRecords: CareerRecord[] = [
     deadlineDate: "2026-05-31",
     url: "https://www.nhis.or.kr",
     resumeName: "공기업 ICT 기본 이력서 v2",
+    applicationEvents: [{ id: "app-event-4", stage: "document", date: "2026-05-31", memo: "자기소개서 문항별 글자 수 점검" }],
   },
   {
     id: "career-planned-1",

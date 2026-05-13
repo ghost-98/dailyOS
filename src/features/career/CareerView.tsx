@@ -18,7 +18,14 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { careerRecords, type CareerRecord, type CareerTab } from "./data";
+import {
+  applicationEventStageLabels,
+  careerRecords,
+  type ApplicationEvent,
+  type ApplicationEventStage,
+  type CareerRecord,
+  type CareerTab,
+} from "./data";
 
 const tabLabels: Record<CareerTab, string> = {
   applied: "지원한 공기업",
@@ -28,7 +35,7 @@ const tabLabels: Record<CareerTab, string> = {
 };
 
 const tabDescriptions: Record<CareerTab, string> = {
-  applied: "지원일, 마감일, 시험, 면접, 결과 발표까지 한 번에 봅니다.",
+  applied: "기업별 지원 상태와 서류, 필기, 면접 이벤트를 함께 관리합니다.",
   planned: "관심 기업과 준비해야 할 자격증, 서류를 미리 정리합니다.",
   certificates: "보유 자격증, 번호, 발급 기관, 만료일, PDF 링크를 관리합니다.",
   resumes: "공기업 지원용 이력서와 자기소개서 버전을 관리합니다.",
@@ -62,11 +69,6 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
 
   const visibleRecords = useMemo(() => records.filter((record) => record.tab === activeTab), [activeTab, records]);
 
-  const openNewSheet = () => {
-    setEditingRecord(null);
-    setIsSheetOpen(true);
-  };
-
   return (
     <div className="career-page">
       <header className="page-header career-header">
@@ -77,7 +79,13 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             <span>{tabDescriptions[activeTab]}</span>
           </div>
         </div>
-        <button className="header-action" onClick={() => openNewSheet()}>
+        <button
+          className="header-action"
+          onClick={() => {
+            setEditingRecord(null);
+            setIsSheetOpen(true);
+          }}
+        >
           <Plus aria-hidden size={18} />
           항목 추가
         </button>
@@ -108,7 +116,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             <div className="career-empty">
               <ClipboardList aria-hidden size={28} />
               <strong>{tabLabels[activeTab]} 항목이 없습니다.</strong>
-              <p>추가 버튼으로 지금 관리할 항목을 등록해보세요.</p>
+              <p>추가 버튼으로 관리할 항목을 등록해보세요.</p>
             </div>
           ) : null}
         </div>
@@ -145,6 +153,7 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         <h3>{record.title}</h3>
         <p>{record.subtitle}</p>
         <CareerMeta record={record} />
+        {record.applicationEvents?.length ? <ApplicationEventList events={record.applicationEvents} /> : null}
         {record.url ? (
           <a className="career-link" href={record.url} rel="noreferrer" target="_blank">
             <LinkIcon aria-hidden size={14} />
@@ -173,8 +182,6 @@ function CareerMeta({ record }: { record: CareerRecord }) {
       <div className="career-meta-grid">
         <MetaItem icon={<CalendarClock aria-hidden size={14} />} label="지원" value={record.primaryDate} />
         <MetaItem label="마감" value={record.deadlineDate} />
-        <MetaItem label="시험" value={record.examDate} />
-        <MetaItem label="면접" value={record.interviewDate} />
         <MetaItem label="결과" value={record.resultDate} />
         <MetaItem label="이력서" value={record.resumeName} />
       </div>
@@ -214,6 +221,20 @@ function CareerMeta({ record }: { record: CareerRecord }) {
   );
 }
 
+function ApplicationEventList({ events }: { events: ApplicationEvent[] }) {
+  return (
+    <div className="application-event-list">
+      {events.map((event) => (
+        <span className="application-event-chip" key={event.id}>
+          <b>{applicationEventStageLabels[event.stage]}</b>
+          {formatDisplayDate(event.date)}
+          {event.memo ? <em>{event.memo}</em> : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function MetaItem({ icon, label, value }: { icon?: React.ReactNode; label: string; value?: string }) {
   if (!value) return null;
   return (
@@ -244,6 +265,7 @@ function CareerRecordSheet({
       subtitle: "",
       status: "",
       priority: "normal",
+      applicationEvents: [],
     },
   );
 
@@ -259,28 +281,20 @@ function CareerRecordSheet({
       subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
       status: form.status.trim() || getDefaultStatus(form.tab),
       memo: form.memo?.trim() || undefined,
+      applicationEvents: form.tab === "applied" ? form.applicationEvents?.filter((event) => event.date) : undefined,
     });
   };
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        aria-labelledby="career-sheet-title"
-        aria-modal="true"
-        className="event-sheet career-sheet"
-        role="dialog"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+      <section aria-labelledby="career-sheet-title" aria-modal="true" className="event-sheet career-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose}>
-            취소
-          </button>
+          <button className="event-sheet__text-button" onClick={onClose}>취소</button>
           <h2 id="career-sheet-title">{record ? "항목 수정" : "항목 추가"}</h2>
-          <button className="event-sheet__done-button" onClick={saveRecord}>
-            저장
-          </button>
+          <button className="event-sheet__done-button" onClick={saveRecord}>저장</button>
         </header>
+
         <div className="event-sheet__body">
           <div className="event-form-card">
             <label className="event-form-row event-form-row--select">
@@ -317,6 +331,7 @@ function CareerRecordSheet({
             </label>
           </div>
         </div>
+
         <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose}>
           <X aria-hidden size={18} />
         </button>
@@ -337,11 +352,10 @@ function CareerSpecificFields({
       <>
         <Field label="지원일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="마감일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
-        <Field label="시험일" type="date" value={form.examDate} onChange={(value) => updateField("examDate", value)} />
-        <Field label="면접일" type="date" value={form.interviewDate} onChange={(value) => updateField("interviewDate", value)} />
         <Field label="결과 발표일" type="date" value={form.resultDate} onChange={(value) => updateField("resultDate", value)} />
         <Field label="공고 URL" value={form.url} onChange={(value) => updateField("url", value)} />
         <Field label="사용 이력서" value={form.resumeName} onChange={(value) => updateField("resumeName", value)} />
+        <ApplicationEventEditor events={form.applicationEvents ?? []} onChange={(events) => updateField("applicationEvents", events)} />
       </>
     );
   }
@@ -384,6 +398,43 @@ function CareerSpecificFields({
       <Field label="최근 수정일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
       <Field label="파일/URL" value={form.url} onChange={(value) => updateField("url", value)} />
     </>
+  );
+}
+
+function ApplicationEventEditor({ events, onChange }: { events: ApplicationEvent[]; onChange: (events: ApplicationEvent[]) => void }) {
+  const addEvent = () => {
+    onChange([...events, { id: `application-event-${Date.now()}`, stage: "document", date: "", memo: "" }]);
+  };
+
+  const updateEvent = <Key extends keyof ApplicationEvent>(id: string, key: Key, value: ApplicationEvent[Key]) => {
+    onChange(events.map((event) => (event.id === id ? { ...event, [key]: value } : event)));
+  };
+
+  return (
+    <div className="application-event-editor">
+      <div className="application-event-editor__header">
+        <span>전형 이벤트</span>
+        <button type="button" onClick={addEvent}>
+          <Plus aria-hidden size={14} />
+          이벤트 등록
+        </button>
+      </div>
+      {events.length === 0 ? <p>서류, 필기, 면접 중 하나를 골라 날짜와 메모를 등록할 수 있습니다.</p> : null}
+      {events.map((event) => (
+        <div className="application-event-row" key={event.id}>
+          <select value={event.stage} onChange={(changeEvent) => updateEvent(event.id, "stage", changeEvent.target.value as ApplicationEventStage)}>
+            <option value="document">서류</option>
+            <option value="written">필기</option>
+            <option value="interview">면접</option>
+          </select>
+          <input type="date" value={event.date} onChange={(changeEvent) => updateEvent(event.id, "date", changeEvent.target.value)} />
+          <input placeholder="메모" value={event.memo ?? ""} onChange={(changeEvent) => updateEvent(event.id, "memo", changeEvent.target.value)} />
+          <button type="button" aria-label="이벤트 삭제" onClick={() => onChange(events.filter((item) => item.id !== event.id))}>
+            <Trash2 aria-hidden size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
