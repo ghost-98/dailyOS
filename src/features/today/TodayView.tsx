@@ -12,12 +12,12 @@ export function TodayView() {
 
   return (
     <div className="today-home">
-      <div className="today-mode-tabs" aria-label="오늘 화면 모드">
-        <button className={mode === "dashboard" ? "today-mode-tabs__item today-mode-tabs__item--active" : "today-mode-tabs__item"} onClick={() => setMode("dashboard")}>
+      <div className="today-mode-tabs" aria-label="오늘 화면 보기 방식">
+        <button className={mode === "dashboard" ? "today-mode-tabs__item today-mode-tabs__item--active" : "today-mode-tabs__item"} onClick={() => setMode("dashboard")} type="button">
           <LayoutDashboard aria-hidden size={18} />
           대시보드
         </button>
-        <button className={mode === "calendar" ? "today-mode-tabs__item today-mode-tabs__item--active" : "today-mode-tabs__item"} onClick={() => setMode("calendar")}>
+        <button className={mode === "calendar" ? "today-mode-tabs__item today-mode-tabs__item--active" : "today-mode-tabs__item"} onClick={() => setMode("calendar")} type="button">
           <CalendarDays aria-hidden size={18} />
           캘린더
         </button>
@@ -28,7 +28,8 @@ export function TodayView() {
       ) : (
         <CalendarView
           addButtonLabel="일정 추가"
-          description="오늘 탭 안에서 전체 날짜 흐름을 함께 확인합니다."
+          description="일정, 이벤트, 할 일을 달력으로 확인합니다."
+          showEventAddButton
           title="캘린더"
         />
       )}
