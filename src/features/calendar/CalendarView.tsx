@@ -9,6 +9,7 @@ import { calendarEvents, calendarTypeLabels, type CalendarEvent } from "./data";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date(2026, 4, 1);
+const yearOptions = Array.from({ length: 101 }, (_, index) => new Date().getFullYear() - 50 + index);
 
 const eventTone: Record<EventType, "violet" | "green" | "pink" | "amber" | "muted"> = {
   schedule: "violet",
@@ -394,7 +395,7 @@ function MonthPickerSheet({
             <label>
               <span>연도</span>
               <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
-                {Array.from({ length: 11 }, (_, index) => 2021 + index).map((value) => (
+                {yearOptions.map((value) => (
                   <option key={value} value={value}>{value}년</option>
                 ))}
               </select>

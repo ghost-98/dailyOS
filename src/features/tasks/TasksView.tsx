@@ -8,6 +8,7 @@ import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { tasks } from "./data";
 
 const initialDate = "2026-05-12";
+const yearOptions = Array.from({ length: 101 }, (_, index) => new Date().getFullYear() - 50 + index);
 
 const statusLabels: Record<TaskStatus, string> = {
   todo: "할 일",
@@ -437,7 +438,7 @@ function TaskDatePickerSheet({
             <label>
               <span>연도</span>
               <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
-                {Array.from({ length: 11 }, (_, index) => 2021 + index).map((value) => (
+                {yearOptions.map((value) => (
                   <option key={value} value={value}>{value}년</option>
                 ))}
               </select>
