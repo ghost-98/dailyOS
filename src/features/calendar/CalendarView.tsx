@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock3, ListFilter, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType } from "@/types/domain";
+import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import { calendarEvents, calendarTypeLabels, type CalendarEvent } from "./data";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-const initialMonth = new Date(2026, 4, 1);
-const yearOptions = Array.from({ length: 101 }, (_, index) => new Date().getFullYear() - 50 + index);
+const initialMonth = new Date();
+const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 
 const eventTone: Record<EventType, "violet" | "green" | "pink" | "amber" | "muted"> = {
   schedule: "violet",
@@ -31,9 +32,9 @@ type CalendarViewProps = {
 export function CalendarView({
   addButtonLabel = "일정 추가",
   allowedTypes,
-  description = "일정, 할 일, 이벤트, 운동, 몸무게, 취업 날짜를 한 번에 봅니다.",
+  description = "일정, 할 일, 이벤트를 날짜별로 관리합니다.",
   showEventAddButton = false,
-  title = "캘린더",
+  title = "일정",
 }: CalendarViewProps) {
   const visibleTypes = allowedTypes ?? (Object.keys(calendarTypeLabels) as EventType[]);
   const defaultType = visibleTypes.includes("schedule") ? "schedule" : visibleTypes[0];
@@ -45,6 +46,24 @@ export function CalendarView({
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sheetDefaultType, setSheetDefaultType] = useState<EventType>(defaultType);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchCalendarEventsFromDb()
+      .then((dbEvents) => {
+        if (isMounted) setEvents(dbEvents ?? []);
+      })
+      .catch((error) => console.error("Failed to load calendar events from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLoadingEvents(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const visibleEvents = events.filter((event) => visibleTypes.includes(event.type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
@@ -68,6 +87,21 @@ export function CalendarView({
     setIsEventSheetOpen(true);
   };
 
+  const saveEvent = async (event: CalendarEvent) => {
+    const exists = events.some((item) => item.id === event.id);
+    const savedEvent = exists ? await updateCalendarEventInDb(event) : await createCalendarEventInDb(event);
+    const nextEvent = savedEvent ?? event;
+
+    setEvents((current) => (exists ? current.map((item) => (item.id === event.id ? nextEvent : item)) : [nextEvent, ...current]));
+    setIsEventSheetOpen(false);
+    setEditingEvent(null);
+  };
+
+  const deleteEvent = async (id: string) => {
+    await deleteCalendarEventFromDb(id);
+    setEvents((current) => current.filter((item) => item.id !== id));
+  };
+
   return (
     <div className="calendar-page">
       <header className="calendar-header page-header">
@@ -79,12 +113,12 @@ export function CalendarView({
           </div>
         </div>
         <div className="header-actions">
-          <button className="header-action" onClick={() => openCreateSheet("schedule")}>
+          <button className="header-action" onClick={() => openCreateSheet("schedule")} type="button">
             <Plus aria-hidden size={18} />
             {addButtonLabel}
           </button>
           {showEventAddButton ? (
-            <button className="header-action header-action--secondary" onClick={() => openCreateSheet("event")}>
+            <button className="header-action header-action--secondary" onClick={() => openCreateSheet("event")} type="button">
               <Plus aria-hidden size={18} />
               이벤트 추가
             </button>
@@ -95,14 +129,14 @@ export function CalendarView({
       <div className={`calendar-layout ${selectedDate ? "calendar-layout--detail-open" : ""}`}>
         <SectionCard className="calendar-board">
           <div className="calendar-toolbar">
-            <button aria-label="이전 달" onClick={() => moveMonth(-1)}>
+            <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
             </button>
-            <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)}>
+            <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
             </button>
-            <button aria-label="다음 달" onClick={() => moveMonth(1)}>
+            <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
               <ChevronRight aria-hidden size={20} />
             </button>
           </div>
@@ -131,6 +165,7 @@ export function CalendarView({
                   disabled={!cell.date}
                   key={cell.key}
                   onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
+                  type="button"
                 >
                   {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
                   <div className="calendar-day__events">
@@ -162,11 +197,11 @@ export function CalendarView({
                 </div>
               </div>
 
-              <div className="date-category-tabs" aria-label="날짜 항목 분류">
+              <div className="date-category-tabs" aria-label="날짜 항목 유형">
                 {visibleTypes.map((type) => {
                   const count = selectedDateAllEvents.filter((event) => event.type === type).length;
                   return (
-                    <button className={`date-category-tab ${activeCategory === type ? "date-category-tab--active" : ""}`} key={type} onClick={() => setActiveCategory(type)}>
+                    <button className={`date-category-tab ${activeCategory === type ? "date-category-tab--active" : ""}`} key={type} onClick={() => setActiveCategory(type)} type="button">
                       <span className={`calendar-dot calendar-dot--${type}`} />
                       {calendarTypeLabels[type]}
                       <strong>{count}</strong>
@@ -192,10 +227,11 @@ export function CalendarView({
                             setSheetDefaultType(event.type);
                             setIsEventSheetOpen(true);
                           }}
+                          type="button"
                         >
                           <Pencil aria-hidden size={15} />
                         </button>
-                        <button aria-label="삭제" onClick={() => setEvents((current) => current.filter((item) => item.id !== event.id))}>
+                        <button aria-label="삭제" onClick={() => deleteEvent(event.id)} type="button">
                           <Trash2 aria-hidden size={15} />
                         </button>
                       </div>
@@ -205,7 +241,7 @@ export function CalendarView({
                   <div className="date-empty-state">
                     <ListFilter aria-hidden size={24} />
                     <strong>{calendarTypeLabels[activeCategory]} 항목이 없습니다.</strong>
-                    <p>이 날짜에 필요한 항목을 추가해 하루 흐름을 정리하세요.</p>
+                    <p>{isLoadingEvents ? "불러오는 중입니다." : "필요한 항목을 추가하면 이곳에 표시됩니다."}</p>
                   </div>
                 )}
               </div>
@@ -224,14 +260,7 @@ export function CalendarView({
             setIsEventSheetOpen(false);
             setEditingEvent(null);
           }}
-          onSave={(event) => {
-            setEvents((current) => {
-              const exists = current.some((item) => item.id === event.id);
-              return exists ? current.map((item) => (item.id === event.id ? event : item)) : [event, ...current];
-            });
-            setIsEventSheetOpen(false);
-            setEditingEvent(null);
-          }}
+          onSave={saveEvent}
         />
       ) : null}
 
@@ -272,7 +301,7 @@ function EventCreateSheet({
   const [type, setType] = useState<EventType>(event?.type ?? defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
 
-  const saveEvent = () => {
+  const saveCurrentEvent = () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
 
@@ -288,14 +317,14 @@ function EventCreateSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose}>
+          <button className="event-sheet__text-button" onClick={onClose} type="button">
             취소
           </button>
           <h2 id="event-sheet-title">{event ? "항목 수정" : `${calendarTypeLabels[type]} 추가`}</h2>
-          <button className="event-sheet__done-button" onClick={saveEvent}>
+          <button className="event-sheet__done-button" onClick={saveCurrentEvent} type="button">
             저장
           </button>
         </header>
@@ -307,8 +336,8 @@ function EventCreateSheet({
               <input autoFocus placeholder={`${calendarTypeLabels[type]} 제목`} value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
             </label>
             <label>
-              <span>위치 또는 메모</span>
-              <input placeholder="장소, 링크, 준비물, 메모" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
+              <span>메모</span>
+              <input placeholder="장소, 링크, 준비물, 참고사항" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
             </label>
           </div>
 
@@ -350,12 +379,12 @@ function EventCreateSheet({
                 <MapPin aria-hidden size={18} />
                 <span>장소</span>
               </div>
-              <input placeholder="회의실, 온라인 링크, 시험장 등" />
+              <input placeholder="오프라인 장소 또는 온라인 링크" />
             </label>
           </div>
         </div>
 
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose}>
+        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
           <X aria-hidden size={18} />
         </button>
       </section>
@@ -380,11 +409,11 @@ function MonthPickerSheet({
       <section aria-labelledby="month-picker-title" aria-modal="true" className="event-sheet date-picker-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose}>
+          <button className="event-sheet__text-button" onClick={onClose} type="button">
             취소
           </button>
           <h2 id="month-picker-title">월 선택</h2>
-          <button className="event-sheet__done-button" onClick={() => onSelect(new Date(year, month - 1, 1))}>
+          <button className="event-sheet__done-button" onClick={() => onSelect(new Date(year, month - 1, 1))} type="button">
             선택
           </button>
         </header>
