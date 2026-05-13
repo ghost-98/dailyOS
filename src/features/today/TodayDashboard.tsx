@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, CalendarDays, Check, Clock3, Dumbbell, Filter, HeartPulse } from "lucide-react";
+import { BriefcaseBusiness, CalendarDays, Check, Dumbbell, HeartPulse } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { careerEvents, health, schedules, todos } from "./data";
@@ -11,101 +11,71 @@ const todayLabel = new Intl.DateTimeFormat("ko-KR", {
 }).format(new Date());
 
 const priorityLabel = {
-  high: "HIGH PRIORITY",
-  normal: "NORMAL",
-  low: "LOW",
+  high: "높음",
+  normal: "보통",
+  low: "낮음",
 };
 
 const priorityTone = {
   high: "pink",
-  normal: "muted",
+  normal: "amber",
   low: "muted",
 } as const;
 
 export function TodayDashboard() {
+  const activeSchedules = schedules.filter((schedule) => schedule.status !== "canceled");
+  const openTodos = todos.filter((todo) => todo.status !== "done");
   const completedCount = todos.filter((todo) => todo.status === "done").length;
   const completionRate = Math.round((completedCount / todos.length) * 100);
+  const urgentCareerEvents = careerEvents.slice(0, 2);
 
   return (
-    <div className="today">
-      <header className="today__header">
+    <div className="today today--compact">
+      <header className="today__header page-header">
         <div>
-          <h1>좋은 아침입니다, 사용자님.</h1>
+          <h1>오늘</h1>
           <div className="today__date">
             <CalendarDays aria-hidden size={20} />
             <span>{todayLabel}</span>
           </div>
         </div>
-        <button className="header-action">
-          <Clock3 aria-hidden size={18} />
-          오늘 동기화
-        </button>
       </header>
 
-      <div className="dashboard-grid">
-        <SectionCard className="hero-card">
-          <div className="hero-card__backdrop" aria-hidden />
-          <div className="hero-card__time">
-            <p>현재 시간</p>
-            <strong>14:42</strong>
-            <span>PM</span>
-          </div>
-          <div className="hero-card__event">
-            <div className="accent-line" />
-            <div>
-              <p>다음 일정</p>
-              <h2>팀 주간 회의</h2>
-              <span>Design Review & Sprint Allocation</span>
-            </div>
-          </div>
+      <div className="today-summary-grid">
+        <SectionCard className="today-focus-card">
+          <span>다음 일정</span>
+          <strong>{activeSchedules[0]?.title ?? "예정 없음"}</strong>
+          <p>{activeSchedules[0] ? `${activeSchedules[0].startsAt} · ${activeSchedules[0].place}` : "오늘 남은 일정이 없습니다."}</p>
         </SectionCard>
-
-        <SectionCard className="vitals-card">
-          <div className="card-title">
-            <HeartPulse aria-hidden size={20} />
-            <span>건강 요약</span>
-          </div>
-          <div className="vitals-ring" style={{ "--value": `${health.vitalsIndex}%` } as React.CSSProperties}>
-            <strong>{health.vitalsIndex}</strong>
-            <span>VITALS INDEX</span>
-          </div>
-          <div className="metrics-row">
-            <div>
-              <span>체중</span>
-              <strong>{health.weightKg} kg</strong>
-            </div>
-            <div>
-              <span>골격근량</span>
-              <strong>{health.muscleMassKg} kg</strong>
-            </div>
-          </div>
-          <div className="workout-plan">
-            <Dumbbell aria-hidden size={18} />
-            <div>
-              <span>오늘의 운동 계획</span>
-              <strong>{health.workoutPlan}</strong>
-              <small>{health.workoutDetail}</small>
-            </div>
-          </div>
+        <SectionCard className="today-focus-card">
+          <span>남은 할 일</span>
+          <strong>{openTodos.length}</strong>
+          <p>완료율 {completionRate}%</p>
         </SectionCard>
+        <SectionCard className="today-focus-card">
+          <span>최근 몸무게</span>
+          <strong>{health.weightKg} kg</strong>
+          <p>골격근량 {health.muscleMassKg} kg</p>
+        </SectionCard>
+      </div>
 
+      <div className="today-work-grid">
         <SectionCard className="schedule-card">
           <div className="section-heading">
             <div className="card-title">
               <CalendarDays aria-hidden size={20} />
-              <span>오늘 일정 요약</span>
+              <span>오늘 일정</span>
             </div>
-            <button>모두 보기</button>
           </div>
           <div className="schedule-list">
-            {schedules.map((schedule) => (
-              <article className={`schedule-item ${schedule.status === "canceled" ? "schedule-item--muted" : ""}`} key={schedule.id}>
+            {activeSchedules.slice(0, 3).map((schedule) => (
+              <article className="schedule-item" key={schedule.id}>
                 <div>
                   <span>{schedule.startsAt}</span>
                   <h3>{schedule.title}</h3>
                   <p>{schedule.place}</p>
                 </div>
-                <Badge tone={schedule.status === "canceled" ? "muted" : "violet"}>{schedule.category}</Badge>
+                <Badge tone="violet">{schedule.category}</Badge>
               </article>
             ))}
           </div>
@@ -115,18 +85,14 @@ export function TodayDashboard() {
           <div className="section-heading">
             <div className="card-title">
               <Check aria-hidden size={20} />
-              <span>할 일</span>
-            </div>
-            <div className="progress-meter">
-              <span style={{ width: `${completionRate}%` }} />
+              <span>오늘 할 일</span>
             </div>
             <strong>{completionRate}%</strong>
           </div>
-
           <div className="todo-list">
-            {todos.map((todo) => (
+            {openTodos.slice(0, 4).map((todo) => (
               <article className={`todo-item todo-item--${todo.status}`} key={todo.id}>
-                <span className="todo-check">{todo.status === "done" ? <Check aria-hidden size={16} /> : null}</span>
+                <span className="todo-check" />
                 <div>
                   <h3>{todo.title}</h3>
                   <p>{todo.dueLabel}</p>
@@ -137,19 +103,30 @@ export function TodayDashboard() {
           </div>
         </SectionCard>
 
+        <SectionCard className="vitals-card today-health-card">
+          <div className="card-title">
+            <HeartPulse aria-hidden size={20} />
+            <span>건강</span>
+          </div>
+          <div className="workout-plan">
+            <Dumbbell aria-hidden size={18} />
+            <div>
+              <span>오늘 운동</span>
+              <strong>{health.workoutPlan}</strong>
+              <small>{health.workoutDetail}</small>
+            </div>
+          </div>
+        </SectionCard>
+
         <SectionCard className="career-card">
           <div className="section-heading">
             <div className="card-title">
               <BriefcaseBusiness aria-hidden size={20} />
-              <span>취업 마감 임박</span>
+              <span>임박한 취업 일정</span>
             </div>
-            <button aria-label="필터">
-              <Filter aria-hidden size={18} />
-            </button>
           </div>
-
           <div className="career-list">
-            {careerEvents.map((event) => (
+            {urgentCareerEvents.map((event) => (
               <article className={`career-item career-item--${event.status}`} key={event.id}>
                 <div>
                   <span>{event.kind.toUpperCase()}</span>
@@ -160,18 +137,6 @@ export function TodayDashboard() {
               </article>
             ))}
           </div>
-        </SectionCard>
-
-        <SectionCard className="system-log">
-          <div>
-            <h2>하루 운영 로그</h2>
-            <ul>
-              <li>오늘 일정 3개 중 2개가 활성 상태입니다.</li>
-              <li>할 일 완료율은 {completionRate}%입니다.</li>
-              <li>가장 가까운 취업 이벤트는 네이버 테크 인턴십 마감입니다.</li>
-            </ul>
-          </div>
-          <div className="system-chip">PWA READY</div>
         </SectionCard>
       </div>
     </div>

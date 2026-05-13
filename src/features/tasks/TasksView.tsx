@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Bell, CalendarClock, Check, ChevronLeft, ChevronRight, Clock3, ListTodo, Plus, X } from "lucide-react";
+import { ArrowRight, Bell, CalendarClock, Check, ChevronLeft, ChevronRight, Clock3, ListTodo, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
@@ -74,10 +74,12 @@ function groupTasksByStatus(items: TaskItem[]) {
 }
 
 export function TasksView() {
+  const [items, setItems] = useState<TaskItem[]>(tasks);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
-  const visibleTasks = useMemo(() => tasks.filter((task) => task.scheduledDate === selectedDate), [selectedDate]);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const visibleTasks = useMemo(() => items.filter((task) => task.scheduledDate === selectedDate), [items, selectedDate]);
   const completedCount = visibleTasks.filter((task) => task.status === "done").length;
   const todayScheduledCount = visibleTasks.filter((task) => task.status !== "done").length;
   const urgentCount = visibleTasks.filter((task) => {
@@ -97,7 +99,10 @@ export function TasksView() {
             <span>예정일은 오늘의 배치, 마감일은 지켜야 할 기한입니다.</span>
           </div>
         </div>
-        <button className="header-action" onClick={() => setIsTaskSheetOpen(true)}>
+        <button className="header-action" onClick={() => {
+          setEditingTask(null);
+          setIsTaskSheetOpen(true);
+        }}>
           <Plus aria-hidden size={18} />
           할 일 추가
         </button>
@@ -150,14 +155,42 @@ export function TasksView() {
 
             <div className="task-list">
               {column.items.length > 0 ? column.items.map((task) => (
-                <TaskCard key={task.id} selectedDate={selectedDate} task={task} />
+                <TaskCard
+                  key={task.id}
+                  onDelete={(id) => setItems((current) => current.filter((item) => item.id !== id))}
+                  onDefer={(id) => setItems((current) => current.map((item) => item.id === id ? { ...item, scheduledDate: addDays(item.scheduledDate, 1), deferredCount: item.deferredCount + 1 } : item))}
+                  onEdit={(target) => {
+                    setEditingTask(target);
+                    setIsTaskSheetOpen(true);
+                  }}
+                  onToggleDone={(id) => setItems((current) => current.map((item) => item.id === id ? { ...item, status: item.status === "done" ? "todo" : "done", completedAt: item.status === "done" ? undefined : new Date().toISOString() } : item))}
+                  selectedDate={selectedDate}
+                  task={task}
+                />
               )) : <EmptyTaskColumn status={column.status} />}
             </div>
           </SectionCard>
         ))}
       </div>
 
-      {isTaskSheetOpen ? <TaskCreateSheet selectedDate={selectedDate} onClose={() => setIsTaskSheetOpen(false)} /> : null}
+      {isTaskSheetOpen ? (
+        <TaskCreateSheet
+          selectedDate={selectedDate}
+          task={editingTask}
+          onClose={() => {
+            setIsTaskSheetOpen(false);
+            setEditingTask(null);
+          }}
+          onSave={(task) => {
+            setItems((current) => {
+              const exists = current.some((item) => item.id === task.id);
+              return exists ? current.map((item) => item.id === task.id ? task : item) : [task, ...current];
+            });
+            setIsTaskSheetOpen(false);
+            setEditingTask(null);
+          }}
+        />
+      ) : null}
       {isDatePickerOpen ? (
         <TaskDatePickerSheet
           selectedDate={selectedDate}
@@ -172,14 +205,28 @@ export function TasksView() {
   );
 }
 
-function TaskCard({ selectedDate, task }: { selectedDate: string; task: TaskItem }) {
+function TaskCard({
+  onDelete,
+  onDefer,
+  onEdit,
+  onToggleDone,
+  selectedDate,
+  task,
+}: {
+  onDelete: (id: string) => void;
+  onDefer: (id: string) => void;
+  onEdit: (task: TaskItem) => void;
+  onToggleDone: (id: string) => void;
+  selectedDate: string;
+  task: TaskItem;
+}) {
   const deadline = getDeadlineState(task, selectedDate);
   const canDefer = task.status !== "done";
 
   return (
     <article className={`task-card task-card--${task.status}`}>
       <div className="task-card__top">
-        <span className="task-check">{task.status === "done" ? <Check aria-hidden size={15} /> : null}</span>
+        <button className="task-check" aria-label="완료 전환" onClick={() => onToggleDone(task.id)}>{task.status === "done" ? <Check aria-hidden size={15} /> : null}</button>
         <Badge tone={priorityTone[task.priority]}>{priorityLabels[task.priority]}</Badge>
         {deadline ? <span className={`deadline-badge deadline-badge--${deadline.tone}`}>{deadline.label}</span> : null}
       </div>
@@ -203,14 +250,22 @@ function TaskCard({ selectedDate, task }: { selectedDate: string; task: TaskItem
 
       <div className="task-card__footer">
         {task.deferredCount > 0 ? <span className="defer-count">미룸 {task.deferredCount}회</span> : <span />}
-        {canDefer ? (
-          <button>
-            내일로
-            <ArrowRight aria-hidden size={15} />
+        <div className="task-card__actions">
+          <button aria-label="수정" onClick={() => onEdit(task)}>
+            <Pencil aria-hidden size={15} />
           </button>
-        ) : (
-          <span className="completed-label">완료됨</span>
-        )}
+          {canDefer ? (
+            <button onClick={() => onDefer(task.id)}>
+              내일로
+              <ArrowRight aria-hidden size={15} />
+            </button>
+          ) : (
+            <span className="completed-label">완료됨</span>
+          )}
+          <button aria-label="삭제" onClick={() => onDelete(task.id)}>
+            <Trash2 aria-hidden size={15} />
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -226,7 +281,41 @@ function EmptyTaskColumn({ status }: { status: TaskStatus }) {
   );
 }
 
-function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onClose: () => void }) {
+function TaskCreateSheet({
+  onClose,
+  onSave,
+  selectedDate,
+  task,
+}: {
+  onClose: () => void;
+  onSave: (task: TaskItem) => void;
+  selectedDate: string;
+  task: TaskItem | null;
+}) {
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [memo, setMemo] = useState(task?.memo ?? "");
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? "todo");
+  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "normal");
+  const [scheduledDate, setScheduledDate] = useState(task?.scheduledDate ?? selectedDate);
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+
+  const saveTask = () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+
+    onSave({
+      id: task?.id ?? `task-${Date.now()}`,
+      title: trimmedTitle,
+      status,
+      priority,
+      scheduledDate,
+      dueDate: dueDate || undefined,
+      completedAt: status === "done" ? task?.completedAt ?? new Date().toISOString() : undefined,
+      deferredCount: task?.deferredCount ?? 0,
+      memo: memo.trim() || undefined,
+    });
+  };
+
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -239,19 +328,19 @@ function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onCl
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
           <button className="event-sheet__text-button" onClick={onClose}>취소</button>
-          <h2 id="task-sheet-title">새로운 할 일</h2>
-          <button className="event-sheet__done-button" onClick={onClose}>추가</button>
+          <h2 id="task-sheet-title">{task ? "할 일 수정" : "새로운 할 일"}</h2>
+          <button className="event-sheet__done-button" onClick={saveTask}>{task ? "저장" : "추가"}</button>
         </header>
 
         <div className="event-sheet__body">
           <div className="event-form-card event-form-card--title">
             <label>
               <span>제목</span>
-              <input autoFocus placeholder="할 일 제목" />
+              <input autoFocus placeholder="할 일 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
               <span>메모</span>
-              <input placeholder="필요한 내용을 짧게 적어두세요" />
+              <input placeholder="필요한 내용을 짧게 적어두세요" value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
           </div>
 
@@ -261,7 +350,7 @@ function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onCl
                 <ListTodo aria-hidden size={18} />
                 <span>상태</span>
               </div>
-              <select defaultValue="todo">
+              <select value={status} onChange={(event) => setStatus(event.target.value as TaskStatus)}>
                 <option value="todo">할 일</option>
                 <option value="inProgress">진행 중</option>
                 <option value="done">완료</option>
@@ -272,7 +361,7 @@ function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onCl
                 <Bell aria-hidden size={18} />
                 <span>우선순위</span>
               </div>
-              <select defaultValue="normal">
+              <select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}>
                 <option value="high">높음</option>
                 <option value="normal">보통</option>
                 <option value="low">낮음</option>
@@ -283,11 +372,11 @@ function TaskCreateSheet({ selectedDate, onClose }: { selectedDate: string; onCl
           <div className="event-form-card">
             <label className="event-form-row event-form-row--field">
               <span>예정일</span>
-              <input type="date" defaultValue={selectedDate} />
+              <input type="date" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value)} />
             </label>
             <label className="event-form-row event-form-row--field">
               <span>마감일</span>
-              <input type="date" />
+              <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
             </label>
           </div>
 

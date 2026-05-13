@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock3, ListFilter, MapPin, Plus, Repeat2, X } from "lucide-react";
+import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock3, ListFilter, MapPin, Pencil, Plus, Repeat2, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType } from "@/types/domain";
-import { calendarEvents, calendarTypeLabels } from "./data";
+import { calendarEvents, calendarTypeLabels, type CalendarEvent } from "./data";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date(2026, 4, 1);
@@ -66,15 +66,17 @@ export function CalendarView({
   title = "캘린더",
 }: CalendarViewProps) {
   const [activeCategory, setActiveCategory] = useState<EventType>("schedule");
+  const [events, setEvents] = useState<CalendarEvent[]>(calendarEvents);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const selectedEvents = selectedDate
-    ? calendarEvents.filter((event) => event.date === selectedDate && event.type === activeCategory)
+    ? events.filter((event) => event.date === selectedDate && event.type === activeCategory)
     : [];
-  const selectedDateAllEvents = selectedDate ? calendarEvents.filter((event) => event.date === selectedDate) : [];
+  const selectedDateAllEvents = selectedDate ? events.filter((event) => event.date === selectedDate) : [];
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
@@ -97,7 +99,10 @@ export function CalendarView({
             <span>{description}</span>
           </div>
         </div>
-        <button className="header-action" onClick={() => setIsEventSheetOpen(true)}>
+        <button className="header-action" onClick={() => {
+          setEditingEvent(null);
+          setIsEventSheetOpen(true);
+        }}>
           <Plus aria-hidden size={18} />
           {addButtonLabel}
         </button>
@@ -134,8 +139,8 @@ export function CalendarView({
 
           <div className="calendar-grid">
             {monthDays.map((cell) => {
-              const events = cell.date ? calendarEvents.filter((event) => event.date === cell.date) : [];
-              const eventSummaries = summarizeEventsByType(events);
+              const dayEvents = cell.date ? events.filter((event) => event.date === cell.date) : [];
+              const eventSummaries = summarizeEventsByType(dayEvents);
               return (
                 <button
                   className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
@@ -199,6 +204,17 @@ export function CalendarView({
                       <h3>{event.title}</h3>
                       <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
                     </div>
+                    <div className="date-event__actions">
+                      <button aria-label="수정" onClick={() => {
+                        setEditingEvent(event);
+                        setIsEventSheetOpen(true);
+                      }}>
+                        <Pencil aria-hidden size={15} />
+                      </button>
+                      <button aria-label="삭제" onClick={() => setEvents((current) => current.filter((item) => item.id !== event.id))}>
+                        <Trash2 aria-hidden size={15} />
+                      </button>
+                    </div>
                   </article>
                 ))
               ) : (
@@ -214,7 +230,24 @@ export function CalendarView({
         ) : null}
       </div>
 
-      {isEventSheetOpen ? <EventCreateSheet onClose={() => setIsEventSheetOpen(false)} /> : null}
+      {isEventSheetOpen ? (
+        <EventCreateSheet
+          defaultDate={selectedDate ?? formatDateKey(currentMonth)}
+          event={editingEvent}
+          onClose={() => {
+            setIsEventSheetOpen(false);
+            setEditingEvent(null);
+          }}
+          onSave={(event) => {
+            setEvents((current) => {
+              const exists = current.some((item) => item.id === event.id);
+              return exists ? current.map((item) => item.id === event.id ? event : item) : [event, ...current];
+            });
+            setIsEventSheetOpen(false);
+            setEditingEvent(null);
+          }}
+        />
+      ) : null}
       {isMonthPickerOpen ? (
         <MonthPickerSheet
           currentMonth={currentMonth}
@@ -285,7 +318,37 @@ function MonthPickerSheet({
   );
 }
 
-function EventCreateSheet({ onClose }: { onClose: () => void }) {
+function EventCreateSheet({
+  defaultDate,
+  event,
+  onClose,
+  onSave,
+}: {
+  defaultDate: string;
+  event: CalendarEvent | null;
+  onClose: () => void;
+  onSave: (event: CalendarEvent) => void;
+}) {
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [date, setDate] = useState(event?.date ?? defaultDate);
+  const [time, setTime] = useState(event?.time ?? "");
+  const [type, setType] = useState<EventType>(event?.type ?? "schedule");
+  const [meta, setMeta] = useState(event?.meta ?? "");
+
+  const saveEvent = () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+
+    onSave({
+      id: event?.id ?? `calendar-${Date.now()}`,
+      date,
+      type,
+      title: trimmedTitle,
+      time: time || undefined,
+      meta: meta.trim() || "메모 없음",
+    });
+  };
+
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -301,9 +364,9 @@ function EventCreateSheet({ onClose }: { onClose: () => void }) {
           <button className="event-sheet__text-button" onClick={onClose}>
             취소
           </button>
-          <h2 id="event-sheet-title">새로운 일정</h2>
-          <button className="event-sheet__done-button" onClick={onClose}>
-            추가
+          <h2 id="event-sheet-title">{event ? "일정 수정" : "새로운 일정"}</h2>
+          <button className="event-sheet__done-button" onClick={saveEvent}>
+            {event ? "저장" : "추가"}
           </button>
         </header>
 
@@ -311,11 +374,11 @@ function EventCreateSheet({ onClose }: { onClose: () => void }) {
           <div className="event-form-card event-form-card--title">
             <label>
               <span>제목</span>
-              <input autoFocus placeholder="일정 제목" />
+              <input autoFocus placeholder="일정 제목" value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
             </label>
             <label>
               <span>장소 또는 화상 회의</span>
-              <input placeholder="위치" />
+              <input placeholder="위치 또는 메모" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
             </label>
           </div>
 
@@ -332,13 +395,13 @@ function EventCreateSheet({ onClose }: { onClose: () => void }) {
             </div>
 
             <label className="event-form-row event-form-row--field">
-              <span>시작</span>
-              <input type="datetime-local" defaultValue="2026-05-12T09:00" />
+              <span>날짜</span>
+              <input type="date" value={date} onChange={(changeEvent) => setDate(changeEvent.target.value)} />
             </label>
 
             <label className="event-form-row event-form-row--field">
-              <span>종료</span>
-              <input type="datetime-local" defaultValue="2026-05-12T10:00" />
+              <span>시간</span>
+              <input type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
             </label>
           </div>
 
@@ -348,7 +411,7 @@ function EventCreateSheet({ onClose }: { onClose: () => void }) {
                 <CalendarDays aria-hidden size={18} />
                 <span>캘린더</span>
               </div>
-              <select defaultValue="schedule">
+              <select value={type} onChange={(changeEvent) => setType(changeEvent.target.value as EventType)}>
                 <option value="schedule">일정</option>
                 <option value="todo">할 일</option>
                 <option value="health">운동</option>
