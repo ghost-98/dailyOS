@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import {
   BriefcaseBusiness,
@@ -17,6 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { createCareerRecordInDb, deleteCareerRecordFromDb, fetchCareerRecordsFromDb, updateCareerRecordInDb } from "./api";
 import {
   applicationEventStageLabels,
   careerRecords,
@@ -27,15 +28,15 @@ import {
 } from "./data";
 
 const tabLabels: Record<CareerTab, string> = {
-  applied: "지원한 공기업",
+  applied: "지원한 기업",
   planned: "지원 예정",
   certificates: "자격증",
 };
 
 const tabDescriptions: Record<CareerTab, string> = {
-  applied: "기업별 지원 상태와 서류, 필기, 면접 이벤트를 함께 관리합니다.",
-  planned: "관심 기업과 준비해야 할 자격증, 서류를 미리 정리합니다.",
-  certificates: "보유 자격증, 번호, 발급 기관, 만료일, PDF 링크를 관리합니다.",
+  applied: "지원한 기업의 상태, 마감일, 결과 발표일, 서류/필기/면접 이벤트를 관리합니다.",
+  planned: "앞으로 지원할 기업과 준비 상태, 필요 자격증, 필요 서류를 정리합니다.",
+  certificates: "보유 자격증의 번호, 발급 기관, 취득일, 만료일, PDF 또는 URL을 관리합니다.",
 };
 
 const tabIcons = {
@@ -61,8 +62,42 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [records, setRecords] = useState<CareerRecord[]>(careerRecords);
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchCareerRecordsFromDb()
+      .then((dbRecords) => {
+        if (isMounted) setRecords(dbRecords ?? []);
+      })
+      .catch((error) => console.error("Failed to load career records from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const visibleRecords = useMemo(() => records.filter((record) => record.tab === activeTab), [activeTab, records]);
+
+  const saveRecord = async (record: CareerRecord) => {
+    const exists = records.some((item) => item.id === record.id);
+    const savedRecord = exists ? await updateCareerRecordInDb(record) : await createCareerRecordInDb(record);
+    const nextRecord = savedRecord ?? record;
+
+    setRecords((current) => (exists ? current.map((item) => (item.id === record.id ? nextRecord : item)) : [nextRecord, ...current]));
+    router.push(tabRoutes[nextRecord.tab]);
+    setEditingRecord(null);
+    setIsSheetOpen(false);
+  };
+
+  const deleteRecord = async (id: string) => {
+    await deleteCareerRecordFromDb(id);
+    setRecords((current) => current.filter((item) => item.id !== id));
+  };
 
   return (
     <div className="career-page">
@@ -80,6 +115,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             setEditingRecord(null);
             setIsSheetOpen(true);
           }}
+          type="button"
         >
           <Plus aria-hidden size={18} />
           항목 추가
@@ -100,7 +136,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             <CareerRecordCard
               key={record.id}
               record={record}
-              onDelete={() => setRecords((current) => current.filter((item) => item.id !== record.id))}
+              onDelete={() => deleteRecord(record.id)}
               onEdit={() => {
                 setEditingRecord(record);
                 setIsSheetOpen(true);
@@ -111,7 +147,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             <div className="career-empty">
               <ClipboardList aria-hidden size={28} />
               <strong>{tabLabels[activeTab]} 항목이 없습니다.</strong>
-              <p>추가 버튼으로 관리할 항목을 등록해보세요.</p>
+              <p>{isLoading ? "불러오는 중입니다." : "항목을 추가하면 이곳에 표시됩니다."}</p>
             </div>
           ) : null}
         </div>
@@ -125,15 +161,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             setEditingRecord(null);
             setIsSheetOpen(false);
           }}
-          onSave={(record) => {
-            setRecords((current) => {
-              const exists = current.some((item) => item.id === record.id);
-              return exists ? current.map((item) => (item.id === record.id ? record : item)) : [record, ...current];
-            });
-            router.push(tabRoutes[record.tab]);
-            setEditingRecord(null);
-            setIsSheetOpen(false);
-          }}
+          onSave={saveRecord}
         />
       ) : null}
     </div>
@@ -158,11 +186,11 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         {record.memo ? <small>{record.memo}</small> : null}
       </div>
       <div className="record-actions">
-        <button onClick={onEdit}>
+        <button onClick={onEdit} type="button">
           <Pencil aria-hidden size={15} />
           수정
         </button>
-        <button onClick={onDelete}>
+        <button onClick={onDelete} type="button">
           <Trash2 aria-hidden size={15} />
           삭제
         </button>
@@ -175,9 +203,11 @@ function CareerMeta({ record }: { record: CareerRecord }) {
   if (record.tab === "applied") {
     return (
       <div className="career-meta-grid">
-        <MetaItem icon={<CalendarClock aria-hidden size={14} />} label="지원" value={record.primaryDate} />
-        <MetaItem label="마감" value={record.deadlineDate} />
-        <MetaItem label="결과" value={record.resultDate} />
+        <MetaItem icon={<CalendarClock aria-hidden size={14} />} label="지원일" value={record.primaryDate} />
+        <MetaItem label="마감일" value={record.deadlineDate} />
+        <MetaItem label="시험일" value={record.examDate} />
+        <MetaItem label="면접일" value={record.interviewDate} />
+        <MetaItem label="결과 발표" value={record.resultDate} />
         <MetaItem label="이력서" value={record.resumeName} />
       </div>
     );
@@ -262,7 +292,7 @@ function CareerRecordSheet({
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const saveRecord = () => {
+  const saveCurrentRecord = () => {
     if (!form.title.trim()) return;
     onSave({
       ...form,
@@ -279,9 +309,9 @@ function CareerRecordSheet({
       <section aria-labelledby="career-sheet-title" aria-modal="true" className="event-sheet career-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose}>취소</button>
+          <button className="event-sheet__text-button" onClick={onClose} type="button">취소</button>
           <h2 id="career-sheet-title">{record ? "항목 수정" : "항목 추가"}</h2>
-          <button className="event-sheet__done-button" onClick={saveRecord}>저장</button>
+          <button className="event-sheet__done-button" onClick={saveCurrentRecord} type="button">저장</button>
         </header>
 
         <div className="event-sheet__body">
@@ -289,7 +319,7 @@ function CareerRecordSheet({
             <label className="event-form-row event-form-row--select">
               <span>분류</span>
               <select value={form.tab} onChange={(event) => updateField("tab", event.target.value as CareerTab)}>
-                <option value="applied">지원한 공기업</option>
+                <option value="applied">지원한 기업</option>
                 <option value="planned">지원 예정</option>
                 <option value="certificates">자격증</option>
               </select>
@@ -315,12 +345,12 @@ function CareerRecordSheet({
             <CareerSpecificFields form={form} updateField={updateField} />
             <label className="event-note">
               <span>메모</span>
-              <textarea rows={4} placeholder="준비할 내용, 체크 포인트, 보완할 문항을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
+              <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
             </label>
           </div>
         </div>
 
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose}>
+        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
           <X aria-hidden size={18} />
         </button>
       </section>
@@ -340,9 +370,11 @@ function CareerSpecificFields({
       <>
         <Field label="지원일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="마감일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
+        <Field label="시험일" type="date" value={form.examDate} onChange={(value) => updateField("examDate", value)} />
+        <Field label="면접일" type="date" value={form.interviewDate} onChange={(value) => updateField("interviewDate", value)} />
         <Field label="결과 발표일" type="date" value={form.resultDate} onChange={(value) => updateField("resultDate", value)} />
         <Field label="공고 URL" value={form.url} onChange={(value) => updateField("url", value)} />
-        <Field label="사용 이력서" value={form.resumeName} onChange={(value) => updateField("resumeName", value)} />
+        <Field label="이력서/파일명" value={form.resumeName} onChange={(value) => updateField("resumeName", value)} />
         <ApplicationEventEditor events={form.applicationEvents ?? []} onChange={(events) => updateField("applicationEvents", events)} />
       </>
     );
@@ -351,7 +383,7 @@ function CareerSpecificFields({
   if (form.tab === "planned") {
     return (
       <>
-        <Field label="예상 채용 시기" value={form.primaryDate} placeholder="2026 하반기" onChange={(value) => updateField("primaryDate", value)} />
+        <Field label="예상 채용 시기" value={form.primaryDate} placeholder="2026년 상반기" onChange={(value) => updateField("primaryDate", value)} />
         <label className="event-form-row event-form-row--select">
           <span>우선순위</span>
           <select value={form.priority ?? "normal"} onChange={(event) => updateField("priority", event.target.value as CareerRecord["priority"])}>
@@ -399,10 +431,10 @@ function ApplicationEventEditor({ events, onChange }: { events: ApplicationEvent
         <span>전형 이벤트</span>
         <button type="button" onClick={addEvent}>
           <Plus aria-hidden size={14} />
-          이벤트 등록
+          이벤트 추가
         </button>
       </div>
-      {events.length === 0 ? <p>서류, 필기, 면접 중 하나를 골라 날짜와 메모를 등록할 수 있습니다.</p> : null}
+      {events.length === 0 ? <p>서류, 필기, 면접 날짜와 메모를 추가할 수 있습니다.</p> : null}
       {events.map((event) => (
         <div className="application-event-row" key={event.id}>
           <select value={event.stage} onChange={(changeEvent) => updateEvent(event.id, "stage", changeEvent.target.value as ApplicationEventStage)}>
@@ -455,12 +487,12 @@ function getBadgeTone(record: CareerRecord) {
 
 function getDefaultSubtitle(tab: CareerTab) {
   if (tab === "applied" || tab === "planned") return "직무 미정";
-  return "발급 기관 미입력";
+  return "발급 기관 미정";
 }
 
 function getDefaultStatus(tab: CareerTab) {
-  if (tab === "applied") return "지원 준비";
-  if (tab === "planned") return "관심";
+  if (tab === "applied") return "지원 완료";
+  if (tab === "planned") return "준비 중";
   return "보유";
 }
 
@@ -481,7 +513,7 @@ function getSubtitleLabel(tab: CareerTab) {
 
 function getSubtitlePlaceholder(tab: CareerTab) {
   if (tab === "certificates") return "한국산업인력공단";
-  return "ICT 운영 / 전산직";
+  return "ICT / 신입 채용";
 }
 
 function formatDisplayDate(value?: string) {
