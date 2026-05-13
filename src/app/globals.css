@@ -114,6 +114,11 @@ button {
   margin-top: 56px;
 }
 
+.nav-group {
+  display: grid;
+  gap: 6px;
+}
+
 .nav-item,
 .bottom-nav__item {
   display: flex;
@@ -129,6 +134,11 @@ button {
   min-height: 46px;
   border-radius: 12px;
   padding: 0 12px;
+}
+
+.nav-item--button {
+  width: 100%;
+  text-align: left;
 }
 
 .nav-item span {
@@ -148,6 +158,53 @@ button {
   border-radius: 999px;
   background: var(--violet);
   content: "";
+}
+
+.nav-item__chevron {
+  margin-left: auto;
+  transition: transform 180ms ease;
+}
+
+.nav-group--open .nav-item__chevron {
+  transform: rotate(180deg);
+}
+
+.nav-submenu {
+  display: grid;
+  max-height: 0;
+  overflow: hidden;
+  gap: 4px;
+  padding-left: 18px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    max-height 220ms ease,
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.nav-group--open .nav-submenu {
+  max-height: 190px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nav-subitem {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 10px;
+  border-left: 1px solid var(--line);
+  color: var(--muted-dark);
+  font-size: 13px;
+  font-weight: 750;
+  padding: 0 0 0 14px;
+  text-decoration: none;
+}
+
+.nav-subitem--active {
+  border-left-color: var(--violet);
+  color: var(--violet);
 }
 
 .sidebar__footer {

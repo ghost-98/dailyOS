@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import {
   BriefcaseBusiness,
@@ -15,6 +15,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { careerRecords, type CareerRecord, type CareerTab } from "./data";
@@ -47,8 +48,10 @@ const priorityLabels = {
 };
 
 export function CareerView() {
+  const searchParams = useSearchParams();
+  const initialTab = getCareerTab(searchParams.get("tab"));
   const [records, setRecords] = useState<CareerRecord[]>(careerRecords);
-  const [activeTab, setActiveTab] = useState<CareerTab>("applied");
+  const [activeTab, setActiveTab] = useState<CareerTab>(initialTab);
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -66,6 +69,10 @@ export function CareerView() {
     setEditingRecord(null);
     setIsSheetOpen(true);
   };
+
+  useEffect(() => {
+    setActiveTab(getCareerTab(searchParams.get("tab")));
+  }, [searchParams]);
 
   return (
     <div className="career-page">
@@ -494,4 +501,9 @@ function formatDisplayDate(value?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(`${value}T00:00:00`);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getCareerTab(value: string | null): CareerTab {
+  if (value === "planned" || value === "certificates" || value === "resumes") return value;
+  return "applied";
 }
