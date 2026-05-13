@@ -843,16 +843,33 @@ a:focus-visible {
 
 .page-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 18px;
+  min-height: 58px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: clamp(34px, 4.2vw, 58px);
-  font-weight: 850;
-  line-height: 1.05;
+  font-size: 28px;
+  font-weight: 820;
+  line-height: 1.15;
+}
+
+.page-header:not(.today__header) .today__date {
+  display: none;
+}
+
+.today__header {
+  min-height: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.today__header h1 {
+  font-size: clamp(40px, 5vw, 78px);
 }
 
 .calendar-layout {
@@ -2567,6 +2584,7 @@ a:focus-visible {
   .page-header {
     align-items: stretch;
     flex-direction: column;
+    gap: 14px;
   }
 
   .health-actions {
@@ -2798,7 +2816,11 @@ a:focus-visible {
   }
 
   .page-header h1 {
-    font-size: 40px;
+    font-size: 26px;
+  }
+
+  .today__header h1 {
+    font-size: 34px;
   }
 
   .weight-detail-grid,
