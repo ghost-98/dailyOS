@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type React from "react";
 import {
   BriefcaseBusiness,
@@ -15,7 +15,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { careerRecords, type CareerRecord, type CareerTab } from "./data";
@@ -47,11 +48,16 @@ const priorityLabels = {
   low: "낮음",
 };
 
-export function CareerView() {
-  const searchParams = useSearchParams();
-  const initialTab = getCareerTab(searchParams.get("tab"));
+const tabRoutes: Record<CareerTab, string> = {
+  applied: "/career/applied",
+  planned: "/career/planned",
+  certificates: "/career/certificates",
+  resumes: "/career/resumes",
+};
+
+export function CareerView({ activeTab }: { activeTab: CareerTab }) {
+  const router = useRouter();
   const [records, setRecords] = useState<CareerRecord[]>(careerRecords);
-  const [activeTab, setActiveTab] = useState<CareerTab>(initialTab);
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -64,15 +70,10 @@ export function CareerView() {
     [records],
   );
 
-  const openNewSheet = (tab = activeTab) => {
-    setActiveTab(tab);
+  const openNewSheet = () => {
     setEditingRecord(null);
     setIsSheetOpen(true);
   };
-
-  useEffect(() => {
-    setActiveTab(getCareerTab(searchParams.get("tab")));
-  }, [searchParams]);
 
   return (
     <div className="career-page">
@@ -113,11 +114,11 @@ export function CareerView() {
           const Icon = tabIcons[tab];
           const count = records.filter((record) => record.tab === tab).length;
           return (
-            <button className={activeTab === tab ? "career-tab career-tab--active" : "career-tab"} key={tab} onClick={() => setActiveTab(tab)}>
+            <Link className={activeTab === tab ? "career-tab career-tab--active" : "career-tab"} href={tabRoutes[tab]} key={tab}>
               <Icon aria-hidden size={18} />
               {tabLabels[tab]}
               <strong>{count}</strong>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -166,7 +167,7 @@ export function CareerView() {
               const exists = current.some((item) => item.id === record.id);
               return exists ? current.map((item) => (item.id === record.id ? record : item)) : [record, ...current];
             });
-            setActiveTab(record.tab);
+            router.push(tabRoutes[record.tab]);
             setEditingRecord(null);
             setIsSheetOpen(false);
           }}
@@ -501,9 +502,4 @@ function formatDisplayDate(value?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(`${value}T00:00:00`);
   return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function getCareerTab(value: string | null): CareerTab {
-  if (value === "planned" || value === "certificates" || value === "resumes") return value;
-  return "applied";
 }
