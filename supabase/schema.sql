@@ -1,4 +1,4 @@
--- dailyOS initial Supabase schema
+-- dailyOS latest Supabase schema
 -- Run this file in Supabase Dashboard > SQL Editor.
 
 create extension if not exists "pgcrypto";
@@ -87,12 +87,13 @@ create table if not exists public.weight_records (
   user_id uuid not null references auth.users(id) on delete cascade,
   record_date date not null,
   weight_kg numeric(5, 2) not null check (weight_kg > 0),
-  measured_fasted boolean not null default false,
+  measured_fasted boolean not null default true,
   muscle_mass_kg numeric(5, 2) check (muscle_mass_kg is null or muscle_mass_kg > 0),
   body_fat_percent numeric(5, 2) check (body_fat_percent is null or body_fat_percent >= 0),
   memo text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (user_id, record_date)
 );
 
 create table if not exists public.workout_sessions (
@@ -101,7 +102,7 @@ create table if not exists public.workout_sessions (
   workout_date date not null,
   type text not null check (type in ('running', 'stretching', 'bodyweight', 'weight', 'etc')),
   condition text not null default 'normal' check (condition in ('good', 'normal', 'low')),
-  duration_minutes integer not null default 0 check (duration_minutes >= 0),
+  duration_minutes integer not null check (duration_minutes > 0),
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -114,7 +115,7 @@ create table if not exists public.career_records (
   title text not null,
   subtitle text not null default '',
   status text not null default '',
-  primary_date date,
+  primary_date text,
   deadline_date date,
   exam_date date,
   interview_date date,
@@ -132,16 +133,7 @@ create table if not exists public.career_records (
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
-  );
-
-alter table public.career_records
-add column if not exists expires_never boolean;
-
-alter table public.career_records
-add column if not exists certificate_file_path text;
-
-alter table public.career_records
-add column if not exists certificate_file_name text;
+);
 
 create table if not exists public.application_events (
   id uuid primary key default gen_random_uuid(),
@@ -154,13 +146,14 @@ create table if not exists public.application_events (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists tasks_user_date_idx on public.tasks(user_id, scheduled_date);
 create index if not exists profiles_email_idx on public.profiles(email);
+create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, scheduled_date);
 create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date);
 create index if not exists calendar_events_user_date_idx on public.calendar_events(user_id, event_date);
+create index if not exists calendar_events_user_type_date_idx on public.calendar_events(user_id, type, event_date);
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
-create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab);
+create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
 create index if not exists application_events_record_idx on public.application_events(career_record_id, event_date);
 
 insert into storage.buckets (id, name, public)
@@ -224,8 +217,8 @@ create trigger set_application_events_updated_at
 before update on public.application_events
 for each row execute function public.set_updated_at();
 
-alter table public.tasks enable row level security;
 alter table public.profiles enable row level security;
+alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
 alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
@@ -238,17 +231,17 @@ on public.profiles for select
 to authenticated
 using (user_id = auth.uid());
 
+drop policy if exists "Users can insert own profile" on public.profiles;
+create policy "Users can insert own profile"
+on public.profiles for insert
+to authenticated
+with check (user_id = auth.uid());
+
 drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
 on public.profiles for update
 to authenticated
 using (user_id = auth.uid())
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can insert own profile" on public.profiles;
-create policy "Users can insert own profile"
-on public.profiles for insert
-to authenticated
 with check (user_id = auth.uid());
 
 drop policy if exists "Users can read own tasks" on public.tasks;
