@@ -84,6 +84,8 @@ create table if not exists public.career_records (
   certificate_number text,
   issuer text,
   expires_never boolean,
+  certificate_file_path text,
+  certificate_file_name text,
   priority text check (priority is null or priority in ('high', 'normal', 'low')),
   memo text,
   created_at timestamptz not null default now(),
@@ -92,6 +94,12 @@ create table if not exists public.career_records (
 
 alter table public.career_records
 add column if not exists expires_never boolean;
+
+alter table public.career_records
+add column if not exists certificate_file_path text;
+
+alter table public.career_records
+add column if not exists certificate_file_name text;
 
 create table if not exists public.application_events (
   id uuid primary key default gen_random_uuid(),
@@ -111,6 +119,32 @@ create index if not exists weight_records_user_date_idx on public.weight_records
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab);
 create index if not exists application_events_record_idx on public.application_events(career_record_id, event_date);
+
+insert into storage.buckets (id, name, public)
+values ('career-files', 'career-files', false)
+on conflict (id) do nothing;
+
+drop policy if exists "career_files_select_own" on storage.objects;
+drop policy if exists "career_files_insert_own" on storage.objects;
+drop policy if exists "career_files_update_own" on storage.objects;
+drop policy if exists "career_files_delete_own" on storage.objects;
+
+create policy "career_files_select_own"
+on storage.objects for select
+using (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "career_files_insert_own"
+on storage.objects for insert
+with check (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "career_files_update_own"
+on storage.objects for update
+using (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1])
+with check (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "career_files_delete_own"
+on storage.objects for delete
+using (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1]);
 
 drop trigger if exists set_tasks_updated_at on public.tasks;
 create trigger set_tasks_updated_at

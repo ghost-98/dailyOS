@@ -27,6 +27,8 @@ export type CareerRecord = {
   certificateNumber?: string;
   issuer?: string;
   expiresNever?: boolean;
+  certificateFilePath?: string;
+  certificateFileName?: string;
   priority?: "high" | "normal" | "low";
   applicationEvents?: ApplicationEvent[];
   memo?: string;

@@ -19,7 +19,14 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { createCareerRecordInDb, deleteCareerRecordFromDb, fetchCareerRecordsFromDb, updateCareerRecordInDb } from "./api";
+import {
+  createCareerRecordInDb,
+  deleteCareerRecordFromDb,
+  fetchCareerRecordsFromDb,
+  getCertificateFileDownloadUrl,
+  updateCareerRecordInDb,
+  uploadCertificateFileToDb,
+} from "./api";
 import {
   applicationEventStageLabels,
   careerRecords,
@@ -38,7 +45,7 @@ const tabLabels: Record<CareerTab, string> = {
 const tabDescriptions: Record<CareerTab, string> = {
   applied: "지원한 기업의 상태, 마감일, 결과 발표일, 서류/필기/면접 이벤트를 관리합니다.",
   planned: "앞으로 지원할 기업과 준비 상태, 필요 자격증, 필요 서류를 정리합니다.",
-  certificates: "보유 자격증의 번호, 발급 기관, 취득일, 만료일, PDF 또는 URL을 관리합니다.",
+  certificates: "보유 자격증의 시행기관, 번호, 취득일, 유효기간, 증빙 파일을 관리합니다.",
 };
 
 const tabIcons = {
@@ -190,7 +197,6 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
             <h3>{record.title}</h3>
             <CopyButton label="자격증명 복사" value={record.title} />
           </div>
-          <p>{record.issuer ?? record.subtitle}</p>
 
           <div className="certificate-detail-grid">
             <MetaBlock canCopy label="시행기관" value={record.issuer ?? record.subtitle} />
@@ -200,11 +206,11 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
           </div>
 
           <div className="certificate-record-card__footer">
-            {record.url ? (
-              <a className="career-link certificate-download-link" download href={record.url} rel="noreferrer" target="_blank">
+            {record.certificateFilePath ? (
+              <button className="career-link certificate-download-link" onClick={() => void downloadCertificateFile(record.certificateFilePath)} type="button">
                 <Download aria-hidden size={14} />
-                증빙 파일 다운로드
-              </a>
+                {record.certificateFileName ?? "증빙 파일 다운로드"}
+              </button>
             ) : (
               <span className="certificate-file-empty">증빙 파일 없음</span>
             )}
@@ -319,17 +325,6 @@ function CareerMeta({ record }: { record: CareerRecord }) {
     );
   }
 
-  if (record.tab === "certificates") {
-    return (
-      <div className="career-meta-grid">
-        <MetaItem label="자격증 번호" value={record.certificateNumber} />
-        <MetaItem label="발급 기관" value={record.issuer ?? record.subtitle} />
-        <MetaItem label="취득일" value={record.primaryDate} />
-        <MetaItem label="유효기간" value={getCertificateExpiry(record)} />
-      </div>
-    );
-  }
-
   return null;
 }
 
@@ -366,7 +361,7 @@ function CareerRecordSheet({
 }: {
   activeTab: CareerTab;
   onClose: () => void;
-  onSave: (record: CareerRecord) => void;
+  onSave: (record: CareerRecord) => Promise<void> | void;
   record: CareerRecord | null;
 }) {
   const [form, setForm] = useState<CareerRecord>(
@@ -380,35 +375,55 @@ function CareerRecordSheet({
       applicationEvents: [],
     },
   );
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const updateField = <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const saveCurrentRecord = () => {
+  const saveCurrentRecord = async () => {
     if (!form.title.trim()) return;
+    setIsSaving(true);
 
-    onSave({
-      ...form,
-      title: form.title.trim(),
-      subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
-      status: form.status.trim() || getDefaultStatus(form.tab),
-      issuer: form.tab === "certificates" ? form.subtitle.trim() || form.issuer?.trim() || undefined : form.issuer,
-      deadlineDate: form.tab === "certificates" && form.expiresNever ? undefined : form.deadlineDate,
-      expiresNever: form.tab === "certificates" ? Boolean(form.expiresNever) : undefined,
-      memo: form.memo?.trim() || undefined,
-      applicationEvents: form.tab === "applied" ? form.applicationEvents?.filter((event) => event.date) : undefined,
-    });
+    try {
+      const uploadedFile =
+        form.tab === "certificates" && certificateFile
+          ? await uploadCertificateFileToDb(certificateFile, form.id, form.certificateFilePath)
+          : null;
+
+      await onSave({
+        ...form,
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
+        status: form.status.trim() || getDefaultStatus(form.tab),
+        issuer: form.tab === "certificates" ? form.subtitle.trim() || form.issuer?.trim() || undefined : form.issuer,
+        deadlineDate: form.tab === "certificates" && form.expiresNever ? undefined : form.deadlineDate,
+        expiresNever: form.tab === "certificates" ? Boolean(form.expiresNever) : undefined,
+        certificateFilePath: uploadedFile?.path ?? form.certificateFilePath,
+        certificateFileName: uploadedFile?.name ?? form.certificateFileName,
+        memo: form.memo?.trim() || undefined,
+        applicationEvents: form.tab === "applied" ? form.applicationEvents?.filter((event) => event.date) : undefined,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="career-sheet-title" aria-modal="true" className="event-sheet career-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+      <section
+        aria-labelledby="career-sheet-title"
+        aria-modal="true"
+        className={`event-sheet career-sheet career-sheet--${form.tab}`}
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header career-sheet__header">
           <div>
             <h2 id="career-sheet-title">{record ? `${tabLabels[form.tab]} 수정` : `${tabLabels[form.tab]} 추가`}</h2>
-            <p>{form.tab === "certificates" ? "점수나 등급은 자격증명에 함께 적고, 등록번호와 증빙 파일을 관리합니다." : tabDescriptions[form.tab]}</p>
+            {form.tab === "certificates" ? null : <p>{tabDescriptions[form.tab]}</p>}
           </div>
           <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
             <X aria-hidden size={18} />
@@ -416,36 +431,22 @@ function CareerRecordSheet({
         </header>
 
         <div className="event-sheet__body career-sheet__body">
-          <div className="career-sheet__column">
-            <div className="event-form-card career-form-card">
-              <label className="event-form-row event-form-row--select">
-                <span>분류</span>
-                <select value={form.tab} onChange={(event) => updateField("tab", event.target.value as CareerTab)}>
-                  <option value="applied">지원한 기업</option>
-                  <option value="planned">지원 예정</option>
-                  <option value="certificates">자격증</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="event-form-card event-form-card--title career-form-card">
-              <label>
-                <span>{getTitleLabel(form.tab)}</span>
-                <input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} />
-              </label>
-              <label>
-                <span>{getSubtitleLabel(form.tab)}</span>
-                <input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
-              </label>
-            </div>
-          </div>
-
           <div className="event-form-card career-field-card career-form-card">
             <div className="career-form-card__title">
               <strong>{form.tab === "certificates" ? "자격 정보" : "관리 정보"}</strong>
-              <span>{form.tab === "certificates" ? "예: TOEIC 875점, OPIc IH, 정보처리기사 필기 합격" : "상태와 관련 날짜를 관리합니다."}</span>
+              {form.tab === "certificates" ? null : <span>상태와 관련 날짜를 관리합니다.</span>}
             </div>
             <div className="career-form-card__fields">
+              <div className="career-primary-fields">
+                <label>
+                  <span>{getTitleLabel(form.tab)}</span>
+                  <input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} />
+                </label>
+                <label>
+                  <span>{getSubtitleLabel(form.tab)}</span>
+                  <input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
+                </label>
+              </div>
               <label className="event-form-row event-form-row--select">
                 <span>상태</span>
                 <select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>
@@ -456,7 +457,7 @@ function CareerRecordSheet({
                   ))}
                 </select>
               </label>
-              <CareerSpecificFields form={form} updateField={updateField} />
+              <CareerSpecificFields form={form} selectedCertificateFile={certificateFile} updateField={updateField} onCertificateFileChange={setCertificateFile} />
               <label className="event-note">
                 <span>메모</span>
                 <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
@@ -469,8 +470,8 @@ function CareerRecordSheet({
           <button className="event-sheet__secondary-button" onClick={onClose} type="button">
             취소
           </button>
-          <button className="event-sheet__primary-button" onClick={saveCurrentRecord} type="button">
-            저장하기
+          <button className="event-sheet__primary-button" disabled={isSaving} onClick={() => void saveCurrentRecord()} type="button">
+            {isSaving ? "저장 중" : "저장하기"}
           </button>
         </footer>
       </section>
@@ -480,9 +481,13 @@ function CareerRecordSheet({
 
 function CareerSpecificFields({
   form,
+  onCertificateFileChange,
+  selectedCertificateFile,
   updateField,
 }: {
   form: CareerRecord;
+  onCertificateFileChange: (file: File | null) => void;
+  selectedCertificateFile: File | null;
   updateField: <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => void;
 }) {
   if (form.tab === "applied") {
@@ -522,24 +527,37 @@ function CareerSpecificFields({
   if (form.tab === "certificates") {
     return (
       <>
-        <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
-        <Field label="취득일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
-        <label className="event-form-row certificate-lifetime-row">
-          <span>유효기간</span>
-          <button
-            className={`certificate-lifetime-toggle ${form.expiresNever ? "certificate-lifetime-toggle--active" : ""}`}
-            onClick={() => {
-              const nextValue = !form.expiresNever;
-              updateField("expiresNever", nextValue);
-              if (nextValue) updateField("deadlineDate", undefined);
+        <div className="certificate-form-grid">
+          <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
+          <Field label="취득일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
+          <label className="event-form-row certificate-lifetime-row">
+            <span>유효기간</span>
+            <button
+              className={`certificate-lifetime-toggle ${form.expiresNever ? "certificate-lifetime-toggle--active" : ""}`}
+              onClick={() => {
+                const nextValue = !form.expiresNever;
+                updateField("expiresNever", nextValue);
+                if (nextValue) updateField("deadlineDate", undefined);
+              }}
+              type="button"
+            >
+              평생 유효
+            </button>
+          </label>
+          {form.expiresNever ? null : <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />}
+        </div>
+        <label className="certificate-file-picker">
+          <span>증빙 파일</span>
+          <input
+            accept=".pdf,image/*"
+            type="file"
+            onChange={(event) => {
+              onCertificateFileChange(event.target.files?.[0] ?? null);
             }}
-            type="button"
-          >
-            평생 유효
-          </button>
+          />
+          <strong>{selectedCertificateFile?.name ?? form.certificateFileName ?? "선택된 파일 없음"}</strong>
+          <small>PDF 또는 이미지 파일을 업로드할 수 있습니다. 저장하면 Supabase Storage에 보관됩니다.</small>
         </label>
-        {form.expiresNever ? null : <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />}
-        <Field label="PDF 파일/URL" value={form.url} onChange={(value) => updateField("url", value)} />
       </>
     );
   }
@@ -618,7 +636,7 @@ function getBadgeTone(record: CareerRecord) {
 
 function getDefaultSubtitle(tab: CareerTab) {
   if (tab === "applied" || tab === "planned") return "직무 미정";
-  return "발급 기관 미정";
+  return "시행기관 미정";
 }
 
 function getDefaultStatus(tab: CareerTab) {
@@ -644,18 +662,25 @@ function getTitleLabel(tab: CareerTab) {
 }
 
 function getTitlePlaceholder(tab: CareerTab) {
-  if (tab === "certificates") return "정보처리기사";
+  if (tab === "certificates") return "TOEIC 875점, OPIc IH, 정보처리기사 필기 합격";
   return "한국전력공사";
 }
 
 function getSubtitleLabel(tab: CareerTab) {
-  if (tab === "certificates") return "발급 기관";
+  if (tab === "certificates") return "시행기관";
   return "직무 / 공고명";
 }
 
 function getSubtitlePlaceholder(tab: CareerTab) {
   if (tab === "certificates") return "한국산업인력공단";
   return "ICT / 신입 채용";
+}
+
+async function downloadCertificateFile(path?: string) {
+  if (!path) return;
+  const url = await getCertificateFileDownloadUrl(path);
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 function formatDisplayDate(value?: string) {

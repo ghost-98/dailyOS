@@ -19,6 +19,8 @@ type CareerRecordRow = {
   certificate_number: string | null;
   issuer: string | null;
   expires_never: boolean | null;
+  certificate_file_path: string | null;
+  certificate_file_name: string | null;
   priority: "high" | "normal" | "low" | null;
   memo: string | null;
   application_events?: ApplicationEventRow[];
@@ -39,7 +41,7 @@ type CareerRecordUpdate = Partial<Omit<CareerRecordInsert, "user_id">>;
 
 const recordColumns = `
   id,tab,title,subtitle,status,primary_date,deadline_date,exam_date,interview_date,result_date,url,resume_name,
-  required_certs,required_docs,certificate_number,issuer,expires_never,priority,memo,
+  required_certs,required_docs,certificate_number,issuer,expires_never,certificate_file_path,certificate_file_name,priority,memo,
   application_events(id,stage,event_date,memo)
 `;
 
@@ -82,6 +84,8 @@ function mapCareerRecordRow(row: CareerRecordRow): CareerRecord {
     certificateNumber: row.certificate_number ?? undefined,
     issuer: row.issuer ?? undefined,
     expiresNever: row.expires_never ?? undefined,
+    certificateFilePath: row.certificate_file_path ?? undefined,
+    certificateFileName: row.certificate_file_name ?? undefined,
     priority: row.priority ?? undefined,
     memo: row.memo ?? undefined,
     applicationEvents: row.application_events?.map(mapApplicationEventRow) ?? [],
@@ -107,6 +111,8 @@ function mapRecordToInsert(record: CareerRecord, userId: string): CareerRecordIn
     certificate_number: emptyToNull(record.certificateNumber),
     issuer: emptyToNull(record.issuer),
     expires_never: record.expiresNever ?? null,
+    certificate_file_path: emptyToNull(record.certificateFilePath),
+    certificate_file_name: emptyToNull(record.certificateFileName),
     priority: record.priority ?? null,
     memo: emptyToNull(record.memo),
   };
@@ -192,4 +198,37 @@ export async function deleteCareerRecordFromDb(id: string) {
   const { error } = await supabase.from("career_records").delete().eq("id", id);
   if (error) throw error;
   return true;
+}
+
+export async function uploadCertificateFileToDb(file: File, recordId: string, existingPath?: string) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const extension = file.name.includes(".") ? file.name.split(".").pop() : "file";
+  const safeExtension = extension?.replace(/[^a-zA-Z0-9]/g, "") || "file";
+  const path = `${userId}/certificates/${recordId}-${Date.now()}.${safeExtension}`;
+
+  if (existingPath) {
+    await supabase.storage.from("career-files").remove([existingPath]);
+  }
+
+  const { error } = await supabase.storage.from("career-files").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw error;
+
+  return {
+    path,
+    name: file.name,
+  };
+}
+
+export async function getCertificateFileDownloadUrl(path: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase.storage.from("career-files").createSignedUrl(path, 60);
+  if (error) throw error;
+  return data.signedUrl;
 }

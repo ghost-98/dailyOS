@@ -2760,10 +2760,6 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.certificate-record-card p {
-  margin: -8px 0 0;
-}
-
 .certificate-detail-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2833,6 +2829,7 @@ a:focus-visible {
   border: 1px solid rgba(201, 184, 255, 0.26);
   border-radius: 999px;
   background: rgba(201, 184, 255, 0.1);
+  cursor: pointer;
   padding: 8px 11px;
 }
 
@@ -3028,13 +3025,12 @@ a:focus-visible {
   width: min(900px, calc(100vw - 48px));
 }
 
-.career-sheet__body {
-  align-items: start;
+.career-sheet--certificates {
+  width: min(980px, calc(100vw - 48px));
 }
 
-.career-sheet__column {
-  display: grid;
-  gap: 14px;
+.career-sheet__body {
+  align-items: start;
 }
 
 .career-form-card {
@@ -3071,7 +3067,91 @@ a:focus-visible {
   display: grid;
 }
 
+.career-primary-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
+  gap: 12px;
+}
+
+.career-primary-fields label {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.12);
+  padding: 14px;
+}
+
+.career-primary-fields span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.career-primary-fields input {
+  min-height: 24px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.career-sheet--certificates .career-sheet__body {
+  gap: 16px;
+}
+
+.career-sheet--certificates .career-form-card {
+  border-color: rgba(201, 184, 255, 0.14);
+  background:
+    linear-gradient(145deg, rgba(201, 184, 255, 0.08), rgba(255, 255, 255, 0.035)),
+    rgba(24, 25, 29, 0.94);
+}
+
+.career-sheet--certificates .career-form-card__fields {
+  gap: 12px;
+  padding: 16px;
+}
+
+.career-sheet--certificates .career-form-card__fields > .event-form-row,
+.certificate-form-grid .event-form-row {
+  display: grid;
+  min-height: unset;
+  align-content: start;
+  align-items: start;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.12);
+  padding: 14px;
+}
+
+.career-sheet--certificates .career-form-card__fields > .event-form-row + .event-form-row,
+.certificate-form-grid .event-form-row + .event-form-row,
+.career-sheet--certificates .event-note {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.career-sheet--certificates .event-form-row--field input,
+.career-sheet--certificates .event-form-row--select select {
+  max-width: none;
+  min-height: 24px;
+  text-align: left;
+}
+
+.career-sheet--certificates .event-form-row--select select {
+  color: var(--text);
+}
+
+.certificate-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .certificate-lifetime-row {
+  align-items: center;
+}
+
+.career-sheet--certificates .certificate-lifetime-row {
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 
@@ -3090,14 +3170,67 @@ a:focus-visible {
   color: var(--green);
 }
 
+.certificate-file-picker {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(201, 184, 255, 0.2);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.06);
+  padding: 16px;
+}
+
+.certificate-file-picker span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.certificate-file-picker input {
+  width: 100%;
+  border: 1px dashed rgba(201, 184, 255, 0.34);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.13);
+  color: var(--text);
+  cursor: pointer;
+  padding: 12px;
+}
+
+.certificate-file-picker input::file-selector-button {
+  margin-right: 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--violet);
+  color: #111216;
+  cursor: pointer;
+  font-weight: 850;
+  padding: 8px 12px;
+}
+
+.certificate-file-picker strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificate-file-picker small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 @media (min-width: 821px) {
   .career-sheet .event-sheet__body {
     max-height: min(660px, calc(100vh - 190px));
   }
 
   .career-sheet__body {
-    grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.35fr);
+    grid-template-columns: 1fr;
     gap: 18px;
+  }
+
+  .career-sheet--certificates .career-sheet__body {
+    grid-template-columns: 1fr;
   }
 
   .career-sheet__header {
@@ -3112,6 +3245,22 @@ a:focus-visible {
   .career-sheet .event-form-row--field input,
   .career-sheet .event-form-row--select select {
     max-width: 300px;
+  }
+
+  .career-sheet--certificates .event-form-row--field input,
+  .career-sheet--certificates .event-form-row--select select {
+    max-width: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .career-primary-fields,
+  .certificate-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .career-sheet--certificates .career-form-card__fields {
+    padding: 12px;
   }
 }
 
