@@ -26,6 +26,7 @@ import type { CalendarEvent } from "./data";
 type CalendarCategory = "schedule" | "event" | "todo";
 type DragPlacement = "before" | "after";
 
+const categoryDisplayOrder: CalendarCategory[] = ["schedule", "todo", "event"];
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
@@ -85,6 +86,7 @@ export function CalendarView({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [activeDateCategory, setActiveDateCategory] = useState<CalendarCategory>("schedule");
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
@@ -111,6 +113,7 @@ export function CalendarView({
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
   const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
+  const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const selectedSchedules = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : [];
   const selectedEvents = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : [];
@@ -124,6 +127,7 @@ export function CalendarView({
       ].filter((section) => categories.includes(section.type)),
     [categories, selectedEvents, selectedSchedules, selectedTasks],
   );
+  const selectedDetailSection = detailSections.find((section) => section.type === activeDateCategory) ?? detailSections[0];
 
   const countsByCategory = useMemo(() => {
     if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
@@ -141,6 +145,7 @@ export function CalendarView({
 
   const handleDateClick = (date: string) => {
     setSelectedDate((current) => (current === date ? null : date));
+    setActiveDateCategory(categories.includes("schedule") ? "schedule" : categories[0]);
   };
 
   const toggleCalendarCategoryFilter = (type: CalendarCategory) => {
@@ -321,7 +326,7 @@ export function CalendarView({
                 ? visibleEvents.filter((event) => event.date === cell.date && visibleCalendarCategories.includes(event.type as CalendarCategory))
                 : [];
               const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => task.scheduledDate === cell.date) : [];
-              const eventSummaries = summarizeDay(dayEvents, dayTasks, visibleCalendarCategories);
+              const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories);
               return (
                 <button
                   className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
@@ -361,14 +366,33 @@ export function CalendarView({
               </div>
 
               <div className="date-event-list">
-                {detailSections.map((section) => (
+                <div className="date-category-tabs" aria-label="날짜별 항목">
+                  {detailSections.map((section) => {
+                    const isActive = section.type === selectedDetailSection?.type;
+
+                    return (
+                      <button
+                        className={`date-category-tab ${isActive ? "date-category-tab--active" : ""}`}
+                        key={section.type}
+                        onClick={() => setActiveDateCategory(section.type)}
+                        type="button"
+                      >
+                        <span className={`calendar-dot calendar-dot--${section.type}`} />
+                        {categoryLabels[section.type]}
+                        <strong>{countsByCategory[section.type]}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedDetailSection ? (
                   <DateDetailSection
-                    key={section.type}
+                    key={selectedDetailSection.type}
                     countsByCategory={countsByCategory}
                     draggingItem={draggingItem}
                     dropTarget={dropTarget}
                     isLoading={isLoading}
-                    onAdd={() => openCreateEventSheet(section.type)}
+                    onAdd={() => openCreateEventSheet(selectedDetailSection.type)}
                     onClearDrag={clearDragState}
                     onDeleteEvent={deleteEvent}
                     onDeleteTask={deleteTask}
@@ -387,9 +411,10 @@ export function CalendarView({
                     onResolveDropPlacement={getDropPlacement}
                     onSetDragging={setDraggingItem}
                     onToggleDone={toggleTaskDone}
-                    section={section}
+                    section={selectedDetailSection}
+                    showHeader={false}
                   />
-                ))}
+                ) : null}
               </div>
             </SectionCard>
           </aside>
@@ -455,6 +480,7 @@ function DateDetailSection({
   onSetDragging,
   onToggleDone,
   section,
+  showHeader = true,
 }: {
   countsByCategory: Record<CalendarCategory, number>;
   draggingItem: { id: string; type: CalendarCategory } | null;
@@ -475,6 +501,7 @@ function DateDetailSection({
   section:
     | { type: "schedule" | "event"; events: CalendarEvent[]; tasks?: never }
     | { type: "todo"; tasks: TaskItem[]; events?: never };
+  showHeader?: boolean;
 }) {
   const itemCount = countsByCategory[section.type];
   const isTodoSection = section.type === "todo";
@@ -482,13 +509,15 @@ function DateDetailSection({
 
   return (
     <section className="date-detail-section">
-      <div className="date-detail-section__header">
-        <div>
-          <span className={`calendar-dot calendar-dot--${section.type}`} />
-          <strong>{categoryLabels[section.type]}</strong>
-          <em>{itemCount}</em>
+      {showHeader ? (
+        <div className="date-detail-section__header">
+          <div>
+            <span className={`calendar-dot calendar-dot--${section.type}`} />
+            <strong>{categoryLabels[section.type]}</strong>
+            <em>{itemCount}</em>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="date-detail-section__items">
         {items.length > 0 ? (
@@ -567,10 +596,13 @@ function EventDateItem({
         onDrop(dragEvent);
       }}
     >
-      <div>
-        <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
+      <div className="date-event__content">
+        <div className="date-event__topline">
+          <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
+          {event.time ? <span>{event.time}</span> : null}
+        </div>
         <h3>{event.title}</h3>
-        <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
+        {event.meta ? <p>{event.meta}</p> : null}
       </div>
       <div className="date-event__actions">
         <button aria-label="수정" onClick={() => onEdit(event)} type="button">
@@ -627,12 +659,12 @@ function TaskDateItem({
         {isDone ? <Check aria-hidden size={15} /> : null}
       </button>
       <div className="date-event__task-body">
-        <Badge tone={taskPriorityTone[task.priority]}>{taskPriorityLabels[task.priority]}</Badge>
+        <div className="date-event__topline">
+          <Badge tone={taskPriorityTone[task.priority]}>{taskPriorityLabels[task.priority]}</Badge>
+          <span>{taskStatusLabels[task.status]}</span>
+        </div>
         <h3>{task.title}</h3>
-        <p>
-          {taskStatusLabels[task.status]}
-          {task.dueDate ? ` · 마감 ${formatShortDate(task.dueDate)}` : ""}
-        </p>
+        {task.dueDate ? <p>마감 {formatShortDate(task.dueDate)}</p> : null}
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
       <div className="date-event__actions">
@@ -700,9 +732,9 @@ function EventCreateSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
+      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet schedule-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header">
+        <header className="event-sheet__header schedule-sheet__header">
           <div>
             <h2 id="event-sheet-title">{event ? "항목 수정" : `${categoryLabels[type]} 추가`}</h2>
             <p>{event ? "등록된 내용을 수정합니다." : "날짜와 종류를 정해 계획에 추가합니다."}</p>
@@ -712,20 +744,20 @@ function EventCreateSheet({
           </button>
         </header>
 
-        <div className="event-sheet__body">
-          <div className="event-form-card event-form-card--title">
-            <label>
+        <div className="event-sheet__body schedule-sheet__body">
+          <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
+            <label className="schedule-field schedule-field--wide">
               <span>제목</span>
               <input autoFocus placeholder={`${categoryLabels[type]} 제목`} value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
             </label>
-            <label>
+            <label className="schedule-field schedule-field--wide">
               <span>메모</span>
               <input placeholder="장소, 링크, 간단한 설명" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
             </label>
           </div>
 
-          <div className="event-form-card">
-            <label className="event-form-row event-form-row--field">
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <CalendarDays aria-hidden size={18} />
                 <span>날짜</span>
@@ -733,7 +765,7 @@ function EventCreateSheet({
               <input type="date" value={date} onChange={(changeEvent) => setDate(changeEvent.target.value)} />
             </label>
 
-            <label className="event-form-row event-form-row--field">
+            <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시간</span>
@@ -741,7 +773,7 @@ function EventCreateSheet({
               <input type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
             </label>
 
-            <label className="event-form-row event-form-row--select">
+            <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
                 <Bell aria-hidden size={18} />
                 <span>종류</span>
@@ -807,9 +839,9 @@ function TaskCreateSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="task-sheet-title" aria-modal="true" className="event-sheet task-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+      <section aria-labelledby="task-sheet-title" aria-modal="true" className="event-sheet schedule-sheet task-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header">
+        <header className="event-sheet__header schedule-sheet__header">
           <div>
             <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
             <p>{task ? "상태와 날짜를 조정합니다." : "예정일 기준으로 할 일을 추가합니다."}</p>
@@ -819,20 +851,20 @@ function TaskCreateSheet({
           </button>
         </header>
 
-        <div className="event-sheet__body">
-          <div className="event-form-card event-form-card--title">
-            <label>
+        <div className="event-sheet__body schedule-sheet__body">
+          <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
+            <label className="schedule-field schedule-field--wide">
               <span>제목</span>
               <input autoFocus placeholder="할 일 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
-            <label>
+            <label className="schedule-field schedule-field--wide">
               <span>메모</span>
               <input placeholder="필요한 내용을 적어주세요." value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
           </div>
 
-          <div className="event-form-card">
-            <label className="event-form-row event-form-row--select">
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
                 <ListChecks aria-hidden size={18} />
                 <span>상태</span>
@@ -844,7 +876,7 @@ function TaskCreateSheet({
               </select>
             </label>
 
-            <label className="event-form-row event-form-row--select">
+            <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
                 <Bell aria-hidden size={18} />
                 <span>우선순위</span>
@@ -857,8 +889,8 @@ function TaskCreateSheet({
             </label>
           </div>
 
-          <div className="event-form-card">
-            <label className="event-form-row event-form-row--field">
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <CalendarDays aria-hidden size={18} />
                 <span>예정일</span>
@@ -866,7 +898,7 @@ function TaskCreateSheet({
               <input type="date" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value)} />
             </label>
 
-            <label className="event-form-row event-form-row--field">
+            <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>마감일</span>
@@ -948,8 +980,8 @@ function MonthPickerSheet({
 }
 
 function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
-  const source = allowedTypes ?? ["schedule", "event", "todo"];
-  return source.filter((type): type is CalendarCategory => type === "schedule" || type === "event" || type === "todo");
+  const source = allowedTypes ?? categoryDisplayOrder;
+  return categoryDisplayOrder.filter((type) => source.includes(type));
 }
 
 function getMonthDays(year: number, monthIndex: number) {
@@ -984,7 +1016,8 @@ function formatShortDate(dateKey: string) {
 }
 
 function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[]) {
-  return categories
+  return categoryDisplayOrder
+    .filter((type) => categories.includes(type))
     .map((type) => ({
       type,
       count: type === "todo" ? tasks.length : events.filter((event) => event.type === type).length,
