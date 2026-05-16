@@ -27,6 +27,7 @@ export type CareerRecord = {
   requiredDocs?: string;
   certificateNumber?: string;
   issuer?: string;
+  expiresNever?: boolean;
   resultType?: CertificateResultType;
   resultValue?: string;
   score?: string;

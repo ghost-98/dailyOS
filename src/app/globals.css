@@ -2693,8 +2693,57 @@ a:focus-visible {
   padding: 20px;
 }
 
+.certificate-record-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(61, 220, 151, 0.18);
+  background:
+    linear-gradient(135deg, rgba(61, 220, 151, 0.095), rgba(201, 184, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+}
+
+.certificate-record-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--green), var(--violet));
+  content: "";
+}
+
 .career-record-main {
   min-width: 0;
+}
+
+.certificate-record-card__main {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 14px;
+}
+
+.certificate-record-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.certificate-result-pill {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(201, 184, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--text) !important;
+  padding: 7px 11px;
+  font-size: 13px !important;
+  font-weight: 850;
+}
+
+.certificate-result-pill b {
+  color: var(--violet);
+  font-size: 12px;
 }
 
 .career-record-card h3 {
@@ -2709,6 +2758,56 @@ a:focus-visible {
   display: block;
   color: var(--muted);
   font-size: 14px;
+}
+
+.certificate-record-card h3 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.certificate-record-card p {
+  margin: -8px 0 0;
+}
+
+.certificate-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.certificate-meta-block {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.13);
+  padding: 13px;
+}
+
+.certificate-meta-block span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.certificate-meta-block strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificate-record-card__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.certificate-file-empty {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .career-next-step {
@@ -2771,6 +2870,10 @@ a:focus-visible {
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
+}
+
+.certificate-record-card .career-link {
+  margin-top: 0;
 }
 
 .application-event-list {
@@ -2935,6 +3038,25 @@ a:focus-visible {
 
 .career-form-card__fields {
   display: grid;
+}
+
+.certificate-lifetime-row {
+  align-items: center;
+}
+
+.certificate-lifetime-toggle {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-weight: 850;
+  padding: 8px 13px;
+}
+
+.certificate-lifetime-toggle--active {
+  border-color: rgba(61, 220, 151, 0.42);
+  background: rgba(61, 220, 151, 0.16);
+  color: var(--green);
 }
 
 @media (min-width: 821px) {
@@ -3262,6 +3384,10 @@ a:focus-visible {
 
   .career-record-card {
     flex-direction: column;
+  }
+
+  .certificate-detail-grid {
+    grid-template-columns: 1fr;
   }
 
   .event-record-card {

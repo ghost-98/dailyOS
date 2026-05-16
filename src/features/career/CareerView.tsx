@@ -61,7 +61,7 @@ const certificateResultTypeLabels: Record<CertificateResultType, string> = {
 const statusOptions: Record<CareerTab, string[]> = {
   applied: ["지원 준비", "지원 완료", "서류 대기", "서류 합격", "필기 예정", "면접 예정", "결과 대기", "합격", "불합격", "보류"],
   planned: ["관심", "준비 중", "공고 대기", "서류 준비", "우선 지원", "보류"],
-  certificates: ["보유", "준비 중", "접수 예정", "응시 예정", "취득", "갱신 필요", "만료"],
+  certificates: ["취득", "응시 예정", "만료"],
 };
 
 const tabRoutes: Record<CareerTab, string> = {
@@ -182,6 +182,57 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
 }
 
 function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; onEdit: () => void; record: CareerRecord }) {
+  if (record.tab === "certificates") {
+    const result = getCertificateResult(record);
+    const expiry = getCertificateExpiry(record);
+
+    return (
+      <article className="career-record-card certificate-record-card">
+        <div className="certificate-record-card__main">
+          <div className="certificate-record-card__top">
+            <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
+            {result ? (
+              <span className="certificate-result-pill">
+                <b>{result.label}</b>
+                {result.value}
+              </span>
+            ) : null}
+          </div>
+          <h3>{record.title}</h3>
+          <p>{record.issuer ?? record.subtitle}</p>
+
+          <div className="certificate-detail-grid">
+            <MetaBlock label="자격증 번호" value={record.certificateNumber} />
+            <MetaBlock label="취득일" value={record.primaryDate} />
+            <MetaBlock label="유효기간" value={expiry} />
+          </div>
+
+          <div className="certificate-record-card__footer">
+            {record.url ? (
+              <a className="career-link" href={record.url} rel="noreferrer" target="_blank">
+                <LinkIcon aria-hidden size={14} />
+                증빙 파일 열기
+              </a>
+            ) : (
+              <span className="certificate-file-empty">증빙 파일 없음</span>
+            )}
+            {record.memo ? <small>{record.memo}</small> : null}
+          </div>
+        </div>
+        <div className="record-actions">
+          <button onClick={onEdit} type="button">
+            <Pencil aria-hidden size={15} />
+            수정
+          </button>
+          <button onClick={onDelete} type="button">
+            <Trash2 aria-hidden size={15} />
+            삭제
+          </button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article className="career-record-card">
       <div className="career-record-main">
@@ -210,6 +261,15 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         </button>
       </div>
     </article>
+  );
+}
+
+function MetaBlock({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="certificate-meta-block">
+      <span>{label}</span>
+      <strong>{value ? formatDisplayDate(value) : "-"}</strong>
+    </div>
   );
 }
 
@@ -331,6 +391,8 @@ function CareerRecordSheet({
       subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
       status: form.status.trim() || getDefaultStatus(form.tab),
       issuer: form.tab === "certificates" ? form.subtitle.trim() || form.issuer?.trim() || undefined : form.issuer,
+      deadlineDate: form.tab === "certificates" && form.expiresNever ? undefined : form.deadlineDate,
+      expiresNever: form.tab === "certificates" ? Boolean(form.expiresNever) : undefined,
       resultType: form.tab === "certificates" ? certificateResultType : undefined,
       resultValue: form.tab === "certificates" ? resultValue : undefined,
       score: form.tab === "certificates" && certificateResultType === "score" ? resultValue : undefined,
@@ -465,7 +527,21 @@ function CareerSpecificFields({
       <>
         <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
         <Field label="취득일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
-        <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
+        <label className="event-form-row certificate-lifetime-row">
+          <span>유효기간</span>
+          <button
+            className={`certificate-lifetime-toggle ${form.expiresNever ? "certificate-lifetime-toggle--active" : ""}`}
+            onClick={() => {
+              const nextValue = !form.expiresNever;
+              updateField("expiresNever", nextValue);
+              if (nextValue) updateField("deadlineDate", undefined);
+            }}
+            type="button"
+          >
+            평생 유효
+          </button>
+        </label>
+        {form.expiresNever ? null : <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />}
         <label className="event-form-row event-form-row--select">
           <span>결과 유형</span>
           <select value={resultType} onChange={(event) => updateField("resultType", event.target.value as CertificateResultType)}>
@@ -563,7 +639,7 @@ function renderTabIcon(tab: CareerTab) {
 }
 
 function getBadgeTone(record: CareerRecord) {
-  if (record.tab === "certificates") return "green";
+  if (record.tab === "certificates") return record.status === "만료" ? "muted" : record.status === "응시 예정" ? "amber" : "green";
   if (record.status.includes("마감") || record.status.includes("준비")) return "amber";
   return "muted";
 }
@@ -576,7 +652,7 @@ function getDefaultSubtitle(tab: CareerTab) {
 function getDefaultStatus(tab: CareerTab) {
   if (tab === "applied") return "지원 완료";
   if (tab === "planned") return "준비 중";
-  return "보유";
+  return "취득";
 }
 
 function getStatusOptions(tab: CareerTab, currentStatus?: string) {
@@ -594,6 +670,11 @@ function getCertificateResult(record: CareerRecord) {
     label: certificateResultTypeLabels[resultType],
     value: resultType === "score" && !value.includes("점") ? `${value}점` : value,
   };
+}
+
+function getCertificateExpiry(record: CareerRecord) {
+  if (record.expiresNever) return "평생";
+  return record.deadlineDate;
 }
 
 function getTitleLabel(tab: CareerTab) {
@@ -644,7 +725,7 @@ function getNextCareerStep(record: CareerRecord) {
   }
 
   if (record.tab === "certificates") {
-    candidates.push({ label: "만료", date: record.deadlineDate }, { label: "취득", date: record.primaryDate });
+    candidates.push(...(record.expiresNever ? [] : [{ label: "만료", date: record.deadlineDate }]), { label: "취득", date: record.primaryDate });
   }
 
   const datedCandidates = candidates.filter((candidate): candidate is { label: string; date: string } => Boolean(candidate.date));

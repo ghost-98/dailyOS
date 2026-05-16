@@ -18,6 +18,7 @@ type CareerRecordRow = {
   required_docs: string | null;
   certificate_number: string | null;
   issuer: string | null;
+  expires_never: boolean | null;
   result_type: CertificateResultType | null;
   result_value: string | null;
   score: string | null;
@@ -42,7 +43,7 @@ type CareerRecordUpdate = Partial<Omit<CareerRecordInsert, "user_id">>;
 
 const recordColumns = `
   id,tab,title,subtitle,status,primary_date,deadline_date,exam_date,interview_date,result_date,url,resume_name,
-  required_certs,required_docs,certificate_number,issuer,result_type,result_value,score,grade,priority,memo,
+  required_certs,required_docs,certificate_number,issuer,expires_never,result_type,result_value,score,grade,priority,memo,
   application_events(id,stage,event_date,memo)
 `;
 
@@ -84,6 +85,7 @@ function mapCareerRecordRow(row: CareerRecordRow): CareerRecord {
     requiredDocs: row.required_docs ?? undefined,
     certificateNumber: row.certificate_number ?? undefined,
     issuer: row.issuer ?? undefined,
+    expiresNever: row.expires_never ?? undefined,
     resultType: row.result_type ?? inferCertificateResultType(row),
     resultValue: row.result_value ?? row.score ?? row.grade ?? undefined,
     score: row.score ?? undefined,
@@ -112,6 +114,7 @@ function mapRecordToInsert(record: CareerRecord, userId: string): CareerRecordIn
     required_docs: emptyToNull(record.requiredDocs),
     certificate_number: emptyToNull(record.certificateNumber),
     issuer: emptyToNull(record.issuer),
+    expires_never: record.expiresNever ?? null,
     result_type: record.resultType ?? null,
     result_value: emptyToNull(record.resultValue),
     score: emptyToNull(record.score),

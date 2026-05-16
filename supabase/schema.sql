@@ -83,6 +83,7 @@ create table if not exists public.career_records (
   required_docs text,
   certificate_number text,
   issuer text,
+  expires_never boolean,
   result_type text check (result_type is null or result_type in ('score', 'passFail', 'grade')),
   result_value text,
   score text,
@@ -99,6 +100,9 @@ check (result_type is null or result_type in ('score', 'passFail', 'grade'));
 
 alter table public.career_records
 add column if not exists result_value text;
+
+alter table public.career_records
+add column if not exists expires_never boolean;
 
 create table if not exists public.application_events (
   id uuid primary key default gen_random_uuid(),
