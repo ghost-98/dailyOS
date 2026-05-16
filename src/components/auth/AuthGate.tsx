@@ -1,7 +1,7 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, CheckCircle2, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Loader2, LockKeyhole, Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -52,7 +52,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, []);
 
   if (!isSupabaseConfigured) {
-    return <AuthShell title="Supabase 설정이 필요합니다" description=".env.local에 Supabase URL과 publishable key를 넣어야 dailyOS를 시작할 수 있습니다." />;
+    return (
+      <AuthShell
+        title="Supabase 설정이 필요합니다"
+        description=".env.local에 Supabase URL과 publishable key를 넣어 주세요."
+      />
+    );
   }
 
   if (isLoading) {
@@ -125,44 +130,63 @@ function AuthScreen() {
 
   return (
     <main className="auth-page">
-      <section className="auth-hero" aria-label="dailyOS 소개">
+      <section className="auth-hero" aria-label="dailyOS 로그인 안내">
         <div className="auth-brand">
           <span className="auth-brand__mark">d</span>
           <div>
             <strong>dailyOS</strong>
-            <span>일정, 할 일, 건강, 취업을 한 곳에서 관리합니다.</span>
+            <span>일정, 할 일, 건강, 취업 관리</span>
           </div>
         </div>
 
         <div className="auth-copy">
-          <span className="auth-kicker">Personal OS</span>
-          <h1>오늘 운영에 필요한 데이터만 깔끔하게.</h1>
-          <p>로그인하면 빈 워크스페이스에서 시작합니다. 샘플 데이터 없이 사용자가 직접 만든 기록만 저장됩니다.</p>
+          <span className="auth-kicker">개인 워크스페이스</span>
+          <h1>오늘 할 일부터 기록까지</h1>
+          <p>필요한 항목만 직접 등록하고, 오늘 화면에서 바로 확인합니다.</p>
         </div>
 
-        <div className="auth-proof">
-          <span><CheckCircle2 aria-hidden size={17} /> PWA 설치 대응</span>
-          <span><ShieldCheck aria-hidden size={17} /> Supabase RLS 기준</span>
-          <span><LockKeyhole aria-hidden size={17} /> 개인 데이터 분리</span>
+        <div className="auth-proof" aria-label="관리 항목">
+          <span>일정</span>
+          <span>할 일</span>
+          <span>건강</span>
+          <span>취업</span>
         </div>
       </section>
 
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-tabs" role="tablist">
-          <button className={mode === "login" ? "auth-tab auth-tab--active" : "auth-tab"} onClick={() => setMode("login")} type="button">로그인</button>
-          <button className={mode === "signup" ? "auth-tab auth-tab--active" : "auth-tab"} onClick={() => setMode("signup")} type="button">회원가입</button>
+          <button
+            className={mode === "login" ? "auth-tab auth-tab--active" : "auth-tab"}
+            onClick={() => setMode("login")}
+            type="button"
+          >
+            로그인
+          </button>
+          <button
+            className={mode === "signup" ? "auth-tab auth-tab--active" : "auth-tab"}
+            onClick={() => setMode("signup")}
+            type="button"
+          >
+            회원가입
+          </button>
         </div>
 
         <div className="auth-card__header">
-          <h2 id="auth-title">{mode === "login" ? "다시 시작하기" : "워크스페이스 만들기"}</h2>
-          <p>{mode === "login" ? "이메일과 비밀번호로 dailyOS에 들어갑니다." : "새 계정을 만들고 본인 데이터만 저장합니다."}</p>
+          <h2 id="auth-title">{mode === "login" ? "로그인" : "계정 만들기"}</h2>
+          <p>{mode === "login" ? "이메일과 비밀번호를 입력해 주세요." : "새 워크스페이스를 시작합니다."}</p>
         </div>
 
         <label className="auth-field">
           <span>이메일</span>
           <div>
             <Mail aria-hidden size={18} />
-            <input autoComplete="email" inputMode="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+            <input
+              autoComplete="email"
+              inputMode="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
           </div>
         </label>
 
@@ -170,9 +194,16 @@ function AuthScreen() {
           <span>비밀번호</span>
           <div>
             <LockKeyhole aria-hidden size={18} />
-            <input autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="6자 이상" type="password" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => {
-              if (event.key === "Enter") void submit();
-            }} />
+            <input
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              placeholder="6자 이상"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void submit();
+              }}
+            />
           </div>
         </label>
 
@@ -184,7 +215,7 @@ function AuthScreen() {
         </button>
         {mode === "login" ? (
           <button className="auth-link-button" disabled={isSubmitting} onClick={sendResetEmail} type="button">
-            비밀번호 재설정 메일 받기
+            비밀번호 재설정
           </button>
         ) : null}
       </section>

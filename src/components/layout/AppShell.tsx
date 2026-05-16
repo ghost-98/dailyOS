@@ -65,7 +65,7 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
               <span className="brand__mark">d</span>
               <div>
                 <span className="brand__name">dailyOS</span>
-                <span className="brand__subtitle">Personal OS</span>
+                <span className="brand__subtitle">개인 관리</span>
               </div>
             </Link>
 
