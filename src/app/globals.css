@@ -1441,6 +1441,21 @@ a:focus-visible {
   padding: 18px 18px 18px 16px;
 }
 
+.date-event--task {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+}
+
+.date-event--task-done {
+  opacity: 0.68;
+}
+
+.date-event--task-done h3 {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
 .date-event--schedule {
   border-left-color: var(--violet);
 }
@@ -1475,6 +1490,26 @@ a:focus-visible {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.date-event__check {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #0b1712;
+}
+
+.date-event--task-done .date-event__check {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.date-event__task-body {
+  min-width: 0;
 }
 
 .date-event__actions {
