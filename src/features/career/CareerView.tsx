@@ -185,14 +185,16 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         <div className="certificate-record-card__main">
           <div className="certificate-record-card__top">
             <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
+          </div>
+          <div className="certificate-record-card__title">
+            <h3>{record.title}</h3>
             <CopyButton label="자격증명 복사" value={record.title} />
           </div>
-          <h3>{record.title}</h3>
           <p>{record.issuer ?? record.subtitle}</p>
 
           <div className="certificate-detail-grid">
+            <MetaBlock canCopy label="시행기관" value={record.issuer ?? record.subtitle} />
             <MetaBlock canCopy label="자격증 번호" value={record.certificateNumber} />
-            <MetaBlock canCopy label="발급 기관" value={record.issuer ?? record.subtitle} />
             <MetaBlock label="취득일" value={record.primaryDate} />
             <MetaBlock label="유효기간" value={expiry} />
           </div>
