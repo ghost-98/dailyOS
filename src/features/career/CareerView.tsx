@@ -330,6 +330,7 @@ function CareerRecordSheet({
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
       status: form.status.trim() || getDefaultStatus(form.tab),
+      issuer: form.tab === "certificates" ? form.subtitle.trim() || form.issuer?.trim() || undefined : form.issuer,
       resultType: form.tab === "certificates" ? certificateResultType : undefined,
       resultValue: form.tab === "certificates" ? resultValue : undefined,
       score: form.tab === "certificates" && certificateResultType === "score" ? resultValue : undefined,
@@ -343,57 +344,74 @@ function CareerRecordSheet({
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
       <section aria-labelledby="career-sheet-title" aria-modal="true" className="event-sheet career-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose} type="button">취소</button>
-          <h2 id="career-sheet-title">{record ? "항목 수정" : "항목 추가"}</h2>
-          <button className="event-sheet__done-button" onClick={saveCurrentRecord} type="button">저장</button>
+        <header className="event-sheet__header career-sheet__header">
+          <div>
+            <h2 id="career-sheet-title">{record ? `${tabLabels[form.tab]} 수정` : `${tabLabels[form.tab]} 추가`}</h2>
+            <p>{form.tab === "certificates" ? "취득 정보, 유효기간, 등록번호, 파일과 결과 유형을 함께 관리합니다." : tabDescriptions[form.tab]}</p>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
+          </button>
         </header>
 
-        <div className="event-sheet__body">
-          <div className="event-form-card">
-            <label className="event-form-row event-form-row--select">
-              <span>분류</span>
-              <select value={form.tab} onChange={(event) => updateField("tab", event.target.value as CareerTab)}>
-                <option value="applied">지원한 기업</option>
-                <option value="planned">지원 예정</option>
-                <option value="certificates">자격증</option>
-              </select>
-            </label>
+        <div className="event-sheet__body career-sheet__body">
+          <div className="career-sheet__column">
+            <div className="event-form-card career-form-card">
+              <label className="event-form-row event-form-row--select">
+                <span>분류</span>
+                <select value={form.tab} onChange={(event) => updateField("tab", event.target.value as CareerTab)}>
+                  <option value="applied">지원한 기업</option>
+                  <option value="planned">지원 예정</option>
+                  <option value="certificates">자격증</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="event-form-card event-form-card--title career-form-card">
+              <label>
+                <span>{getTitleLabel(form.tab)}</span>
+                <input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} />
+              </label>
+              <label>
+                <span>{getSubtitleLabel(form.tab)}</span>
+                <input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
+              </label>
+            </div>
           </div>
 
-          <div className="event-form-card event-form-card--title">
-            <label>
-              <span>{getTitleLabel(form.tab)}</span>
-              <input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} />
-            </label>
-            <label>
-              <span>{getSubtitleLabel(form.tab)}</span>
-              <input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
-            </label>
-          </div>
-
-          <div className="event-form-card career-field-card">
-            <label className="event-form-row event-form-row--select">
-              <span>상태</span>
-              <select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>
-                {getStatusOptions(form.tab, form.status).map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <CareerSpecificFields form={form} updateField={updateField} />
-            <label className="event-note">
-              <span>메모</span>
-              <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
-            </label>
+          <div className="event-form-card career-field-card career-form-card">
+            <div className="career-form-card__title">
+              <strong>{form.tab === "certificates" ? "자격 정보" : "관리 정보"}</strong>
+              <span>{form.tab === "certificates" ? "결과 유형과 증빙 정보를 한 번에 정리합니다." : "상태와 관련 날짜를 관리합니다."}</span>
+            </div>
+            <div className="career-form-card__fields">
+              <label className="event-form-row event-form-row--select">
+                <span>상태</span>
+                <select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>
+                  {getStatusOptions(form.tab, form.status).map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <CareerSpecificFields form={form} updateField={updateField} />
+              <label className="event-note">
+                <span>메모</span>
+                <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
+              </label>
+            </div>
           </div>
         </div>
 
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
-          <X aria-hidden size={18} />
-        </button>
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+            취소
+          </button>
+          <button className="event-sheet__primary-button" onClick={saveCurrentRecord} type="button">
+            저장하기
+          </button>
+        </footer>
       </section>
     </div>
   );
@@ -446,7 +464,6 @@ function CareerSpecificFields({
     return (
       <>
         <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
-        <Field label="발급 기관" value={form.issuer} onChange={(value) => updateField("issuer", value)} />
         <Field label="취득일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
         <label className="event-form-row event-form-row--select">

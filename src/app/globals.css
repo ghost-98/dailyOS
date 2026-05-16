@@ -1686,6 +1686,8 @@ a:focus-visible {
 
 .event-sheet {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(720px, 100%);
   max-height: min(820px, calc(100vh - 48px));
   overflow: hidden;
@@ -1757,6 +1759,7 @@ a:focus-visible {
 
 .event-sheet__body {
   display: grid;
+  flex: 1 1 auto;
   max-height: min(650px, calc(100vh - 150px));
   gap: 14px;
   overflow-y: auto;
@@ -1777,9 +1780,11 @@ a:focus-visible {
 
 .event-sheet__footer {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(24, 25, 29, 0.98);
   padding: 16px 24px 20px;
 }
 
@@ -2886,11 +2891,75 @@ a:focus-visible {
 }
 
 .career-sheet {
-  width: min(640px, 100%);
+  width: min(900px, calc(100vw - 48px));
+}
+
+.career-sheet__body {
+  align-items: start;
+}
+
+.career-sheet__column {
+  display: grid;
+  gap: 14px;
+}
+
+.career-form-card {
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035)),
+    rgba(24, 25, 29, 0.92);
 }
 
 .career-field-card {
   overflow: hidden;
+}
+
+.career-form-card__title {
+  display: grid;
+  gap: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 17px 18px 15px;
+}
+
+.career-form-card__title strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.career-form-card__title span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.career-form-card__fields {
+  display: grid;
+}
+
+@media (min-width: 821px) {
+  .career-sheet .event-sheet__body {
+    max-height: min(660px, calc(100vh - 190px));
+  }
+
+  .career-sheet__body {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.35fr);
+    gap: 18px;
+  }
+
+  .career-sheet__header {
+    padding: 26px 28px 20px;
+  }
+
+  .career-sheet .event-sheet__footer {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .career-sheet .event-form-row--field input,
+  .career-sheet .event-form-row--select select {
+    max-width: 300px;
+  }
 }
 
 .settings-page {
