@@ -78,6 +78,8 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [certificateQuery, setCertificateQuery] = useState("");
+  const [certificateStatusFilter, setCertificateStatusFilter] = useState("전체");
 
   useEffect(() => {
     let isMounted = true;
@@ -97,6 +99,23 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   }, []);
 
   const visibleRecords = useMemo(() => records.filter((record) => record.tab === activeTab), [activeTab, records]);
+  const displayedRecords = useMemo(() => {
+    if (activeTab !== "certificates") return visibleRecords;
+
+    const query = certificateQuery.trim().toLowerCase();
+    return visibleRecords.filter((record) => {
+      const matchesStatus = certificateStatusFilter === "전체" || record.status === certificateStatusFilter;
+      const matchesQuery =
+        query.length === 0 ||
+        [record.title, record.subtitle, record.issuer, record.certificateNumber, record.status]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+
+      return matchesStatus && matchesQuery;
+    });
+  }, [activeTab, certificateQuery, certificateStatusFilter, visibleRecords]);
 
   const saveRecord = async (record: CareerRecord) => {
     const exists = records.some((item) => item.id === record.id);
@@ -146,26 +165,72 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           <p className="section-description">{tabDescriptions[activeTab]}</p>
         </div>
 
-        <div className="career-record-list">
-          {visibleRecords.map((record) => (
-            <CareerRecordCard
-              key={record.id}
-              record={record}
-              onDelete={() => deleteRecord(record.id)}
-              onEdit={() => {
+        {activeTab === "certificates" ? (
+          <div className="certificate-browser">
+            <aside className="certificate-index-panel" aria-label="자격증 탐색">
+              <label className="certificate-search">
+                <span>검색</span>
+                <input
+                  placeholder="자격증명, 시행기관, 번호"
+                  value={certificateQuery}
+                  onChange={(event) => setCertificateQuery(event.target.value)}
+                />
+              </label>
+
+              <div className="certificate-status-filter" aria-label="자격증 상태 필터">
+                {["전체", ...statusOptions.certificates].map((status) => (
+                  <button
+                    className={certificateStatusFilter === status ? "certificate-status-filter__chip certificate-status-filter__chip--active" : "certificate-status-filter__chip"}
+                    key={status}
+                    onClick={() => setCertificateStatusFilter(status)}
+                    type="button"
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+
+              <div className="certificate-index-list">
+                <span>목차</span>
+                {displayedRecords.map((record) => (
+                  <button
+                    key={record.id}
+                    onClick={() => document.getElementById(`career-record-${record.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    type="button"
+                  >
+                    <strong>{record.title}</strong>
+                    <small>{record.issuer ?? record.subtitle}</small>
+                  </button>
+                ))}
+                {visibleRecords.length > 0 && displayedRecords.length === 0 ? <p>검색 결과가 없습니다.</p> : null}
+              </div>
+            </aside>
+
+            <CareerRecordList
+              activeTab={activeTab}
+              emptyDescription={visibleRecords.length > 0 && displayedRecords.length === 0 ? "검색어나 상태 필터를 조정해 보세요." : undefined}
+              emptyTitle={visibleRecords.length > 0 && displayedRecords.length === 0 ? "검색 결과가 없습니다." : undefined}
+              isLoading={isLoading}
+              records={displayedRecords}
+              onDelete={deleteRecord}
+              onEdit={(record) => {
                 setEditingRecord(record);
                 setIsSheetOpen(true);
               }}
             />
-          ))}
-          {visibleRecords.length === 0 ? (
-            <div className="career-empty">
-              <ClipboardList aria-hidden size={28} />
-              <strong>{tabLabels[activeTab]} 항목이 없습니다.</strong>
-              <p>{isLoading ? "불러오는 중입니다." : "항목을 추가하면 이곳에 표시됩니다."}</p>
-            </div>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <CareerRecordList
+            activeTab={activeTab}
+            isLoading={isLoading}
+            records={displayedRecords}
+            onDelete={deleteRecord}
+            onEdit={(record) => {
+              setEditingRecord(record);
+              setIsSheetOpen(true);
+            }}
+          />
+        )}
       </SectionCard>
 
       {isSheetOpen ? (
@@ -183,12 +248,45 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   );
 }
 
+function CareerRecordList({
+  activeTab,
+  emptyDescription,
+  emptyTitle,
+  isLoading,
+  onDelete,
+  onEdit,
+  records,
+}: {
+  activeTab: CareerTab;
+  emptyDescription?: string;
+  emptyTitle?: string;
+  isLoading: boolean;
+  onDelete: (id: string) => void;
+  onEdit: (record: CareerRecord) => void;
+  records: CareerRecord[];
+}) {
+  return (
+    <div className="career-record-list">
+      {records.map((record) => (
+        <CareerRecordCard key={record.id} record={record} onDelete={() => onDelete(record.id)} onEdit={() => onEdit(record)} />
+      ))}
+      {records.length === 0 ? (
+        <div className="career-empty">
+          <ClipboardList aria-hidden size={28} />
+          <strong>{emptyTitle ?? `${tabLabels[activeTab]} 항목이 없습니다.`}</strong>
+          <p>{emptyDescription ?? (isLoading ? "불러오는 중입니다." : "항목을 추가하면 이곳에 표시됩니다.")}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; onEdit: () => void; record: CareerRecord }) {
   if (record.tab === "certificates") {
     const expiry = getCertificateExpiry(record);
 
     return (
-      <article className="career-record-card certificate-record-card">
+      <article className="career-record-card certificate-record-card" id={`career-record-${record.id}`}>
         <div className="certificate-record-card__main">
           <div className="certificate-record-card__top">
             <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
@@ -232,7 +330,7 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
   }
 
   return (
-    <article className="career-record-card">
+    <article className="career-record-card" id={`career-record-${record.id}`}>
       <div className="career-record-main">
         <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
         <h3>{record.title}</h3>
