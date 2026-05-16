@@ -234,13 +234,24 @@ button {
   color: var(--violet);
 }
 
-.auth-field input {
+.auth-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.auth-field input,
+.auth-field select {
   width: 100%;
   min-height: 52px;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--text);
+}
+
+.auth-field select {
+  appearance: none;
 }
 
 .auth-message {
@@ -3814,6 +3825,10 @@ a:focus-visible {
 
   .auth-card {
     box-shadow: var(--shadow);
+  }
+
+  .auth-profile-grid {
+    grid-template-columns: 1fr;
   }
 
   .app-shell {

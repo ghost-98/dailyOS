@@ -1,7 +1,7 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, Cake, Loader2, LockKeyhole, Mail, UserRound, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -84,6 +84,9 @@ function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -96,11 +99,26 @@ function AuthScreen() {
       return;
     }
 
+    if (mode === "signup" && (!fullName.trim() || !gender || !birthDate)) {
+      setMessage("이름, 성별, 생년월일을 모두 입력하세요.");
+      return;
+    }
+
     setIsSubmitting(true);
     const result =
       mode === "login"
         ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-        : await supabase.auth.signUp({ email: email.trim(), password });
+        : await supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              data: {
+                birth_date: birthDate,
+                full_name: fullName.trim(),
+                gender,
+              },
+            },
+          });
 
     setIsSubmitting(false);
 
@@ -175,6 +193,42 @@ function AuthScreen() {
           <h2 id="auth-title">{mode === "login" ? "로그인" : "계정 만들기"}</h2>
           <p>{mode === "login" ? "이메일과 비밀번호를 입력해 주세요." : "새 워크스페이스를 시작합니다."}</p>
         </div>
+
+        {mode === "signup" ? (
+          <>
+            <label className="auth-field">
+              <span>이름</span>
+              <div>
+                <UserRound aria-hidden size={18} />
+                <input autoComplete="name" placeholder="홍길동" value={fullName} onChange={(event) => setFullName(event.target.value)} />
+              </div>
+            </label>
+
+            <div className="auth-profile-grid">
+              <label className="auth-field">
+                <span>성별</span>
+                <div>
+                  <UsersRound aria-hidden size={18} />
+                  <select value={gender} onChange={(event) => setGender(event.target.value)}>
+                    <option value="">선택</option>
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                    <option value="other">기타</option>
+                    <option value="prefer_not_to_say">응답 안 함</option>
+                  </select>
+                </div>
+              </label>
+
+              <label className="auth-field">
+                <span>생년월일</span>
+                <div>
+                  <Cake aria-hidden size={18} />
+                  <input type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} />
+                </div>
+              </label>
+            </div>
+          </>
+        ) : null}
 
         <label className="auth-field">
           <span>이메일</span>
