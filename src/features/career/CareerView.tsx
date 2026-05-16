@@ -79,7 +79,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [certificateQuery, setCertificateQuery] = useState("");
-  const [certificateStatusFilter, setCertificateStatusFilter] = useState("전체");
+  const [certificateStatusFilter, setCertificateStatusFilter] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -104,7 +104,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
 
     const query = certificateQuery.trim().toLowerCase();
     return visibleRecords.filter((record) => {
-      const matchesStatus = certificateStatusFilter === "전체" || record.status === certificateStatusFilter;
+      const matchesStatus = !certificateStatusFilter || record.status === certificateStatusFilter;
       const matchesQuery =
         query.length === 0 ||
         [record.title, record.subtitle, record.issuer, record.certificateNumber, record.status]
@@ -178,11 +178,11 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
               </label>
 
               <div className="certificate-status-filter" aria-label="자격증 상태 필터">
-                {["전체", ...statusOptions.certificates].map((status) => (
+                {statusOptions.certificates.map((status) => (
                   <button
                     className={certificateStatusFilter === status ? "certificate-status-filter__chip certificate-status-filter__chip--active" : "certificate-status-filter__chip"}
                     key={status}
-                    onClick={() => setCertificateStatusFilter(status)}
+                    onClick={() => setCertificateStatusFilter((current) => (current === status ? "" : status))}
                     type="button"
                   >
                     {status}
