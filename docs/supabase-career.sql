@@ -20,22 +20,11 @@ create table if not exists public.career_records (
   certificate_number text,
   issuer text,
   expires_never boolean,
-  result_type text check (result_type is null or result_type in ('score', 'passFail', 'grade')),
-  result_value text,
-  score text,
-  grade text,
   priority text check (priority in ('high', 'normal', 'low')),
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
-alter table public.career_records
-add column if not exists result_type text
-check (result_type is null or result_type in ('score', 'passFail', 'grade'));
-
-alter table public.career_records
-add column if not exists result_value text;
 
 alter table public.career_records
 add column if not exists expires_never boolean;

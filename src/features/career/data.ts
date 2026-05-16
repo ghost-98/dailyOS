@@ -1,7 +1,6 @@
 export type CareerTab = "applied" | "planned" | "certificates";
 
 export type ApplicationEventStage = "document" | "written" | "interview";
-export type CertificateResultType = "score" | "passFail" | "grade";
 
 export type ApplicationEvent = {
   id: string;
@@ -28,10 +27,6 @@ export type CareerRecord = {
   certificateNumber?: string;
   issuer?: string;
   expiresNever?: boolean;
-  resultType?: CertificateResultType;
-  resultValue?: string;
-  score?: string;
-  grade?: string;
   priority?: "high" | "normal" | "low";
   applicationEvents?: ApplicationEvent[];
   memo?: string;

@@ -2728,24 +2728,6 @@ a:focus-visible {
   gap: 10px;
 }
 
-.certificate-result-pill {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(201, 184, 255, 0.22);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.1);
-  color: var(--text) !important;
-  padding: 7px 11px;
-  font-size: 13px !important;
-  font-weight: 850;
-}
-
-.certificate-result-pill b {
-  color: var(--violet);
-  font-size: 12px;
-}
-
 .career-record-card h3 {
   margin: 10px 0 6px;
   font-size: 21px;
@@ -2771,7 +2753,7 @@ a:focus-visible {
 
 .certificate-detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -2785,6 +2767,10 @@ a:focus-visible {
 }
 
 .certificate-meta-block span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -2803,6 +2789,38 @@ a:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.copy-icon-button {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.copy-icon-button:hover {
+  border-color: rgba(201, 184, 255, 0.38);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  transform: translateY(-1px);
+}
+
+.certificate-download-link {
+  border: 1px solid rgba(201, 184, 255, 0.26);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.1);
+  padding: 8px 11px;
 }
 
 .certificate-file-empty {

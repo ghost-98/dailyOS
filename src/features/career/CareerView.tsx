@@ -5,7 +5,9 @@ import type React from "react";
 import {
   BriefcaseBusiness,
   CalendarClock,
+  Clipboard,
   ClipboardList,
+  Download,
   FileBadge,
   LinkIcon,
   Pencil,
@@ -25,7 +27,6 @@ import {
   type ApplicationEventStage,
   type CareerRecord,
   type CareerTab,
-  type CertificateResultType,
 } from "./data";
 
 const tabLabels: Record<CareerTab, string> = {
@@ -50,12 +51,6 @@ const priorityLabels = {
   high: "높음",
   normal: "보통",
   low: "낮음",
-};
-
-const certificateResultTypeLabels: Record<CertificateResultType, string> = {
-  score: "점수",
-  passFail: "합불",
-  grade: "등급",
 };
 
 const statusOptions: Record<CareerTab, string[]> = {
@@ -183,7 +178,6 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
 
 function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; onEdit: () => void; record: CareerRecord }) {
   if (record.tab === "certificates") {
-    const result = getCertificateResult(record);
     const expiry = getCertificateExpiry(record);
 
     return (
@@ -191,27 +185,23 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         <div className="certificate-record-card__main">
           <div className="certificate-record-card__top">
             <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
-            {result ? (
-              <span className="certificate-result-pill">
-                <b>{result.label}</b>
-                {result.value}
-              </span>
-            ) : null}
+            <CopyButton label="자격증명 복사" value={record.title} />
           </div>
           <h3>{record.title}</h3>
           <p>{record.issuer ?? record.subtitle}</p>
 
           <div className="certificate-detail-grid">
-            <MetaBlock label="자격증 번호" value={record.certificateNumber} />
+            <MetaBlock canCopy label="자격증 번호" value={record.certificateNumber} />
+            <MetaBlock canCopy label="발급 기관" value={record.issuer ?? record.subtitle} />
             <MetaBlock label="취득일" value={record.primaryDate} />
             <MetaBlock label="유효기간" value={expiry} />
           </div>
 
           <div className="certificate-record-card__footer">
             {record.url ? (
-              <a className="career-link" href={record.url} rel="noreferrer" target="_blank">
-                <LinkIcon aria-hidden size={14} />
-                증빙 파일 열기
+              <a className="career-link certificate-download-link" download href={record.url} rel="noreferrer" target="_blank">
+                <Download aria-hidden size={14} />
+                증빙 파일 다운로드
               </a>
             ) : (
               <span className="certificate-file-empty">증빙 파일 없음</span>
@@ -264,12 +254,28 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
   );
 }
 
-function MetaBlock({ label, value }: { label: string; value?: string }) {
+function MetaBlock({ canCopy = false, label, value }: { canCopy?: boolean; label: string; value?: string }) {
   return (
     <div className="certificate-meta-block">
-      <span>{label}</span>
-      <strong>{value ? formatDisplayDate(value) : "-"}</strong>
+      <span>
+        {label}
+        {canCopy && value ? <CopyButton label={`${label} 복사`} value={value} /> : null}
+      </span>
+      <strong>{value ? formatCertificateValue(label, value) : "-"}</strong>
     </div>
+  );
+}
+
+function CopyButton({ label, value }: { label: string; value: string }) {
+  const copyValue = async () => {
+    if (!navigator.clipboard) return;
+    await navigator.clipboard.writeText(value);
+  };
+
+  return (
+    <button className="copy-icon-button" aria-label={label} onClick={copyValue} title={label} type="button">
+      <Clipboard aria-hidden size={14} />
+    </button>
   );
 }
 
@@ -312,15 +318,12 @@ function CareerMeta({ record }: { record: CareerRecord }) {
   }
 
   if (record.tab === "certificates") {
-    const result = getCertificateResult(record);
-
     return (
       <div className="career-meta-grid">
         <MetaItem label="자격증 번호" value={record.certificateNumber} />
         <MetaItem label="발급 기관" value={record.issuer ?? record.subtitle} />
         <MetaItem label="취득일" value={record.primaryDate} />
-        <MetaItem label="만료일" value={record.deadlineDate} />
-        <MetaItem label={result?.label ?? "결과"} value={result?.value} />
+        <MetaItem label="유효기간" value={getCertificateExpiry(record)} />
       </div>
     );
   }
@@ -382,8 +385,6 @@ function CareerRecordSheet({
 
   const saveCurrentRecord = () => {
     if (!form.title.trim()) return;
-    const certificateResultType = form.resultType ?? "score";
-    const resultValue = form.resultValue?.trim() || undefined;
 
     onSave({
       ...form,
@@ -393,10 +394,6 @@ function CareerRecordSheet({
       issuer: form.tab === "certificates" ? form.subtitle.trim() || form.issuer?.trim() || undefined : form.issuer,
       deadlineDate: form.tab === "certificates" && form.expiresNever ? undefined : form.deadlineDate,
       expiresNever: form.tab === "certificates" ? Boolean(form.expiresNever) : undefined,
-      resultType: form.tab === "certificates" ? certificateResultType : undefined,
-      resultValue: form.tab === "certificates" ? resultValue : undefined,
-      score: form.tab === "certificates" && certificateResultType === "score" ? resultValue : undefined,
-      grade: form.tab === "certificates" && certificateResultType === "grade" ? resultValue : undefined,
       memo: form.memo?.trim() || undefined,
       applicationEvents: form.tab === "applied" ? form.applicationEvents?.filter((event) => event.date) : undefined,
     });
@@ -409,7 +406,7 @@ function CareerRecordSheet({
         <header className="event-sheet__header career-sheet__header">
           <div>
             <h2 id="career-sheet-title">{record ? `${tabLabels[form.tab]} 수정` : `${tabLabels[form.tab]} 추가`}</h2>
-            <p>{form.tab === "certificates" ? "취득 정보, 유효기간, 등록번호, 파일과 결과 유형을 함께 관리합니다." : tabDescriptions[form.tab]}</p>
+            <p>{form.tab === "certificates" ? "점수나 등급은 자격증명에 함께 적고, 등록번호와 증빙 파일을 관리합니다." : tabDescriptions[form.tab]}</p>
           </div>
           <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
             <X aria-hidden size={18} />
@@ -444,7 +441,7 @@ function CareerRecordSheet({
           <div className="event-form-card career-field-card career-form-card">
             <div className="career-form-card__title">
               <strong>{form.tab === "certificates" ? "자격 정보" : "관리 정보"}</strong>
-              <span>{form.tab === "certificates" ? "결과 유형과 증빙 정보를 한 번에 정리합니다." : "상태와 관련 날짜를 관리합니다."}</span>
+              <span>{form.tab === "certificates" ? "예: TOEIC 875점, OPIc IH, 정보처리기사 필기 합격" : "상태와 관련 날짜를 관리합니다."}</span>
             </div>
             <div className="career-form-card__fields">
               <label className="event-form-row event-form-row--select">
@@ -521,8 +518,6 @@ function CareerSpecificFields({
   }
 
   if (form.tab === "certificates") {
-    const resultType = form.resultType ?? "score";
-
     return (
       <>
         <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
@@ -542,31 +537,6 @@ function CareerSpecificFields({
           </button>
         </label>
         {form.expiresNever ? null : <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />}
-        <label className="event-form-row event-form-row--select">
-          <span>결과 유형</span>
-          <select value={resultType} onChange={(event) => updateField("resultType", event.target.value as CertificateResultType)}>
-            <option value="score">점수</option>
-            <option value="passFail">합불</option>
-            <option value="grade">등급</option>
-          </select>
-        </label>
-        {resultType === "passFail" ? (
-          <label className="event-form-row event-form-row--select">
-            <span>결과</span>
-            <select value={form.resultValue ?? ""} onChange={(event) => updateField("resultValue", event.target.value)}>
-              <option value="">선택 안 함</option>
-              <option value="합격">합격</option>
-              <option value="불합격">불합격</option>
-            </select>
-          </label>
-        ) : (
-          <Field
-            label={certificateResultTypeLabels[resultType]}
-            placeholder={resultType === "score" ? "875" : "1급, 2급, IH, AL"}
-            value={form.resultValue ?? (resultType === "score" ? form.score : form.grade)}
-            onChange={(value) => updateField("resultValue", value)}
-          />
-        )}
         <Field label="PDF 파일/URL" value={form.url} onChange={(value) => updateField("url", value)} />
       </>
     );
@@ -661,17 +631,6 @@ function getStatusOptions(tab: CareerTab, currentStatus?: string) {
   return [currentStatus, ...options];
 }
 
-function getCertificateResult(record: CareerRecord) {
-  const resultType = record.resultType ?? (record.score ? "score" : record.grade ? "grade" : undefined);
-  const value = record.resultValue ?? record.score ?? record.grade;
-
-  if (!resultType || !value) return null;
-  return {
-    label: certificateResultTypeLabels[resultType],
-    value: resultType === "score" && !value.includes("점") ? `${value}점` : value,
-  };
-}
-
 function getCertificateExpiry(record: CareerRecord) {
   if (record.expiresNever) return "평생";
   return record.deadlineDate;
@@ -702,6 +661,20 @@ function formatDisplayDate(value?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(`${value}T00:00:00`);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function formatCertificateValue(label: string, value: string) {
+  if ((label.includes("취득일") || label.includes("유효기간")) && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return formatFullDate(value);
+  }
+
+  return value;
+}
+
+function formatFullDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
 }
 
 function getNextCareerStep(record: CareerRecord) {
