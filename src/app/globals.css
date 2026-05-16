@@ -2706,6 +2706,31 @@ a:focus-visible {
   font-size: 14px;
 }
 
+.career-next-step {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  border: 1px solid rgba(246, 173, 69, 0.26);
+  border-radius: 999px;
+  background: rgba(246, 173, 69, 0.1);
+  color: #ffd99f;
+  padding: 8px 11px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.career-next-step span {
+  display: inline;
+  color: inherit;
+  font-size: inherit;
+}
+
+.career-next-step strong {
+  color: var(--text);
+}
+
 .career-record-card small {
   margin-top: 8px;
 }

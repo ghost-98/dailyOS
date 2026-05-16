@@ -51,6 +51,12 @@ const priorityLabels = {
   low: "낮음",
 };
 
+const statusOptions: Record<CareerTab, string[]> = {
+  applied: ["지원 준비", "지원 완료", "서류 대기", "서류 합격", "필기 예정", "면접 예정", "결과 대기", "합격", "불합격", "보류"],
+  planned: ["관심", "준비 중", "공고 대기", "서류 준비", "우선 지원", "보류"],
+  certificates: ["보유", "준비 중", "접수 예정", "응시 예정", "취득", "갱신 필요", "만료"],
+};
+
 const tabRoutes: Record<CareerTab, string> = {
   applied: "/career/applied",
   planned: "/career/planned",
@@ -175,6 +181,7 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         <Badge tone={getBadgeTone(record)}>{record.status}</Badge>
         <h3>{record.title}</h3>
         <p>{record.subtitle}</p>
+        <CareerNextStep record={record} />
         <CareerMeta record={record} />
         {record.applicationEvents?.length ? <ApplicationEventList events={record.applicationEvents} /> : null}
         {record.url ? (
@@ -196,6 +203,19 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         </button>
       </div>
     </article>
+  );
+}
+
+function CareerNextStep({ record }: { record: CareerRecord }) {
+  const nextStep = getNextCareerStep(record);
+  if (!nextStep) return null;
+
+  return (
+    <div className="career-next-step">
+      <CalendarClock aria-hidden size={15} />
+      <span>{nextStep.label}</span>
+      <strong>{formatDisplayDate(nextStep.date)}</strong>
+    </div>
   );
 }
 
@@ -338,9 +358,15 @@ function CareerRecordSheet({
           </div>
 
           <div className="event-form-card career-field-card">
-            <label className="event-form-row event-form-row--field">
+            <label className="event-form-row event-form-row--select">
               <span>상태</span>
-              <input placeholder={getDefaultStatus(form.tab)} value={form.status} onChange={(event) => updateField("status", event.target.value)} />
+              <select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>
+                {getStatusOptions(form.tab, form.status).map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
             </label>
             <CareerSpecificFields form={form} updateField={updateField} />
             <label className="event-note">
@@ -496,6 +522,12 @@ function getDefaultStatus(tab: CareerTab) {
   return "보유";
 }
 
+function getStatusOptions(tab: CareerTab, currentStatus?: string) {
+  const options = statusOptions[tab];
+  if (!currentStatus || options.includes(currentStatus)) return options;
+  return [currentStatus, ...options];
+}
+
 function getTitleLabel(tab: CareerTab) {
   if (tab === "certificates") return "자격증명";
   return "기업명";
@@ -521,4 +553,45 @@ function formatDisplayDate(value?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(`${value}T00:00:00`);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function getNextCareerStep(record: CareerRecord) {
+  const candidates: { label: string; date?: string }[] = [];
+
+  if (record.tab === "applied") {
+    candidates.push(
+      { label: "마감", date: record.deadlineDate },
+      { label: "시험", date: record.examDate },
+      { label: "면접", date: record.interviewDate },
+      { label: "결과", date: record.resultDate },
+      ...(record.applicationEvents ?? []).map((event) => ({
+        label: applicationEventStageLabels[event.stage],
+        date: event.date,
+      })),
+    );
+  }
+
+  if (record.tab === "planned") {
+    candidates.push({ label: "예상 채용", date: record.primaryDate });
+  }
+
+  if (record.tab === "certificates") {
+    candidates.push({ label: "만료", date: record.deadlineDate }, { label: "취득", date: record.primaryDate });
+  }
+
+  const datedCandidates = candidates.filter((candidate): candidate is { label: string; date: string } => Boolean(candidate.date));
+  if (datedCandidates.length === 0) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (
+    datedCandidates
+      .map((candidate) => ({
+        ...candidate,
+        time: new Date(`${candidate.date}T00:00:00`).getTime(),
+      }))
+      .filter((candidate) => Number.isFinite(candidate.time) && candidate.time >= today.getTime())
+      .sort((a, b) => a.time - b.time)[0] ?? datedCandidates.sort((a, b) => b.date.localeCompare(a.date))[0]
+  );
 }
