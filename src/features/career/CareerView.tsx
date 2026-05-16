@@ -103,18 +103,20 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     if (activeTab !== "certificates") return visibleRecords;
 
     const query = certificateQuery.trim().toLowerCase();
-    return visibleRecords.filter((record) => {
-      const matchesStatus = !certificateStatusFilter || record.status === certificateStatusFilter;
-      const matchesQuery =
-        query.length === 0 ||
-        [record.title, record.subtitle, record.issuer, record.certificateNumber, record.status]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
+    return visibleRecords
+      .filter((record) => {
+        const matchesStatus = !certificateStatusFilter || record.status === certificateStatusFilter;
+        const matchesQuery =
+          query.length === 0 ||
+          [record.title, record.subtitle, record.issuer, record.certificateNumber, record.status]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(query);
 
-      return matchesStatus && matchesQuery;
-    });
+        return matchesStatus && matchesQuery;
+      })
+      .sort(compareCertificatesByAcquiredDate);
   }, [activeTab, certificateQuery, certificateStatusFilter, visibleRecords]);
 
   const saveRecord = async (record: CareerRecord) => {
@@ -316,13 +318,11 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
           </div>
         </div>
         <div className="record-actions">
-          <button onClick={onEdit} type="button">
+          <button aria-label="수정" title="수정" onClick={onEdit} type="button">
             <Pencil aria-hidden size={15} />
-            수정
           </button>
-          <button onClick={onDelete} type="button">
+          <button aria-label="삭제" title="삭제" onClick={onDelete} type="button">
             <Trash2 aria-hidden size={15} />
-            삭제
           </button>
         </div>
       </article>
@@ -347,13 +347,11 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         {record.memo ? <small>{record.memo}</small> : null}
       </div>
       <div className="record-actions">
-        <button onClick={onEdit} type="button">
+        <button aria-label="수정" title="수정" onClick={onEdit} type="button">
           <Pencil aria-hidden size={15} />
-          수정
         </button>
-        <button onClick={onDelete} type="button">
+        <button aria-label="삭제" title="삭제" onClick={onDelete} type="button">
           <Trash2 aria-hidden size={15} />
-          삭제
         </button>
       </div>
     </article>
@@ -747,6 +745,18 @@ function getStatusOptions(tab: CareerTab, currentStatus?: string) {
   const options = statusOptions[tab];
   if (!currentStatus || options.includes(currentStatus)) return options;
   return [currentStatus, ...options];
+}
+
+function compareCertificatesByAcquiredDate(a: CareerRecord, b: CareerRecord) {
+  const dateDiff = getSortableDateValue(b.primaryDate) - getSortableDateValue(a.primaryDate);
+  if (dateDiff !== 0) return dateDiff;
+  return a.title.localeCompare(b.title, "ko");
+}
+
+function getSortableDateValue(value?: string) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return 0;
+  const time = new Date(`${value}T00:00:00`).getTime();
+  return Number.isFinite(time) ? time : 0;
 }
 
 function getCertificateExpiry(record: CareerRecord) {

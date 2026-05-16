@@ -2826,6 +2826,14 @@ a:focus-visible {
   padding: 20px;
 }
 
+.career-record-card .record-actions button {
+  width: 36px;
+  min-height: 36px;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0;
+}
+
 .certificate-record-card {
   position: relative;
   overflow: hidden;
