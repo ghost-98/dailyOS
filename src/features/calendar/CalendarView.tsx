@@ -74,8 +74,7 @@ export function CalendarView({
   title = "일정",
 }: CalendarViewProps) {
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
-  const defaultCategory = categories.includes("schedule") ? "schedule" : categories[0];
-  const [activeCategory, setActiveCategory] = useState<CalendarCategory>(defaultCategory);
+  const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarCategory[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
@@ -111,11 +110,20 @@ export function CalendarView({
   }, []);
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
+  const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
-  const selectedEvents = selectedDate
-    ? visibleEvents.filter((event) => event.date === selectedDate && event.type === activeCategory)
-    : [];
+  const selectedSchedules = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : [];
+  const selectedEvents = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : [];
   const selectedTasks = selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : [];
+  const detailSections = useMemo(
+    () =>
+      [
+        { type: "schedule" as const, events: selectedSchedules },
+        { type: "todo" as const, tasks: selectedTasks },
+        { type: "event" as const, events: selectedEvents },
+      ].filter((section) => categories.includes(section.type)),
+    [categories, selectedEvents, selectedSchedules, selectedTasks],
+  );
 
   const countsByCategory = useMemo(() => {
     if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
@@ -129,12 +137,14 @@ export function CalendarView({
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
     setSelectedDate(null);
-    setActiveCategory(defaultCategory);
   };
 
   const handleDateClick = (date: string) => {
     setSelectedDate((current) => (current === date ? null : date));
-    setActiveCategory(defaultCategory);
+  };
+
+  const toggleCalendarCategoryFilter = (type: CalendarCategory) => {
+    setCalendarCategoryFilters((current) => (current.includes(type) ? current.filter((item) => item !== type) : [...current, type]));
   };
 
   const openCreateEventSheet = (type: CalendarCategory) => {
@@ -205,8 +215,14 @@ export function CalendarView({
     setDropTarget(null);
   };
 
-  const reorderEvent = (targetId: string) => {
-    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId || !dropTarget) return;
+  const getDropPlacement = (dragEvent: DragEvent<HTMLElement>) => {
+    const rect = dragEvent.currentTarget.getBoundingClientRect();
+    return dragEvent.clientY < rect.top + rect.height / 2 ? "before" : "after";
+  };
+
+  const reorderEvent = (targetId: string, placementOverride?: DragPlacement) => {
+    const placement = placementOverride ?? dropTarget?.placement;
+    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId || !placement) return;
     const targetType = draggingItem.type;
     setEvents((current) =>
       reorderScopedItems(
@@ -214,15 +230,16 @@ export function CalendarView({
         (event) => event.date === selectedDate && event.type === targetType,
         draggingItem.id,
         targetId,
-        dropTarget.placement,
+        placement,
       ),
     );
     clearDragState();
   };
 
-  const reorderTask = (targetId: string) => {
-    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId || !dropTarget) return;
-    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId, dropTarget.placement));
+  const reorderTask = (targetId: string, placementOverride?: DragPlacement) => {
+    const placement = placementOverride ?? dropTarget?.placement;
+    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId || !placement) return;
+    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId, placement));
     clearDragState();
   };
 
@@ -279,9 +296,16 @@ export function CalendarView({
 
           <div className="calendar-filters" aria-label="표시 항목">
             {categories.map((type) => (
-              <span className={`calendar-filter calendar-filter--${type}`} key={type}>
+              <button
+                className={`calendar-filter calendar-filter--${type} ${
+                  calendarCategoryFilters.includes(type) ? "calendar-filter--active" : ""
+                } ${calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+                key={type}
+                onClick={() => toggleCalendarCategoryFilter(type)}
+                type="button"
+              >
                 {categoryLabels[type]}
-              </span>
+              </button>
             ))}
           </div>
 
@@ -293,9 +317,11 @@ export function CalendarView({
 
           <div className="calendar-grid">
             {monthDays.map((cell) => {
-              const dayEvents = cell.date ? visibleEvents.filter((event) => event.date === cell.date) : [];
-              const dayTasks = cell.date ? tasks.filter((task) => task.scheduledDate === cell.date) : [];
-              const eventSummaries = summarizeDay(dayEvents, dayTasks, categories);
+              const dayEvents = cell.date
+                ? visibleEvents.filter((event) => event.date === cell.date && visibleCalendarCategories.includes(event.type as CalendarCategory))
+                : [];
+              const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => task.scheduledDate === cell.date) : [];
+              const eventSummaries = summarizeDay(dayEvents, dayTasks, visibleCalendarCategories);
               return (
                 <button
                   className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
@@ -334,84 +360,36 @@ export function CalendarView({
                 </div>
               </div>
 
-              <div className="date-category-tabs" aria-label="날짜별 항목">
-                {categories.map((type) => (
-                  <button
-                    className={`date-category-tab ${activeCategory === type ? "date-category-tab--active" : ""}`}
-                    key={type}
-                    onClick={() => setActiveCategory(type)}
-                    type="button"
-                  >
-                    <span className={`calendar-dot calendar-dot--${type}`} />
-                    {categoryLabels[type]}
-                    <strong>{countsByCategory[type]}</strong>
-                  </button>
-                ))}
-              </div>
-
               <div className="date-event-list">
-                {activeCategory === "todo" ? (
-                  selectedTasks.length > 0 ? (
-                    selectedTasks.map((task) => (
-                      <TaskDateItem
-                        dropPlacement={dropTarget?.id === task.id && draggingItem?.id !== task.id ? dropTarget.placement : null}
-                        isDragging={draggingItem?.id === task.id}
-                        key={task.id}
-                        onDelete={deleteTask}
-                        onDragEnd={clearDragState}
-                        onDragOver={(dragEvent) => handleDragOverItem(dragEvent, task.id, "todo")}
-                        onDragStart={() => setDraggingItem({ id: task.id, type: "todo" })}
-                        onDrop={() => reorderTask(task.id)}
-                        onEdit={(target) => {
-                          setEditingTask(target);
-                          setIsTaskSheetOpen(true);
-                        }}
-                        onToggleDone={toggleTaskDone}
-                        task={task}
-                      />
-                    ))
-                  ) : (
-                    <EmptyDateState isLoading={isLoading} label="할 일" />
-                  )
-                ) : selectedEvents.length > 0 ? (
-                  selectedEvents.map((event) => (
-                    <article
-                      className={`date-event date-event--${event.type} ${draggingItem?.id === event.id ? "date-event--dragging" : ""} ${
-                        dropTarget?.id === event.id && draggingItem?.id !== event.id ? `date-event--drop-${dropTarget.placement}` : ""
-                      }`}
-                      draggable
-                      key={event.id}
-                      onDragEnd={clearDragState}
-                      onDragOver={(dragEvent) => handleDragOverItem(dragEvent, event.id, event.type as CalendarCategory)}
-                      onDragStart={() => setDraggingItem({ id: event.id, type: event.type as CalendarCategory })}
-                      onDrop={() => reorderEvent(event.id)}
-                    >
-                      <div>
-                        <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
-                        <h3>{event.title}</h3>
-                        <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
-                      </div>
-                      <div className="date-event__actions">
-                        <button
-                          aria-label="수정"
-                          onClick={() => {
-                            setEditingEvent(event);
-                            setSheetDefaultType(event.type as CalendarCategory);
-                            setIsEventSheetOpen(true);
-                          }}
-                          type="button"
-                        >
-                          <Pencil aria-hidden size={15} />
-                        </button>
-                        <button aria-label="삭제" onClick={() => deleteEvent(event.id)} type="button">
-                          <Trash2 aria-hidden size={15} />
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <EmptyDateState isLoading={isLoading} label={categoryLabels[activeCategory]} />
-                )}
+                {detailSections.map((section) => (
+                  <DateDetailSection
+                    key={section.type}
+                    countsByCategory={countsByCategory}
+                    draggingItem={draggingItem}
+                    dropTarget={dropTarget}
+                    isLoading={isLoading}
+                    onAdd={() => openCreateEventSheet(section.type)}
+                    onClearDrag={clearDragState}
+                    onDeleteEvent={deleteEvent}
+                    onDeleteTask={deleteTask}
+                    onDragOverItem={handleDragOverItem}
+                    onEditEvent={(event) => {
+                      setEditingEvent(event);
+                      setSheetDefaultType(event.type as CalendarCategory);
+                      setIsEventSheetOpen(true);
+                    }}
+                    onEditTask={(target) => {
+                      setEditingTask(target);
+                      setIsTaskSheetOpen(true);
+                    }}
+                    onReorderEvent={reorderEvent}
+                    onReorderTask={reorderTask}
+                    onResolveDropPlacement={getDropPlacement}
+                    onSetDragging={setDraggingItem}
+                    onToggleDone={toggleTaskDone}
+                    section={section}
+                  />
+                ))}
               </div>
             </SectionCard>
           </aside>
@@ -451,12 +429,158 @@ export function CalendarView({
           onSelect={(month) => {
             setCurrentMonth(month);
             setSelectedDate(null);
-            setActiveCategory(defaultCategory);
             setIsMonthPickerOpen(false);
           }}
         />
       ) : null}
     </div>
+  );
+}
+
+function DateDetailSection({
+  countsByCategory,
+  draggingItem,
+  dropTarget,
+  isLoading,
+  onAdd,
+  onClearDrag,
+  onDeleteEvent,
+  onDeleteTask,
+  onDragOverItem,
+  onEditEvent,
+  onEditTask,
+  onReorderEvent,
+  onReorderTask,
+  onResolveDropPlacement,
+  onSetDragging,
+  onToggleDone,
+  section,
+}: {
+  countsByCategory: Record<CalendarCategory, number>;
+  draggingItem: { id: string; type: CalendarCategory } | null;
+  dropTarget: { id: string; placement: DragPlacement } | null;
+  isLoading: boolean;
+  onAdd: () => void;
+  onClearDrag: () => void;
+  onDeleteEvent: (id: string) => void;
+  onDeleteTask: (id: string) => void;
+  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => void;
+  onEditEvent: (event: CalendarEvent) => void;
+  onEditTask: (task: TaskItem) => void;
+  onReorderEvent: (targetId: string, placement?: DragPlacement) => void;
+  onReorderTask: (targetId: string, placement?: DragPlacement) => void;
+  onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
+  onSetDragging: (item: { id: string; type: CalendarCategory }) => void;
+  onToggleDone: (task: TaskItem) => void;
+  section:
+    | { type: "schedule" | "event"; events: CalendarEvent[]; tasks?: never }
+    | { type: "todo"; tasks: TaskItem[]; events?: never };
+}) {
+  const itemCount = countsByCategory[section.type];
+  const isTodoSection = section.type === "todo";
+  const items = isTodoSection ? section.tasks : section.events;
+
+  return (
+    <section className="date-detail-section">
+      <div className="date-detail-section__header">
+        <div>
+          <span className={`calendar-dot calendar-dot--${section.type}`} />
+          <strong>{categoryLabels[section.type]}</strong>
+          <em>{itemCount}</em>
+        </div>
+      </div>
+
+      <div className="date-detail-section__items">
+        {items.length > 0 ? (
+          isTodoSection ? (
+            section.tasks.map((task) => (
+              <TaskDateItem
+                dropPlacement={dropTarget?.id === task.id && draggingItem?.id !== task.id ? dropTarget.placement : null}
+                isDragging={draggingItem?.id === task.id}
+                key={task.id}
+                onDelete={onDeleteTask}
+                onDragEnd={onClearDrag}
+                onDragOver={(dragEvent) => onDragOverItem(dragEvent, task.id, "todo")}
+                onDragStart={() => onSetDragging({ id: task.id, type: "todo" })}
+                onDrop={(dragEvent) => onReorderTask(task.id, onResolveDropPlacement(dragEvent))}
+                onEdit={onEditTask}
+                onToggleDone={onToggleDone}
+                task={task}
+              />
+            ))
+          ) : (
+            section.events.map((event) => (
+              <EventDateItem
+                dropPlacement={dropTarget?.id === event.id && draggingItem?.id !== event.id ? dropTarget.placement : null}
+                event={event}
+                isDragging={draggingItem?.id === event.id}
+                key={event.id}
+                onDelete={onDeleteEvent}
+                onDragEnd={onClearDrag}
+                onDragOver={(dragEvent) => onDragOverItem(dragEvent, event.id, event.type as CalendarCategory)}
+                onDragStart={() => onSetDragging({ id: event.id, type: event.type as CalendarCategory })}
+                onDrop={(dragEvent) => onReorderEvent(event.id, onResolveDropPlacement(dragEvent))}
+                onEdit={onEditEvent}
+              />
+            ))
+          )
+        ) : (
+          <EmptyDateState isLoading={isLoading} label={categoryLabels[section.type]} onAdd={onAdd} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EventDateItem({
+  dropPlacement,
+  event,
+  isDragging,
+  onDelete,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
+  onEdit,
+}: {
+  dropPlacement: DragPlacement | null;
+  event: CalendarEvent;
+  isDragging: boolean;
+  onDelete: (id: string) => void;
+  onDragEnd: () => void;
+  onDragOver: (event: DragEvent<HTMLElement>) => void;
+  onDragStart: () => void;
+  onDrop: (event: DragEvent<HTMLElement>) => void;
+  onEdit: (event: CalendarEvent) => void;
+}) {
+  return (
+    <article
+      className={`date-event date-event--${event.type} ${isDragging ? "date-event--dragging" : ""} ${
+        dropPlacement ? `date-event--drop-${dropPlacement}` : ""
+      }`}
+      draggable
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragStart={onDragStart}
+      onDrop={(dragEvent) => {
+        dragEvent.preventDefault();
+        onDrop(dragEvent);
+      }}
+    >
+      <div>
+        <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
+        <h3>{event.title}</h3>
+        <p>{event.time ? `${event.time} · ${event.meta}` : event.meta}</p>
+      </div>
+      <div className="date-event__actions">
+        <button aria-label="수정" onClick={() => onEdit(event)} type="button">
+          <Pencil aria-hidden size={15} />
+        </button>
+        <button aria-label="삭제" onClick={() => onDelete(event.id)} type="button">
+          <Trash2 aria-hidden size={15} />
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -478,7 +602,7 @@ function TaskDateItem({
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
   onDragStart: () => void;
-  onDrop: () => void;
+  onDrop: (event: DragEvent<HTMLElement>) => void;
   onEdit: (task: TaskItem) => void;
   onToggleDone: (task: TaskItem) => void;
   task: TaskItem;
@@ -494,7 +618,10 @@ function TaskDateItem({
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
-      onDrop={onDrop}
+      onDrop={(dragEvent) => {
+        dragEvent.preventDefault();
+        onDrop(dragEvent);
+      }}
     >
       <button className="date-event__check" aria-label={isDone ? "완료 취소" : "완료"} onClick={() => onToggleDone(task)} type="button">
         {isDone ? <Check aria-hidden size={15} /> : null}
@@ -520,12 +647,18 @@ function TaskDateItem({
   );
 }
 
-function EmptyDateState({ isLoading, label }: { isLoading: boolean; label: string }) {
+function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean; label: string; onAdd?: () => void }) {
   return (
     <div className="date-empty-state">
       <ListFilter aria-hidden size={24} />
       <strong>{label} 항목이 없습니다.</strong>
       <p>{isLoading ? "불러오는 중입니다." : "상단 추가 버튼으로 새 항목을 등록할 수 있습니다."}</p>
+      {!isLoading && onAdd ? (
+        <button className="date-empty-state__add" onClick={onAdd} type="button">
+          <Plus aria-hidden size={15} />
+          {label} 추가
+        </button>
+      ) : null}
     </div>
   );
 }

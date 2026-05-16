@@ -1277,10 +1277,17 @@ a:focus-visible {
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
   color: var(--muted);
+  cursor: pointer;
   font-size: 13px;
   font-weight: 750;
   padding: 0 12px;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
 }
 
 .calendar-filter::before {
@@ -1319,6 +1326,16 @@ a:focus-visible {
 .calendar-filter--career::before,
 .calendar-dot--career {
   background: var(--amber);
+}
+
+.calendar-filter--active {
+  border-color: rgba(201, 184, 255, 0.32);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
+}
+
+.calendar-filter--muted {
+  opacity: 0.42;
 }
 
 .calendar-weekdays {
@@ -1475,7 +1492,57 @@ a:focus-visible {
 
 .date-event-list {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+}
+
+.date-detail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.date-detail-section + .date-detail-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 18px;
+}
+
+.date-detail-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.date-detail-section__header div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-detail-section__header .calendar-dot {
+  width: 18px;
+}
+
+.date-detail-section__header strong {
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.date-detail-section__header em {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.date-detail-section__items {
+  display: grid;
+  gap: 12px;
 }
 
 .date-event {
@@ -1637,8 +1704,10 @@ a:focus-visible {
 .date-empty-state {
   display: grid;
   min-height: 240px;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
   border: 1px dashed var(--line);
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   padding: 28px;
   text-align: center;
@@ -1658,6 +1727,23 @@ a:focus-visible {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.date-empty-state__add {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 14px;
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  padding: 0 13px;
 }
 
 @keyframes detail-slide-in {
