@@ -1,5 +1,6 @@
 "use client";
 
+import type { DragEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
@@ -20,7 +21,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
-import { calendarEvents, type CalendarEvent } from "./data";
+import type { CalendarEvent } from "./data";
 
 type CalendarCategory = "schedule" | "event" | "todo";
 
@@ -74,7 +75,7 @@ export function CalendarView({
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const defaultCategory = categories.includes("schedule") ? "schedule" : categories[0];
   const [activeCategory, setActiveCategory] = useState<CalendarCategory>(defaultCategory);
-  const [events, setEvents] = useState<CalendarEvent[]>(calendarEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -86,6 +87,7 @@ export function CalendarView({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
+  const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -187,14 +189,40 @@ export function CalendarView({
     setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
   };
 
+  const reorderEvent = (targetId: string) => {
+    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId) return;
+    const targetType = draggingItem.type;
+    setEvents((current) =>
+      reorderScopedItems(
+        current,
+        (event) => event.date === selectedDate && event.type === targetType,
+        draggingItem.id,
+        targetId,
+      ),
+    );
+    setDraggingItem(null);
+  };
+
+  const reorderTask = (targetId: string) => {
+    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId) return;
+    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId));
+    setDraggingItem(null);
+  };
+
   return (
     <div className="calendar-page">
       <header className="calendar-header page-header">
-        <div>
+        <div className="calendar-header__copy">
+          <span className="calendar-header__eyebrow">dailyOS</span>
           <h1>{title}</h1>
-          <div className="today__date">
-            <CalendarDays aria-hidden size={20} />
-            <span>{description}</span>
+          <p>{description}</p>
+          <div className="calendar-header__meta" aria-label="계획 항목">
+            {categories.map((type) => (
+              <span key={type}>
+                <span className={`calendar-dot calendar-dot--${type}`} />
+                {categoryLabels[type]}
+              </span>
+            ))}
           </div>
         </div>
         <div className="header-actions">
@@ -319,8 +347,13 @@ export function CalendarView({
                   selectedTasks.length > 0 ? (
                     selectedTasks.map((task) => (
                       <TaskDateItem
+                        isDragging={draggingItem?.id === task.id}
                         key={task.id}
                         onDelete={deleteTask}
+                        onDragEnd={() => setDraggingItem(null)}
+                        onDragOver={(dragEvent) => dragEvent.preventDefault()}
+                        onDragStart={() => setDraggingItem({ id: task.id, type: "todo" })}
+                        onDrop={() => reorderTask(task.id)}
                         onEdit={(target) => {
                           setEditingTask(target);
                           setIsTaskSheetOpen(true);
@@ -334,7 +367,15 @@ export function CalendarView({
                   )
                 ) : selectedEvents.length > 0 ? (
                   selectedEvents.map((event) => (
-                    <article className={`date-event date-event--${event.type}`} key={event.id}>
+                    <article
+                      className={`date-event date-event--${event.type} ${draggingItem?.id === event.id ? "date-event--dragging" : ""}`}
+                      draggable
+                      key={event.id}
+                      onDragEnd={() => setDraggingItem(null)}
+                      onDragOver={(dragEvent) => dragEvent.preventDefault()}
+                      onDragStart={() => setDraggingItem({ id: event.id, type: event.type as CalendarCategory })}
+                      onDrop={() => reorderEvent(event.id)}
+                    >
                       <div>
                         <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
                         <h3>{event.title}</h3>
@@ -410,12 +451,22 @@ export function CalendarView({
 }
 
 function TaskDateItem({
+  isDragging,
   onDelete,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
   onEdit,
   onToggleDone,
   task,
 }: {
+  isDragging: boolean;
   onDelete: (id: string) => void;
+  onDragEnd: () => void;
+  onDragOver: (event: DragEvent<HTMLElement>) => void;
+  onDragStart: () => void;
+  onDrop: () => void;
   onEdit: (task: TaskItem) => void;
   onToggleDone: (task: TaskItem) => void;
   task: TaskItem;
@@ -423,7 +474,14 @@ function TaskDateItem({
   const isDone = task.status === "done";
 
   return (
-    <article className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""}`}>
+    <article
+      className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""}`}
+      draggable
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+    >
       <button className="date-event__check" aria-label={isDone ? "완료 취소" : "완료"} onClick={() => onToggleDone(task)} type="button">
         {isDone ? <Check aria-hidden size={15} /> : null}
       </button>
@@ -776,4 +834,24 @@ function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: Ca
       count: type === "todo" ? tasks.length : events.filter((event) => event.type === type).length,
     }))
     .filter((summary) => summary.count > 0);
+}
+
+function reorderScopedItems<T extends { id: string }>(
+  items: T[],
+  belongsToScope: (item: T) => boolean,
+  sourceId: string,
+  targetId: string,
+) {
+  const scopedItems = items.filter(belongsToScope);
+  const sourceIndex = scopedItems.findIndex((item) => item.id === sourceId);
+  const targetIndex = scopedItems.findIndex((item) => item.id === targetId);
+
+  if (sourceIndex < 0 || targetIndex < 0) return items;
+
+  const reordered = [...scopedItems];
+  const [movedItem] = reordered.splice(sourceIndex, 1);
+  reordered.splice(targetIndex, 0, movedItem);
+
+  let nextScopedIndex = 0;
+  return items.map((item) => (belongsToScope(item) ? reordered[nextScopedIndex++] : item));
 }
