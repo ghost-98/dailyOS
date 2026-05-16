@@ -88,6 +88,7 @@ export function CalendarView({
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -201,29 +202,21 @@ export function CalendarView({
       ),
     );
     setDraggingItem(null);
+    setDragOverItemId(null);
   };
 
   const reorderTask = (targetId: string) => {
     if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId) return;
     setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId));
     setDraggingItem(null);
+    setDragOverItemId(null);
   };
 
   return (
     <div className="calendar-page">
       <header className="calendar-header page-header">
-        <div className="calendar-header__copy">
-          <span className="calendar-header__eyebrow">dailyOS</span>
+        <div>
           <h1>{title}</h1>
-          <p>{description}</p>
-          <div className="calendar-header__meta" aria-label="계획 항목">
-            {categories.map((type) => (
-              <span key={type}>
-                <span className={`calendar-dot calendar-dot--${type}`} />
-                {categoryLabels[type]}
-              </span>
-            ))}
-          </div>
         </div>
         <div className="header-actions">
           <div className="add-menu">
@@ -347,11 +340,19 @@ export function CalendarView({
                   selectedTasks.length > 0 ? (
                     selectedTasks.map((task) => (
                       <TaskDateItem
+                        isDropTarget={dragOverItemId === task.id && draggingItem?.id !== task.id}
                         isDragging={draggingItem?.id === task.id}
                         key={task.id}
                         onDelete={deleteTask}
-                        onDragEnd={() => setDraggingItem(null)}
-                        onDragOver={(dragEvent) => dragEvent.preventDefault()}
+                        onDragEnd={() => {
+                          setDraggingItem(null);
+                          setDragOverItemId(null);
+                        }}
+                        onDragEnter={() => setDragOverItemId(task.id)}
+                        onDragOver={(dragEvent) => {
+                          dragEvent.preventDefault();
+                          setDragOverItemId(task.id);
+                        }}
                         onDragStart={() => setDraggingItem({ id: task.id, type: "todo" })}
                         onDrop={() => reorderTask(task.id)}
                         onEdit={(target) => {
@@ -368,11 +369,20 @@ export function CalendarView({
                 ) : selectedEvents.length > 0 ? (
                   selectedEvents.map((event) => (
                     <article
-                      className={`date-event date-event--${event.type} ${draggingItem?.id === event.id ? "date-event--dragging" : ""}`}
+                      className={`date-event date-event--${event.type} ${draggingItem?.id === event.id ? "date-event--dragging" : ""} ${
+                        dragOverItemId === event.id && draggingItem?.id !== event.id ? "date-event--drop-target" : ""
+                      }`}
                       draggable
                       key={event.id}
-                      onDragEnd={() => setDraggingItem(null)}
-                      onDragOver={(dragEvent) => dragEvent.preventDefault()}
+                      onDragEnd={() => {
+                        setDraggingItem(null);
+                        setDragOverItemId(null);
+                      }}
+                      onDragEnter={() => setDragOverItemId(event.id)}
+                      onDragOver={(dragEvent) => {
+                        dragEvent.preventDefault();
+                        setDragOverItemId(event.id);
+                      }}
                       onDragStart={() => setDraggingItem({ id: event.id, type: event.type as CalendarCategory })}
                       onDrop={() => reorderEvent(event.id)}
                     >
@@ -451,9 +461,11 @@ export function CalendarView({
 }
 
 function TaskDateItem({
+  isDropTarget,
   isDragging,
   onDelete,
   onDragEnd,
+  onDragEnter,
   onDragOver,
   onDragStart,
   onDrop,
@@ -461,9 +473,11 @@ function TaskDateItem({
   onToggleDone,
   task,
 }: {
+  isDropTarget: boolean;
   isDragging: boolean;
   onDelete: (id: string) => void;
   onDragEnd: () => void;
+  onDragEnter: () => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
   onDragStart: () => void;
   onDrop: () => void;
@@ -475,9 +489,12 @@ function TaskDateItem({
 
   return (
     <article
-      className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""}`}
+      className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""} ${
+        isDropTarget ? "date-event--drop-target" : ""
+      }`}
       draggable
       onDragEnd={onDragEnd}
+      onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
       onDrop={onDrop}
@@ -556,12 +573,12 @@ function EventCreateSheet({
       <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose} type="button">
-            취소
-          </button>
-          <h2 id="event-sheet-title">{event ? "항목 수정" : `${categoryLabels[type]} 추가`}</h2>
-          <button className="event-sheet__done-button" onClick={saveCurrentEvent} type="button">
-            저장
+          <div>
+            <h2 id="event-sheet-title">{event ? "항목 수정" : `${categoryLabels[type]} 추가`}</h2>
+            <p>{event ? "등록된 내용을 수정합니다." : "날짜와 종류를 정해 계획에 추가합니다."}</p>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
           </button>
         </header>
 
@@ -608,12 +625,16 @@ function EventCreateSheet({
               </select>
             </label>
           </div>
-
         </div>
 
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
-          <X aria-hidden size={18} />
-        </button>
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+            취소
+          </button>
+          <button className="event-sheet__primary-button" onClick={saveCurrentEvent} type="button">
+            저장
+          </button>
+        </footer>
       </section>
     </div>
   );
@@ -659,12 +680,12 @@ function TaskCreateSheet({
       <section aria-labelledby="task-sheet-title" aria-modal="true" className="event-sheet task-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose} type="button">
-            취소
-          </button>
-          <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
-          <button className="event-sheet__done-button" onClick={saveTask} type="button">
-            저장
+          <div>
+            <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
+            <p>{task ? "상태와 날짜를 조정합니다." : "예정일 기준으로 할 일을 추가합니다."}</p>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
           </button>
         </header>
 
@@ -725,9 +746,14 @@ function TaskCreateSheet({
           </div>
         </div>
 
-        <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">
-          <X aria-hidden size={18} />
-        </button>
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+            취소
+          </button>
+          <button className="event-sheet__primary-button" onClick={saveTask} type="button">
+            저장
+          </button>
+        </footer>
       </section>
     </div>
   );
