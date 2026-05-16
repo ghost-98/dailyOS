@@ -25,6 +25,7 @@ import {
   type ApplicationEventStage,
   type CareerRecord,
   type CareerTab,
+  type CertificateResultType,
 } from "./data";
 
 const tabLabels: Record<CareerTab, string> = {
@@ -49,6 +50,12 @@ const priorityLabels = {
   high: "높음",
   normal: "보통",
   low: "낮음",
+};
+
+const certificateResultTypeLabels: Record<CertificateResultType, string> = {
+  score: "점수",
+  passFail: "합불",
+  grade: "등급",
 };
 
 const statusOptions: Record<CareerTab, string[]> = {
@@ -245,14 +252,15 @@ function CareerMeta({ record }: { record: CareerRecord }) {
   }
 
   if (record.tab === "certificates") {
+    const result = getCertificateResult(record);
+
     return (
       <div className="career-meta-grid">
         <MetaItem label="자격증 번호" value={record.certificateNumber} />
         <MetaItem label="발급 기관" value={record.issuer ?? record.subtitle} />
         <MetaItem label="취득일" value={record.primaryDate} />
         <MetaItem label="만료일" value={record.deadlineDate} />
-        <MetaItem label="점수" value={record.score} />
-        <MetaItem label="등급" value={record.grade} />
+        <MetaItem label={result?.label ?? "결과"} value={result?.value} />
       </div>
     );
   }
@@ -314,11 +322,18 @@ function CareerRecordSheet({
 
   const saveCurrentRecord = () => {
     if (!form.title.trim()) return;
+    const certificateResultType = form.resultType ?? "score";
+    const resultValue = form.resultValue?.trim() || undefined;
+
     onSave({
       ...form,
       title: form.title.trim(),
       subtitle: form.subtitle.trim() || getDefaultSubtitle(form.tab),
       status: form.status.trim() || getDefaultStatus(form.tab),
+      resultType: form.tab === "certificates" ? certificateResultType : undefined,
+      resultValue: form.tab === "certificates" ? resultValue : undefined,
+      score: form.tab === "certificates" && certificateResultType === "score" ? resultValue : undefined,
+      grade: form.tab === "certificates" && certificateResultType === "grade" ? resultValue : undefined,
       memo: form.memo?.trim() || undefined,
       applicationEvents: form.tab === "applied" ? form.applicationEvents?.filter((event) => event.date) : undefined,
     });
@@ -426,14 +441,39 @@ function CareerSpecificFields({
   }
 
   if (form.tab === "certificates") {
+    const resultType = form.resultType ?? "score";
+
     return (
       <>
         <Field label="자격증 번호" value={form.certificateNumber} onChange={(value) => updateField("certificateNumber", value)} />
         <Field label="발급 기관" value={form.issuer} onChange={(value) => updateField("issuer", value)} />
         <Field label="취득일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="만료일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
-        <Field label="점수" value={form.score} onChange={(value) => updateField("score", value)} />
-        <Field label="등급" value={form.grade} onChange={(value) => updateField("grade", value)} />
+        <label className="event-form-row event-form-row--select">
+          <span>결과 유형</span>
+          <select value={resultType} onChange={(event) => updateField("resultType", event.target.value as CertificateResultType)}>
+            <option value="score">점수</option>
+            <option value="passFail">합불</option>
+            <option value="grade">등급</option>
+          </select>
+        </label>
+        {resultType === "passFail" ? (
+          <label className="event-form-row event-form-row--select">
+            <span>결과</span>
+            <select value={form.resultValue ?? ""} onChange={(event) => updateField("resultValue", event.target.value)}>
+              <option value="">선택 안 함</option>
+              <option value="합격">합격</option>
+              <option value="불합격">불합격</option>
+            </select>
+          </label>
+        ) : (
+          <Field
+            label={certificateResultTypeLabels[resultType]}
+            placeholder={resultType === "score" ? "875" : "1급, 2급, IH, AL"}
+            value={form.resultValue ?? (resultType === "score" ? form.score : form.grade)}
+            onChange={(value) => updateField("resultValue", value)}
+          />
+        )}
         <Field label="PDF 파일/URL" value={form.url} onChange={(value) => updateField("url", value)} />
       </>
     );
@@ -526,6 +566,17 @@ function getStatusOptions(tab: CareerTab, currentStatus?: string) {
   const options = statusOptions[tab];
   if (!currentStatus || options.includes(currentStatus)) return options;
   return [currentStatus, ...options];
+}
+
+function getCertificateResult(record: CareerRecord) {
+  const resultType = record.resultType ?? (record.score ? "score" : record.grade ? "grade" : undefined);
+  const value = record.resultValue ?? record.score ?? record.grade;
+
+  if (!resultType || !value) return null;
+  return {
+    label: certificateResultTypeLabels[resultType],
+    value: resultType === "score" && !value.includes("점") ? `${value}점` : value,
+  };
 }
 
 function getTitleLabel(tab: CareerTab) {

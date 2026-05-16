@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { ApplicationEvent, ApplicationEventStage, CareerRecord, CareerTab } from "./data";
+import type { ApplicationEvent, ApplicationEventStage, CareerRecord, CareerTab, CertificateResultType } from "./data";
 
 type CareerRecordRow = {
   id: string;
@@ -18,6 +18,8 @@ type CareerRecordRow = {
   required_docs: string | null;
   certificate_number: string | null;
   issuer: string | null;
+  result_type: CertificateResultType | null;
+  result_value: string | null;
   score: string | null;
   grade: string | null;
   priority: "high" | "normal" | "low" | null;
@@ -40,7 +42,7 @@ type CareerRecordUpdate = Partial<Omit<CareerRecordInsert, "user_id">>;
 
 const recordColumns = `
   id,tab,title,subtitle,status,primary_date,deadline_date,exam_date,interview_date,result_date,url,resume_name,
-  required_certs,required_docs,certificate_number,issuer,score,grade,priority,memo,
+  required_certs,required_docs,certificate_number,issuer,result_type,result_value,score,grade,priority,memo,
   application_events(id,stage,event_date,memo)
 `;
 
@@ -82,6 +84,8 @@ function mapCareerRecordRow(row: CareerRecordRow): CareerRecord {
     requiredDocs: row.required_docs ?? undefined,
     certificateNumber: row.certificate_number ?? undefined,
     issuer: row.issuer ?? undefined,
+    resultType: row.result_type ?? inferCertificateResultType(row),
+    resultValue: row.result_value ?? row.score ?? row.grade ?? undefined,
     score: row.score ?? undefined,
     grade: row.grade ?? undefined,
     priority: row.priority ?? undefined,
@@ -108,11 +112,19 @@ function mapRecordToInsert(record: CareerRecord, userId: string): CareerRecordIn
     required_docs: emptyToNull(record.requiredDocs),
     certificate_number: emptyToNull(record.certificateNumber),
     issuer: emptyToNull(record.issuer),
+    result_type: record.resultType ?? null,
+    result_value: emptyToNull(record.resultValue),
     score: emptyToNull(record.score),
     grade: emptyToNull(record.grade),
     priority: record.priority ?? null,
     memo: emptyToNull(record.memo),
   };
+}
+
+function inferCertificateResultType(row: CareerRecordRow): CertificateResultType | undefined {
+  if (row.score) return "score";
+  if (row.grade) return "grade";
+  return undefined;
 }
 
 function mapRecordToUpdate(record: CareerRecord): CareerRecordUpdate {

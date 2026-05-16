@@ -83,13 +83,22 @@ create table if not exists public.career_records (
   required_docs text,
   certificate_number text,
   issuer text,
+  result_type text check (result_type is null or result_type in ('score', 'passFail', 'grade')),
+  result_value text,
   score text,
   grade text,
   priority text check (priority is null or priority in ('high', 'normal', 'low')),
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
-);
+  );
+
+alter table public.career_records
+add column if not exists result_type text
+check (result_type is null or result_type in ('score', 'passFail', 'grade'));
+
+alter table public.career_records
+add column if not exists result_value text;
 
 create table if not exists public.application_events (
   id uuid primary key default gen_random_uuid(),
