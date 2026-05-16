@@ -24,6 +24,7 @@ import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEvents
 import type { CalendarEvent } from "./data";
 
 type CalendarCategory = "schedule" | "event" | "todo";
+type DragPlacement = "before" | "after";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
@@ -88,7 +89,7 @@ export function CalendarView({
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
-  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -190,8 +191,22 @@ export function CalendarView({
     setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
   };
 
+  const handleDragOverItem = (dragEvent: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => {
+    dragEvent.preventDefault();
+    if (!draggingItem || draggingItem.type !== targetType || draggingItem.id === targetId) return;
+
+    const rect = dragEvent.currentTarget.getBoundingClientRect();
+    const placement: DragPlacement = dragEvent.clientY < rect.top + rect.height / 2 ? "before" : "after";
+    setDropTarget({ id: targetId, placement });
+  };
+
+  const clearDragState = () => {
+    setDraggingItem(null);
+    setDropTarget(null);
+  };
+
   const reorderEvent = (targetId: string) => {
-    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId) return;
+    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId || !dropTarget) return;
     const targetType = draggingItem.type;
     setEvents((current) =>
       reorderScopedItems(
@@ -199,17 +214,16 @@ export function CalendarView({
         (event) => event.date === selectedDate && event.type === targetType,
         draggingItem.id,
         targetId,
+        dropTarget.placement,
       ),
     );
-    setDraggingItem(null);
-    setDragOverItemId(null);
+    clearDragState();
   };
 
   const reorderTask = (targetId: string) => {
-    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId) return;
-    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId));
-    setDraggingItem(null);
-    setDragOverItemId(null);
+    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId || !dropTarget) return;
+    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId, dropTarget.placement));
+    clearDragState();
   };
 
   return (
@@ -340,19 +354,12 @@ export function CalendarView({
                   selectedTasks.length > 0 ? (
                     selectedTasks.map((task) => (
                       <TaskDateItem
-                        isDropTarget={dragOverItemId === task.id && draggingItem?.id !== task.id}
+                        dropPlacement={dropTarget?.id === task.id && draggingItem?.id !== task.id ? dropTarget.placement : null}
                         isDragging={draggingItem?.id === task.id}
                         key={task.id}
                         onDelete={deleteTask}
-                        onDragEnd={() => {
-                          setDraggingItem(null);
-                          setDragOverItemId(null);
-                        }}
-                        onDragEnter={() => setDragOverItemId(task.id)}
-                        onDragOver={(dragEvent) => {
-                          dragEvent.preventDefault();
-                          setDragOverItemId(task.id);
-                        }}
+                        onDragEnd={clearDragState}
+                        onDragOver={(dragEvent) => handleDragOverItem(dragEvent, task.id, "todo")}
                         onDragStart={() => setDraggingItem({ id: task.id, type: "todo" })}
                         onDrop={() => reorderTask(task.id)}
                         onEdit={(target) => {
@@ -370,19 +377,12 @@ export function CalendarView({
                   selectedEvents.map((event) => (
                     <article
                       className={`date-event date-event--${event.type} ${draggingItem?.id === event.id ? "date-event--dragging" : ""} ${
-                        dragOverItemId === event.id && draggingItem?.id !== event.id ? "date-event--drop-target" : ""
+                        dropTarget?.id === event.id && draggingItem?.id !== event.id ? `date-event--drop-${dropTarget.placement}` : ""
                       }`}
                       draggable
                       key={event.id}
-                      onDragEnd={() => {
-                        setDraggingItem(null);
-                        setDragOverItemId(null);
-                      }}
-                      onDragEnter={() => setDragOverItemId(event.id)}
-                      onDragOver={(dragEvent) => {
-                        dragEvent.preventDefault();
-                        setDragOverItemId(event.id);
-                      }}
+                      onDragEnd={clearDragState}
+                      onDragOver={(dragEvent) => handleDragOverItem(dragEvent, event.id, event.type as CalendarCategory)}
                       onDragStart={() => setDraggingItem({ id: event.id, type: event.type as CalendarCategory })}
                       onDrop={() => reorderEvent(event.id)}
                     >
@@ -461,11 +461,10 @@ export function CalendarView({
 }
 
 function TaskDateItem({
-  isDropTarget,
+  dropPlacement,
   isDragging,
   onDelete,
   onDragEnd,
-  onDragEnter,
   onDragOver,
   onDragStart,
   onDrop,
@@ -473,11 +472,10 @@ function TaskDateItem({
   onToggleDone,
   task,
 }: {
-  isDropTarget: boolean;
+  dropPlacement: DragPlacement | null;
   isDragging: boolean;
   onDelete: (id: string) => void;
   onDragEnd: () => void;
-  onDragEnter: () => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
   onDragStart: () => void;
   onDrop: () => void;
@@ -490,11 +488,10 @@ function TaskDateItem({
   return (
     <article
       className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""} ${
-        isDropTarget ? "date-event--drop-target" : ""
+        dropPlacement ? `date-event--drop-${dropPlacement}` : ""
       }`}
       draggable
       onDragEnd={onDragEnd}
-      onDragEnter={onDragEnter}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
       onDrop={onDrop}
@@ -867,6 +864,7 @@ function reorderScopedItems<T extends { id: string }>(
   belongsToScope: (item: T) => boolean,
   sourceId: string,
   targetId: string,
+  placement: DragPlacement,
 ) {
   const scopedItems = items.filter(belongsToScope);
   const sourceIndex = scopedItems.findIndex((item) => item.id === sourceId);
@@ -876,7 +874,14 @@ function reorderScopedItems<T extends { id: string }>(
 
   const reordered = [...scopedItems];
   const [movedItem] = reordered.splice(sourceIndex, 1);
-  reordered.splice(targetIndex, 0, movedItem);
+  let insertionIndex = targetIndex + (placement === "after" ? 1 : 0);
+
+  if (sourceIndex < insertionIndex) {
+    insertionIndex -= 1;
+  }
+
+  insertionIndex = Math.max(0, Math.min(insertionIndex, reordered.length));
+  reordered.splice(insertionIndex, 0, movedItem);
 
   let nextScopedIndex = 0;
   return items.map((item) => (belongsToScope(item) ? reordered[nextScopedIndex++] : item));
