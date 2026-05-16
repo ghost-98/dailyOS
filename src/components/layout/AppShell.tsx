@@ -4,7 +4,6 @@ import {
   Activity,
   BriefcaseBusiness,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   Grid2X2,
   HeartPulse,
@@ -20,7 +19,6 @@ import { AuthGate, signOutDailyOS } from "@/components/auth/AuthGate";
 
 const timeChildren = [
   { label: "캘린더", href: "/schedule", key: "schedule" },
-  { label: "할 일 보드", href: "/tasks", key: "tasks" },
 ];
 
 const careerChildren = [
@@ -40,7 +38,6 @@ const primaryNav = [
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
-  { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
 ];
@@ -52,7 +49,7 @@ type AppShellProps = {
 
 export function AppShell({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
-  const isTimeActive = activeKey === "schedule" || activeKey === "tasks" || activeKey === "time";
+  const isTimeActive = activeKey === "schedule" || activeKey === "time";
   const [isTimeOpen, setIsTimeOpen] = useState(isTimeActive);
   const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
 

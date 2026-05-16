@@ -204,7 +204,7 @@ export function TodayDashboard() {
         </SectionCard>
 
         <SectionCard className="todo-card">
-          <DashboardHeader href="/tasks" icon={<Check aria-hidden size={20} />} title="오늘 할 일" trailing={`${completionRate}%`} />
+          <DashboardHeader href="/schedule" icon={<Check aria-hidden size={20} />} title="오늘 할 일" trailing={`${completionRate}%`} />
           <div className="todo-list">
             {openTasks.length > 0 ? openTasks.slice(0, 4).map((task) => (
               <article className={`todo-item todo-item--${task.status}`} key={task.id}>
@@ -215,7 +215,7 @@ export function TodayDashboard() {
                 </div>
                 <Badge tone={priorityTone[task.priority]}>{priorityLabel[task.priority]}</Badge>
               </article>
-            )) : <EmptyBlock href="/tasks" text="오늘 남은 할 일이 없습니다." />}
+            )) : <EmptyBlock href="/schedule" text="오늘 남은 할 일이 없습니다." />}
           </div>
         </SectionCard>
 

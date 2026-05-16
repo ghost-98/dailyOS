@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { TasksView } from "@/features/tasks/TasksView";
+import { redirect } from "next/navigation";
 
 export default function TasksPage() {
-  return (
-    <AppShell activeKey="tasks">
-      <TasksView />
-    </AppShell>
-  );
+  redirect("/schedule");
 }
