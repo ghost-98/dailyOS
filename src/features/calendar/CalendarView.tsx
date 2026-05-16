@@ -10,7 +10,6 @@ import {
   Clock3,
   ListChecks,
   ListFilter,
-  MapPin,
   Pencil,
   Plus,
   Trash2,
@@ -60,7 +59,6 @@ const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> = {
 };
 
 type CalendarViewProps = {
-  addButtonLabel?: string;
   allowedTypes?: EventType[];
   description?: string;
   showEventAddButton?: boolean;
@@ -68,7 +66,6 @@ type CalendarViewProps = {
 };
 
 export function CalendarView({
-  addButtonLabel = "일정 추가",
   allowedTypes,
   description = "일정, 이벤트, 할 일을 날짜 기준으로 함께 관리합니다.",
   showEventAddButton = false,
@@ -84,6 +81,7 @@ export function CalendarView({
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
@@ -136,6 +134,8 @@ export function CalendarView({
   };
 
   const openCreateEventSheet = (type: CalendarCategory) => {
+    setIsAddMenuOpen(false);
+
     if (type === "todo") {
       setEditingTask(null);
       setIsTaskSheetOpen(true);
@@ -198,22 +198,32 @@ export function CalendarView({
           </div>
         </div>
         <div className="header-actions">
-          <button className="header-action" onClick={() => openCreateEventSheet("schedule")} type="button">
-            <Plus aria-hidden size={18} />
-            {addButtonLabel}
-          </button>
-          {showEventAddButton ? (
-            <button className="header-action header-action--secondary" onClick={() => openCreateEventSheet("event")} type="button">
+          <div className="add-menu">
+            <button className="header-action" aria-expanded={isAddMenuOpen} onClick={() => setIsAddMenuOpen((current) => !current)} type="button">
               <Plus aria-hidden size={18} />
-              이벤트 추가
+              추가
             </button>
-          ) : null}
-          {categories.includes("todo") ? (
-            <button className="header-action" onClick={() => openCreateEventSheet("todo")} type="button">
-              <Plus aria-hidden size={18} />
-              할 일 추가
-            </button>
-          ) : null}
+            {isAddMenuOpen ? (
+              <div className="add-menu__panel" role="menu">
+                <button onClick={() => openCreateEventSheet("schedule")} role="menuitem" type="button">
+                  <span className="calendar-dot calendar-dot--schedule" />
+                  일정 추가
+                </button>
+                {showEventAddButton && categories.includes("event") ? (
+                  <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
+                    <span className="calendar-dot calendar-dot--event" />
+                    이벤트 추가
+                  </button>
+                ) : null}
+                {categories.includes("todo") ? (
+                  <button onClick={() => openCreateEventSheet("todo")} role="menuitem" type="button">
+                    <span className="calendar-dot calendar-dot--todo" />
+                    할 일 추가
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -541,15 +551,6 @@ function EventCreateSheet({
             </label>
           </div>
 
-          <div className="event-form-card">
-            <label className="event-form-row event-form-row--field">
-              <div className="event-form-row__label">
-                <MapPin aria-hidden size={18} />
-                <span>장소</span>
-              </div>
-              <input placeholder="필요하면 메모에 함께 적어주세요." value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
-            </label>
-          </div>
         </div>
 
         <button className="event-sheet__floating-close" aria-label="닫기" onClick={onClose} type="button">

@@ -19,8 +19,8 @@ import { useState } from "react";
 import { AuthGate, signOutDailyOS } from "@/components/auth/AuthGate";
 
 const timeChildren = [
-  { label: "일정", href: "/schedule", key: "schedule" },
-  { label: "할 일", href: "/tasks", key: "tasks" },
+  { label: "캘린더", href: "/schedule", key: "schedule" },
+  { label: "할 일 보드", href: "/tasks", key: "tasks" },
 ];
 
 const careerChildren = [
@@ -31,7 +31,7 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "일정 관리", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
+  { label: "계획", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
@@ -39,7 +39,7 @@ const primaryNav = [
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "일정", href: "/schedule", key: "schedule", icon: CalendarDays },
+  { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
   { label: "할 일", href: "/tasks", key: "tasks", icon: CheckCircle2 },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },

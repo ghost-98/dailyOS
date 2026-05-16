@@ -5,11 +5,10 @@ export default function SchedulePage() {
   return (
     <AppShell activeKey="schedule">
       <CalendarView
-        addButtonLabel="일정 추가"
         allowedTypes={["schedule", "event", "todo"]}
         description="일정, 이벤트, 할 일을 날짜 기준으로 함께 관리합니다."
         showEventAddButton
-        title="일정"
+        title="계획"
       />
     </AppShell>
   );
