@@ -26,6 +26,7 @@ import {
   createCareerRecordInDb,
   createAiExtractionDraftInDb,
   createJobApplicationFromExtraction,
+  createManualJobApplicationInDb,
   deleteCareerRecordFromDb,
   fetchCareerRecordsFromDb,
   fetchJobApplicationsFromDb,
@@ -61,9 +62,9 @@ const tabLabels: Record<CareerTab, string> = {
 };
 
 const tabDescriptions: Record<CareerTab, string> = {
-  applied: "지원한 기업의 상태, 마감일, 결과 발표일, 서류/필기/면접 이벤트를 관리합니다.",
-  planned: "앞으로 지원할 기업과 준비 상태, 필요 자격증, 필요 서류를 정리합니다.",
-  certificates: "보유 자격증의 시행기관, 번호, 취득일, 유효기간, 증빙 파일을 관리합니다.",
+  applied: "지원 이후의 전형 단계, 일정, 준비 항목을 관리합니다.",
+  planned: "관심 있는 공고를 보관하고 지원 여부를 결정합니다.",
+  certificates: "취득한 자격증, 등록번호, 발급기관, 증빙 파일을 관리합니다.",
 };
 
 const tabIcons = {
@@ -79,9 +80,9 @@ const priorityLabels = {
 };
 
 const statusOptions: Record<CareerTab, string[]> = {
-  applied: ["지원 준비", "지원 완료", "서류 대기", "서류 합격", "필기 예정", "면접 예정", "결과 대기", "합격", "불합격", "보류"],
-  planned: ["관심", "준비 중", "공고 대기", "서류 준비", "우선 지원", "보류"],
-  certificates: ["취득", "응시 예정", "만료"],
+  applied: ["지원 완료", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
+  planned: ["지원 예정", "관심", "보류", "마감"],
+  certificates: ["취득", "응시예정", "만료"],
 };
 
 const tabRoutes: Record<CareerTab, string> = {
@@ -90,11 +91,14 @@ const tabRoutes: Record<CareerTab, string> = {
   certificates: "/career/certificates",
 };
 
+type CareerSheetMode = "certificate" | "manual-job" | "posting-upload";
+
 export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const router = useRouter();
   const [records, setRecords] = useState<CareerRecord[]>(careerRecords);
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<CareerSheetMode>(activeTab === "certificates" ? "certificate" : "manual-job");
   const [isLoading, setIsLoading] = useState(true);
   const [jobApplications, setJobApplications] = useState<JobApplicationBundle[]>([]);
   const [certificateQuery, setCertificateQuery] = useState("");
@@ -173,6 +177,13 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     router.push("/career/planned");
   };
 
+  const saveManualJobApplication = async (payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string }) => {
+    const saved = await createManualJobApplicationInDb(payload);
+    if (saved) setJobApplications((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+    setIsSheetOpen(false);
+    router.push("/career/planned");
+  };
+
   const applyJobApplication = async (application: JobApplicationBundle) => {
     const updated = await markJobApplicationAsApplied(application);
     if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -198,12 +209,13 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           className="header-action"
           onClick={() => {
             setEditingRecord(null);
+            setSheetMode(activeTab === "certificates" ? "certificate" : "manual-job");
             setIsSheetOpen(true);
           }}
           type="button"
         >
           <Plus aria-hidden size={18} />
-          항목 추가
+          {activeTab === "certificates" ? "자격증 추가" : "직접 추가"}
         </button>
       </header>
 
@@ -266,6 +278,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
               onDelete={deleteRecord}
               onEdit={(record) => {
                 setEditingRecord(record);
+                setSheetMode("certificate");
                 setIsSheetOpen(true);
               }}
             />
@@ -274,8 +287,14 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           <>
             <CompanyManagementPreview
               activeTab={activeTab}
-              onCreate={() => {
+              onManualCreate={() => {
                 setEditingRecord(null);
+                setSheetMode("manual-job");
+                setIsSheetOpen(true);
+              }}
+              onUploadPosting={() => {
+                setEditingRecord(null);
+                setSheetMode("posting-upload");
                 setIsSheetOpen(true);
               }}
             />
@@ -290,7 +309,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
         )}
       </SectionCard>
 
-      {isSheetOpen ? (
+      {isSheetOpen && activeTab === "certificates" ? (
         <CareerRecordSheet
           activeTab={activeTab}
           record={editingRecord}
@@ -299,59 +318,49 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             setIsSheetOpen(false);
           }}
           onSave={saveRecord}
-          onSaveJobPosting={saveJobPosting}
         />
+      ) : null}
+      {isSheetOpen && activeTab !== "certificates" && sheetMode === "posting-upload" ? (
+        <JobPostingUploadSheet onClose={() => setIsSheetOpen(false)} onSaveJobPosting={saveJobPosting} />
+      ) : null}
+      {isSheetOpen && activeTab !== "certificates" && sheetMode === "manual-job" ? (
+        <ManualJobApplicationSheet onClose={() => setIsSheetOpen(false)} onSave={saveManualJobApplication} />
       ) : null}
     </div>
   );
 }
 
-function CompanyManagementPreview({ activeTab, onCreate }: { activeTab: CareerTab; onCreate: () => void }) {
-  const isApplied = activeTab === "applied";
+function CompanyManagementPreview({
+  activeTab,
+  onManualCreate,
+  onUploadPosting,
+}: {
+  activeTab: CareerTab;
+  onManualCreate: () => void;
+  onUploadPosting: () => void;
+}) {
+  const isPlanned = activeTab === "planned";
 
   return (
-    <div className="company-management-preview">
-      <div className="company-ai-panel">
-        <div className="company-ai-panel__icon">
-          <FileText aria-hidden size={20} />
-        </div>
-        <div>
-          <span>{isApplied ? "공고 PDF / 첨부자료" : "관심 기업 자료"}</span>
-          <strong>{isApplied ? "PDF를 넣고 전형 초안을 정리" : "채용 시기와 준비물을 한 화면에서 정리"}</strong>
-          <p>
-            {isApplied
-              ? "공고 파일을 업로드하면 회사명, 직무, 마감일, 서류/필기/면접 일정을 AI 초안으로 뽑고 사용자가 확정하는 흐름으로 확장할 수 있어요."
-              : "아직 공고가 없어도 예상 채용 시기, 필요한 자격증, 준비 서류, 우선순위를 먼저 쌓아둘 수 있어요."}
-          </p>
-        </div>
-        <button className="company-ai-panel__button" type="button" onClick={onCreate}>
-          <Sparkles aria-hidden size={15} />
-          {isApplied ? "PDF로 초안 만들기" : "기업 추가하기"}
-        </button>
+    <div className="job-command-panel">
+      <div className="job-command-panel__copy">
+        <span>{isPlanned ? "지원 예정 공고" : "지원 진행 관리"}</span>
+        <strong>{isPlanned ? "공고를 보관하고 지원할지 결정합니다" : "지원한 공고의 전형 상태를 따라갑니다"}</strong>
+        <p>
+          PDF 분석은 공고 원문에서 전형 일정과 준비 항목을 뽑아 초안을 만들고, 직접 추가는 회사와 공고명만 먼저 저장할 때 씁니다.
+        </p>
       </div>
-
-      <div className="company-workflow-grid" aria-label="기업 관리 구성 미리보기">
-        <div className="company-workflow-card">
-          <span>기본 정보</span>
-          <strong>기업 / 공고 / 직무</strong>
-          <p>지원일, 마감일, 공고 URL, 이력서 파일까지 같은 카드에서 관리</p>
-        </div>
-        <div className="company-workflow-card">
-          <span>전형 흐름</span>
-          <div className="company-stage-strip">
-            {defaultJobProcessStepTypes.slice(0, 6).map((stage, index) => (
-              <b key={stage} className={index === 2 ? "company-stage-strip__item company-stage-strip__item--active" : "company-stage-strip__item"}>
-                {jobProcessStepLabels[stage]}
-              </b>
-            ))}
-          </div>
-          <p>회사마다 다른 절차는 단계 카드와 메모로 유연하게 추가</p>
-        </div>
-        <div className="company-workflow-card">
-          <span>준비 체크</span>
-          <strong>자격증 / 서류 / 메모</strong>
-          <p>가산점, 필기 과목, 제출 파일, 면접 준비 내용을 한곳에 보관</p>
-        </div>
+      <div className="job-command-panel__actions">
+        <button className="job-command-card job-command-card--ai" onClick={onUploadPosting} type="button">
+          <FileText aria-hidden size={19} />
+          <span>PDF로 공고 분석</span>
+          <small>전형 일정, 자격요건, 준비 항목 초안 생성</small>
+        </button>
+        <button className="job-command-card" onClick={onManualCreate} type="button">
+          <Plus aria-hidden size={19} />
+          <span>직접 추가</span>
+          <small>기업명, 공고명, 직무를 빠르게 등록</small>
+        </button>
       </div>
     </div>
   );
@@ -405,10 +414,16 @@ function JobApplicationBoard({
 }) {
   if (applications.length === 0) {
     return (
-      <div className="career-empty">
+      <div className="career-empty job-empty-state">
         <ClipboardList aria-hidden size={28} />
-        <strong>{activeTab === "planned" ? "저장된 전형 공고가 없습니다." : "지원 중인 전형이 없습니다."}</strong>
-        <p>{isLoading ? "데이터를 불러오는 중입니다." : activeTab === "planned" ? "공고 PDF를 분석해서 지원 예정 전형으로 보관해보세요." : "지원 예정 공고에서 지원하기를 누르면 이곳에서 단계별로 관리합니다."}</p>
+        <strong>{activeTab === "planned" ? "보관한 지원 예정 공고가 없습니다." : "지원 진행 중인 공고가 없습니다."}</strong>
+        <p>
+          {isLoading
+            ? "취업 데이터를 불러오는 중입니다."
+            : activeTab === "planned"
+              ? "PDF로 공고를 분석하거나 직접 추가해서 관심 공고를 먼저 모아두세요."
+              : "지원 예정 공고에서 지원으로 전환하면 전형 일정이 캘린더에 함께 들어갑니다."}
+        </p>
       </div>
     );
   }
@@ -425,28 +440,43 @@ function JobApplicationBoard({
             </div>
             {activeTab === "planned" ? (
               <button className="job-application-card__primary" onClick={() => void onApply(application)} type="button">
-                지원하기
+                지원으로 전환
               </button>
             ) : null}
           </div>
 
-          <div className="job-step-timeline">
-            {application.steps.map((step) => (
-              <div className="job-step-card" key={step.id}>
-                <span>{jobProcessStepLabels[step.type]}</span>
-                <strong>{step.title}</strong>
-                <small>{formatJobStepRange(step)}</small>
-                {step.sourceText ? <em>{step.sourceText}</em> : null}
-                {activeTab === "applied" ? (
-                  <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
-                    <option value="confirmed">예정</option>
-                    <option value="done">완료</option>
-                    <option value="skipped">해당 없음</option>
-                  </select>
-                ) : null}
-              </div>
-            ))}
-          </div>
+          {application.sourceFileName || application.postingUrl ? (
+            <div className="job-application-source-row">
+              {application.sourceFileName ? <span>{application.sourceFileName}</span> : null}
+              {application.postingUrl ? (
+                <a href={application.postingUrl} rel="noreferrer" target="_blank">
+                  공고 열기
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          {application.steps.length > 0 ? (
+            <div className="job-step-timeline">
+              {application.steps.map((step) => (
+                <div className="job-step-card" key={step.id}>
+                  <span>{jobProcessStepLabels[step.type]}</span>
+                  <strong>{step.title}</strong>
+                  <small>{formatJobStepRange(step)}</small>
+                  {step.sourceText ? <em>{step.sourceText}</em> : null}
+                  {activeTab === "applied" ? (
+                    <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
+                      <option value="confirmed">예정</option>
+                      <option value="done">완료</option>
+                      <option value="skipped">건너뜀</option>
+                    </select>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="job-no-steps">전형 일정은 아직 없습니다. PDF 분석으로 추가하거나 이후 상세 편집에서 보강하면 됩니다.</div>
+          )}
 
           {application.requirements.length > 0 ? (
             <div className="job-requirement-strip">
@@ -670,31 +700,13 @@ function MetaItem({ icon, label, value }: { icon?: React.ReactNode; label: strin
   );
 }
 
-function CareerRecordSheet({
-  activeTab,
+function JobPostingUploadSheet({
   onClose,
-  onSave,
   onSaveJobPosting,
-  record,
 }: {
-  activeTab: CareerTab;
   onClose: () => void;
-  onSave: (record: CareerRecord) => Promise<void> | void;
   onSaveJobPosting: (extraction: JobPostingExtraction, file?: { path?: string; name?: string }) => Promise<void> | void;
-  record: CareerRecord | null;
 }) {
-  const [form, setForm] = useState<CareerRecord>(
-    record ?? {
-      id: `career-${Date.now()}`,
-      tab: activeTab,
-      title: "",
-      subtitle: "",
-      status: "",
-      priority: "normal",
-      applicationEvents: [],
-    },
-  );
-  const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [postingFile, setPostingFile] = useState<File | null>(null);
   const [aiDraft, setAiDraft] = useState<JobPostingExtraction | null>(null);
   const [uploadedPostingFile, setUploadedPostingFile] = useState<{ path?: string; name?: string } | null>(null);
@@ -702,26 +714,17 @@ function CareerRecordSheet({
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const updateField = <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
-
   const extractPostingDraft = async () => {
-    if (!postingFile || form.tab !== "applied") return;
-
+    if (!postingFile) return;
     setAiError("");
     setIsExtracting(true);
 
     try {
       const payload = new FormData();
       payload.append("file", postingFile);
-      payload.append("companyName", form.title);
-      payload.append("postingTitle", form.subtitle);
-      payload.append("jobRole", form.subtitle);
 
       const response = await fetch("/api/career/extract-posting", { method: "POST", body: payload });
       const result = await response.json();
-
       if (!response.ok) throw new Error(result.error ?? "PDF 분석에 실패했습니다.");
 
       const extraction = result as JobPostingExtraction;
@@ -751,48 +754,114 @@ function CareerRecordSheet({
     }
   };
 
-  const applyAiDraft = () => {
-    if (!aiDraft) return;
+  return (
+    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
+      <section aria-labelledby="posting-upload-sheet-title" aria-modal="true" className="event-sheet career-sheet job-posting-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="event-sheet__grabber" aria-hidden />
+        <header className="event-sheet__header career-sheet__header">
+          <div>
+            <h2 id="posting-upload-sheet-title">PDF로 공고 분석</h2>
+            <p>채용공고 PDF에서 전형 일정과 준비 항목을 뽑아 초안을 만듭니다. 저장 전에는 직접 확인합니다.</p>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
+        </header>
+        <div className="event-sheet__body career-sheet__body">
+          <AppliedAiPostingPanel aiDraft={aiDraft} aiError={aiError} isExtracting={isExtracting} isSaving={isSaving} postingFile={postingFile} onExtractPostingDraft={() => void extractPostingDraft()} onPostingFileChange={setPostingFile} onSaveDraft={saveDraftAsJobPosting} />
+        </div>
+      </section>
+    </div>
+  );
+}
 
-    const applicationStep = findDraftStep(aiDraft, "application");
-    const writtenStep = findDraftStep(aiDraft, "written") ?? findDraftStep(aiDraft, "coding_test");
-    const interviewStep = findDraftStep(aiDraft, "interview");
-    const resultStep = findDraftStep(aiDraft, "result");
-    const documentStep = findDraftStep(aiDraft, "document");
+function ManualJobApplicationSheet({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave: (payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string }) => Promise<void> | void;
+}) {
+  const [companyName, setCompanyName] = useState("");
+  const [postingTitle, setPostingTitle] = useState("");
+  const [jobRole, setJobRole] = useState("");
+  const [postingUrl, setPostingUrl] = useState("");
+  const [memo, setMemo] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const canSave = Boolean(companyName.trim() && postingTitle.trim());
 
-    setForm((current) => ({
-      ...current,
-      title: aiDraft.companyName || current.title,
-      subtitle: [aiDraft.jobRole, aiDraft.postingTitle].filter(Boolean).join(" / ") || current.subtitle,
-      url: aiDraft.postingUrl || current.url,
-      deadlineDate: toDateInputValue(applicationStep?.endAt ?? applicationStep?.startAt) ?? current.deadlineDate,
-      examDate: toDateInputValue(writtenStep?.startAt) ?? current.examDate,
-      interviewDate: toDateInputValue(interviewStep?.startAt) ?? current.interviewDate,
-      resultDate: toDateInputValue(resultStep?.startAt) ?? current.resultDate,
-      requiredCerts: extractRequirementText(aiDraft, "eligibility") ?? current.requiredCerts,
-      requiredDocs: extractRequirementText(aiDraft, "document") ?? current.requiredDocs,
-      memo: [current.memo, aiDraft.summary, ...aiDraft.warnings.map((warning) => `확인 필요: ${warning}`)].filter(Boolean).join("\n"),
-      applicationEvents: [
-        ...(current.applicationEvents ?? []),
-        ...[
-          documentStep ? draftStepToApplicationEvent(documentStep, "document") : null,
-          writtenStep ? draftStepToApplicationEvent(writtenStep, "written") : null,
-          interviewStep ? draftStepToApplicationEvent(interviewStep, "interview") : null,
-        ].filter((event): event is ApplicationEvent => Boolean(event)),
-      ],
-    }));
+  const save = async () => {
+    if (!canSave) return;
+    setIsSaving(true);
+    try {
+      await onSave({ companyName, postingTitle, jobRole, postingUrl, memo });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
+      <section aria-labelledby="manual-job-sheet-title" aria-modal="true" className="event-sheet career-sheet manual-job-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="event-sheet__grabber" aria-hidden />
+        <header className="event-sheet__header career-sheet__header">
+          <div><h2 id="manual-job-sheet-title">지원 기업 직접 추가</h2></div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
+        </header>
+        <div className="event-sheet__body career-sheet__body manual-job-sheet__body">
+          <div className="event-form-card career-field-card career-form-card manual-job-form">
+            <div className="career-form-card__fields">
+              <div className="career-primary-fields">
+                <label><span>기업명</span><input autoFocus placeholder="한국전력공사" value={companyName} onChange={(event) => setCompanyName(event.target.value)} /></label>
+                <label><span>공고명</span><input placeholder="2026년도 상반기 4직급 대졸수준" value={postingTitle} onChange={(event) => setPostingTitle(event.target.value)} /></label>
+              </div>
+              <Field label="직무" placeholder="ICT" value={jobRole} onChange={setJobRole} />
+              <Field label="공고 URL" placeholder="https://..." value={postingUrl} onChange={setPostingUrl} />
+              <label className="event-note"><span>메모</span><textarea rows={5} placeholder="관심 사유, 준비할 내용, 확인해야 할 조건을 적어두세요." value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
+            </div>
+          </div>
+        </div>
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">취소</button>
+          <button className="event-sheet__primary-button" disabled={!canSave || isSaving} onClick={() => void save()} type="button">{isSaving ? "저장 중" : "지원 예정으로 저장"}</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function CareerRecordSheet({
+  activeTab,
+  onClose,
+  onSave,
+  record,
+}: {
+  activeTab: CareerTab;
+  onClose: () => void;
+  onSave: (record: CareerRecord) => Promise<void> | void;
+  record: CareerRecord | null;
+}) {
+  const [form, setForm] = useState<CareerRecord>(
+    record ?? {
+      id: "career-" + Date.now(),
+      tab: activeTab,
+      title: "",
+      subtitle: "",
+      status: "",
+      priority: "normal",
+      applicationEvents: [],
+    },
+  );
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const updateField = <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => {
+    setForm((current) => ({ ...current, [key]: value }));
   };
 
   const saveCurrentRecord = async () => {
     if (!form.title.trim()) return;
     setIsSaving(true);
-
     try {
-      const uploadedFile =
-        form.tab === "certificates" && certificateFile
-          ? await uploadCertificateFileToDb(certificateFile, form.id, form.certificateFilePath)
-          : null;
-
+      const uploadedFile = form.tab === "certificates" && certificateFile ? await uploadCertificateFileToDb(certificateFile, form.id, form.certificateFilePath) : null;
       await onSave({
         ...form,
         title: form.title.trim(),
@@ -813,84 +882,29 @@ function CareerRecordSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        aria-labelledby="career-sheet-title"
-        aria-modal="true"
-        className={`event-sheet career-sheet career-sheet--${form.tab}`}
-        role="dialog"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+      <section aria-labelledby="career-sheet-title" aria-modal="true" className={"event-sheet career-sheet career-sheet--" + form.tab} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header career-sheet__header">
-          <div>
-            <h2 id="career-sheet-title">{record ? `${tabLabels[form.tab]} 수정` : `${tabLabels[form.tab]} 추가`}</h2>
-            {form.tab === "certificates" ? null : <p>{tabDescriptions[form.tab]}</p>}
-          </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
-            <X aria-hidden size={18} />
-          </button>
+          <div><h2 id="career-sheet-title">{record ? tabLabels[form.tab] + " 수정" : tabLabels[form.tab] + " 추가"}</h2></div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
         </header>
-
         <div className="event-sheet__body career-sheet__body">
-          {form.tab === "applied" ? (
-            <AppliedAiPostingPanel
-              aiDraft={aiDraft}
-              aiError={aiError}
-              isExtracting={isExtracting}
-              postingFile={postingFile}
-              onApplyAiDraft={applyAiDraft}
-              onExtractPostingDraft={() => void extractPostingDraft()}
-              onPostingFileChange={setPostingFile}
-              onSaveDraft={saveDraftAsJobPosting}
-              />
-          ) : null}
           <div className="event-form-card career-field-card career-form-card">
-            <div className="career-form-card__title">
-              <strong>{form.tab === "certificates" ? "자격 정보" : "관리 정보"}</strong>
-              {form.tab === "certificates" ? null : <span>상태와 관련 날짜를 관리합니다.</span>}
-            </div>
+            <div className="career-form-card__title"><strong>자격 정보</strong></div>
             <div className="career-form-card__fields">
               <div className="career-primary-fields">
-                <label>
-                  <span>{getTitleLabel(form.tab)}</span>
-                  <input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} />
-                </label>
-                <label>
-                  <span>{getSubtitleLabel(form.tab)}</span>
-                  <input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} />
-                </label>
+                <label><span>{getTitleLabel(form.tab)}</span><input autoFocus placeholder={getTitlePlaceholder(form.tab)} value={form.title} onChange={(event) => updateField("title", event.target.value)} /></label>
+                <label><span>{getSubtitleLabel(form.tab)}</span><input placeholder={getSubtitlePlaceholder(form.tab)} value={form.subtitle} onChange={(event) => updateField("subtitle", event.target.value)} /></label>
               </div>
-              <label className="event-form-row event-form-row--select">
-                <span>상태</span>
-                <select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>
-                  {getStatusOptions(form.tab, form.status).map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <CareerSpecificFields
-                form={form}
-                selectedCertificateFile={certificateFile}
-                updateField={updateField}
-                onCertificateFileChange={setCertificateFile}
-              />
-              <label className="event-note">
-                <span>메모</span>
-                <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
-              </label>
+              <label className="event-form-row event-form-row--select"><span>상태</span><select value={form.status || getDefaultStatus(form.tab)} onChange={(event) => updateField("status", event.target.value)}>{getStatusOptions(form.tab, form.status).map((status) => (<option key={status} value={status}>{status}</option>))}</select></label>
+              <CareerSpecificFields form={form} selectedCertificateFile={certificateFile} updateField={updateField} onCertificateFileChange={setCertificateFile} />
+              <label className="event-note"><span>메모</span><textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} /></label>
             </div>
           </div>
         </div>
-
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
-            취소
-          </button>
-          <button className="event-sheet__primary-button" disabled={isSaving} onClick={() => void saveCurrentRecord()} type="button">
-            {isSaving ? "저장 중" : "저장하기"}
-          </button>
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">취소</button>
+          <button className="event-sheet__primary-button" disabled={isSaving} onClick={() => void saveCurrentRecord()} type="button">{isSaving ? "저장 중" : "저장하기"}</button>
         </footer>
       </section>
     </div>
@@ -901,6 +915,7 @@ function AppliedAiPostingPanel({
   aiDraft,
   aiError,
   isExtracting,
+  isSaving,
   onApplyAiDraft,
   onExtractPostingDraft,
   onPostingFileChange,
@@ -910,7 +925,8 @@ function AppliedAiPostingPanel({
   aiDraft: JobPostingExtraction | null;
   aiError: string;
   isExtracting: boolean;
-  onApplyAiDraft: () => void;
+  isSaving: boolean;
+  onApplyAiDraft?: () => void;
   onExtractPostingDraft: () => void;
   onPostingFileChange: (file: File | null) => void;
   onSaveDraft: () => Promise<void> | void;
@@ -937,7 +953,7 @@ function AppliedAiPostingPanel({
         <div className="career-ai-uploader__file">{postingFile ? postingFile.name : "선택된 PDF가 없습니다."}</div>
         {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
       </div>
-      {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} onSave={onSaveDraft} /> : null}
+      {aiDraft ? <AiDraftReview draft={aiDraft} isSaving={isSaving} onApply={onApplyAiDraft} onSave={onSaveDraft} /> : null}
     </div>
   );
 }
@@ -1028,7 +1044,17 @@ function CareerSpecificFields({
   return null;
 }
 
-function AiDraftReview({ draft, onApply, onSave }: { draft: JobPostingExtraction; onApply: () => void; onSave: () => Promise<void> | void }) {
+function AiDraftReview({
+  draft,
+  isSaving,
+  onApply,
+  onSave,
+}: {
+  draft: JobPostingExtraction;
+  isSaving: boolean;
+  onApply?: () => void;
+  onSave: () => Promise<void> | void;
+}) {
   return (
     <div className="ai-draft-review">
       <div className="ai-draft-review__header">
@@ -1038,11 +1064,13 @@ function AiDraftReview({ draft, onApply, onSave }: { draft: JobPostingExtraction
           <p>{[draft.jobRole, draft.postingTitle].filter(Boolean).join(" / ") || draft.summary || "추출된 공고 정보를 확인해 주세요."}</p>
         </div>
         <div className="ai-draft-review__actions">
-          <button type="button" onClick={onApply}>
-            폼에 반영
-          </button>
-          <button type="button" onClick={() => void onSave()}>
-            전형 공고로 저장
+          {onApply ? (
+            <button type="button" onClick={onApply}>
+              폼에 반영
+            </button>
+          ) : null}
+          <button disabled={isSaving} type="button" onClick={() => void onSave()}>
+            {isSaving ? "저장 중" : "전형 공고로 저장"}
           </button>
         </div>
       </div>

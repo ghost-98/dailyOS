@@ -54,7 +54,7 @@ export const jobApplicationStatusLabels: Record<JobApplicationStatus, string> = 
   result_pending: "결과 대기",
   accepted: "합격",
   rejected: "불합격",
-  closed: "종료",
+  closed: "마감",
 };
 
 export type JobApplicationStep = {

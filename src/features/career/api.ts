@@ -430,6 +430,43 @@ export async function createJobApplicationFromExtraction({
   return applications?.find((application) => application.id === applicationId) ?? null;
 }
 
+export async function createManualJobApplicationInDb({
+  companyName,
+  postingTitle,
+  jobRole,
+  postingUrl,
+  memo,
+}: {
+  companyName: string;
+  postingTitle: string;
+  jobRole: string;
+  postingUrl?: string;
+  memo?: string;
+}) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("job_applications")
+    .insert({
+      user_id: userId,
+      company_name: companyName.trim(),
+      posting_title: postingTitle.trim(),
+      job_role: jobRole.trim(),
+      status: "planned",
+      posting_url: emptyToNull(postingUrl),
+      memo: emptyToNull(memo),
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  const applicationId = (data as { id: string }).id;
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
+}
+
 export async function markJobApplicationAsApplied(application: JobApplicationBundle) {
   if (!supabase) return null;
   const userId = await getUserId();
