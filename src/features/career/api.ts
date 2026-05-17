@@ -260,7 +260,9 @@ export async function uploadJobPostingFileToDb(file: File) {
     size_bytes: file.size,
   });
 
-  if (fileError) throw fileError;
+  if (fileError) {
+    console.warn("Failed to save job posting file metadata", fileError);
+  }
 
   return {
     path,
