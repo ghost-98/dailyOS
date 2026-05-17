@@ -1,23 +1,5 @@
 export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career";
 
-export type ScheduleSummary = {
-  id: string;
-  title: string;
-  startsAt: string;
-  endsAt?: string;
-  place: string;
-  category: string;
-  status?: "active" | "canceled";
-};
-
-export type TodoSummary = {
-  id: string;
-  title: string;
-  status: "todo" | "inProgress" | "done";
-  priority: "high" | "normal" | "low";
-  dueLabel: string;
-};
-
 export type TaskStatus = "todo" | "inProgress" | "done";
 
 export type TaskPriority = "high" | "normal" | "low";
@@ -32,25 +14,6 @@ export type TaskItem = {
   completedAt?: string;
   deferredCount: number;
   memo?: string;
-};
-
-export type HealthSummary = {
-  vitalsIndex: number;
-  weightKg: number;
-  muscleMassKg?: number;
-  bodyFatPercent?: number;
-  workoutPlan: string;
-  workoutDetail: string;
-};
-
-export type CareerEvent = {
-  id: string;
-  company: string;
-  role: string;
-  kind: "deadline" | "exam" | "interview" | "result";
-  dateLabel: string;
-  dday: string;
-  status: "urgent" | "normal" | "muted";
 };
 
 export type WeightRecord = {

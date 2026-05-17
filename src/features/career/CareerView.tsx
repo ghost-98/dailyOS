@@ -2082,16 +2082,6 @@ function getNextCareerStep(record: CareerRecord) {
   );
 }
 
-function findDraftStep(draft: JobPostingExtraction, type: JobProcessStepType) {
-  return draft.steps.find((step) => step.type === type);
-}
-
-function toDateInputValue(value?: string) {
-  if (!value) return undefined;
-  const dateOnly = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
-  return dateOnly;
-}
-
 function toDatetimeLocalValue(value?: string) {
   if (!value) return "";
   const date = new Date(value);
@@ -2105,27 +2095,6 @@ function toIsoFromDatetimeLocal(value?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toISOString();
-}
-
-function draftStepToApplicationEvent(step: NonNullable<ReturnType<typeof findDraftStep>>, stage: ApplicationEventStage): ApplicationEvent | null {
-  const date = toDateInputValue(step.startAt ?? step.endAt);
-  if (!date) return null;
-
-  return {
-    id: `application-event-${stage}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    stage,
-    date,
-    memo: step.memo || step.title,
-  };
-}
-
-function extractRequirementText(draft: JobPostingExtraction, category: "eligibility" | "document") {
-  const values = draft.requirements
-    .filter((requirement) => requirement.category === category)
-    .map((requirement) => `${requirement.title}: ${requirement.content}`)
-    .slice(0, 4);
-
-  return values.length > 0 ? values.join("\n") : undefined;
 }
 
 function formatDraftRange(startAt?: string, endAt?: string) {
