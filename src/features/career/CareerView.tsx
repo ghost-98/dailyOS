@@ -95,6 +95,15 @@ const priorityLabels = {
   low: "낮음",
 };
 
+const requirementCategoryLabels: Record<JobApplicationRequirement["category"], string> = {
+  eligibility: "지원자격",
+  preferred: "우대/가점/배점",
+  document: "서류",
+  exam: "필기",
+  interview: "면접",
+  note: "메모",
+};
+
 const statusOptions: Record<CareerTab, string[]> = {
   applied: ["지원중", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
   planned: ["지원 예정", "관심", "보류", "마감"],
@@ -643,7 +652,7 @@ function JobApplicationBoard({
               <strong>자격/가점</strong>
               {application.requirements.slice(0, 5).map((requirement) => (
                 <span key={requirement.id}>
-                  <b>{requirement.title}</b>
+                  <b>{requirementCategoryLabels[requirement.category]} · {requirement.title}</b>
                   {requirement.content}
                 </span>
               ))}
@@ -955,7 +964,7 @@ function JobApplicationDetailPanel({
         <div className="job-detail-manage-form">
           <select value={requirementForm.category} onChange={(event) => setRequirementForm((current) => ({ ...current, category: event.target.value as JobApplicationRequirement["category"] }))}>
             <option value="eligibility">지원자격</option>
-            <option value="preferred">우대/가점</option>
+            <option value="preferred">우대/가점/배점</option>
             <option value="document">서류</option>
             <option value="exam">필기</option>
             <option value="interview">면접</option>
@@ -975,7 +984,7 @@ function JobApplicationDetailPanel({
           <div className="job-detail-requirements">
             {application.requirements.map((requirement) => (
               <article key={requirement.id}>
-                <b>{requirement.title}</b>
+                <b>{requirementCategoryLabels[requirement.category]} · {requirement.title}</b>
                 <p>{requirement.content}</p>
                 {requirement.sourceText ? <em>{requirement.sourceText}</em> : null}
                 <div className="job-detail-item-actions">
@@ -999,7 +1008,7 @@ function JobApplicationDetailPanel({
           <select value={checkItemForm.category} onChange={(event) => setCheckItemForm((current) => ({ ...current, category: event.target.value as JobApplicationCheckItem["category"] }))}>
             <option value="document">서류</option>
             <option value="eligibility">지원자격</option>
-            <option value="preferred">우대/가점</option>
+            <option value="preferred">우대/가점/배점</option>
             <option value="exam">필기</option>
             <option value="interview">면접</option>
             <option value="note">메모</option>
@@ -1747,7 +1756,7 @@ function JobTemplateDraftEditor({
           <div className="job-template-row job-template-row--requirement" key={`template-requirement-${index}`}>
             <select value={requirement.category} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, category: event.target.value as JobApplicationRequirement["category"] } : item)))}>
               <option value="eligibility">지원자격</option>
-              <option value="preferred">우대/가점</option>
+              <option value="preferred">우대/가점/배점</option>
               <option value="document">서류</option>
               <option value="exam">필기</option>
               <option value="interview">면접</option>
@@ -1774,7 +1783,7 @@ function JobTemplateDraftEditor({
             <select value={item.category} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, category: event.target.value as JobApplicationCheckItem["category"] } : checkItem)))}>
               <option value="document">서류</option>
               <option value="eligibility">지원자격</option>
-              <option value="preferred">우대/가점</option>
+              <option value="preferred">우대/가점/배점</option>
               <option value="exam">필기</option>
               <option value="interview">면접</option>
               <option value="note">메모</option>

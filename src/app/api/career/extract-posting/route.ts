@@ -275,6 +275,14 @@ function asString(value: unknown) {
 
 function normalizeDateTime(value: string) {
   if (!value) return "";
+  const compact = value.trim().replace(/\s+/, "T");
+  const hasTime = /\d{4}-\d{2}-\d{2}[T\s]\d{1,2}:\d{2}/.test(value);
+  const normalizedWithZone = compact.replace(/([T\s]\d{1,2}:\d{2}(?::\d{2})?)([+-]\d{2}:?\d{2}|Z)$/i, (_match, time, zone) => {
+    const safeTime = time.length === 6 ? `${time}:00` : time;
+    const safeZone = zone === "Z" || zone.includes(":") ? zone : `${zone.slice(0, 3)}:${zone.slice(3)}`;
+    return `${safeTime}${safeZone}`;
+  });
+  if (hasTime && !Number.isNaN(new Date(normalizedWithZone).getTime())) return normalizedWithZone;
   const date = new Date(value);
   if (!Number.isNaN(date.getTime())) return value.includes("T") ? value : `${value}T00:00:00+09:00`;
   const dateOnly = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];

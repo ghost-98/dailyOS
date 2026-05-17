@@ -120,6 +120,33 @@ function emptyToNull(value?: string) {
   return value?.trim() ? value.trim() : null;
 }
 
+function timestampToNull(value?: string) {
+  const normalized = normalizeTimestamp(value);
+  return normalized || null;
+}
+
+function normalizeTimestamp(value?: string) {
+  const raw = value?.trim();
+  if (!raw) return "";
+
+  const compact = raw.replace(/\s+/, "T");
+  const hasDateTime = /\d{4}-\d{2}-\d{2}[T\s]\d{1,2}:\d{2}/.test(raw);
+  const normalizedWithZone = compact.replace(/(T\d{1,2}:\d{2}(?::\d{2})?)([+-]\d{2}:?\d{2}|Z)$/i, (_match, time, zone) => {
+    const safeTime = time.length === 6 ? `${time}:00` : time;
+    const safeZone = zone === "Z" || zone.includes(":") ? zone : `${zone.slice(0, 3)}:${zone.slice(3)}`;
+    return `${safeTime}${safeZone}`;
+  });
+
+  if (hasDateTime && !Number.isNaN(new Date(normalizedWithZone).getTime())) return normalizedWithZone;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return `${raw}T00:00:00+09:00`;
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+
+  const dateOnly = raw.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  return dateOnly ? `${dateOnly}T00:00:00+09:00` : raw;
+}
+
 export type JobApplicationTemplatePayload = {
   companyName: string;
   postingTitle: string;
@@ -170,8 +197,8 @@ async function insertJobApplicationTemplateData({
       application_id: applicationId,
       type: step.type,
       title: step.title.trim(),
-      start_at: emptyToNull(step.startAt),
-      end_at: emptyToNull(step.endAt),
+      start_at: timestampToNull(step.startAt),
+      end_at: timestampToNull(step.endAt),
       status: "confirmed",
       order_index: index,
       memo: emptyToNull(step.memo),
@@ -208,7 +235,7 @@ async function insertJobApplicationTemplateData({
       application_id: applicationId,
       title: item.title.trim(),
       category: item.category,
-      due_at: emptyToNull(item.dueAt),
+      due_at: timestampToNull(item.dueAt),
       is_done: false,
       memo: emptyToNull(item.memo),
     }));
@@ -247,8 +274,8 @@ function mapExtractionStepToRow(step: JobPostingExtraction["steps"][number], use
     application_id: applicationId,
     type: step.type,
     title: step.title.trim(),
-    start_at: emptyToNull(step.startAt),
-    end_at: emptyToNull(step.endAt),
+    start_at: timestampToNull(step.startAt),
+    end_at: timestampToNull(step.endAt),
     status: "confirmed",
     order_index: index,
     memo: emptyToNull(step.memo),
@@ -275,7 +302,7 @@ function mapExtractionCheckItemToRow(item: JobPostingExtraction["checkItems"][nu
     application_id: applicationId,
     title: item.title.trim(),
     category: item.category,
-    due_at: emptyToNull(item.dueAt),
+    due_at: timestampToNull(item.dueAt),
     is_done: false,
     memo: emptyToNull(item.memo || item.sourceText),
   };
@@ -731,8 +758,8 @@ export async function createJobApplicationStepInDb(
     application_id: applicationId,
     type: step.type,
     title: step.title.trim(),
-    start_at: emptyToNull(step.startAt),
-    end_at: emptyToNull(step.endAt),
+    start_at: timestampToNull(step.startAt),
+    end_at: timestampToNull(step.endAt),
     status: "confirmed",
     order_index: orderIndex,
     memo: emptyToNull(step.memo),
@@ -763,8 +790,8 @@ export async function updateJobApplicationStepInDb(
     .update({
       type: step.type,
       title: step.title.trim(),
-      start_at: emptyToNull(step.startAt),
-      end_at: emptyToNull(step.endAt),
+      start_at: timestampToNull(step.startAt),
+      end_at: timestampToNull(step.endAt),
       memo: emptyToNull(step.memo),
       source_text: emptyToNull(step.sourceText),
       confirmed_by_user: true,
@@ -872,7 +899,7 @@ export async function createJobApplicationCheckItemInDb(
     application_id: applicationId,
     category: item.category,
     title: item.title.trim(),
-    due_at: emptyToNull(item.dueAt),
+    due_at: timestampToNull(item.dueAt),
     is_done: false,
     memo: emptyToNull(item.memo),
   });
@@ -893,7 +920,7 @@ export async function updateJobApplicationCheckItemInDb(
     .update({
       category: item.category,
       title: item.title.trim(),
-      due_at: emptyToNull(item.dueAt),
+      due_at: timestampToNull(item.dueAt),
       memo: emptyToNull(item.memo),
       ...(typeof item.isDone === "boolean" ? { is_done: item.isDone } : {}),
     })
