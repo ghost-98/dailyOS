@@ -7,6 +7,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "signup";
+const EMAIL_VERIFICATION_CODE_LENGTH = 8;
 type DailyOSProfile = {
   birthDate?: string;
   email?: string;
@@ -206,28 +207,49 @@ function AuthScreen() {
       return;
     }
 
-    if (mode === "signup" && (!fullName.trim() || !gender || !birthDate)) {
-      setMessage("이름, 성별, 생년월일을 모두 입력하세요.");
+    if (mode === "signup") {
+      await sendSignupVerificationCode();
       return;
     }
 
     const normalizedEmail = email.trim();
     setIsSubmitting(true);
-    const result =
-      mode === "login"
-        ? await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
-        : await supabase.auth.signUp({
-            email: normalizedEmail,
-            password,
-            options: {
-              data: {
-                birth_date: birthDate,
-                full_name: fullName.trim(),
-                gender,
-              },
-            },
-          });
+    const result = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
+    setIsSubmitting(false);
+
+    if (result.error) {
+      setMessage(result.error.message);
+    }
+  };
+
+  const sendSignupVerificationCode = async () => {
+    if (!supabase || isSubmitting) return;
+    setMessage("");
+
+    if (!fullName.trim() || !gender || !birthDate) {
+      setMessage("이름, 성별, 생년월일을 모두 입력하세요.");
+      return;
+    }
+
+    if (!email.trim() || password.length < 6) {
+      setMessage("이메일과 6자 이상 비밀번호를 입력해 주세요.");
+      return;
+    }
+
+    const normalizedEmail = email.trim();
+    setIsSubmitting(true);
+    const result = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        data: {
+          birth_date: birthDate,
+          full_name: fullName.trim(),
+          gender,
+        },
+      },
+    });
     setIsSubmitting(false);
 
     if (result.error) {
@@ -235,10 +257,8 @@ function AuthScreen() {
       return;
     }
 
-    if (mode === "signup" && !result.data.session) {
-      startEmailVerification(normalizedEmail);
-      setMessage("인증 코드를 보냈습니다. 메일함에서 6자리 코드를 확인해 주세요.");
-    }
+    startEmailVerification(normalizedEmail);
+    setMessage(`인증 코드를 보냈습니다. 메일함에서 ${EMAIL_VERIFICATION_CODE_LENGTH}자리 코드를 확인해 주세요.`);
   };
 
   const startEmailVerification = (targetEmail: string) => {
@@ -267,8 +287,8 @@ function AuthScreen() {
   const verifyEmailCode = async () => {
     if (!supabase || !verificationEmail || isVerifying) return;
     const token = verificationCode.trim();
-    if (token.length !== 6) {
-      setMessage("6자리 인증 코드를 입력해 주세요.");
+    if (token.length !== EMAIL_VERIFICATION_CODE_LENGTH) {
+      setMessage(`${EMAIL_VERIFICATION_CODE_LENGTH}자리 인증 코드를 입력해 주세요.`);
       return;
     }
 
@@ -335,14 +355,23 @@ function AuthScreen() {
         <div className="auth-tabs" role="tablist">
           <button
             className={mode === "login" ? "auth-tab auth-tab--active" : "auth-tab"}
-            onClick={() => setMode("login")}
+            onClick={() => {
+              setMode("login");
+              setVerificationEmail("");
+              setVerificationCode("");
+              setVerificationExpiresAt(null);
+              setMessage("");
+            }}
             type="button"
           >
             로그인
           </button>
           <button
             className={mode === "signup" ? "auth-tab auth-tab--active" : "auth-tab"}
-            onClick={() => setMode("signup")}
+            onClick={() => {
+              setMode("signup");
+              setMessage("");
+            }}
             type="button"
           >
             회원가입
@@ -390,9 +419,25 @@ function AuthScreen() {
           </>
         ) : null}
 
+        {mode === "signup" ? (
+          <label className="auth-field">
+            <span>비밀번호</span>
+            <div>
+              <LockKeyhole aria-hidden size={18} />
+              <input
+                autoComplete="new-password"
+                placeholder="6자 이상"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+          </label>
+        ) : null}
+
         <label className="auth-field">
           <span>이메일</span>
-          <div>
+          <div className={mode === "signup" ? "auth-field__control auth-field__control--with-action" : "auth-field__control"}>
             <Mail aria-hidden size={18} />
             <input
               autoComplete="email"
@@ -401,27 +446,23 @@ function AuthScreen() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
+            {mode === "signup" ? (
+              <button
+                disabled={isSubmitting || isVerifying}
+                onClick={() => {
+                  if (verificationEmail && verificationEmail === email.trim()) {
+                    void resendVerificationCode();
+                    return;
+                  }
+                  void sendSignupVerificationCode();
+                }}
+                type="button"
+              >
+                {verificationEmail ? "다시 발송" : "코드 발송"}
+              </button>
+            ) : null}
           </div>
         </label>
-
-        <label className="auth-field">
-          <span>비밀번호</span>
-          <div>
-            <LockKeyhole aria-hidden size={18} />
-            <input
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              placeholder="6자 이상"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void submit();
-              }}
-            />
-          </div>
-        </label>
-
-        {message ? <p className="auth-message">{message}</p> : null}
 
         {verificationEmail ? (
           <div className="auth-verification-panel">
@@ -429,17 +470,17 @@ function AuthScreen() {
               <strong>이메일 인증</strong>
               <span>{verificationEmail}</span>
             </div>
-            <p>메일로 받은 6자리 코드를 3분 안에 입력해 주세요.</p>
+            <p>메일로 받은 {EMAIL_VERIFICATION_CODE_LENGTH}자리 코드를 3분 안에 입력해 주세요. 인증이 완료되면 회원가입이 승인됩니다.</p>
             <label className="auth-field">
               <span>인증 코드</span>
               <div>
                 <Mail aria-hidden size={18} />
                 <input
                   inputMode="numeric"
-                  maxLength={6}
-                  placeholder="000000"
+                  maxLength={EMAIL_VERIFICATION_CODE_LENGTH}
+                  placeholder={"0".repeat(EMAIL_VERIFICATION_CODE_LENGTH)}
                   value={verificationCode}
-                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, EMAIL_VERIFICATION_CODE_LENGTH))}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") void verifyEmailCode();
                   }}
@@ -460,10 +501,35 @@ function AuthScreen() {
           </div>
         ) : null}
 
-        <button className="auth-submit" disabled={isSubmitting} onClick={submit} type="button">
-          {isSubmitting ? <Loader2 aria-hidden size={18} /> : <ArrowRight aria-hidden size={18} />}
-          {mode === "login" ? "로그인" : "회원가입"}
-        </button>
+        {mode === "login" ? (
+          <label className="auth-field">
+            <span>비밀번호</span>
+            <div>
+              <LockKeyhole aria-hidden size={18} />
+              <input
+                autoComplete="current-password"
+                placeholder="6자 이상"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submit();
+                }}
+              />
+            </div>
+          </label>
+        ) : null}
+
+        {message ? <p className="auth-message">{message}</p> : null}
+
+        {mode === "login" ? (
+          <button className="auth-submit" disabled={isSubmitting} onClick={submit} type="button">
+            {isSubmitting ? <Loader2 aria-hidden size={18} /> : <ArrowRight aria-hidden size={18} />}
+            로그인
+          </button>
+        ) : (
+          <p className="auth-signup-note">기본 정보와 비밀번호를 입력한 뒤 이메일 옆의 코드 발송을 눌러 인증을 완료하세요.</p>
+        )}
         {mode === "login" ? (
           <button className="auth-link-button" disabled={isSubmitting} onClick={sendResetEmail} type="button">
             비밀번호 재설정
