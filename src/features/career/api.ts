@@ -164,6 +164,18 @@ function mapExtractionRequirementToRow(requirement: JobPostingExtraction["requir
   };
 }
 
+function mapExtractionCheckItemToRow(item: JobPostingExtraction["checkItems"][number], userId: string, applicationId: string) {
+  return {
+    user_id: userId,
+    application_id: applicationId,
+    title: item.title.trim(),
+    category: item.category,
+    due_at: emptyToNull(item.dueAt),
+    is_done: false,
+    memo: emptyToNull(item.memo || item.sourceText),
+  };
+}
+
 function toDateOnly(value?: string) {
   return value?.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
 }
@@ -426,6 +438,15 @@ export async function createJobApplicationFromExtraction({
   if (requirementRows.length > 0) {
     const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
     if (requirementsError) throw toDbError(requirementsError, "지원자격/우대사항 저장에 실패했습니다.");
+  }
+
+  const checkItemRows = extraction.checkItems
+    .filter((item) => item.title?.trim())
+    .map((item) => mapExtractionCheckItemToRow(item, userId, applicationId));
+
+  if (checkItemRows.length > 0) {
+    const { error: checkItemsError } = await supabase.from("job_application_check_items").insert(checkItemRows);
+    if (checkItemsError) throw toDbError(checkItemsError, "준비 체크 항목 저장에 실패했습니다.");
   }
 
   if (sourceFilePath && sourceFileName) {
@@ -832,6 +853,9 @@ export async function applyLatestAiDraftToJobApplication(application: JobApplica
   const { error: deleteRequirementsError } = await supabase.from("job_application_requirements").delete().eq("application_id", application.id);
   if (deleteRequirementsError) throw toDbError(deleteRequirementsError, "기존 지원 요건 정리에 실패했습니다.");
 
+  const { error: deleteCheckItemsError } = await supabase.from("job_application_check_items").delete().eq("application_id", application.id);
+  if (deleteCheckItemsError) throw toDbError(deleteCheckItemsError, "기존 준비 체크 정리에 실패했습니다.");
+
   const stepRows = extraction.steps
     .filter((step) => step.title?.trim())
     .map((step, index) => mapExtractionStepToRow(step, userId, application.id, index));
@@ -848,6 +872,15 @@ export async function applyLatestAiDraftToJobApplication(application: JobApplica
   if (requirementRows.length > 0) {
     const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
     if (requirementsError) throw toDbError(requirementsError, "AI 지원 요건 반영에 실패했습니다.");
+  }
+
+  const checkItemRows = extraction.checkItems
+    .filter((item) => item.title?.trim())
+    .map((item) => mapExtractionCheckItemToRow(item, userId, application.id));
+
+  if (checkItemRows.length > 0) {
+    const { error: checkItemsError } = await supabase.from("job_application_check_items").insert(checkItemRows);
+    if (checkItemsError) throw toDbError(checkItemsError, "AI 준비 체크 반영에 실패했습니다.");
   }
 
   const { error: appError } = await supabase

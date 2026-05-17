@@ -1596,11 +1596,12 @@ function AiDraftReview({
         <span>전형 일정</span>
         {draft.steps.length > 0 ? (
           <div className="ai-draft-step-list">
-            {draft.steps.slice(0, 6).map((step, index) => (
+            {draft.steps.map((step, index) => (
               <div className="ai-draft-step" key={`${step.type}-${step.title}-${index}`}>
                 <b>{jobProcessStepLabels[step.type]}</b>
                 <strong>{step.title}</strong>
                 <small>{formatDraftRange(step.startAt, step.endAt) || "날짜 확인 필요"}</small>
+                {step.memo ? <p>{step.memo}</p> : null}
                 {step.sourceText ? <em>{step.sourceText}</em> : null}
               </div>
             ))}
@@ -1613,7 +1614,7 @@ function AiDraftReview({
       <div className="ai-draft-review__section">
         <span>준비/자격</span>
         <div className="ai-draft-chip-list">
-          {[...draft.requirements.slice(0, 4), ...draft.checkItems.slice(0, 3)].map((item, index) => (
+          {[...draft.requirements, ...draft.checkItems].map((item, index) => (
             <span key={`${item.title}-${index}`}>
               <b>{item.title}</b>
               {"content" in item ? item.content : item.memo}
