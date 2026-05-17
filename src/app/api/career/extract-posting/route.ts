@@ -1,29 +1,35 @@
 import { NextResponse } from "next/server";
 
 const allowedTypes = new Set(["application/pdf"]);
-const maxFileSize = 50 * 1024 * 1024;
+const maxFileSize = 10 * 1024 * 1024;
+const extractionTimeoutMs = 75_000;
 
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file");
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "PDF file is required." }, { status: 400 });
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "PDF 파일이 필요합니다." }, { status: 400 });
+    }
+
+    if (!allowedTypes.has(file.type)) {
+      return NextResponse.json({ error: "PDF 파일만 분석할 수 있습니다." }, { status: 400 });
+    }
+
+    if (file.size > maxFileSize) {
+      return NextResponse.json({ error: "PDF 파일은 10MB 이하로 올려주세요. 큰 공고는 필요한 페이지만 따로 저장해서 올리는 편이 안정적입니다." }, { status: 400 });
+    }
+
+    const companyName = String(formData.get("companyName") ?? "");
+    const postingTitle = String(formData.get("postingTitle") ?? "");
+    const jobRole = String(formData.get("jobRole") ?? "");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    return extractWithGemini({ bytes, companyName, file, jobRole, postingTitle });
+  } catch (error) {
+    console.error("Failed to extract job posting PDF", error);
+    return NextResponse.json({ error: "PDF 분석 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 500 });
   }
-
-  if (!allowedTypes.has(file.type)) {
-    return NextResponse.json({ error: "Only PDF files are supported for AI extraction." }, { status: 400 });
-  }
-
-  if (file.size > maxFileSize) {
-    return NextResponse.json({ error: "PDF file must be 50MB or smaller." }, { status: 400 });
-  }
-
-  const companyName = String(formData.get("companyName") ?? "");
-  const postingTitle = String(formData.get("postingTitle") ?? "");
-  const jobRole = String(formData.get("jobRole") ?? "");
-  const bytes = Buffer.from(await file.arrayBuffer());
-  return extractWithGemini({ bytes, companyName, file, jobRole, postingTitle });
 }
 
 async function extractWithGemini({
@@ -47,32 +53,47 @@ async function extractWithGemini({
 
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const prompt = buildExtractionPrompt({ companyName, jobRole, postingTitle });
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: file.type,
-                data: bytes.toString("base64"),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: extractionSchema,
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), extractionTimeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: file.type,
+                  data: bytes.toString("base64"),
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: extractionSchema,
+        },
+      }),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return NextResponse.json({ error: "AI 분석 시간이 길어져 중단했습니다. PDF 용량을 줄이거나 필요한 페이지만 추려 다시 올려주세요." }, { status: 504 });
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const payload = await response.json();
 
@@ -94,15 +115,15 @@ async function extractWithGemini({
 
 function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { companyName: string; jobRole: string; postingTitle: string }) {
   return [
-    "너는 한국어 채용공고를 dailyOS 데이터로 정리하는 추출기다.",
-    "추측하지 말고 PDF 원문에 있는 정보만 JSON으로 추출해라.",
-    "날짜는 가능하면 ISO 형식으로 작성하라. 시간이 있으면 +09:00을 포함한 ISO datetime으로 작성하라.",
-    "모든 날짜/자격/준비물에는 sourceText에 근거 원문을 짧게 넣어라.",
-    "확실하지 않은 값은 비워두고 warnings에 남겨라.",
+    "너는 채용공고 PDF를 dailyOS의 취업 관리 데이터로 구조화하는 도우미다.",
+    "PDF에서 확인 가능한 내용만 JSON으로 추출한다.",
+    "날짜는 가능하면 ISO 형식으로 쓴다. 시간이 명시되면 +09:00 기준 ISO datetime으로 쓴다.",
+    "전형 일정, 자격요건, 우대사항, 제출서류, 준비 항목은 원문 근거를 sourceText에 짧게 남긴다.",
+    "불확실하거나 사용자가 확인해야 하는 내용은 warnings에 넣는다.",
     `사용자가 미리 입력한 기업명: ${companyName || "(없음)"}`,
     `사용자가 미리 입력한 공고명: ${postingTitle || "(없음)"}`,
     `사용자가 미리 입력한 직무: ${jobRole || "(없음)"}`,
-    "반드시 제공된 JSON schema와 호환되는 JSON만 반환해라.",
+    "반드시 schema에 맞는 JSON만 반환한다.",
   ].join("\n");
 }
 

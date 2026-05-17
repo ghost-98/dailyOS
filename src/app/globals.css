@@ -3858,6 +3858,13 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.career-ai-uploader__hint {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .ai-draft-review {
   display: grid;
   gap: 14px;

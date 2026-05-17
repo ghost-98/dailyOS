@@ -951,6 +951,7 @@ function AppliedAiPostingPanel({
           </button>
         </div>
         <div className="career-ai-uploader__file">{postingFile ? postingFile.name : "선택된 PDF가 없습니다."}</div>
+        {isExtracting ? <small className="career-ai-uploader__hint">보통 30초 안팎이지만, PDF가 크거나 Gemini 응답이 느리면 최대 75초 뒤 자동으로 중단됩니다.</small> : null}
         {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
       </div>
       {aiDraft ? <AiDraftReview draft={aiDraft} isSaving={isSaving} onApply={onApplyAiDraft} onSave={onSaveDraft} /> : null}
