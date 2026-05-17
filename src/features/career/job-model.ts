@@ -74,6 +74,46 @@ export type JobApplicationCheckItem = {
   memo?: string;
 };
 
+export type JobPostingExtractionStep = {
+  type: JobProcessStepType;
+  title: string;
+  startAt?: string;
+  endAt?: string;
+  memo?: string;
+  sourceText?: string;
+  confidence: number;
+};
+
+export type JobPostingExtractionRequirement = {
+  category: JobRequirementCategory;
+  title: string;
+  content: string;
+  sourceText?: string;
+  confidence: number;
+};
+
+export type JobPostingExtractionCheckItem = {
+  title: string;
+  category: JobRequirementCategory;
+  dueAt?: string;
+  memo?: string;
+  sourceText?: string;
+  confidence: number;
+};
+
+export type JobPostingExtraction = {
+  companyName?: string;
+  postingTitle?: string;
+  jobRole?: string;
+  postingUrl?: string;
+  summary?: string;
+  steps: JobPostingExtractionStep[];
+  requirements: JobPostingExtractionRequirement[];
+  checkItems: JobPostingExtractionCheckItem[];
+  warnings: string[];
+  modelName?: string;
+};
+
 export const jobProcessStepLabels: Record<JobProcessStepType, string> = {
   application: "접수",
   document: "서류",

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { ApplicationEvent, ApplicationEventStage, CareerRecord, CareerTab } from "./data";
+import type { JobPostingExtraction } from "./job-model";
 
 type CareerRecordRow = {
   id: string;
@@ -231,4 +232,71 @@ export async function getCertificateFileDownloadUrl(path: string) {
   const { data, error } = await supabase.storage.from("career-files").createSignedUrl(path, 60);
   if (error) throw error;
   return data.signedUrl;
+}
+
+export async function uploadJobPostingFileToDb(file: File) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const extension = file.name.includes(".") ? file.name.split(".").pop() : "pdf";
+  const safeExtension = extension?.replace(/[^a-zA-Z0-9]/g, "") || "pdf";
+  const path = `${userId}/job-postings/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
+
+  const { error } = await supabase.storage.from("career-files").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw error;
+
+  const { error: fileError } = await supabase.from("job_application_files").insert({
+    user_id: userId,
+    application_id: null,
+    kind: "posting",
+    file_path: path,
+    file_name: file.name,
+    mime_type: file.type || "application/pdf",
+    size_bytes: file.size,
+  });
+
+  if (fileError) throw fileError;
+
+  return {
+    path,
+    name: file.name,
+  };
+}
+
+export async function createAiExtractionDraftInDb({
+  extraction,
+  modelName,
+  sourceFileName,
+  sourceFilePath,
+}: {
+  extraction: JobPostingExtraction;
+  modelName?: string;
+  sourceFileName?: string;
+  sourceFilePath?: string;
+}) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("ai_extraction_drafts")
+    .insert({
+      user_id: userId,
+      application_id: null,
+      source_file_path: sourceFilePath ?? null,
+      source_file_name: sourceFileName ?? null,
+      extracted_json: extraction,
+      status: "draft",
+      model_name: modelName ?? extraction.modelName ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data as { id: string };
 }

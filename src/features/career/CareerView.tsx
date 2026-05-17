@@ -24,11 +24,13 @@ import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import {
   createCareerRecordInDb,
+  createAiExtractionDraftInDb,
   deleteCareerRecordFromDb,
   fetchCareerRecordsFromDb,
   getCertificateFileDownloadUrl,
   updateCareerRecordInDb,
   uploadCertificateFileToDb,
+  uploadJobPostingFileToDb,
 } from "./api";
 import {
   applicationEventStageLabels,
@@ -38,7 +40,7 @@ import {
   type CareerRecord,
   type CareerTab,
 } from "./data";
-import { defaultJobProcessStepTypes, jobProcessStepLabels, type JobProcessStepType } from "./job-model";
+import { defaultJobProcessStepTypes, jobProcessStepLabels, type JobPostingExtraction, type JobProcessStepType } from "./job-model";
 
 const tabLabels: Record<CareerTab, string> = {
   applied: "지원한 기업",
@@ -570,10 +572,80 @@ function CareerRecordSheet({
     },
   );
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [postingFile, setPostingFile] = useState<File | null>(null);
+  const [aiDraft, setAiDraft] = useState<JobPostingExtraction | null>(null);
+  const [aiError, setAiError] = useState("");
+  const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const updateField = <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => {
     setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const extractPostingDraft = async () => {
+    if (!postingFile || form.tab !== "applied") return;
+
+    setAiError("");
+    setIsExtracting(true);
+
+    try {
+      const payload = new FormData();
+      payload.append("file", postingFile);
+      payload.append("companyName", form.title);
+      payload.append("postingTitle", form.subtitle);
+      payload.append("jobRole", form.subtitle);
+
+      const response = await fetch("/api/career/extract-posting", { method: "POST", body: payload });
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error ?? "PDF 분석에 실패했습니다.");
+
+      const extraction = result as JobPostingExtraction;
+      const uploadedFile = await uploadJobPostingFileToDb(postingFile);
+      await createAiExtractionDraftInDb({
+        extraction,
+        modelName: extraction.modelName,
+        sourceFileName: uploadedFile?.name ?? postingFile.name,
+        sourceFilePath: uploadedFile?.path,
+      });
+      setAiDraft(extraction);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "PDF 분석에 실패했습니다.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const applyAiDraft = () => {
+    if (!aiDraft) return;
+
+    const applicationStep = findDraftStep(aiDraft, "application");
+    const writtenStep = findDraftStep(aiDraft, "written") ?? findDraftStep(aiDraft, "coding_test");
+    const interviewStep = findDraftStep(aiDraft, "interview");
+    const resultStep = findDraftStep(aiDraft, "result");
+    const documentStep = findDraftStep(aiDraft, "document");
+
+    setForm((current) => ({
+      ...current,
+      title: aiDraft.companyName || current.title,
+      subtitle: [aiDraft.jobRole, aiDraft.postingTitle].filter(Boolean).join(" / ") || current.subtitle,
+      url: aiDraft.postingUrl || current.url,
+      deadlineDate: toDateInputValue(applicationStep?.endAt ?? applicationStep?.startAt) ?? current.deadlineDate,
+      examDate: toDateInputValue(writtenStep?.startAt) ?? current.examDate,
+      interviewDate: toDateInputValue(interviewStep?.startAt) ?? current.interviewDate,
+      resultDate: toDateInputValue(resultStep?.startAt) ?? current.resultDate,
+      requiredCerts: extractRequirementText(aiDraft, "eligibility") ?? current.requiredCerts,
+      requiredDocs: extractRequirementText(aiDraft, "document") ?? current.requiredDocs,
+      memo: [current.memo, aiDraft.summary, ...aiDraft.warnings.map((warning) => `확인 필요: ${warning}`)].filter(Boolean).join("\n"),
+      applicationEvents: [
+        ...(current.applicationEvents ?? []),
+        ...[
+          documentStep ? draftStepToApplicationEvent(documentStep, "document") : null,
+          writtenStep ? draftStepToApplicationEvent(writtenStep, "written") : null,
+          interviewStep ? draftStepToApplicationEvent(interviewStep, "interview") : null,
+        ].filter((event): event is ApplicationEvent => Boolean(event)),
+      ],
+    }));
   };
 
   const saveCurrentRecord = async () => {
@@ -651,7 +723,19 @@ function CareerRecordSheet({
                   ))}
                 </select>
               </label>
-              <CareerSpecificFields form={form} selectedCertificateFile={certificateFile} updateField={updateField} onCertificateFileChange={setCertificateFile} />
+              <CareerSpecificFields
+                aiDraft={aiDraft}
+                aiError={aiError}
+                form={form}
+                isExtracting={isExtracting}
+                postingFile={postingFile}
+                selectedCertificateFile={certificateFile}
+                updateField={updateField}
+                onApplyAiDraft={applyAiDraft}
+                onCertificateFileChange={setCertificateFile}
+                onExtractPostingDraft={() => void extractPostingDraft()}
+                onPostingFileChange={setPostingFile}
+              />
               <label className="event-note">
                 <span>메모</span>
                 <textarea rows={4} placeholder="준비 내용, 참고사항, 다음 액션을 적어두세요." value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
@@ -674,19 +758,44 @@ function CareerRecordSheet({
 }
 
 function CareerSpecificFields({
+  aiDraft,
+  aiError,
   form,
+  isExtracting,
+  onApplyAiDraft,
   onCertificateFileChange,
+  onExtractPostingDraft,
+  onPostingFileChange,
+  postingFile,
   selectedCertificateFile,
   updateField,
 }: {
+  aiDraft: JobPostingExtraction | null;
+  aiError: string;
   form: CareerRecord;
+  isExtracting: boolean;
+  onApplyAiDraft: () => void;
   onCertificateFileChange: (file: File | null) => void;
+  onExtractPostingDraft: () => void;
+  onPostingFileChange: (file: File | null) => void;
+  postingFile: File | null;
   selectedCertificateFile: File | null;
   updateField: <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => void;
 }) {
   if (form.tab === "applied") {
     return (
       <>
+        <label className="career-ai-uploader">
+          <span>공고 PDF</span>
+          <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />
+          <strong>{postingFile?.name ?? "PDF를 선택하면 AI가 전형 초안을 정리합니다."}</strong>
+          <button disabled={!postingFile || isExtracting} onClick={onExtractPostingDraft} type="button">
+            <Sparkles aria-hidden size={15} />
+            {isExtracting ? "분석 중" : "AI 초안 생성"}
+          </button>
+          {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
+        </label>
+        {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} /> : null}
         <Field label="지원일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="마감일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
         <Field label="시험일" type="date" value={form.examDate} onChange={(value) => updateField("examDate", value)} />
@@ -757,6 +866,61 @@ function CareerSpecificFields({
   }
 
   return null;
+}
+
+function AiDraftReview({ draft, onApply }: { draft: JobPostingExtraction; onApply: () => void }) {
+  return (
+    <div className="ai-draft-review">
+      <div className="ai-draft-review__header">
+        <div>
+          <span>AI 검토 초안</span>
+          <strong>{draft.companyName || "기업명 미확인"}</strong>
+          <p>{[draft.jobRole, draft.postingTitle].filter(Boolean).join(" / ") || draft.summary || "추출된 공고 정보를 확인해 주세요."}</p>
+        </div>
+        <button type="button" onClick={onApply}>
+          초안 반영
+        </button>
+      </div>
+
+      <div className="ai-draft-review__section">
+        <span>전형 일정</span>
+        {draft.steps.length > 0 ? (
+          <div className="ai-draft-step-list">
+            {draft.steps.slice(0, 6).map((step, index) => (
+              <div className="ai-draft-step" key={`${step.type}-${step.title}-${index}`}>
+                <b>{jobProcessStepLabels[step.type]}</b>
+                <strong>{step.title}</strong>
+                <small>{formatDraftRange(step.startAt, step.endAt) || "날짜 확인 필요"}</small>
+                {step.sourceText ? <em>{step.sourceText}</em> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>전형 일정이 추출되지 않았습니다.</p>
+        )}
+      </div>
+
+      <div className="ai-draft-review__section">
+        <span>준비/자격</span>
+        <div className="ai-draft-chip-list">
+          {[...draft.requirements.slice(0, 4), ...draft.checkItems.slice(0, 3)].map((item, index) => (
+            <span key={`${item.title}-${index}`}>
+              <b>{item.title}</b>
+              {"content" in item ? item.content : item.memo}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {draft.warnings.length > 0 ? (
+        <div className="ai-draft-review__warnings">
+          {draft.warnings.map((warning) => (
+            <span key={warning}>확인 필요: {warning}</span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ApplicationEventEditor({ events, onChange }: { events: ApplicationEvent[]; onChange: (events: ApplicationEvent[]) => void }) {
@@ -949,6 +1113,56 @@ function getNextCareerStep(record: CareerRecord) {
       .filter((candidate) => Number.isFinite(candidate.time) && candidate.time >= today.getTime())
       .sort((a, b) => a.time - b.time)[0] ?? datedCandidates.sort((a, b) => b.date.localeCompare(a.date))[0]
   );
+}
+
+function findDraftStep(draft: JobPostingExtraction, type: JobProcessStepType) {
+  return draft.steps.find((step) => step.type === type);
+}
+
+function toDateInputValue(value?: string) {
+  if (!value) return undefined;
+  const dateOnly = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  return dateOnly;
+}
+
+function draftStepToApplicationEvent(step: NonNullable<ReturnType<typeof findDraftStep>>, stage: ApplicationEventStage): ApplicationEvent | null {
+  const date = toDateInputValue(step.startAt ?? step.endAt);
+  if (!date) return null;
+
+  return {
+    id: `application-event-${stage}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    stage,
+    date,
+    memo: step.memo || step.title,
+  };
+}
+
+function extractRequirementText(draft: JobPostingExtraction, category: "eligibility" | "document") {
+  const values = draft.requirements
+    .filter((requirement) => requirement.category === category)
+    .map((requirement) => `${requirement.title}: ${requirement.content}`)
+    .slice(0, 4);
+
+  return values.length > 0 ? values.join("\n") : undefined;
+}
+
+function formatDraftRange(startAt?: string, endAt?: string) {
+  const start = formatDraftDateTime(startAt);
+  const end = formatDraftDateTime(endAt);
+  if (start && end && start !== end) return `${start} ~ ${end}`;
+  return start || end;
+}
+
+function formatDraftDateTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+    hour: value.includes("T") ? "2-digit" : undefined,
+    minute: value.includes("T") ? "2-digit" : undefined,
+  }).format(date);
 }
 
 function getCompanyProcessStages(record: CareerRecord) {
