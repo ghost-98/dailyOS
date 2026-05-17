@@ -264,6 +264,72 @@ button {
   font-size: 13px;
 }
 
+.auth-verification-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(201, 184, 255, 0.24);
+  border-radius: 12px;
+  background: rgba(201, 184, 255, 0.08);
+  padding: 14px;
+}
+
+.auth-verification-panel > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-verification-panel strong {
+  font-size: 15px;
+}
+
+.auth-verification-panel span,
+.auth-verification-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth-verification-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-verification-panel__footer button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0 11px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-verification-panel__footer button:last-child {
+  border-color: transparent;
+  background: var(--violet);
+  color: #151020;
+}
+
+.auth-verification-panel__footer button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.auth-verification-panel__timer {
+  min-width: 44px;
+  color: var(--violet) !important;
+  font-weight: 900;
+}
+
+.auth-verification-panel__timer--expired {
+  color: var(--pink) !important;
+}
+
 .auth-submit {
   display: inline-flex;
   min-height: 52px;

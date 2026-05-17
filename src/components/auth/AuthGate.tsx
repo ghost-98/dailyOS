@@ -182,7 +182,20 @@ function AuthScreen() {
   const [gender, setGender] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [message, setMessage] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  const verificationSecondsLeft = verificationExpiresAt ? Math.max(0, Math.ceil((verificationExpiresAt - now) / 1000)) : 0;
+  const verificationTimeLabel = `${Math.floor(verificationSecondsLeft / 60)}:${String(verificationSecondsLeft % 60).padStart(2, "0")}`;
+
+  useEffect(() => {
+    if (!verificationExpiresAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [verificationExpiresAt]);
 
   const submit = async () => {
     if (!supabase || isSubmitting) return;
@@ -198,12 +211,13 @@ function AuthScreen() {
       return;
     }
 
+    const normalizedEmail = email.trim();
     setIsSubmitting(true);
     const result =
       mode === "login"
-        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        ? await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
         : await supabase.auth.signUp({
-            email: email.trim(),
+            email: normalizedEmail,
             password,
             options: {
               data: {
@@ -222,8 +236,60 @@ function AuthScreen() {
     }
 
     if (mode === "signup" && !result.data.session) {
-      setMessage("가입 확인 메일을 보냈습니다. 메일 인증 후 로그인해 주세요.");
+      startEmailVerification(normalizedEmail);
+      setMessage("인증 코드를 보냈습니다. 메일함에서 6자리 코드를 확인해 주세요.");
     }
+  };
+
+  const startEmailVerification = (targetEmail: string) => {
+    setVerificationEmail(targetEmail);
+    setVerificationCode("");
+    setVerificationExpiresAt(Date.now() + 180000);
+    setNow(Date.now());
+  };
+
+  const resendVerificationCode = async () => {
+    if (!supabase || !verificationEmail || isSubmitting) return;
+    setMessage("");
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email: verificationEmail });
+    setIsSubmitting(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    startEmailVerification(verificationEmail);
+    setMessage("인증 코드를 다시 보냈습니다.");
+  };
+
+  const verifyEmailCode = async () => {
+    if (!supabase || !verificationEmail || isVerifying) return;
+    const token = verificationCode.trim();
+    if (token.length !== 6) {
+      setMessage("6자리 인증 코드를 입력해 주세요.");
+      return;
+    }
+
+    setMessage("");
+    setIsVerifying(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email: verificationEmail,
+      token,
+      type: "signup",
+    });
+    setIsVerifying(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setVerificationEmail("");
+    setVerificationCode("");
+    setVerificationExpiresAt(null);
+    setMessage("");
   };
 
   const sendResetEmail = async () => {
@@ -356,6 +422,43 @@ function AuthScreen() {
         </label>
 
         {message ? <p className="auth-message">{message}</p> : null}
+
+        {verificationEmail ? (
+          <div className="auth-verification-panel">
+            <div>
+              <strong>이메일 인증</strong>
+              <span>{verificationEmail}</span>
+            </div>
+            <p>메일로 받은 6자리 코드를 3분 안에 입력해 주세요.</p>
+            <label className="auth-field">
+              <span>인증 코드</span>
+              <div>
+                <Mail aria-hidden size={18} />
+                <input
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={verificationCode}
+                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void verifyEmailCode();
+                  }}
+                />
+              </div>
+            </label>
+            <div className="auth-verification-panel__footer">
+              <span className={verificationSecondsLeft === 0 ? "auth-verification-panel__timer auth-verification-panel__timer--expired" : "auth-verification-panel__timer"}>
+                {verificationSecondsLeft > 0 ? verificationTimeLabel : "만료됨"}
+              </span>
+              <button disabled={isSubmitting} onClick={resendVerificationCode} type="button">
+                코드 다시 보내기
+              </button>
+              <button disabled={isVerifying || verificationSecondsLeft === 0} onClick={verifyEmailCode} type="button">
+                {isVerifying ? "확인 중" : "인증하기"}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <button className="auth-submit" disabled={isSubmitting} onClick={submit} type="button">
           {isSubmitting ? <Loader2 aria-hidden size={18} /> : <ArrowRight aria-hidden size={18} />}
