@@ -791,16 +791,27 @@ function CareerSpecificFields({
   if (form.tab === "applied") {
     return (
       <>
-        <label className="career-ai-uploader">
-          <span>공고 PDF</span>
-          <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />
-          <strong>{postingFile?.name ?? "PDF를 선택하면 AI가 전형 초안을 정리합니다."}</strong>
-          <button disabled={!postingFile || isExtracting} onClick={onExtractPostingDraft} type="button">
-            <Sparkles aria-hidden size={15} />
-            {isExtracting ? "분석 중" : "AI 초안 생성"}
-          </button>
+        <div className="career-ai-uploader">
+          <div className="career-ai-uploader__copy">
+            <span>공고 PDF</span>
+            <strong>PDF로 전형 초안 만들기</strong>
+            <p>공고 파일을 선택하면 AI가 일정, 지원자격, 준비물을 검토용 초안으로 정리합니다.</p>
+          </div>
+          <div className="career-ai-uploader__actions">
+            <label className="career-ai-file-button">
+              파일 선택
+              <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />
+            </label>
+            <button disabled={!postingFile || isExtracting} onClick={onExtractPostingDraft} type="button">
+              <Sparkles aria-hidden size={15} />
+              {isExtracting ? "분석 중" : "AI 초안 생성"}
+            </button>
+          </div>
+          <div className="career-ai-uploader__file">
+            {postingFile ? postingFile.name : "선택된 PDF가 없습니다."}
+          </div>
           {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
-        </label>
+        </div>
         {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} /> : null}
         <Field label="지원일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="마감일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />

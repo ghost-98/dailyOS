@@ -3500,7 +3500,9 @@ a:focus-visible {
 
 .career-ai-uploader {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 16px;
   border: 1px solid rgba(201, 184, 255, 0.22);
   border-radius: 14px;
   background:
@@ -3509,7 +3511,13 @@ a:focus-visible {
   padding: 16px;
 }
 
-.career-ai-uploader span,
+.career-ai-uploader__copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.career-ai-uploader__copy span,
 .ai-draft-review__header span,
 .ai-draft-review__section > span {
   color: var(--muted);
@@ -3517,36 +3525,63 @@ a:focus-visible {
   font-weight: 850;
 }
 
-.career-ai-uploader input {
-  width: 100%;
-  border: 1px dashed rgba(201, 184, 255, 0.34);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.13);
+.career-ai-uploader__copy strong {
   color: var(--text);
-  cursor: pointer;
-  padding: 12px;
+  font-size: 16px;
 }
 
-.career-ai-uploader input::file-selector-button {
-  margin-right: 12px;
-  border: 0;
-  border-radius: 9px;
-  background: var(--violet);
-  color: #111216;
+.career-ai-uploader__copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.career-ai-uploader__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.career-ai-file-button {
+  position: relative;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
   cursor: pointer;
+  font-size: 13px;
   font-weight: 850;
-  padding: 8px 12px;
+  padding: 9px 12px;
 }
 
-.career-ai-uploader strong {
+.career-ai-file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.career-ai-uploader__file {
+  grid-column: 1 / -1;
   overflow: hidden;
-  color: var(--text);
-  font-size: 14px;
+  border: 1px dashed rgba(201, 184, 255, 0.2);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 10px 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.career-ai-uploader button,
+.career-ai-uploader__actions button,
 .ai-draft-review__header button {
   display: inline-flex;
   width: fit-content;
@@ -3563,12 +3598,13 @@ a:focus-visible {
   padding: 9px 12px;
 }
 
-.career-ai-uploader button:disabled {
+.career-ai-uploader__actions button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
 .career-ai-uploader__error {
+  grid-column: 1 / -1;
   color: #ff9a9a;
   font-size: 12px;
 }
@@ -4306,12 +4342,19 @@ a:focus-visible {
 
   .company-ai-panel,
   .company-workflow-grid,
+  .career-ai-uploader,
   .company-process-rail {
     grid-template-columns: 1fr;
   }
 
-  .company-ai-panel__button {
+  .company-ai-panel__button,
+  .career-ai-uploader__actions {
     justify-content: center;
+    width: 100%;
+  }
+
+  .career-ai-file-button,
+  .career-ai-uploader__actions button {
     width: 100%;
   }
 
