@@ -3498,6 +3498,11 @@ a:focus-visible {
   padding: 16px;
 }
 
+.career-ai-panel-stack {
+  display: grid;
+  gap: 12px;
+}
+
 .career-ai-uploader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

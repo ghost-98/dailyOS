@@ -703,6 +703,17 @@ function CareerRecordSheet({
         </header>
 
         <div className="event-sheet__body career-sheet__body">
+          {form.tab === "applied" ? (
+            <AppliedAiPostingPanel
+              aiDraft={aiDraft}
+              aiError={aiError}
+              isExtracting={isExtracting}
+              postingFile={postingFile}
+              onApplyAiDraft={applyAiDraft}
+              onExtractPostingDraft={() => void extractPostingDraft()}
+              onPostingFileChange={setPostingFile}
+            />
+          ) : null}
           <div className="event-form-card career-field-card career-form-card">
             <div className="career-form-card__title">
               <strong>{form.tab === "certificates" ? "자격 정보" : "관리 정보"}</strong>
@@ -730,17 +741,10 @@ function CareerRecordSheet({
                 </select>
               </label>
               <CareerSpecificFields
-                aiDraft={aiDraft}
-                aiError={aiError}
                 form={form}
-                isExtracting={isExtracting}
-                postingFile={postingFile}
                 selectedCertificateFile={certificateFile}
                 updateField={updateField}
-                onApplyAiDraft={applyAiDraft}
                 onCertificateFileChange={setCertificateFile}
-                onExtractPostingDraft={() => void extractPostingDraft()}
-                onPostingFileChange={setPostingFile}
               />
               <label className="event-note">
                 <span>메모</span>
@@ -763,56 +767,63 @@ function CareerRecordSheet({
   );
 }
 
-function CareerSpecificFields({
+function AppliedAiPostingPanel({
   aiDraft,
   aiError,
-  form,
   isExtracting,
   onApplyAiDraft,
-  onCertificateFileChange,
   onExtractPostingDraft,
   onPostingFileChange,
   postingFile,
-  selectedCertificateFile,
-  updateField,
 }: {
   aiDraft: JobPostingExtraction | null;
   aiError: string;
-  form: CareerRecord;
   isExtracting: boolean;
   onApplyAiDraft: () => void;
-  onCertificateFileChange: (file: File | null) => void;
   onExtractPostingDraft: () => void;
   onPostingFileChange: (file: File | null) => void;
   postingFile: File | null;
+}) {
+  return (
+    <div className="career-ai-panel-stack">
+      <div className="career-ai-uploader">
+        <div className="career-ai-uploader__copy">
+          <span>공고 PDF</span>
+          <strong>PDF로 전형 초안 만들기</strong>
+          <p>공고 파일을 선택하면 AI가 일정, 지원자격, 준비물을 검토용 초안으로 정리합니다.</p>
+        </div>
+        <div className="career-ai-uploader__actions">
+          <label className="career-ai-file-button">
+            파일 선택
+            <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />
+          </label>
+          <button disabled={!postingFile || isExtracting} onClick={onExtractPostingDraft} type="button">
+            <Sparkles aria-hidden size={15} />
+            {isExtracting ? "분석 중" : "AI 초안 생성"}
+          </button>
+        </div>
+        <div className="career-ai-uploader__file">{postingFile ? postingFile.name : "선택된 PDF가 없습니다."}</div>
+        {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
+      </div>
+      {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} /> : null}
+    </div>
+  );
+}
+
+function CareerSpecificFields({
+  form,
+  onCertificateFileChange,
+  selectedCertificateFile,
+  updateField,
+}: {
+  form: CareerRecord;
+  onCertificateFileChange: (file: File | null) => void;
   selectedCertificateFile: File | null;
   updateField: <Key extends keyof CareerRecord>(key: Key, value: CareerRecord[Key]) => void;
 }) {
   if (form.tab === "applied") {
     return (
       <>
-        <div className="career-ai-uploader">
-          <div className="career-ai-uploader__copy">
-            <span>공고 PDF</span>
-            <strong>PDF로 전형 초안 만들기</strong>
-            <p>공고 파일을 선택하면 AI가 일정, 지원자격, 준비물을 검토용 초안으로 정리합니다.</p>
-          </div>
-          <div className="career-ai-uploader__actions">
-            <label className="career-ai-file-button">
-              파일 선택
-              <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />
-            </label>
-            <button disabled={!postingFile || isExtracting} onClick={onExtractPostingDraft} type="button">
-              <Sparkles aria-hidden size={15} />
-              {isExtracting ? "분석 중" : "AI 초안 생성"}
-            </button>
-          </div>
-          <div className="career-ai-uploader__file">
-            {postingFile ? postingFile.name : "선택된 PDF가 없습니다."}
-          </div>
-          {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
-        </div>
-        {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} /> : null}
         <Field label="지원일" type="date" value={form.primaryDate} onChange={(value) => updateField("primaryDate", value)} />
         <Field label="마감일" type="date" value={form.deadlineDate} onChange={(value) => updateField("deadlineDate", value)} />
         <Field label="시험일" type="date" value={form.examDate} onChange={(value) => updateField("examDate", value)} />

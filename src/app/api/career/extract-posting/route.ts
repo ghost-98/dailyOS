@@ -128,7 +128,6 @@ function extractGeminiOutputText(payload: unknown) {
 
 const extractionSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
     companyName: { type: "string" },
     postingTitle: { type: "string" },
@@ -139,7 +138,6 @@ const extractionSchema = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           type: {
             type: "string",
@@ -159,7 +157,6 @@ const extractionSchema = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           category: {
             type: "string",
@@ -177,7 +174,6 @@ const extractionSchema = {
       type: "array",
       items: {
         type: "object",
-        additionalProperties: false,
         properties: {
           title: { type: "string" },
           category: {
