@@ -1,16 +1,39 @@
 "use client";
 
-import type { Session } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { ArrowRight, Cake, Loader2, LockKeyhole, Mail, UserRound, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "signup";
+type DailyOSProfile = {
+  birthDate?: string;
+  email?: string;
+  fullName: string;
+  gender?: string;
+};
+
+type AuthContextValue = {
+  displayName: string;
+  profile: DailyOSProfile | null;
+  refreshProfile: () => Promise<void>;
+  session: Session;
+  user: User;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<DailyOSProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshProfile = async () => {
+    if (!supabase || !session?.user) return;
+    const nextProfile = await fetchDailyOSProfile(session.user);
+    setProfile(nextProfile);
+  };
 
   useEffect(() => {
     if (!supabase) {
@@ -51,6 +74,26 @@ export function AuthGate({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!session?.user) {
+      setProfile(null);
+      return;
+    }
+
+    let isMounted = true;
+    fetchDailyOSProfile(session.user)
+      .then((nextProfile) => {
+        if (isMounted) setProfile(nextProfile);
+      })
+      .catch(() => {
+        if (isMounted) setProfile(getFallbackProfile(session.user));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session]);
+
   if (!isSupabaseConfigured) {
     return (
       <AuthShell
@@ -72,12 +115,63 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return <AuthScreen />;
   }
 
-  return <>{children}</>;
+  return (
+    <AuthContext.Provider
+      value={{
+        displayName: getDisplayName(profile, session.user),
+        profile,
+        refreshProfile,
+        session,
+        user: session.user,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export async function signOutDailyOS() {
   if (!supabase) return;
   await supabase.auth.signOut();
+}
+
+export function useDailyOSUser() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useDailyOSUser must be used inside AuthGate.");
+  return context;
+}
+
+export function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
+  const metadataName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
+  const displayName = profile?.fullName || metadataName || user?.email?.split("@")[0] || "사용자";
+  return displayName.trim() || "사용자";
+}
+
+async function fetchDailyOSProfile(user: User): Promise<DailyOSProfile> {
+  if (!supabase) return getFallbackProfile(user);
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("email,full_name,gender,birth_date")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error || !data) return getFallbackProfile(user);
+
+  return {
+    birthDate: data.birth_date ?? undefined,
+    email: data.email ?? user.email ?? undefined,
+    fullName: data.full_name || getFallbackProfile(user).fullName,
+    gender: data.gender ?? undefined,
+  };
+}
+
+function getFallbackProfile(user: User): DailyOSProfile {
+  return {
+    birthDate: typeof user.user_metadata?.birth_date === "string" ? user.user_metadata.birth_date : undefined,
+    email: user.email ?? undefined,
+    fullName: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email?.split("@")[0] ?? "사용자",
+    gender: typeof user.user_metadata?.gender === "string" ? user.user_metadata.gender : undefined,
+  };
 }
 
 function AuthScreen() {

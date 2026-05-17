@@ -3,6 +3,7 @@
 import { BriefcaseBusiness, CalendarDays, Check, Dumbbell, HeartPulse } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useDailyOSUser } from "@/components/auth/AuthGate";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
@@ -114,6 +115,7 @@ function addApplicationEvent(items: CareerAgendaItem[], record: CareerRecord, ev
 }
 
 export function TodayDashboard() {
+  const { displayName } = useDailyOSUser();
   const todayKey = useMemo(getTodayKey, []);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -160,7 +162,7 @@ export function TodayDashboard() {
     <div className="today today--compact">
       <header className="today__header page-header">
         <div>
-          <h1>오늘</h1>
+          <h1>{displayName}님, 오늘</h1>
           <div className="today__date">
             <CalendarDays aria-hidden size={20} />
             <span>{todayLabel}</span>

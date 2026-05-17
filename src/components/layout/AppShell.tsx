@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { AuthGate, signOutDailyOS } from "@/components/auth/AuthGate";
+import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 
 const timeChildren = [
   { label: "캘린더", href: "/schedule", key: "schedule" },
@@ -51,14 +51,23 @@ type AppShellProps = {
 };
 
 export function AppShell({ activeKey = "today", children }: AppShellProps) {
+  return (
+    <AuthGate>
+      <AppShellContent activeKey={activeKey}>{children}</AppShellContent>
+    </AuthGate>
+  );
+}
+
+function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
   const isTimeActive = activeKey === "schedule" || activeKey === "time";
   const [isTimeOpen, setIsTimeOpen] = useState(isTimeActive);
   const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
+  const { displayName, user } = useDailyOSUser();
+  const avatarInitial = displayName.trim().slice(0, 1).toUpperCase() || "D";
 
   return (
-    <AuthGate>
-      <div className="app-shell">
+    <div className="app-shell">
         <aside className="sidebar" aria-label="주요 메뉴">
           <div>
             <Link className="brand" href="/" aria-label="dailyOS 홈으로 이동">
@@ -121,12 +130,12 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
             </button>
 
             <div className="profile">
-              <div className="profile__avatar">D</div>
+              <div className="profile__avatar">{avatarInitial}</div>
               <div>
-                <strong>daily user</strong>
+                <strong>{displayName}</strong>
                 <span>
                   <Activity aria-hidden size={13} />
-                  로그인됨
+                  {user.email ?? "로그인됨"}
                 </span>
               </div>
               <button className="profile__logout" aria-label="로그아웃" onClick={() => void signOutDailyOS()} type="button">
@@ -151,7 +160,6 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
           })}
         </nav>
       </div>
-    </AuthGate>
   );
 }
 

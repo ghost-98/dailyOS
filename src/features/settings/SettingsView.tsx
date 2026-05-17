@@ -3,13 +3,15 @@
 import type { User } from "@supabase/supabase-js";
 import { Bell, Database, LogOut, Mail, Save, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { signOutDailyOS } from "@/components/auth/AuthGate";
+import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { supabase } from "@/lib/supabase";
 
 export function SettingsView() {
+  const { displayName: authDisplayName, profile, refreshProfile, user: authUser } = useDailyOSUser();
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
   const [scheduleAlarm, setScheduleAlarm] = useState(true);
   const [taskAlarm, setTaskAlarm] = useState(true);
   const [careerAlarm, setCareerAlarm] = useState(true);
@@ -19,9 +21,38 @@ export function SettingsView() {
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      setDisplayName(data.user?.user_metadata?.display_name ?? data.user?.email?.split("@")[0] ?? "");
+      setDisplayName(profile?.fullName ?? authDisplayName);
     });
-  }, []);
+  }, [authDisplayName, profile?.fullName]);
+
+  const saveAccount = async () => {
+    if (!supabase) return;
+    setSaveMessage("");
+    const nextName = displayName.trim();
+    if (!nextName) {
+      setSaveMessage("이름을 입력해 주세요.");
+      return;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert({
+        birth_date: profile?.birthDate ?? null,
+        email: authUser.email ?? null,
+        full_name: nextName,
+        gender: profile?.gender ?? "prefer_not_to_say",
+        user_id: authUser.id,
+      });
+
+    if (profileError) {
+      setSaveMessage("프로필 저장에 실패했습니다.");
+      return;
+    }
+
+    await supabase.auth.updateUser({ data: { full_name: nextName } });
+    await refreshProfile();
+    setSaveMessage("저장되었습니다.");
+  };
 
   return (
     <div className="settings-page">
@@ -33,7 +64,7 @@ export function SettingsView() {
             <span>계정, 알림, 데이터 관리 방식을 조정합니다.</span>
           </div>
         </div>
-        <button className="header-action" type="button">
+        <button className="header-action" onClick={() => void saveAccount()} type="button">
           <Save aria-hidden size={18} />
           저장
         </button>
@@ -49,6 +80,7 @@ export function SettingsView() {
             <span>이름</span>
             <input placeholder="표시 이름" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
           </label>
+          {saveMessage ? <p className="settings-message">{saveMessage}</p> : null}
           <div className="settings-account-row">
             <Mail aria-hidden size={17} />
             <div>

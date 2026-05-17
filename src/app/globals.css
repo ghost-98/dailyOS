@@ -4871,6 +4871,12 @@ a:focus-visible {
   font-size: 14px;
 }
 
+.settings-message {
+  margin: -6px 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;
