@@ -120,6 +120,16 @@ function emptyToNull(value?: string) {
   return value?.trim() ? value.trim() : null;
 }
 
+function toDbError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error;
+  if (error && typeof error === "object") {
+    const maybeError = error as { message?: unknown; details?: unknown; code?: unknown };
+    const parts = [maybeError.message, maybeError.details, maybeError.code].filter((part): part is string => typeof part === "string" && part.length > 0);
+    if (parts.length > 0) return new Error(parts.join(" "));
+  }
+  return new Error(fallback);
+}
+
 function toDateOnly(value?: string) {
   return value?.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
 }
@@ -261,7 +271,7 @@ async function replaceApplicationEvents(record: CareerRecord, recordId: string, 
   if (record.tab !== "applied" || events.length === 0) return;
 
   const { error } = await supabase.from("application_events").insert(events.map((event) => mapEventToInsert(event, recordId, userId)));
-  if (error) throw error;
+  if (error) throw toDbError(error, "채용공고 저장에 실패했습니다.");
 }
 
 export async function fetchCareerRecordsFromDb() {
@@ -382,7 +392,7 @@ export async function createJobApplicationFromExtraction({
 
   if (stepRows.length > 0) {
     const { error: stepsError } = await supabase.from("job_application_steps").insert(stepRows);
-    if (stepsError) throw stepsError;
+    if (stepsError) throw toDbError(stepsError, "전형 일정 저장에 실패했습니다.");
   }
 
   const requirementRows = extraction.requirements.map((requirement) => ({
@@ -397,22 +407,7 @@ export async function createJobApplicationFromExtraction({
 
   if (requirementRows.length > 0) {
     const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
-    if (requirementsError) throw requirementsError;
-  }
-
-  const checkRows = extraction.checkItems.map((item) => ({
-    user_id: userId,
-    application_id: applicationId,
-    title: item.title,
-    category: item.category,
-    due_at: emptyToNull(item.dueAt),
-    is_done: false,
-    memo: emptyToNull(item.memo || item.sourceText),
-  }));
-
-  if (checkRows.length > 0) {
-    const { error: checkError } = await supabase.from("job_application_check_items").insert(checkRows);
-    if (checkError) throw checkError;
+    if (requirementsError) throw toDbError(requirementsError, "지원자격/우대사항 저장에 실패했습니다.");
   }
 
   if (sourceFilePath && sourceFileName) {

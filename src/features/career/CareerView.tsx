@@ -700,6 +700,16 @@ function MetaItem({ icon, label, value }: { icon?: React.ReactNode; label: strin
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const maybeError = error as { message?: unknown; details?: unknown; code?: unknown };
+    const parts = [maybeError.message, maybeError.details, maybeError.code].filter((part): part is string => typeof part === "string" && part.length > 0);
+    if (parts.length > 0) return parts.join(" ");
+  }
+  return fallback;
+}
+
 function JobPostingUploadSheet({
   onClose,
   onSaveJobPosting,
@@ -746,9 +756,12 @@ function JobPostingUploadSheet({
 
   const saveDraftAsJobPosting = async () => {
     if (!aiDraft) return;
+    setAiError("");
     setIsSaving(true);
     try {
       await onSaveJobPosting(aiDraft, uploadedPostingFile ?? undefined);
+    } catch (error) {
+      setAiError(getErrorMessage(error, "전형 공고 저장에 실패했습니다. Supabase 정책이나 테이블 구성을 확인해주세요."));
     } finally {
       setIsSaving(false);
     }

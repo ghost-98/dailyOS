@@ -132,10 +132,14 @@ async function extractWithGemini({
 
 function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { companyName: string; jobRole: string; postingTitle: string }) {
   return [
-    "너는 채용공고 PDF를 dailyOS의 취업 관리 데이터로 구조화하는 도우미다.",
-    "PDF에서 확인 가능한 내용만 JSON으로 추출한다.",
+    "너는 채용공고 PDF에서 dailyOS에 필요한 핵심만 뽑는 추출기다.",
+    "너무 세부적인 회사 설명, 블라인드 채용 안내, 유의사항, 법적 고지, 반환/이의신청 문구는 저장하지 않는다.",
+    "반드시 다음 네 가지 중심으로만 추출한다: 1) 전형 일정 2) 지원자격 3) 우대/가점/자격증/어학 요건 4) 제출 마감 또는 제출물.",
+    "steps에는 접수, 서류, 필기, 코딩테스트, 면접, 결과 발표, 입사/검진처럼 캘린더에 넣을 날짜만 넣는다. 최대 8개만 넣는다.",
+    "requirements에는 지원 가능 여부 판단에 필요한 자격요건과 우대/가점 사항만 넣는다. 최대 8개만 넣는다.",
+    "checkItems에는 사용자가 실제로 준비해야 할 제출물이나 마감 체크만 넣는다. 최대 4개만 넣고, 없으면 빈 배열로 둔다.",
     "날짜는 가능하면 ISO 형식으로 쓴다. 시간이 명시되면 +09:00 기준 ISO datetime으로 쓴다.",
-    "전형 일정, 자격요건, 우대사항, 제출서류, 준비 항목은 원문 근거를 sourceText에 짧게 남긴다.",
+    "각 항목의 sourceText에는 원문 근거를 짧게 남긴다.",
     "불확실하거나 사용자가 확인해야 하는 내용은 warnings에 넣는다.",
     `사용자가 미리 입력한 기업명: ${companyName || "(없음)"}`,
     `사용자가 미리 입력한 공고명: ${postingTitle || "(없음)"}`,
