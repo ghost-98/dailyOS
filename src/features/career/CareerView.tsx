@@ -5,13 +5,16 @@ import type React from "react";
 import {
   BriefcaseBusiness,
   CalendarClock,
+  CheckCircle2,
   Clipboard,
   ClipboardList,
   Download,
   FileBadge,
+  FileText,
   LinkIcon,
   Pencil,
   Plus,
+  Sparkles,
   Target,
   Trash2,
   X,
@@ -222,16 +225,19 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             />
           </div>
         ) : (
-          <CareerRecordList
-            activeTab={activeTab}
-            isLoading={isLoading}
-            records={displayedRecords}
-            onDelete={deleteRecord}
-            onEdit={(record) => {
-              setEditingRecord(record);
-              setIsSheetOpen(true);
-            }}
-          />
+          <>
+            <CompanyManagementPreview activeTab={activeTab} />
+            <CareerRecordList
+              activeTab={activeTab}
+              isLoading={isLoading}
+              records={displayedRecords}
+              onDelete={deleteRecord}
+              onEdit={(record) => {
+                setEditingRecord(record);
+                setIsSheetOpen(true);
+              }}
+            />
+          </>
         )}
       </SectionCard>
 
@@ -246,6 +252,57 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           onSave={saveRecord}
         />
       ) : null}
+    </div>
+  );
+}
+
+function CompanyManagementPreview({ activeTab }: { activeTab: CareerTab }) {
+  const isApplied = activeTab === "applied";
+
+  return (
+    <div className="company-management-preview">
+      <div className="company-ai-panel">
+        <div className="company-ai-panel__icon">
+          <FileText aria-hidden size={20} />
+        </div>
+        <div>
+          <span>{isApplied ? "공고 PDF / 첨부자료" : "관심 기업 자료"}</span>
+          <strong>{isApplied ? "PDF를 넣고 전형 초안을 정리" : "채용 시기와 준비물을 한 화면에서 정리"}</strong>
+          <p>
+            {isApplied
+              ? "공고 파일을 업로드하면 회사명, 직무, 마감일, 서류/필기/면접 일정을 AI 초안으로 뽑고 사용자가 확정하는 흐름으로 확장할 수 있어요."
+              : "아직 공고가 없어도 예상 채용 시기, 필요한 자격증, 준비 서류, 우선순위를 먼저 쌓아둘 수 있어요."}
+          </p>
+        </div>
+        <button className="company-ai-panel__button" type="button" disabled>
+          <Sparkles aria-hidden size={15} />
+          AI 초안 준비중
+        </button>
+      </div>
+
+      <div className="company-workflow-grid" aria-label="기업 관리 구성 미리보기">
+        <div className="company-workflow-card">
+          <span>기본 정보</span>
+          <strong>기업 / 공고 / 직무</strong>
+          <p>지원일, 마감일, 공고 URL, 이력서 파일까지 같은 카드에서 관리</p>
+        </div>
+        <div className="company-workflow-card">
+          <span>전형 흐름</span>
+          <div className="company-stage-strip">
+            {["서류", "필기", "면접", "결과"].map((stage, index) => (
+              <b key={stage} className={index === 1 ? "company-stage-strip__item company-stage-strip__item--active" : "company-stage-strip__item"}>
+                {stage}
+              </b>
+            ))}
+          </div>
+          <p>회사마다 다른 절차는 단계 카드와 메모로 유연하게 추가</p>
+        </div>
+        <div className="company-workflow-card">
+          <span>준비 체크</span>
+          <strong>자격증 / 서류 / 메모</strong>
+          <p>가산점, 필기 과목, 제출 파일, 면접 준비 내용을 한곳에 보관</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -336,6 +393,7 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         <h3>{record.title}</h3>
         <p>{record.subtitle}</p>
         <CareerNextStep record={record} />
+        {record.tab === "applied" ? <CompanyProcessRail record={record} /> : <PlannedCompanyPrep record={record} />}
         <CareerMeta record={record} />
         {record.applicationEvents?.length ? <ApplicationEventList events={record.applicationEvents} /> : null}
         {record.url ? (
@@ -355,6 +413,45 @@ function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; 
         </button>
       </div>
     </article>
+  );
+}
+
+function CompanyProcessRail({ record }: { record: CareerRecord }) {
+  const stages = getCompanyProcessStages(record);
+  const hasAnyDate = stages.some((stage) => stage.date);
+
+  return (
+    <div className="company-process-rail" aria-label="전형 진행 흐름">
+      {stages.map((stage) => (
+        <div className={stage.active ? "company-process-step company-process-step--active" : "company-process-step"} key={stage.key}>
+          <span>{stage.label}</span>
+          <strong>{stage.date ? formatDisplayDate(stage.date) : hasAnyDate ? "대기" : "미정"}</strong>
+          {stage.memo ? <small>{stage.memo}</small> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PlannedCompanyPrep({ record }: { record: CareerRecord }) {
+  const items = [
+    { label: "채용 시기", value: record.primaryDate },
+    { label: "필요 자격증", value: record.requiredCerts },
+    { label: "필요 서류", value: record.requiredDocs },
+  ].filter((item) => item.value);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="planned-company-prep">
+      {items.map((item) => (
+        <span key={item.label}>
+          <CheckCircle2 aria-hidden size={14} />
+          <b>{item.label}</b>
+          {item.value}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -851,4 +948,49 @@ function getNextCareerStep(record: CareerRecord) {
       .filter((candidate) => Number.isFinite(candidate.time) && candidate.time >= today.getTime())
       .sort((a, b) => a.time - b.time)[0] ?? datedCandidates.sort((a, b) => b.date.localeCompare(a.date))[0]
   );
+}
+
+function getCompanyProcessStages(record: CareerRecord) {
+  const eventByStage = new Map<ApplicationEventStage, ApplicationEvent>();
+
+  for (const event of record.applicationEvents ?? []) {
+    if (!eventByStage.has(event.stage)) eventByStage.set(event.stage, event);
+  }
+
+  const stages = [
+    {
+      key: "document",
+      label: "서류",
+      date: eventByStage.get("document")?.date ?? record.deadlineDate,
+      memo: eventByStage.get("document")?.memo,
+    },
+    {
+      key: "written",
+      label: "필기",
+      date: eventByStage.get("written")?.date ?? record.examDate,
+      memo: eventByStage.get("written")?.memo,
+    },
+    {
+      key: "interview",
+      label: "면접",
+      date: eventByStage.get("interview")?.date ?? record.interviewDate,
+      memo: eventByStage.get("interview")?.memo,
+    },
+    {
+      key: "result",
+      label: "결과",
+      date: record.resultDate,
+      memo: undefined,
+    },
+  ];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextDatedStage = stages
+    .filter((stage): stage is typeof stage & { date: string } => Boolean(stage.date))
+    .map((stage) => ({ ...stage, time: new Date(`${stage.date}T00:00:00`).getTime() }))
+    .filter((stage) => Number.isFinite(stage.time) && stage.time >= today.getTime())
+    .sort((a, b) => a.time - b.time)[0];
+
+  return stages.map((stage) => ({ ...stage, active: nextDatedStage ? stage.key === nextDatedStage.key : false }));
 }

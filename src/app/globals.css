@@ -3032,6 +3032,114 @@ a:focus-visible {
   gap: 14px;
 }
 
+.company-management-preview {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.company-ai-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(201, 184, 255, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(201, 184, 255, 0.12), rgba(61, 220, 151, 0.05)),
+    rgba(255, 255, 255, 0.035);
+  padding: 18px;
+}
+
+.company-ai-panel__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.22);
+  border-radius: 13px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+}
+
+.company-ai-panel span,
+.company-workflow-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.company-ai-panel strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.company-ai-panel p,
+.company-workflow-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.company-ai-panel__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: not-allowed;
+  font-size: 13px;
+  font-weight: 850;
+  padding: 10px 13px;
+}
+
+.company-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.company-workflow-card {
+  min-height: 128px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.12);
+  padding: 15px;
+}
+
+.company-workflow-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.company-stage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.company-stage-strip__item {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 6px 9px;
+}
+
+.company-stage-strip__item--active {
+  border-color: rgba(201, 184, 255, 0.35);
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--violet);
+}
+
 .career-record-card {
   display: flex;
   scroll-margin-top: 24px;
@@ -3224,6 +3332,85 @@ a:focus-visible {
 
 .career-record-card small {
   margin-top: 8px;
+}
+
+.company-process-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.company-process-step {
+  position: relative;
+  display: grid;
+  min-height: 82px;
+  align-content: start;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+}
+
+.company-process-step::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  content: "";
+}
+
+.company-process-step--active {
+  border-color: rgba(246, 173, 69, 0.32);
+  background: rgba(246, 173, 69, 0.095);
+}
+
+.company-process-step--active::before {
+  background: var(--amber);
+}
+
+.company-process-step span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.company-process-step strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.company-process-step small {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planned-company-prep {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.planned-company-prep span {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(61, 220, 151, 0.22);
+  border-radius: 999px;
+  background: rgba(61, 220, 151, 0.08);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.planned-company-prep b {
+  color: var(--text);
+  font-size: 12px;
 }
 
 .career-meta-grid {
@@ -3932,6 +4119,17 @@ a:focus-visible {
   .certificate-index-panel {
     position: static;
     max-height: none;
+  }
+
+  .company-ai-panel,
+  .company-workflow-grid,
+  .company-process-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .company-ai-panel__button {
+    justify-content: center;
+    width: 100%;
   }
 
   .certificate-index-list {
