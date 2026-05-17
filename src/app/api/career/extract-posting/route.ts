@@ -5,7 +5,11 @@ const maxFileSize = 10 * 1024 * 1024;
 const extractionTimeoutMs = 75_000;
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const startedAt = Date.now();
+
   try {
+    console.info(`[career-extract:${requestId}] request started`);
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -24,10 +28,15 @@ export async function POST(request: Request) {
     const companyName = String(formData.get("companyName") ?? "");
     const postingTitle = String(formData.get("postingTitle") ?? "");
     const jobRole = String(formData.get("jobRole") ?? "");
+    const fileReadStartedAt = Date.now();
     const bytes = Buffer.from(await file.arrayBuffer());
-    return extractWithGemini({ bytes, companyName, file, jobRole, postingTitle });
+    console.info(`[career-extract:${requestId}] file read ${Date.now() - fileReadStartedAt}ms size=${file.size}`);
+
+    const response = await extractWithGemini({ bytes, companyName, file, jobRole, postingTitle, requestId });
+    console.info(`[career-extract:${requestId}] request finished ${Date.now() - startedAt}ms`);
+    return response;
   } catch (error) {
-    console.error("Failed to extract job posting PDF", error);
+    console.error(`[career-extract:${requestId}] request failed ${Date.now() - startedAt}ms`, error);
     return NextResponse.json({ error: "PDF 분석 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 500 });
   }
 }
@@ -38,12 +47,14 @@ async function extractWithGemini({
   file,
   jobRole,
   postingTitle,
+  requestId,
 }: {
   bytes: Buffer;
   companyName: string;
   file: File;
   jobRole: string;
   postingTitle: string;
+  requestId: string;
 }) {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -55,9 +66,11 @@ async function extractWithGemini({
   const prompt = buildExtractionPrompt({ companyName, jobRole, postingTitle });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), extractionTimeoutMs);
+  const geminiStartedAt = Date.now();
 
   let response: Response;
   try {
+    console.info(`[career-extract:${requestId}] gemini request started model=${model}`);
     response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: {
@@ -85,8 +98,10 @@ async function extractWithGemini({
         },
       }),
     });
+    console.info(`[career-extract:${requestId}] gemini response status=${response.status} ${Date.now() - geminiStartedAt}ms`);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
+      console.warn(`[career-extract:${requestId}] gemini timeout ${Date.now() - geminiStartedAt}ms`);
       return NextResponse.json({ error: "AI 분석 시간이 길어져 중단했습니다. PDF 용량을 줄이거나 필요한 페이지만 추려 다시 올려주세요." }, { status: 504 });
     }
 
@@ -95,7 +110,9 @@ async function extractWithGemini({
     clearTimeout(timeout);
   }
 
+  const parseStartedAt = Date.now();
   const payload = await response.json();
+  console.info(`[career-extract:${requestId}] gemini json parsed ${Date.now() - parseStartedAt}ms`);
 
   if (!response.ok) {
     return NextResponse.json({ error: payload.error?.message ?? "Gemini extraction failed." }, { status: response.status });
