@@ -667,7 +667,14 @@ drop policy if exists "Users can read own job application check items" on public
 create policy "Users can read own job application check items"
 on public.job_application_check_items for select
 to authenticated
-using (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  and application_id in (
+    select id
+    from public.job_applications
+    where user_id = auth.uid()
+  )
+);
 
 drop policy if exists "Users can insert own job application check items" on public.job_application_check_items;
 create policy "Users can insert own job application check items"
@@ -675,11 +682,10 @@ on public.job_application_check_items for insert
 to authenticated
 with check (
   user_id = auth.uid()
-  and exists (
-    select 1
+  and application_id in (
+    select id
     from public.job_applications
-    where job_applications.id = job_application_check_items.application_id
-      and job_applications.user_id = auth.uid()
+    where user_id = auth.uid()
   )
 );
 
@@ -690,11 +696,10 @@ to authenticated
 using (user_id = auth.uid())
 with check (
   user_id = auth.uid()
-  and exists (
-    select 1
+  and application_id in (
+    select id
     from public.job_applications
-    where job_applications.id = job_application_check_items.application_id
-      and job_applications.user_id = auth.uid()
+    where user_id = auth.uid()
   )
 );
 
@@ -702,7 +707,14 @@ drop policy if exists "Users can delete own job application check items" on publ
 create policy "Users can delete own job application check items"
 on public.job_application_check_items for delete
 to authenticated
-using (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  and application_id in (
+    select id
+    from public.job_applications
+    where user_id = auth.uid()
+  )
+);
 
 drop policy if exists "Users can read own job application files" on public.job_application_files;
 create policy "Users can read own job application files"
