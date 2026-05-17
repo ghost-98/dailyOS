@@ -124,7 +124,15 @@ async function extractWithGemini({
   }
 
   try {
-    return NextResponse.json({ ...JSON.parse(outputText), modelName: model });
+    const extraction = JSON.parse(outputText) as Record<string, unknown>;
+    return NextResponse.json({
+      ...extraction,
+      companyName: companyName.trim() || extraction.companyName,
+      postingTitle: postingTitle.trim() || extraction.postingTitle,
+      jobRole: jobRole.trim() || extraction.jobRole,
+      summary: "",
+      modelName: model,
+    });
   } catch {
     return NextResponse.json({ error: "Gemini response JSON could not be parsed." }, { status: 502 });
   }
@@ -144,6 +152,9 @@ function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { company
     `사용자가 미리 입력한 기업명: ${companyName || "(없음)"}`,
     `사용자가 미리 입력한 공고명: ${postingTitle || "(없음)"}`,
     `사용자가 미리 입력한 직무: ${jobRole || "(없음)"}`,
+    "summary에는 회사 소개, 슬로건, 채용 홍보 문구를 넣지 말고 빈 문자열을 반환한다.",
+    "jobRole은 ICT, 전기, 사무, 토목처럼 지원자가 실제 선택하는 직무/모집분야만 넣는다. 채용 수준이나 직급명은 jobRole에 넣지 않는다.",
+    "연령 제한 없음, 병역, 신분증/수험표, 블라인드 채용, 채용서류 반환, 부정행위, 문의처 같은 일반 안내는 requirements와 checkItems에 넣지 않는다.",
     "반드시 schema에 맞는 JSON만 반환한다.",
   ].join("\n");
 }

@@ -3065,6 +3065,22 @@ a:focus-visible {
   font-size: 14px;
 }
 
+.job-application-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.job-application-meta-row span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  padding: 6px 9px;
+}
+
 .job-application-card__primary {
   border: 1px solid rgba(61, 220, 151, 0.28);
   border-radius: 999px;
@@ -3243,8 +3259,7 @@ a:focus-visible {
 
 .job-application-source-row span,
 .job-application-source-row a,
-.job-application-source-row button,
-.job-no-steps {
+.job-application-source-row button {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -3266,18 +3281,6 @@ a:focus-visible {
 
 .job-application-source-row button {
   appearance: none;
-}
-
-.job-application-summary {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.job-no-steps {
-  border-radius: 12px;
-  line-height: 1.5;
 }
 
 .job-posting-sheet,
@@ -3810,6 +3813,34 @@ a:focus-visible {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.career-ai-uploader__fields {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.career-ai-uploader__fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.career-ai-uploader__fields span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.career-ai-uploader__fields input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+  color: var(--text);
+  font: inherit;
+  padding: 10px 11px;
 }
 
 .career-ai-file-button {
@@ -4637,6 +4668,10 @@ a:focus-visible {
   .career-ai-uploader__actions {
     justify-content: center;
     width: 100%;
+  }
+
+  .career-ai-uploader__fields {
+    grid-template-columns: 1fr;
   }
 
   .career-ai-file-button,

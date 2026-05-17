@@ -431,13 +431,19 @@ function JobApplicationBoard({
 
   return (
     <div className="job-application-list">
-      {applications.map((application) => (
+      {applications.map((application) => {
+        const visibleJobRole = getVisibleJobRole(application);
+
+        return (
         <article className="job-application-card" key={application.id}>
           <div className="job-application-card__header">
             <div>
               <Badge tone={application.status === "planned" ? "amber" : "green"}>{jobApplicationStatusLabels[application.status]}</Badge>
               <h3>{application.companyName}</h3>
-              <p>{[application.jobRole, application.postingTitle].filter(Boolean).join(" / ")}</p>
+              <div className="job-application-meta-row">
+                {application.postingTitle ? <span>공고 {application.postingTitle}</span> : null}
+                {visibleJobRole ? <span>직무 {visibleJobRole}</span> : null}
+              </div>
             </div>
             {activeTab === "planned" ? (
               <button className="job-application-card__primary" onClick={() => void onApply(application)} type="button">
@@ -464,8 +470,6 @@ function JobApplicationBoard({
             </div>
           ) : null}
 
-          {application.memo ? <p className="job-application-summary">{application.memo}</p> : null}
-
           {application.steps.length > 0 ? (
             <div className="job-step-timeline">
               {application.steps.map((step) => (
@@ -484,9 +488,7 @@ function JobApplicationBoard({
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="job-no-steps">전형 일정은 아직 없습니다. PDF 분석으로 추가하거나 이후 상세 편집에서 보강하면 됩니다.</div>
-          )}
+          ) : null}
 
           {application.requirements.length > 0 ? (
             <div className="job-requirement-strip">
@@ -499,9 +501,21 @@ function JobApplicationBoard({
             </div>
           ) : null}
         </article>
-      ))}
+        );
+      })}
     </div>
   );
+}
+
+function getVisibleJobRole(application: JobApplicationBundle) {
+  const role = application.jobRole.trim();
+  if (!role) return "";
+
+  const postingTitle = application.postingTitle.trim();
+  if (postingTitle.includes(role)) return "";
+  if (/직급|대졸|신입사원|채용공고|채용형|인턴/i.test(role)) return "";
+
+  return role;
 }
 
 function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; onEdit: () => void; record: CareerRecord }) {
@@ -728,6 +742,9 @@ function JobPostingUploadSheet({
   onSaveJobPosting: (extraction: JobPostingExtraction, file?: { path?: string; name?: string }) => Promise<void> | void;
 }) {
   const [postingFile, setPostingFile] = useState<File | null>(null);
+  const [companyName, setCompanyName] = useState("");
+  const [postingTitle, setPostingTitle] = useState("");
+  const [jobRole, setJobRole] = useState("");
   const [aiDraft, setAiDraft] = useState<JobPostingExtraction | null>(null);
   const [uploadedPostingFile, setUploadedPostingFile] = useState<{ path?: string; name?: string } | null>(null);
   const [aiError, setAiError] = useState("");
@@ -742,6 +759,9 @@ function JobPostingUploadSheet({
     try {
       const payload = new FormData();
       payload.append("file", postingFile);
+      payload.append("companyName", companyName);
+      payload.append("postingTitle", postingTitle);
+      payload.append("jobRole", jobRole);
 
       const response = await fetch("/api/career/extract-posting", { method: "POST", body: payload });
       const result = await response.json();
@@ -789,7 +809,22 @@ function JobPostingUploadSheet({
           <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
         </header>
         <div className="event-sheet__body career-sheet__body">
-          <AppliedAiPostingPanel aiDraft={aiDraft} aiError={aiError} isExtracting={isExtracting} isSaving={isSaving} postingFile={postingFile} onExtractPostingDraft={() => void extractPostingDraft()} onPostingFileChange={setPostingFile} onSaveDraft={saveDraftAsJobPosting} />
+          <AppliedAiPostingPanel
+            aiDraft={aiDraft}
+            aiError={aiError}
+            companyName={companyName}
+            isExtracting={isExtracting}
+            isSaving={isSaving}
+            jobRole={jobRole}
+            postingFile={postingFile}
+            postingTitle={postingTitle}
+            onCompanyNameChange={setCompanyName}
+            onExtractPostingDraft={() => void extractPostingDraft()}
+            onJobRoleChange={setJobRole}
+            onPostingFileChange={setPostingFile}
+            onPostingTitleChange={setPostingTitle}
+            onSaveDraft={saveDraftAsJobPosting}
+          />
         </div>
       </section>
     </div>
@@ -937,23 +972,35 @@ function CareerRecordSheet({
 function AppliedAiPostingPanel({
   aiDraft,
   aiError,
+  companyName,
   isExtracting,
   isSaving,
+  jobRole,
   onApplyAiDraft,
+  onCompanyNameChange,
   onExtractPostingDraft,
+  onJobRoleChange,
   onPostingFileChange,
+  onPostingTitleChange,
   onSaveDraft,
   postingFile,
+  postingTitle,
 }: {
   aiDraft: JobPostingExtraction | null;
   aiError: string;
+  companyName: string;
   isExtracting: boolean;
   isSaving: boolean;
+  jobRole: string;
   onApplyAiDraft?: () => void;
+  onCompanyNameChange: (value: string) => void;
   onExtractPostingDraft: () => void;
+  onJobRoleChange: (value: string) => void;
   onPostingFileChange: (file: File | null) => void;
+  onPostingTitleChange: (value: string) => void;
   onSaveDraft: () => Promise<void> | void;
   postingFile: File | null;
+  postingTitle: string;
 }) {
   return (
     <div className="career-ai-panel-stack">
@@ -964,6 +1011,20 @@ function AppliedAiPostingPanel({
           <p>공고 파일을 선택하면 AI가 일정, 지원자격, 준비물을 검토용 초안으로 정리합니다.</p>
         </div>
         <div className="career-ai-uploader__actions">
+          <div className="career-ai-uploader__fields">
+            <label>
+              <span>기업명</span>
+              <input value={companyName} placeholder="한국전력공사" onChange={(event) => onCompanyNameChange(event.target.value)} />
+            </label>
+            <label>
+              <span>공고명</span>
+              <input value={postingTitle} placeholder="2026년도 상반기 4직급 대졸수준" onChange={(event) => onPostingTitleChange(event.target.value)} />
+            </label>
+            <label>
+              <span>지원 직무</span>
+              <input value={jobRole} placeholder="ICT" onChange={(event) => onJobRoleChange(event.target.value)} />
+            </label>
+          </div>
           <label className="career-ai-file-button">
             파일 선택
             <input accept="application/pdf,.pdf" type="file" onChange={(event) => onPostingFileChange(event.target.files?.[0] ?? null)} />

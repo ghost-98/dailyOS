@@ -368,7 +368,7 @@ export async function createJobApplicationFromExtraction({
       posting_url: emptyToNull(extraction.postingUrl),
       source_file_path: emptyToNull(sourceFilePath),
       source_file_name: emptyToNull(sourceFileName),
-      memo: extraction.summary || null,
+      memo: null,
     })
     .select("id")
     .single();
