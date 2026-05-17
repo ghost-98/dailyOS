@@ -462,6 +462,35 @@ export async function createManualJobApplicationInDb({
   return applications?.find((application) => application.id === applicationId) ?? null;
 }
 
+export async function updateJobApplicationInDb(
+  applicationId: string,
+  payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string },
+) {
+  if (!supabase) return null;
+
+  const { error } = await supabase
+    .from("job_applications")
+    .update({
+      company_name: payload.companyName.trim(),
+      posting_title: payload.postingTitle.trim(),
+      job_role: payload.jobRole.trim(),
+      posting_url: emptyToNull(payload.postingUrl),
+      memo: emptyToNull(payload.memo),
+    })
+    .eq("id", applicationId);
+
+  if (error) throw toDbError(error, "공고 기본정보 저장에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
+}
+
+export async function deleteJobApplicationFromDb(applicationId: string) {
+  if (!supabase) return false;
+  const { error } = await supabase.from("job_applications").delete().eq("id", applicationId);
+  if (error) throw toDbError(error, "공고 삭제에 실패했습니다.");
+  return true;
+}
+
 export async function markJobApplicationAsApplied(application: JobApplicationBundle) {
   if (!supabase) return null;
   const userId = await getUserId();
@@ -495,6 +524,83 @@ export async function markJobApplicationAsApplied(application: JobApplicationBun
   return applications?.find((item) => item.id === application.id) ?? null;
 }
 
+export async function createJobApplicationStepInDb(
+  applicationId: string,
+  step: {
+    type: JobApplicationStep["type"];
+    title: string;
+    startAt?: string;
+    endAt?: string;
+    memo?: string;
+    sourceText?: string;
+  },
+) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const applications = await fetchJobApplicationsFromDb();
+  const application = applications?.find((item) => item.id === applicationId);
+  const orderIndex = application?.steps.length ?? 0;
+
+  const { error } = await supabase.from("job_application_steps").insert({
+    user_id: userId,
+    application_id: applicationId,
+    type: step.type,
+    title: step.title.trim(),
+    start_at: emptyToNull(step.startAt),
+    end_at: emptyToNull(step.endAt),
+    status: "confirmed",
+    order_index: orderIndex,
+    memo: emptyToNull(step.memo),
+    source_text: emptyToNull(step.sourceText),
+    confirmed_by_user: true,
+  });
+
+  if (error) throw toDbError(error, "전형 일정 추가에 실패했습니다.");
+  const nextApplications = await fetchJobApplicationsFromDb();
+  return nextApplications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function updateJobApplicationStepInDb(
+  applicationId: string,
+  stepId: string,
+  step: {
+    type: JobApplicationStep["type"];
+    title: string;
+    startAt?: string;
+    endAt?: string;
+    memo?: string;
+    sourceText?: string;
+  },
+) {
+  if (!supabase) return null;
+  const { error } = await supabase
+    .from("job_application_steps")
+    .update({
+      type: step.type,
+      title: step.title.trim(),
+      start_at: emptyToNull(step.startAt),
+      end_at: emptyToNull(step.endAt),
+      memo: emptyToNull(step.memo),
+      source_text: emptyToNull(step.sourceText),
+      confirmed_by_user: true,
+    })
+    .eq("id", stepId);
+
+  if (error) throw toDbError(error, "전형 일정 수정에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function deleteJobApplicationStepFromDb(applicationId: string, stepId: string) {
+  if (!supabase) return null;
+  const { error } = await supabase.from("job_application_steps").delete().eq("id", stepId);
+  if (error) throw toDbError(error, "전형 일정 삭제에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
 export async function updateJobApplicationStepStatus(applicationId: string, stepId: string, status: JobApplicationStep["status"]) {
   if (!supabase) return null;
   const { error } = await supabase
@@ -503,6 +609,69 @@ export async function updateJobApplicationStepStatus(applicationId: string, step
     .eq("id", stepId);
 
   if (error) throw error;
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function createJobApplicationRequirementInDb(
+  applicationId: string,
+  requirement: {
+    category: JobApplicationRequirement["category"];
+    title: string;
+    content: string;
+    sourceText?: string;
+  },
+) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { error } = await supabase.from("job_application_requirements").insert({
+    user_id: userId,
+    application_id: applicationId,
+    category: requirement.category,
+    title: requirement.title.trim(),
+    content: requirement.content.trim(),
+    source_text: emptyToNull(requirement.sourceText),
+    confirmed_by_user: true,
+  });
+
+  if (error) throw toDbError(error, "지원 요건 추가에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function updateJobApplicationRequirementInDb(
+  applicationId: string,
+  requirementId: string,
+  requirement: {
+    category: JobApplicationRequirement["category"];
+    title: string;
+    content: string;
+    sourceText?: string;
+  },
+) {
+  if (!supabase) return null;
+  const { error } = await supabase
+    .from("job_application_requirements")
+    .update({
+      category: requirement.category,
+      title: requirement.title.trim(),
+      content: requirement.content.trim(),
+      source_text: emptyToNull(requirement.sourceText),
+      confirmed_by_user: true,
+    })
+    .eq("id", requirementId);
+
+  if (error) throw toDbError(error, "지원 요건 수정에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function deleteJobApplicationRequirementFromDb(applicationId: string, requirementId: string) {
+  if (!supabase) return null;
+  const { error } = await supabase.from("job_application_requirements").delete().eq("id", requirementId);
+  if (error) throw toDbError(error, "지원 요건 삭제에 실패했습니다.");
   const applications = await fetchJobApplicationsFromDb();
   return applications?.find((item) => item.id === applicationId) ?? null;
 }

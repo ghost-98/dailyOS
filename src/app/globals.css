@@ -3068,6 +3068,25 @@ a:focus-visible {
   gap: 16px;
 }
 
+.job-application-card__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.job-application-card__actions button,
+.job-detail-item-actions button {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  cursor: pointer;
+}
+
 .job-application-card h3 {
   margin: 10px 0 6px;
   color: var(--text);
@@ -3202,6 +3221,56 @@ a:focus-visible {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+}
+
+.job-detail-top-actions,
+.job-detail-inline-actions,
+.job-detail-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.job-detail-info-form,
+.job-detail-manage-form {
+  display: grid;
+  gap: 8px;
+}
+
+.job-detail-info-form {
+  margin-top: 10px;
+}
+
+.job-detail-info-form input,
+.job-detail-info-form textarea,
+.job-detail-manage-form input,
+.job-detail-manage-form textarea,
+.job-detail-manage-form select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 10px 11px;
+}
+
+.job-detail-inline-actions button {
+  border: 1px solid rgba(201, 184, 255, 0.26);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 8px 11px;
+}
+
+.job-detail-inline-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .job-detail-panel__top h2 {

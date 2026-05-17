@@ -26,14 +26,22 @@ import {
   createCareerRecordInDb,
   createAiExtractionDraftInDb,
   createJobApplicationFromExtraction,
+  createJobApplicationRequirementInDb,
+  createJobApplicationStepInDb,
   createManualJobApplicationInDb,
   deleteCareerRecordFromDb,
+  deleteJobApplicationFromDb,
+  deleteJobApplicationRequirementFromDb,
+  deleteJobApplicationStepFromDb,
   fetchCareerRecordsFromDb,
   fetchJobApplicationsFromDb,
   getCertificateFileDownloadUrl,
   getJobPostingFileDownloadUrl,
   markJobApplicationAsApplied,
   updateCareerRecordInDb,
+  updateJobApplicationInDb,
+  updateJobApplicationRequirementInDb,
+  updateJobApplicationStepInDb,
   updateJobApplicationStepStatus,
   uploadCertificateFileToDb,
   uploadJobPostingFileToDb,
@@ -51,6 +59,7 @@ import {
   jobApplicationStatusLabels,
   jobProcessStepLabels,
   type JobApplicationBundle,
+  type JobApplicationRequirement,
   type JobApplicationStep,
   type JobPostingExtraction,
   type JobProcessStepType,
@@ -81,7 +90,7 @@ const priorityLabels = {
 };
 
 const statusOptions: Record<CareerTab, string[]> = {
-  applied: ["지원 완료", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
+  applied: ["지원중", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
   planned: ["지원 예정", "관심", "보류", "마감"],
   certificates: ["취득", "응시예정", "만료"],
 };
@@ -203,6 +212,51 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   };
 
+  const updateApplication = async (
+    applicationId: string,
+    payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string },
+  ) => {
+    const updated = await updateJobApplicationInDb(applicationId, payload);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const deleteApplication = async (applicationId: string) => {
+    if (!window.confirm("이 공고를 삭제할까요?")) return;
+    await deleteJobApplicationFromDb(applicationId);
+    setJobApplications((current) => current.filter((item) => item.id !== applicationId));
+    setSelectedApplicationId((current) => (current === applicationId ? null : current));
+  };
+
+  const saveApplicationStep = async (
+    applicationId: string,
+    step: { type: JobApplicationStep["type"]; title: string; startAt?: string; endAt?: string; memo?: string; sourceText?: string },
+    stepId?: string,
+  ) => {
+    const updated = stepId ? await updateJobApplicationStepInDb(applicationId, stepId, step) : await createJobApplicationStepInDb(applicationId, step);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const deleteApplicationStep = async (applicationId: string, stepId: string) => {
+    const updated = await deleteJobApplicationStepFromDb(applicationId, stepId);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const saveApplicationRequirement = async (
+    applicationId: string,
+    requirement: { category: JobApplicationRequirement["category"]; title: string; content: string; sourceText?: string },
+    requirementId?: string,
+  ) => {
+    const updated = requirementId
+      ? await updateJobApplicationRequirementInDb(applicationId, requirementId, requirement)
+      : await createJobApplicationRequirementInDb(applicationId, requirement);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const deleteApplicationRequirement = async (applicationId: string, requirementId: string) => {
+    const updated = await deleteJobApplicationRequirementFromDb(applicationId, requirementId);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
   return (
     <div className="career-page">
       <header className="page-header career-header">
@@ -311,6 +365,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
               applications={activeApplications}
               isLoading={isLoading}
               selectedApplicationId={selectedApplicationId}
+              onDelete={deleteApplication}
               onApply={applyJobApplication}
               onSelect={setSelectedApplicationId}
               onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
@@ -321,7 +376,13 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
                 application={selectedApplication}
                 onApply={applyJobApplication}
                 onClose={() => setSelectedApplicationId(null)}
+                onDelete={deleteApplication}
+                onDeleteRequirement={deleteApplicationRequirement}
+                onDeleteStep={deleteApplicationStep}
+                onSaveRequirement={saveApplicationRequirement}
+                onSaveStep={saveApplicationStep}
                 onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
+                onUpdateApplication={updateApplication}
               />
             ) : null}
           </>
@@ -423,6 +484,7 @@ function JobApplicationBoard({
   applications,
   isLoading,
   selectedApplicationId,
+  onDelete,
   onApply,
   onSelect,
   onStepStatusChange,
@@ -431,6 +493,7 @@ function JobApplicationBoard({
   applications: JobApplicationBundle[];
   isLoading: boolean;
   selectedApplicationId: string | null;
+  onDelete: (applicationId: string) => Promise<void> | void;
   onApply: (application: JobApplicationBundle) => Promise<void> | void;
   onSelect: (applicationId: string) => void;
   onStepStatusChange: (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => void;
@@ -479,6 +542,20 @@ function JobApplicationBoard({
                 지원으로 전환
               </button>
             ) : null}
+            <div className="job-application-card__actions">
+              <button aria-label="공고 수정" title="공고 수정" onClick={(event) => {
+                event.stopPropagation();
+                onSelect(application.id);
+              }} type="button">
+                <Pencil aria-hidden size={14} />
+              </button>
+              <button aria-label="공고 삭제" title="공고 삭제" onClick={(event) => {
+                event.stopPropagation();
+                void onDelete(application.id);
+              }} type="button">
+                <Trash2 aria-hidden size={14} />
+              </button>
+            </div>
           </div>
 
           {application.sourceFileName || application.postingUrl ? (
@@ -559,28 +636,147 @@ function JobApplicationDetailPanel({
   application,
   onApply,
   onClose,
+  onDelete,
+  onDeleteRequirement,
+  onDeleteStep,
+  onSaveRequirement,
+  onSaveStep,
   onStepStatusChange,
+  onUpdateApplication,
 }: {
   activeTab: CareerTab;
   application: JobApplicationBundle;
   onApply: (application: JobApplicationBundle) => Promise<void> | void;
   onClose: () => void;
+  onDelete: (applicationId: string) => Promise<void> | void;
+  onDeleteRequirement: (applicationId: string, requirementId: string) => Promise<void> | void;
+  onDeleteStep: (applicationId: string, stepId: string) => Promise<void> | void;
+  onSaveRequirement: (
+    applicationId: string,
+    requirement: { category: JobApplicationRequirement["category"]; title: string; content: string; sourceText?: string },
+    requirementId?: string,
+  ) => Promise<void> | void;
+  onSaveStep: (
+    applicationId: string,
+    step: { type: JobApplicationStep["type"]; title: string; startAt?: string; endAt?: string; memo?: string; sourceText?: string },
+    stepId?: string,
+  ) => Promise<void> | void;
   onStepStatusChange: (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => void;
+  onUpdateApplication: (
+    applicationId: string,
+    payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string },
+  ) => Promise<void> | void;
 }) {
   const visibleJobRole = getVisibleJobRole(application);
   const nextStep = application.steps.find((step) => step.status !== "done" && step.status !== "skipped") ?? application.steps[0];
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({
+    companyName: application.companyName,
+    postingTitle: application.postingTitle,
+    jobRole: application.jobRole,
+    postingUrl: application.postingUrl ?? "",
+    memo: application.memo ?? "",
+  });
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [stepForm, setStepForm] = useState({
+    type: "application" as JobApplicationStep["type"],
+    title: "",
+    startAt: "",
+    endAt: "",
+    memo: "",
+    sourceText: "",
+  });
+  const [editingRequirementId, setEditingRequirementId] = useState<string | null>(null);
+  const [requirementForm, setRequirementForm] = useState({
+    category: "eligibility" as JobApplicationRequirement["category"],
+    title: "",
+    content: "",
+    sourceText: "",
+  });
+
+  const startEditStep = (step: JobApplicationStep) => {
+    setEditingStepId(step.id);
+    setStepForm({
+      type: step.type,
+      title: step.title,
+      startAt: toDatetimeLocalValue(step.startAt),
+      endAt: toDatetimeLocalValue(step.endAt),
+      memo: step.memo ?? "",
+      sourceText: step.sourceText ?? "",
+    });
+  };
+
+  const resetStepForm = () => {
+    setEditingStepId(null);
+    setStepForm({ type: "application", title: "", startAt: "", endAt: "", memo: "", sourceText: "" });
+  };
+
+  const startEditRequirement = (requirement: JobApplicationRequirement) => {
+    setEditingRequirementId(requirement.id);
+    setRequirementForm({
+      category: requirement.category,
+      title: requirement.title,
+      content: requirement.content,
+      sourceText: requirement.sourceText ?? "",
+    });
+  };
+
+  const resetRequirementForm = () => {
+    setEditingRequirementId(null);
+    setRequirementForm({ category: "eligibility", title: "", content: "", sourceText: "" });
+  };
+
+  useEffect(() => {
+    setIsEditingInfo(false);
+    setInfoForm({
+      companyName: application.companyName,
+      postingTitle: application.postingTitle,
+      jobRole: application.jobRole,
+      postingUrl: application.postingUrl ?? "",
+      memo: application.memo ?? "",
+    });
+    resetStepForm();
+    resetRequirementForm();
+  }, [application.id]);
 
   return (
     <aside className="job-detail-panel" aria-label="공고 상세">
       <div className="job-detail-panel__top">
         <div>
           <Badge tone={application.status === "planned" ? "amber" : "green"}>{jobApplicationStatusLabels[application.status]}</Badge>
-          <h2>{application.companyName}</h2>
-          <p>{application.postingTitle || "공고명 미입력"}</p>
+          {isEditingInfo ? (
+            <div className="job-detail-info-form">
+              <input value={infoForm.companyName} placeholder="기업명" onChange={(event) => setInfoForm((current) => ({ ...current, companyName: event.target.value }))} />
+              <input value={infoForm.postingTitle} placeholder="공고명" onChange={(event) => setInfoForm((current) => ({ ...current, postingTitle: event.target.value }))} />
+              <input value={infoForm.jobRole} placeholder="지원 직무" onChange={(event) => setInfoForm((current) => ({ ...current, jobRole: event.target.value }))} />
+              <input value={infoForm.postingUrl} placeholder="채용사이트 URL" onChange={(event) => setInfoForm((current) => ({ ...current, postingUrl: event.target.value }))} />
+              <textarea rows={2} value={infoForm.memo} placeholder="메모" onChange={(event) => setInfoForm((current) => ({ ...current, memo: event.target.value }))} />
+              <div className="job-detail-inline-actions">
+                <button onClick={() => {
+                  void onUpdateApplication(application.id, infoForm);
+                  setIsEditingInfo(false);
+                }} type="button">저장</button>
+                <button onClick={() => setIsEditingInfo(false)} type="button">취소</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2>{application.companyName}</h2>
+              <p>{application.postingTitle || "공고명 미입력"}</p>
+            </>
+          )}
         </div>
-        <button aria-label="상세 닫기" className="event-sheet__icon-button" onClick={onClose} type="button">
-          <X aria-hidden size={18} />
-        </button>
+        <div className="job-detail-top-actions">
+          <button aria-label="공고 수정" title="공고 수정" className="event-sheet__icon-button" onClick={() => setIsEditingInfo((current) => !current)} type="button">
+            <Pencil aria-hidden size={16} />
+          </button>
+          <button aria-label="공고 삭제" title="공고 삭제" className="event-sheet__icon-button" onClick={() => void onDelete(application.id)} type="button">
+            <Trash2 aria-hidden size={16} />
+          </button>
+          <button aria-label="상세 닫기" className="event-sheet__icon-button" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
+          </button>
+        </div>
       </div>
 
       <div className="job-detail-meta-grid">
@@ -613,6 +809,26 @@ function JobApplicationDetailPanel({
           <span>전형 일정</span>
           <small>{activeTab === "planned" ? "지원으로 전환하면 캘린더에 반영됩니다." : "단계별 진행 상태를 관리합니다."}</small>
         </div>
+        <div className="job-detail-manage-form">
+          <select value={stepForm.type} onChange={(event) => setStepForm((current) => ({ ...current, type: event.target.value as JobApplicationStep["type"] }))}>
+            {defaultJobProcessStepTypes.map((type) => <option key={type} value={type}>{jobProcessStepLabels[type]}</option>)}
+          </select>
+          <input value={stepForm.title} placeholder="전형명" onChange={(event) => setStepForm((current) => ({ ...current, title: event.target.value }))} />
+          <input type="datetime-local" value={stepForm.startAt} onChange={(event) => setStepForm((current) => ({ ...current, startAt: event.target.value }))} />
+          <input type="datetime-local" value={stepForm.endAt} onChange={(event) => setStepForm((current) => ({ ...current, endAt: event.target.value }))} />
+          <textarea rows={2} value={stepForm.memo} placeholder="메모" onChange={(event) => setStepForm((current) => ({ ...current, memo: event.target.value }))} />
+          <div className="job-detail-inline-actions">
+            <button disabled={!stepForm.title.trim()} onClick={() => {
+              void onSaveStep(application.id, {
+                ...stepForm,
+                startAt: toIsoFromDatetimeLocal(stepForm.startAt),
+                endAt: toIsoFromDatetimeLocal(stepForm.endAt),
+              }, editingStepId ?? undefined);
+              resetStepForm();
+            }} type="button">{editingStepId ? "일정 수정" : "일정 추가"}</button>
+            {editingStepId ? <button onClick={resetStepForm} type="button">취소</button> : null}
+          </div>
+        </div>
         {application.steps.length > 0 ? (
           <div className="job-detail-step-list">
             {application.steps.map((step) => (
@@ -621,6 +837,10 @@ function JobApplicationDetailPanel({
                 <strong>{step.title}</strong>
                 <small>{formatJobStepRange(step) || "날짜 확인 필요"}</small>
                 {step.sourceText ? <em>{step.sourceText}</em> : null}
+                <div className="job-detail-item-actions">
+                  <button aria-label="일정 수정" onClick={() => startEditStep(step)} type="button"><Pencil aria-hidden size={13} /></button>
+                  <button aria-label="일정 삭제" onClick={() => void onDeleteStep(application.id, step.id)} type="button"><Trash2 aria-hidden size={13} /></button>
+                </div>
                 {activeTab === "applied" ? (
                   <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
                     <option value="confirmed">예정</option>
@@ -641,6 +861,25 @@ function JobApplicationDetailPanel({
           <span>지원 요건/가점</span>
           <small>자격증 매칭은 다음 단계에서 연결합니다.</small>
         </div>
+        <div className="job-detail-manage-form">
+          <select value={requirementForm.category} onChange={(event) => setRequirementForm((current) => ({ ...current, category: event.target.value as JobApplicationRequirement["category"] }))}>
+            <option value="eligibility">지원자격</option>
+            <option value="preferred">우대/가점</option>
+            <option value="document">서류</option>
+            <option value="exam">필기</option>
+            <option value="interview">면접</option>
+            <option value="note">메모</option>
+          </select>
+          <input value={requirementForm.title} placeholder="항목명" onChange={(event) => setRequirementForm((current) => ({ ...current, title: event.target.value }))} />
+          <textarea rows={3} value={requirementForm.content} placeholder="내용" onChange={(event) => setRequirementForm((current) => ({ ...current, content: event.target.value }))} />
+          <div className="job-detail-inline-actions">
+            <button disabled={!requirementForm.title.trim()} onClick={() => {
+              void onSaveRequirement(application.id, requirementForm, editingRequirementId ?? undefined);
+              resetRequirementForm();
+            }} type="button">{editingRequirementId ? "요건 수정" : "요건 추가"}</button>
+            {editingRequirementId ? <button onClick={resetRequirementForm} type="button">취소</button> : null}
+          </div>
+        </div>
         {application.requirements.length > 0 ? (
           <div className="job-detail-requirements">
             {application.requirements.map((requirement) => (
@@ -648,6 +887,10 @@ function JobApplicationDetailPanel({
                 <b>{requirement.title}</b>
                 <p>{requirement.content}</p>
                 {requirement.sourceText ? <em>{requirement.sourceText}</em> : null}
+                <div className="job-detail-item-actions">
+                  <button aria-label="요건 수정" onClick={() => startEditRequirement(requirement)} type="button"><Pencil aria-hidden size={13} /></button>
+                  <button aria-label="요건 삭제" onClick={() => void onDeleteRequirement(application.id, requirement.id)} type="button"><Trash2 aria-hidden size={13} /></button>
+                </div>
               </article>
             ))}
           </div>
@@ -1579,6 +1822,21 @@ function toDateInputValue(value?: string) {
   if (!value) return undefined;
   const dateOnly = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
   return dateOnly;
+}
+
+function toDatetimeLocalValue(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function toIsoFromDatetimeLocal(value?: string) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString();
 }
 
 function draftStepToApplicationEvent(step: NonNullable<ReturnType<typeof findDraftStep>>, stage: ApplicationEventStage): ApplicationEvent | null {

@@ -47,7 +47,7 @@ export type JobApplicationBundle = JobApplication & {
 
 export const jobApplicationStatusLabels: Record<JobApplicationStatus, string> = {
   planned: "지원 예정",
-  applied: "지원 완료",
+  applied: "지원중",
   document_pending: "서류 대기",
   written_pending: "필기 대기",
   interview_pending: "면접 대기",
