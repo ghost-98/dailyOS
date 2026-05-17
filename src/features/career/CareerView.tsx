@@ -31,6 +31,7 @@ import {
   fetchCareerRecordsFromDb,
   fetchJobApplicationsFromDb,
   getCertificateFileDownloadUrl,
+  getJobPostingFileDownloadUrl,
   markJobApplicationAsApplied,
   updateCareerRecordInDb,
   updateJobApplicationStepStatus,
@@ -448,13 +449,22 @@ function JobApplicationBoard({
           {application.sourceFileName || application.postingUrl ? (
             <div className="job-application-source-row">
               {application.sourceFileName ? <span>{application.sourceFileName}</span> : null}
+              {application.sourceFilePath ? (
+                <button onClick={() => void openJobPostingFile(application.sourceFilePath)} type="button">
+                  <FileText aria-hidden size={14} />
+                  PDF 보기
+                </button>
+              ) : null}
               {application.postingUrl ? (
                 <a href={application.postingUrl} rel="noreferrer" target="_blank">
-                  공고 열기
+                  <LinkIcon aria-hidden size={14} />
+                  채용사이트
                 </a>
               ) : null}
             </div>
           ) : null}
+
+          {application.memo ? <p className="job-application-summary">{application.memo}</p> : null}
 
           {application.steps.length > 0 ? (
             <div className="job-step-timeline">
@@ -1256,6 +1266,13 @@ function getSubtitlePlaceholder(tab: CareerTab) {
 async function downloadCertificateFile(path?: string) {
   if (!path) return;
   const url = await getCertificateFileDownloadUrl(path);
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function openJobPostingFile(path?: string) {
+  if (!path) return;
+  const url = await getJobPostingFileDownloadUrl(path);
   if (!url) return;
   window.open(url, "_blank", "noopener,noreferrer");
 }

@@ -540,6 +540,13 @@ export async function getCertificateFileDownloadUrl(path: string) {
   return data.signedUrl;
 }
 
+export async function getJobPostingFileDownloadUrl(path: string) {
+  if (!supabase) return null;
+  const { data, error } = await supabase.storage.from("career-files").createSignedUrl(path, 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function uploadJobPostingFileToDb(file: File) {
   if (!supabase) return null;
   const userId = await getUserId();
