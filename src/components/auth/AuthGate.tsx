@@ -4,7 +4,6 @@ import type { Session, User } from "@supabase/supabase-js";
 import { ArrowRight, Cake, Loader2, LockKeyhole, Mail, UserRound, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import { DailyOSMark } from "@/components/brand/DailyOSMark";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "signup";
@@ -245,9 +244,7 @@ function AuthScreen() {
     <main className="auth-page">
       <section className="auth-hero" aria-label="dailyOS 로그인 안내">
         <div className="auth-brand">
-          <span className="auth-brand__mark">
-            <DailyOSMark />
-          </span>
+          <span className="auth-brand__mark">d</span>
           <div>
             <strong>dailyOS</strong>
             <span>일정, 할 일, 건강, 취업 관리</span>
@@ -378,10 +375,8 @@ function AuthShell({ children, description, title }: { children?: ReactNode; des
   return (
     <main className="auth-page auth-page--center">
       <section className="auth-card auth-card--notice">
-      <div className="auth-brand auth-brand--compact">
-        <span className="auth-brand__mark">
-          <DailyOSMark />
-        </span>
+        <div className="auth-brand auth-brand--compact">
+          <span className="auth-brand__mark">d</span>
           <strong>dailyOS</strong>
         </div>
         {children}

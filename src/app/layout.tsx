@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "dailyOS",
-  description: "일정, 할 일, 건강, 취업 관리를 한 곳에서 다루는 개인 OS",
+  description: "개인 생산성과 생활 관리를 위한 PWA",
   manifest: "/manifest.webmanifest",
 };
 
