@@ -145,8 +145,13 @@ function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { company
     "전형 일정은 접수기간, 서류전형/서류발표, 필기시험, 코딩테스트, 면접, 결과발표, 건강검진, 입사일처럼 사용자가 캘린더에서 관리할 날짜만 넣는다.",
     "기간이면 startAt과 endAt을 모두 넣고, 단일 날짜이면 startAt과 endAt에 같은 날짜를 넣는다. 시간이 없으면 해당 날짜의 00:00:00+09:00을 사용한다.",
     "title에는 '2차전형 필기전형', '면접전형', '최종 합격자 발표'처럼 전형명을 짧게 넣고, sourceText에는 PDF 원문 근거 문장을 넣는다.",
-    "requirements에는 지원 가능 여부나 가점 판단에 직접 필요한 자격증, 어학, 전공, 지역인재, 우대/가점, 제출물 요건만 넣는다.",
-    "연령 제한 없음, 병역, 신분증/수험표, 블라인드 채용, 채용서류 반환, 부정행위, 문의처, 회사 소개, 슬로건, 일반 유의사항은 넣지 않는다.",
+    "requirements에는 사용자가 지원 가능 여부와 서류 점수/가점 산정을 판단하는 데 필요한 내용만 넣는다.",
+    "eligibility에는 필수 자격요건만 넣는다. 예: TOEIC 700점 이상, 기술 분야 전공자 또는 관련 분야 자격증 보유자, 특정 지역인재 지원 가능 조건.",
+    "preferred에는 실제 배점이나 가점 계산에 필요한 우대사항만 넣는다. 예: 자격증 가점, 어학 환산식, 서류전형 배점, 우대가점, 이전지역인재 채용목표제.",
+    "document에는 지원서/자기소개서/증빙서류처럼 제출 시기와 제출물이 명확한 것만 넣는다.",
+    "exam/interview에는 필기 과목, NCS/전공 문항 수, 코딩테스트 과목, 면접 평가요소처럼 전형 준비에 필요한 평가정보만 넣는다.",
+    "연령 제한 없음, 병역, 결격사유, 신분증/수험표, 블라인드 채용 유의사항, 채용서류 반환, 부정행위, 문의처, 회사 소개, 슬로건, 일반 유의사항은 requirements에 넣지 않는다.",
+    "자격증/어학/가점 표가 PDF에 있으면 title은 짧게, content에는 점수 기준이나 배점 방식을 요약한다. 표 전체를 길게 복붙하지 않는다.",
     "summary에는 아무 것도 넣지 말고 빈 문자열을 반환한다.",
     "jobRole은 ICT, 전기, 사무, 토목처럼 지원자가 실제 선택하는 직무/모집분야만 넣는다. 채용 수준이나 직급명은 jobRole에 넣지 않는다.",
     "steps는 최대 10개, requirements는 최대 8개, checkItems는 최대 4개로 제한한다.",
@@ -232,10 +237,12 @@ function normalizeRequirements(value: unknown) {
   return value
     .map((item) => {
       const raw = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      const title = asString(raw.title);
+      const content = asString(raw.content);
       return {
-        category: normalizeRequirementCategory(asString(raw.category)),
-        title: asString(raw.title),
-        content: asString(raw.content),
+        category: normalizeRequirementCategoryByText(asString(raw.category), title, content),
+        title,
+        content,
         sourceText: asString(raw.sourceText),
         confidence: Number(raw.confidence) || 0.7,
       };
@@ -290,12 +297,20 @@ function normalizeStepType(type: string, title: string) {
 
 function normalizeRequirementCategory(category: string) {
   if (["eligibility", "preferred", "document", "exam", "interview", "note"].includes(category)) return category;
-  if (category.includes("가점") || category.includes("우대") || category.includes("자격증")) return "preferred";
+  if (category.includes("가점") || category.includes("우대") || category.includes("배점")) return "preferred";
   if (category.includes("서류") || category.includes("제출")) return "document";
   if (category.includes("필기") || category.includes("시험")) return "exam";
   if (category.includes("면접")) return "interview";
-  if (category.includes("자격") || category.includes("어학") || category.includes("전공")) return "eligibility";
+  if (category.includes("자격") || category.includes("자격증") || category.includes("어학") || category.includes("전공")) return "eligibility";
   return "note";
+}
+
+function normalizeRequirementCategoryByText(category: string, title: string, content: string) {
+  const normalized = normalizeRequirementCategory(category);
+  const text = `${title} ${content}`;
+  if (/가점|우대|배점|환산|상한점수|채용목표제/.test(text)) return "preferred";
+  if (/TOEIC|OPIc|TEPS|JPT|HSK|어학|전공자|자격증\s*보유|지원자격|필수|이상/.test(text)) return "eligibility";
+  return normalized;
 }
 
 function normalizeJobRole(value: string) {
@@ -305,7 +320,7 @@ function normalizeJobRole(value: string) {
 
 function isGenericRequirement(title: string, content: string) {
   const text = `${title} ${content}`;
-  return /연령|병역|신분증|수험표|블라인드|반환|이의신청|부정행위|문의|회사|슬로건/.test(text);
+  return /연령|병역|결격|신분증|수험표|블라인드|반환|이의신청|부정행위|청탁|문의|홈페이지|회사\s*소개|슬로건|정년|입사일부터\s*근무|허위|위변조|신원조사/.test(text);
 }
 
 const extractionSchema = {

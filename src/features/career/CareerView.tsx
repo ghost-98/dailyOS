@@ -634,10 +634,13 @@ function JobApplicationBoard({
                 </div>
               ))}
             </div>
-          ) : null}
+          ) : (
+            <div className="job-card-template-empty">전형 일정 없음</div>
+          )}
 
           {application.requirements.length > 0 ? (
             <div className="job-requirement-strip">
+              <strong>자격/가점</strong>
               {application.requirements.slice(0, 5).map((requirement) => (
                 <span key={requirement.id}>
                   <b>{requirement.title}</b>
@@ -645,7 +648,23 @@ function JobApplicationBoard({
                 </span>
               ))}
             </div>
-          ) : null}
+          ) : (
+            <div className="job-card-template-empty">자격/가점 요건 없음</div>
+          )}
+
+          {application.checkItems.length > 0 ? (
+            <div className="job-requirement-strip job-requirement-strip--checks">
+              <strong>준비 체크</strong>
+              {application.checkItems.slice(0, 4).map((item) => (
+                <span key={item.id}>
+                  <b>{item.title}</b>
+                  {item.memo || (item.dueAt ? formatDraftRange(item.dueAt, item.dueAt) : "체크 항목")}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="job-card-template-empty">준비 체크 없음</div>
+          )}
         </article>
         );
       })}

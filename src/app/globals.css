@@ -3180,6 +3180,14 @@ a:focus-visible {
   gap: 8px;
 }
 
+.job-requirement-strip > strong {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .job-requirement-strip span {
   display: inline-flex;
   max-width: 100%;
@@ -3195,6 +3203,19 @@ a:focus-visible {
 
 .job-requirement-strip b {
   color: var(--text);
+}
+
+.job-requirement-strip--checks span {
+  border-color: rgba(61, 220, 151, 0.2);
+  background: rgba(61, 220, 151, 0.06);
+}
+
+.job-card-template-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 9px 11px;
 }
 
 .job-detail-panel {

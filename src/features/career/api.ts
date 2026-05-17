@@ -611,9 +611,46 @@ export async function updateJobApplicationInDb(
 
 export async function deleteJobApplicationFromDb(applicationId: string) {
   if (!supabase) return false;
-  const { data, error } = await supabase.from("job_applications").delete().eq("id", applicationId).select("id").maybeSingle();
+
+  const { data: application, error: readError } = await supabase
+    .from("job_applications")
+    .select("id,source_file_path")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (readError) throw toDbError(readError, "공고 삭제 전 조회에 실패했습니다.");
+  if (!application) throw new Error("삭제할 공고를 찾지 못했습니다. Supabase RLS 정책이나 소유자(user_id)를 확인해주세요.");
+
+  const sourceFilePath = (application as { source_file_path?: string | null }).source_file_path;
+  const cleanupTargets = [
+    { table: "job_application_check_items", label: "준비 체크" },
+    { table: "job_application_requirements", label: "지원 요건" },
+    { table: "job_application_steps", label: "전형 일정" },
+  ];
+
+  for (const target of cleanupTargets) {
+    const { error } = await supabase.from(target.table).delete().eq("application_id", applicationId);
+    if (error) throw toDbError(error, `${target.label} 정리에 실패했습니다.`);
+  }
+
+  const { error: fileLinkError } = await supabase.from("job_application_files").delete().eq("application_id", applicationId);
+  if (fileLinkError) throw toDbError(fileLinkError, "공고 파일 연결 정리에 실패했습니다.");
+
+  if (sourceFilePath) {
+    const { error: draftError } = await supabase.from("ai_extraction_drafts").delete().eq("source_file_path", sourceFilePath);
+    if (draftError) throw toDbError(draftError, "AI 초안 정리에 실패했습니다.");
+
+    const { error: orphanFileError } = await supabase.from("job_application_files").delete().eq("file_path", sourceFilePath);
+    if (orphanFileError) throw toDbError(orphanFileError, "공고 파일 메타데이터 정리에 실패했습니다.");
+  }
+
+  const { error } = await supabase.from("job_applications").delete().eq("id", applicationId);
   if (error) throw toDbError(error, "공고 삭제에 실패했습니다.");
-  if (!data) throw new Error("공고가 삭제되지 않았습니다. Supabase RLS 정책이나 소유자(user_id)를 확인해주세요.");
+
+  const { data: remaining, error: verifyError } = await supabase.from("job_applications").select("id").eq("id", applicationId).maybeSingle();
+  if (verifyError) throw toDbError(verifyError, "공고 삭제 확인에 실패했습니다.");
+  if (remaining) throw new Error("공고가 삭제되지 않았습니다. Supabase RLS 정책이나 소유자(user_id)를 확인해주세요.");
+
   return true;
 }
 
