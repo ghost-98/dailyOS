@@ -2676,6 +2676,13 @@ a:focus-visible {
   gap: 18px;
 }
 
+.health-daily-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  gap: 18px;
+  align-items: start;
+}
+
 .weight-card,
 .health-metric-card,
 .workout-section {
@@ -2690,6 +2697,17 @@ a:focus-visible {
 .weight-card > strong {
   font-size: 52px;
   line-height: 0.95;
+}
+
+.weight-card__trend {
+  display: grid;
+  gap: 8px;
+}
+
+.weight-card__trend > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
 }
 
 .weight-flags {
@@ -2781,6 +2799,24 @@ a:focus-visible {
 .workout-section {
   display: grid;
   gap: 20px;
+}
+
+.workout-section .section-heading {
+  margin-bottom: 0;
+}
+
+.workout-section__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.workout-section__summary strong {
+  color: var(--text);
+  font-size: 15px;
 }
 
 .workout-session-list {
@@ -5273,6 +5309,10 @@ a:focus-visible {
   }
 
   .health-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-daily-grid {
     grid-template-columns: 1fr;
   }
 

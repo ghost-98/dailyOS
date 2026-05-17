@@ -78,7 +78,7 @@ export function HealthView() {
   const weight = useMemo(() => weights.find((record) => record.date === selectedDate), [selectedDate, weights]);
   const sessions = useMemo(() => workouts.filter((session) => session.date === selectedDate), [selectedDate, workouts]);
   const totalMinutes = sessions.reduce((sum, session) => sum + session.durationMinutes, 0);
-  const latestWeight = weights[0];
+  const weightTrend = weights.slice(0, 12).reverse();
 
   const saveWeight = async (record: WeightRecord) => {
     const exists = weights.some((item) => item.id === record.id);
@@ -124,17 +124,25 @@ export function HealthView() {
           </div>
         </div>
         <div className="health-actions">
-          <button className="header-action" onClick={() => {
-            setEditingWeight(null);
-            setSheetType("weight");
-          }} type="button">
+          <button
+            className="header-action"
+            onClick={() => {
+              setEditingWeight(null);
+              setSheetType("weight");
+            }}
+            type="button"
+          >
             <Scale aria-hidden size={18} />
             몸무게 기록
           </button>
-          <button className="header-action" onClick={() => {
-            setEditingWorkout(null);
-            setSheetType("workout");
-          }} type="button">
+          <button
+            className="header-action"
+            onClick={() => {
+              setEditingWorkout(null);
+              setSheetType("workout");
+            }}
+            type="button"
+          >
             <Plus aria-hidden size={18} />
             운동 기록
           </button>
@@ -151,7 +159,7 @@ export function HealthView() {
         </button>
       </SectionCard>
 
-      <div className="health-summary-grid">
+      <div className="health-daily-grid">
         <WeightCard
           onDelete={deleteWeight}
           onEdit={(record) => {
@@ -159,51 +167,42 @@ export function HealthView() {
             setSheetType("weight");
           }}
           weight={weight}
+          weightTrend={weightTrend}
         />
-        <SectionCard className="health-metric-card">
-          <span>운동 기록</span>
-          <strong>{sessions.length}</strong>
-          <p>{isLoading ? "불러오는 중입니다." : `총 ${totalMinutes}분 기록`}</p>
-        </SectionCard>
-        <SectionCard className="health-metric-card">
-          <span>최근 몸무게</span>
-          <strong>{latestWeight ? `${latestWeight.weightKg}kg` : "--"}</strong>
-          <div className="weight-sparkline" aria-hidden>
-            {weights.slice(0, 12).reverse().map((record) => (
-              <span key={record.id} style={{ height: `${Math.max(20, 100 - (record.weightKg - 70) * 16)}%` }} />
-            ))}
+
+        <SectionCard className="workout-section">
+          <div className="section-heading">
+            <div className="card-title">
+              <Dumbbell aria-hidden size={20} />
+              <span>운동 기록</span>
+            </div>
+            <div className="workout-section__summary">
+              <strong>{sessions.length}건</strong>
+              <span>{totalMinutes}분</span>
+            </div>
+          </div>
+
+          <div className="workout-session-list">
+            {sessions.length > 0 ? sessions.map((session) => (
+              <WorkoutSessionCard
+                key={session.id}
+                onDelete={deleteWorkout}
+                onEdit={(target) => {
+                  setEditingWorkout(target);
+                  setSheetType("workout");
+                }}
+                session={session}
+              />
+            )) : (
+              <div className="health-empty">
+                <Activity aria-hidden size={24} />
+                <strong>운동 기록이 없습니다.</strong>
+                <p>{isLoading ? "불러오는 중입니다." : "운동을 기록하면 이 날짜에 표시됩니다."}</p>
+              </div>
+            )}
           </div>
         </SectionCard>
       </div>
-
-      <SectionCard className="workout-section">
-        <div className="section-heading">
-          <div className="card-title">
-            <Dumbbell aria-hidden size={20} />
-            <span>운동 기록</span>
-          </div>
-        </div>
-
-        <div className="workout-session-list">
-          {sessions.length > 0 ? sessions.map((session) => (
-            <WorkoutSessionCard
-              key={session.id}
-              onDelete={deleteWorkout}
-              onEdit={(target) => {
-                setEditingWorkout(target);
-                setSheetType("workout");
-              }}
-              session={session}
-            />
-          )) : (
-            <div className="health-empty">
-              <Activity aria-hidden size={24} />
-              <strong>운동 기록이 없습니다.</strong>
-              <p>{isLoading ? "불러오는 중입니다." : "운동을 기록하면 이 날짜에 표시됩니다."}</p>
-            </div>
-          )}
-        </div>
-      </SectionCard>
 
       {sheetType === "weight" ? (
         <WeightRecordSheet
@@ -231,7 +230,17 @@ export function HealthView() {
   );
 }
 
-function WeightCard({ onDelete, onEdit, weight }: { onDelete: (id: string) => void; onEdit: (record: WeightRecord) => void; weight?: WeightRecord }) {
+function WeightCard({
+  onDelete,
+  onEdit,
+  weight,
+  weightTrend,
+}: {
+  onDelete: (id: string) => void;
+  onEdit: (record: WeightRecord) => void;
+  weight?: WeightRecord;
+  weightTrend: WeightRecord[];
+}) {
   return (
     <SectionCard className="weight-card">
       <div className="card-title">
@@ -247,6 +256,16 @@ function WeightCard({ onDelete, onEdit, weight }: { onDelete: (id: string) => vo
               공복 측정
             </span>
           </div>
+          {weightTrend.length > 1 ? (
+            <div className="weight-card__trend">
+              <span>최근 기록</span>
+              <div className="weight-sparkline" aria-hidden>
+                {weightTrend.map((record) => (
+                  <span key={record.id} style={{ height: `${Math.max(20, 100 - (record.weightKg - 70) * 16)}%` }} />
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="record-actions">
             <button onClick={() => onEdit(weight)} type="button">
               <Pencil aria-hidden size={15} />
@@ -272,7 +291,7 @@ function WeightCard({ onDelete, onEdit, weight }: { onDelete: (id: string) => vo
       ) : (
         <div className="health-empty health-empty--compact">
           <strong>기록 없음</strong>
-          <p>이 날짜의 몸무게 기록이 없습니다.</p>
+          <p>이 날짜에 몸무게 기록이 없습니다.</p>
         </div>
       )}
     </SectionCard>
