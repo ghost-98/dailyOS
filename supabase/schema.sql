@@ -146,6 +146,115 @@ create table if not exists public.application_events (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.job_applications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  company_name text not null,
+  posting_title text not null default '',
+  job_role text not null default '',
+  status text not null default 'preparing' check (
+    status in (
+      'watching',
+      'preparing',
+      'applied',
+      'document_pending',
+      'written_pending',
+      'interview_pending',
+      'result_pending',
+      'accepted',
+      'rejected',
+      'closed'
+    )
+  ),
+  posting_url text,
+  source_file_path text,
+  source_file_name text,
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.job_application_steps (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  application_id uuid not null references public.job_applications(id) on delete cascade,
+  type text not null default 'etc' check (
+    type in (
+      'application',
+      'document',
+      'written',
+      'coding_test',
+      'assignment',
+      'interview',
+      'medical',
+      'result',
+      'employment',
+      'etc'
+    )
+  ),
+  title text not null,
+  start_at timestamptz,
+  end_at timestamptz,
+  status text not null default 'confirmed' check (status in ('draft', 'confirmed', 'done', 'skipped')),
+  order_index integer not null default 0,
+  memo text,
+  source_text text,
+  confirmed_by_user boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.job_application_requirements (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  application_id uuid not null references public.job_applications(id) on delete cascade,
+  category text not null default 'note' check (category in ('eligibility', 'preferred', 'document', 'exam', 'interview', 'note')),
+  title text not null,
+  content text not null default '',
+  source_text text,
+  confirmed_by_user boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.job_application_check_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  application_id uuid not null references public.job_applications(id) on delete cascade,
+  title text not null,
+  category text not null default 'note' check (category in ('eligibility', 'preferred', 'document', 'exam', 'interview', 'note')),
+  due_at timestamptz,
+  is_done boolean not null default false,
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.job_application_files (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  application_id uuid references public.job_applications(id) on delete cascade,
+  kind text not null default 'posting' check (kind in ('posting', 'resume', 'proof', 'etc')),
+  file_path text not null,
+  file_name text not null,
+  mime_type text,
+  size_bytes bigint check (size_bytes is null or size_bytes >= 0),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.ai_extraction_drafts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  application_id uuid references public.job_applications(id) on delete cascade,
+  source_file_path text,
+  source_file_name text,
+  extracted_json jsonb not null default '{}'::jsonb,
+  status text not null default 'draft' check (status in ('draft', 'reviewed', 'applied', 'discarded')),
+  model_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists profiles_email_idx on public.profiles(email);
 create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, scheduled_date);
 create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date);
@@ -155,6 +264,13 @@ create index if not exists weight_records_user_date_idx on public.weight_records
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
 create index if not exists application_events_record_idx on public.application_events(career_record_id, event_date);
+create index if not exists job_applications_user_status_idx on public.job_applications(user_id, status, created_at desc);
+create index if not exists job_application_steps_application_idx on public.job_application_steps(application_id, order_index, start_at);
+create index if not exists job_application_steps_user_start_idx on public.job_application_steps(user_id, start_at);
+create index if not exists job_application_requirements_application_idx on public.job_application_requirements(application_id, category);
+create index if not exists job_application_check_items_application_idx on public.job_application_check_items(application_id, is_done, due_at);
+create index if not exists job_application_files_application_idx on public.job_application_files(application_id, kind);
+create index if not exists ai_extraction_drafts_application_idx on public.ai_extraction_drafts(application_id, status, created_at desc);
 
 insert into storage.buckets (id, name, public)
 values ('career-files', 'career-files', false)
@@ -217,6 +333,31 @@ create trigger set_application_events_updated_at
 before update on public.application_events
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_job_applications_updated_at on public.job_applications;
+create trigger set_job_applications_updated_at
+before update on public.job_applications
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_job_application_steps_updated_at on public.job_application_steps;
+create trigger set_job_application_steps_updated_at
+before update on public.job_application_steps
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_job_application_requirements_updated_at on public.job_application_requirements;
+create trigger set_job_application_requirements_updated_at
+before update on public.job_application_requirements
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_job_application_check_items_updated_at on public.job_application_check_items;
+create trigger set_job_application_check_items_updated_at
+before update on public.job_application_check_items
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_ai_extraction_drafts_updated_at on public.ai_extraction_drafts;
+create trigger set_ai_extraction_drafts_updated_at
+before update on public.ai_extraction_drafts
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
@@ -224,6 +365,12 @@ alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
 alter table public.career_records enable row level security;
 alter table public.application_events enable row level security;
+alter table public.job_applications enable row level security;
+alter table public.job_application_steps enable row level security;
+alter table public.job_application_requirements enable row level security;
+alter table public.job_application_check_items enable row level security;
+alter table public.job_application_files enable row level security;
+alter table public.ai_extraction_drafts enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -407,5 +554,247 @@ with check (
 drop policy if exists "Users can delete own application events" on public.application_events;
 create policy "Users can delete own application events"
 on public.application_events for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own job applications" on public.job_applications;
+create policy "Users can read own job applications"
+on public.job_applications for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own job applications" on public.job_applications;
+create policy "Users can insert own job applications"
+on public.job_applications for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own job applications" on public.job_applications;
+create policy "Users can update own job applications"
+on public.job_applications for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own job applications" on public.job_applications;
+create policy "Users can delete own job applications"
+on public.job_applications for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own job application steps" on public.job_application_steps;
+create policy "Users can read own job application steps"
+on public.job_application_steps for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own job application steps" on public.job_application_steps;
+create policy "Users can insert own job application steps"
+on public.job_application_steps for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_steps.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can update own job application steps" on public.job_application_steps;
+create policy "Users can update own job application steps"
+on public.job_application_steps for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_steps.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can delete own job application steps" on public.job_application_steps;
+create policy "Users can delete own job application steps"
+on public.job_application_steps for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own job application requirements" on public.job_application_requirements;
+create policy "Users can read own job application requirements"
+on public.job_application_requirements for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own job application requirements" on public.job_application_requirements;
+create policy "Users can insert own job application requirements"
+on public.job_application_requirements for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_requirements.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can update own job application requirements" on public.job_application_requirements;
+create policy "Users can update own job application requirements"
+on public.job_application_requirements for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_requirements.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can delete own job application requirements" on public.job_application_requirements;
+create policy "Users can delete own job application requirements"
+on public.job_application_requirements for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own job application check items" on public.job_application_check_items;
+create policy "Users can read own job application check items"
+on public.job_application_check_items for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own job application check items" on public.job_application_check_items;
+create policy "Users can insert own job application check items"
+on public.job_application_check_items for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_check_items.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can update own job application check items" on public.job_application_check_items;
+create policy "Users can update own job application check items"
+on public.job_application_check_items for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.job_applications
+    where job_applications.id = job_application_check_items.application_id
+      and job_applications.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can delete own job application check items" on public.job_application_check_items;
+create policy "Users can delete own job application check items"
+on public.job_application_check_items for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own job application files" on public.job_application_files;
+create policy "Users can read own job application files"
+on public.job_application_files for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own job application files" on public.job_application_files;
+create policy "Users can insert own job application files"
+on public.job_application_files for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and (
+    application_id is null
+    or exists (
+      select 1
+      from public.job_applications
+      where job_applications.id = job_application_files.application_id
+        and job_applications.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can update own job application files" on public.job_application_files;
+create policy "Users can update own job application files"
+on public.job_application_files for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and (
+    application_id is null
+    or exists (
+      select 1
+      from public.job_applications
+      where job_applications.id = job_application_files.application_id
+        and job_applications.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can delete own job application files" on public.job_application_files;
+create policy "Users can delete own job application files"
+on public.job_application_files for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own ai extraction drafts" on public.ai_extraction_drafts;
+create policy "Users can read own ai extraction drafts"
+on public.ai_extraction_drafts for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own ai extraction drafts" on public.ai_extraction_drafts;
+create policy "Users can insert own ai extraction drafts"
+on public.ai_extraction_drafts for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and (
+    application_id is null
+    or exists (
+      select 1
+      from public.job_applications
+      where job_applications.id = ai_extraction_drafts.application_id
+        and job_applications.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can update own ai extraction drafts" on public.ai_extraction_drafts;
+create policy "Users can update own ai extraction drafts"
+on public.ai_extraction_drafts for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and (
+    application_id is null
+    or exists (
+      select 1
+      from public.job_applications
+      where job_applications.id = ai_extraction_drafts.application_id
+        and job_applications.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can delete own ai extraction drafts" on public.ai_extraction_drafts;
+create policy "Users can delete own ai extraction drafts"
+on public.ai_extraction_drafts for delete
 to authenticated
 using (user_id = auth.uid());

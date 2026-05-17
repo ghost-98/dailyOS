@@ -38,6 +38,7 @@ import {
   type CareerRecord,
   type CareerTab,
 } from "./data";
+import { defaultJobProcessStepTypes, jobProcessStepLabels, type JobProcessStepType } from "./job-model";
 
 const tabLabels: Record<CareerTab, string> = {
   applied: "지원한 기업",
@@ -289,9 +290,9 @@ function CompanyManagementPreview({ activeTab }: { activeTab: CareerTab }) {
         <div className="company-workflow-card">
           <span>전형 흐름</span>
           <div className="company-stage-strip">
-            {["서류", "필기", "면접", "결과"].map((stage, index) => (
-              <b key={stage} className={index === 1 ? "company-stage-strip__item company-stage-strip__item--active" : "company-stage-strip__item"}>
-                {stage}
+            {defaultJobProcessStepTypes.slice(0, 6).map((stage, index) => (
+              <b key={stage} className={index === 2 ? "company-stage-strip__item company-stage-strip__item--active" : "company-stage-strip__item"}>
+                {jobProcessStepLabels[stage]}
               </b>
             ))}
           </div>
@@ -959,30 +960,36 @@ function getCompanyProcessStages(record: CareerRecord) {
 
   const stages = [
     {
+      key: "application",
+      label: jobProcessStepLabels.application,
+      date: record.deadlineDate,
+      memo: undefined,
+    },
+    {
       key: "document",
-      label: "서류",
+      label: jobProcessStepLabels.document,
       date: eventByStage.get("document")?.date ?? record.deadlineDate,
       memo: eventByStage.get("document")?.memo,
     },
     {
       key: "written",
-      label: "필기",
+      label: jobProcessStepLabels.written,
       date: eventByStage.get("written")?.date ?? record.examDate,
       memo: eventByStage.get("written")?.memo,
     },
     {
       key: "interview",
-      label: "면접",
+      label: jobProcessStepLabels.interview,
       date: eventByStage.get("interview")?.date ?? record.interviewDate,
       memo: eventByStage.get("interview")?.memo,
     },
     {
       key: "result",
-      label: "결과",
+      label: jobProcessStepLabels.result,
       date: record.resultDate,
       memo: undefined,
     },
-  ];
+  ] satisfies { key: JobProcessStepType; label: string; date?: string; memo?: string }[];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
