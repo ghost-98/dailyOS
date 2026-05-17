@@ -307,9 +307,9 @@ function AuthScreen() {
     }
 
     setVerificationEmail("");
-    setVerificationCode("");
     setVerificationExpiresAt(null);
-    setMessage("");
+    setVerificationCode("");
+    setMessage("이메일 인증이 완료되었습니다.");
   };
 
   const sendResetEmail = async () => {
@@ -394,19 +394,18 @@ function AuthScreen() {
             </label>
 
             <div className="auth-profile-grid">
-              <label className="auth-field">
+              <div className="auth-field">
                 <span>성별</span>
-                <div>
+                <div className="auth-gender-toggle">
                   <UsersRound aria-hidden size={18} />
-                  <select value={gender} onChange={(event) => setGender(event.target.value)}>
-                    <option value="">선택</option>
-                    <option value="male">남성</option>
-                    <option value="female">여성</option>
-                    <option value="other">기타</option>
-                    <option value="prefer_not_to_say">응답 안 함</option>
-                  </select>
+                  <button className={gender === "male" ? "auth-gender-toggle__item auth-gender-toggle__item--active" : "auth-gender-toggle__item"} onClick={() => setGender("male")} type="button">
+                    남
+                  </button>
+                  <button className={gender === "female" ? "auth-gender-toggle__item auth-gender-toggle__item--active" : "auth-gender-toggle__item"} onClick={() => setGender("female")} type="button">
+                    여
+                  </button>
                 </div>
-              </label>
+              </div>
 
               <label className="auth-field">
                 <span>생년월일</span>

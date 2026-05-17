@@ -255,6 +255,30 @@ button {
   opacity: 0.6;
 }
 
+.auth-gender-toggle {
+  padding-right: 6px !important;
+}
+
+.auth-gender-toggle svg {
+  flex: 0 0 auto;
+}
+
+.auth-gender-toggle__item {
+  min-height: 38px;
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.auth-gender-toggle__item--active {
+  border-color: transparent;
+  background: var(--violet);
+  color: #151020;
+}
+
 .auth-field svg {
   color: var(--violet);
 }
