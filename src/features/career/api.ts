@@ -504,8 +504,9 @@ export async function updateJobApplicationInDb(
 
 export async function deleteJobApplicationFromDb(applicationId: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("job_applications").delete().eq("id", applicationId);
+  const { data, error } = await supabase.from("job_applications").delete().eq("id", applicationId).select("id").maybeSingle();
   if (error) throw toDbError(error, "공고 삭제에 실패했습니다.");
+  if (!data) throw new Error("공고가 삭제되지 않았습니다. Supabase RLS 정책이나 소유자(user_id)를 확인해주세요.");
   return true;
 }
 

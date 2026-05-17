@@ -223,11 +223,14 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
 
   const deleteApplication = async (applicationId: string) => {
     if (!window.confirm("이 공고를 삭제할까요?")) return;
-    await deleteJobApplicationFromDb(applicationId);
-    setJobApplications((current) => current.filter((item) => item.id !== applicationId));
-    setSelectedApplicationId((current) => (current === applicationId ? null : current));
+    try {
+      await deleteJobApplicationFromDb(applicationId);
+      setJobApplications((current) => current.filter((item) => item.id !== applicationId));
+      setSelectedApplicationId((current) => (current === applicationId ? null : current));
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "공고 삭제에 실패했습니다.");
+    }
   };
-
   const saveApplicationStep = async (
     applicationId: string,
     step: { type: JobApplicationStep["type"]; title: string; startAt?: string; endAt?: string; memo?: string; sourceText?: string },
