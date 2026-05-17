@@ -152,10 +152,9 @@ create table if not exists public.job_applications (
   company_name text not null,
   posting_title text not null default '',
   job_role text not null default '',
-  status text not null default 'preparing' check (
+  status text not null default 'planned' check (
     status in (
-      'watching',
-      'preparing',
+      'planned',
       'applied',
       'document_pending',
       'written_pending',

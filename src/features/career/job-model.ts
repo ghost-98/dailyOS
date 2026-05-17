@@ -1,6 +1,5 @@
 export type JobApplicationStatus =
-  | "watching"
-  | "preparing"
+  | "planned"
   | "applied"
   | "document_pending"
   | "written_pending"
@@ -38,6 +37,24 @@ export type JobApplication = {
   sourceFilePath?: string;
   sourceFileName?: string;
   memo?: string;
+};
+
+export type JobApplicationBundle = JobApplication & {
+  steps: JobApplicationStep[];
+  requirements: JobApplicationRequirement[];
+  checkItems: JobApplicationCheckItem[];
+};
+
+export const jobApplicationStatusLabels: Record<JobApplicationStatus, string> = {
+  planned: "지원 예정",
+  applied: "지원 완료",
+  document_pending: "서류 대기",
+  written_pending: "필기 대기",
+  interview_pending: "면접 대기",
+  result_pending: "결과 대기",
+  accepted: "합격",
+  rejected: "불합격",
+  closed: "종료",
 };
 
 export type JobApplicationStep = {

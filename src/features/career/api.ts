@@ -1,6 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import type { ApplicationEvent, ApplicationEventStage, CareerRecord, CareerTab } from "./data";
-import type { JobPostingExtraction } from "./job-model";
+import type {
+  JobApplicationBundle,
+  JobApplicationCheckItem,
+  JobApplicationRequirement,
+  JobApplicationStatus,
+  JobApplicationStep,
+  JobPostingExtraction,
+} from "./job-model";
 
 type CareerRecordRow = {
   id: string;
@@ -40,10 +47,66 @@ type CareerRecordInsert = Omit<CareerRecordRow, "id" | "application_events"> & {
 
 type CareerRecordUpdate = Partial<Omit<CareerRecordInsert, "user_id">>;
 
+type JobApplicationRow = {
+  id: string;
+  company_name: string;
+  posting_title: string;
+  job_role: string;
+  status: JobApplicationStatus;
+  posting_url: string | null;
+  source_file_path: string | null;
+  source_file_name: string | null;
+  memo: string | null;
+  job_application_steps?: JobApplicationStepRow[];
+  job_application_requirements?: JobApplicationRequirementRow[];
+  job_application_check_items?: JobApplicationCheckItemRow[];
+};
+
+type JobApplicationStepRow = {
+  id: string;
+  application_id: string;
+  type: JobApplicationStep["type"];
+  title: string;
+  start_at: string | null;
+  end_at: string | null;
+  status: JobApplicationStep["status"];
+  order_index: number;
+  memo: string | null;
+  source_text: string | null;
+  confirmed_by_user: boolean;
+};
+
+type JobApplicationRequirementRow = {
+  id: string;
+  application_id: string;
+  category: JobApplicationRequirement["category"];
+  title: string;
+  content: string;
+  source_text: string | null;
+  confirmed_by_user: boolean;
+};
+
+type JobApplicationCheckItemRow = {
+  id: string;
+  application_id: string;
+  title: string;
+  category: JobApplicationCheckItem["category"];
+  due_at: string | null;
+  is_done: boolean;
+  memo: string | null;
+};
+
 const recordColumns = `
   id,tab,title,subtitle,status,primary_date,deadline_date,exam_date,interview_date,result_date,url,resume_name,
   required_certs,required_docs,certificate_number,issuer,expires_never,certificate_file_path,certificate_file_name,priority,memo,
   application_events(id,stage,event_date,memo)
+`;
+
+const jobApplicationColumns = `
+  id,company_name,posting_title,job_role,status,posting_url,source_file_path,source_file_name,memo,
+  job_application_steps(id,application_id,type,title,start_at,end_at,status,order_index,memo,source_text,confirmed_by_user),
+  job_application_requirements(id,application_id,category,title,content,source_text,confirmed_by_user),
+  job_application_check_items(id,application_id,title,category,due_at,is_done,memo)
 `;
 
 async function getUserId() {
@@ -55,6 +118,15 @@ async function getUserId() {
 
 function emptyToNull(value?: string) {
   return value?.trim() ? value.trim() : null;
+}
+
+function toDateOnly(value?: string) {
+  return value?.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+}
+
+function toTimeOnly(value?: string) {
+  if (!value?.includes("T")) return null;
+  return value.match(/T(\d{2}:\d{2})/)?.[1] ?? null;
 }
 
 function mapApplicationEventRow(row: ApplicationEventRow): ApplicationEvent {
@@ -90,6 +162,53 @@ function mapCareerRecordRow(row: CareerRecordRow): CareerRecord {
     priority: row.priority ?? undefined,
     memo: row.memo ?? undefined,
     applicationEvents: row.application_events?.map(mapApplicationEventRow) ?? [],
+  };
+}
+
+function mapJobApplicationRow(row: JobApplicationRow): JobApplicationBundle {
+  return {
+    id: row.id,
+    companyName: row.company_name,
+    postingTitle: row.posting_title,
+    jobRole: row.job_role,
+    status: row.status,
+    postingUrl: row.posting_url ?? undefined,
+    sourceFilePath: row.source_file_path ?? undefined,
+    sourceFileName: row.source_file_name ?? undefined,
+    memo: row.memo ?? undefined,
+    steps: (row.job_application_steps ?? [])
+      .map((step) => ({
+        id: step.id,
+        applicationId: step.application_id,
+        type: step.type,
+        title: step.title,
+        startAt: step.start_at ?? undefined,
+        endAt: step.end_at ?? undefined,
+        status: step.status,
+        orderIndex: step.order_index,
+        memo: step.memo ?? undefined,
+        sourceText: step.source_text ?? undefined,
+        confirmedByUser: step.confirmed_by_user,
+      }))
+      .sort((a, b) => a.orderIndex - b.orderIndex),
+    requirements: (row.job_application_requirements ?? []).map((requirement) => ({
+      id: requirement.id,
+      applicationId: requirement.application_id,
+      category: requirement.category,
+      title: requirement.title,
+      content: requirement.content,
+      sourceText: requirement.source_text ?? undefined,
+      confirmedByUser: requirement.confirmed_by_user,
+    })),
+    checkItems: (row.job_application_check_items ?? []).map((item) => ({
+      id: item.id,
+      applicationId: item.application_id,
+      title: item.title,
+      category: item.category,
+      dueAt: item.due_at ?? undefined,
+      isDone: item.is_done,
+      memo: item.memo ?? undefined,
+    })),
   };
 }
 
@@ -199,6 +318,161 @@ export async function deleteCareerRecordFromDb(id: string) {
   const { error } = await supabase.from("career_records").delete().eq("id", id);
   if (error) throw error;
   return true;
+}
+
+export async function fetchJobApplicationsFromDb() {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("job_applications")
+    .select(jobApplicationColumns)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data as JobApplicationRow[]).map(mapJobApplicationRow);
+}
+
+export async function createJobApplicationFromExtraction({
+  extraction,
+  sourceFileName,
+  sourceFilePath,
+}: {
+  extraction: JobPostingExtraction;
+  sourceFileName?: string;
+  sourceFilePath?: string;
+}) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("job_applications")
+    .insert({
+      user_id: userId,
+      company_name: extraction.companyName?.trim() || "기업명 미확인",
+      posting_title: extraction.postingTitle?.trim() || "채용공고",
+      job_role: extraction.jobRole?.trim() || "",
+      status: "planned",
+      posting_url: emptyToNull(extraction.postingUrl),
+      source_file_path: emptyToNull(sourceFilePath),
+      source_file_name: emptyToNull(sourceFileName),
+      memo: extraction.summary || null,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  const applicationId = (data as { id: string }).id;
+
+  const stepRows = extraction.steps.map((step, index) => ({
+    user_id: userId,
+    application_id: applicationId,
+    type: step.type,
+    title: step.title,
+    start_at: emptyToNull(step.startAt),
+    end_at: emptyToNull(step.endAt),
+    status: "confirmed",
+    order_index: index,
+    memo: emptyToNull(step.memo),
+    source_text: emptyToNull(step.sourceText),
+    confirmed_by_user: false,
+  }));
+
+  if (stepRows.length > 0) {
+    const { error: stepsError } = await supabase.from("job_application_steps").insert(stepRows);
+    if (stepsError) throw stepsError;
+  }
+
+  const requirementRows = extraction.requirements.map((requirement) => ({
+    user_id: userId,
+    application_id: applicationId,
+    category: requirement.category,
+    title: requirement.title,
+    content: requirement.content,
+    source_text: emptyToNull(requirement.sourceText),
+    confirmed_by_user: false,
+  }));
+
+  if (requirementRows.length > 0) {
+    const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
+    if (requirementsError) throw requirementsError;
+  }
+
+  const checkRows = extraction.checkItems.map((item) => ({
+    user_id: userId,
+    application_id: applicationId,
+    title: item.title,
+    category: item.category,
+    due_at: emptyToNull(item.dueAt),
+    is_done: false,
+    memo: emptyToNull(item.memo || item.sourceText),
+  }));
+
+  if (checkRows.length > 0) {
+    const { error: checkError } = await supabase.from("job_application_check_items").insert(checkRows);
+    if (checkError) throw checkError;
+  }
+
+  if (sourceFilePath && sourceFileName) {
+    const { error: fileError } = await supabase.from("job_application_files").insert({
+      user_id: userId,
+      application_id: applicationId,
+      kind: "posting",
+      file_path: sourceFilePath,
+      file_name: sourceFileName,
+    });
+    if (fileError) console.warn("Failed to save linked job posting file metadata", fileError);
+  }
+
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
+}
+
+export async function markJobApplicationAsApplied(application: JobApplicationBundle) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { error } = await supabase
+    .from("job_applications")
+    .update({ status: "applied" })
+    .eq("id", application.id);
+
+  if (error) throw error;
+
+  const calendarRows = application.steps
+    .filter((step) => step.startAt || step.endAt)
+    .map((step) => ({
+      user_id: userId,
+      event_date: toDateOnly(step.startAt ?? step.endAt),
+      event_time: toTimeOnly(step.startAt),
+      type: "career",
+      title: `${application.companyName} · ${step.title}`,
+      meta: application.postingTitle,
+    }))
+    .filter((row) => row.event_date);
+
+  if (calendarRows.length > 0) {
+    const { error: calendarError } = await supabase.from("calendar_events").insert(calendarRows);
+    if (calendarError) throw calendarError;
+  }
+
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === application.id) ?? null;
+}
+
+export async function updateJobApplicationStepStatus(applicationId: string, stepId: string, status: JobApplicationStep["status"]) {
+  if (!supabase) return null;
+  const { error } = await supabase
+    .from("job_application_steps")
+    .update({ status })
+    .eq("id", stepId);
+
+  if (error) throw error;
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === applicationId) ?? null;
 }
 
 export async function uploadCertificateFileToDb(file: File, recordId: string, existingPath?: string) {

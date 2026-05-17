@@ -25,10 +25,14 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import {
   createCareerRecordInDb,
   createAiExtractionDraftInDb,
+  createJobApplicationFromExtraction,
   deleteCareerRecordFromDb,
   fetchCareerRecordsFromDb,
+  fetchJobApplicationsFromDb,
   getCertificateFileDownloadUrl,
+  markJobApplicationAsApplied,
   updateCareerRecordInDb,
+  updateJobApplicationStepStatus,
   uploadCertificateFileToDb,
   uploadJobPostingFileToDb,
 } from "./api";
@@ -40,7 +44,15 @@ import {
   type CareerRecord,
   type CareerTab,
 } from "./data";
-import { defaultJobProcessStepTypes, jobProcessStepLabels, type JobPostingExtraction, type JobProcessStepType } from "./job-model";
+import {
+  defaultJobProcessStepTypes,
+  jobApplicationStatusLabels,
+  jobProcessStepLabels,
+  type JobApplicationBundle,
+  type JobApplicationStep,
+  type JobPostingExtraction,
+  type JobProcessStepType,
+} from "./job-model";
 
 const tabLabels: Record<CareerTab, string> = {
   applied: "지원한 기업",
@@ -84,6 +96,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [jobApplications, setJobApplications] = useState<JobApplicationBundle[]>([]);
   const [certificateQuery, setCertificateQuery] = useState("");
   const [certificateStatusFilter, setCertificateStatusFilter] = useState("");
 
@@ -98,6 +111,12 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
+
+    fetchJobApplicationsFromDb()
+      .then((applications) => {
+        if (isMounted) setJobApplications(applications ?? []);
+      })
+      .catch((error) => console.error("Failed to load job applications from Supabase", error));
 
     return () => {
       isMounted = false;
@@ -124,6 +143,8 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
       })
       .sort(compareCertificatesByAcquiredDate);
   }, [activeTab, certificateQuery, certificateStatusFilter, visibleRecords]);
+  const plannedApplications = useMemo(() => jobApplications.filter((application) => application.status === "planned"), [jobApplications]);
+  const appliedApplications = useMemo(() => jobApplications.filter((application) => application.status !== "planned"), [jobApplications]);
 
   const saveRecord = async (record: CareerRecord) => {
     const exists = records.some((item) => item.id === record.id);
@@ -139,6 +160,28 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const deleteRecord = async (id: string) => {
     await deleteCareerRecordFromDb(id);
     setRecords((current) => current.filter((item) => item.id !== id));
+  };
+
+  const saveJobPosting = async (extraction: JobPostingExtraction, file?: { path?: string; name?: string }) => {
+    const saved = await createJobApplicationFromExtraction({
+      extraction,
+      sourceFileName: file?.name,
+      sourceFilePath: file?.path,
+    });
+    if (saved) setJobApplications((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
+    setIsSheetOpen(false);
+    router.push("/career/planned");
+  };
+
+  const applyJobApplication = async (application: JobApplicationBundle) => {
+    const updated = await markJobApplicationAsApplied(application);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    router.push("/career/applied");
+  };
+
+  const updateStepStatus = async (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => {
+    const updated = await updateJobApplicationStepStatus(applicationId, stepId, status);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   };
 
   return (
@@ -236,15 +279,12 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
                 setIsSheetOpen(true);
               }}
             />
-            <CareerRecordList
+            <JobApplicationBoard
               activeTab={activeTab}
+              applications={activeTab === "planned" ? plannedApplications : appliedApplications}
               isLoading={isLoading}
-              records={displayedRecords}
-              onDelete={deleteRecord}
-              onEdit={(record) => {
-                setEditingRecord(record);
-                setIsSheetOpen(true);
-              }}
+              onApply={applyJobApplication}
+              onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
             />
           </>
         )}
@@ -259,6 +299,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             setIsSheetOpen(false);
           }}
           onSave={saveRecord}
+          onSaveJobPosting={saveJobPosting}
         />
       ) : null}
     </div>
@@ -345,6 +386,80 @@ function CareerRecordList({
           <p>{emptyDescription ?? (isLoading ? "불러오는 중입니다." : "항목을 추가하면 이곳에 표시됩니다.")}</p>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function JobApplicationBoard({
+  activeTab,
+  applications,
+  isLoading,
+  onApply,
+  onStepStatusChange,
+}: {
+  activeTab: CareerTab;
+  applications: JobApplicationBundle[];
+  isLoading: boolean;
+  onApply: (application: JobApplicationBundle) => Promise<void> | void;
+  onStepStatusChange: (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => void;
+}) {
+  if (applications.length === 0) {
+    return (
+      <div className="career-empty">
+        <ClipboardList aria-hidden size={28} />
+        <strong>{activeTab === "planned" ? "저장된 전형 공고가 없습니다." : "지원 중인 전형이 없습니다."}</strong>
+        <p>{isLoading ? "데이터를 불러오는 중입니다." : activeTab === "planned" ? "공고 PDF를 분석해서 지원 예정 전형으로 보관해보세요." : "지원 예정 공고에서 지원하기를 누르면 이곳에서 단계별로 관리합니다."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="job-application-list">
+      {applications.map((application) => (
+        <article className="job-application-card" key={application.id}>
+          <div className="job-application-card__header">
+            <div>
+              <Badge tone={application.status === "planned" ? "amber" : "green"}>{jobApplicationStatusLabels[application.status]}</Badge>
+              <h3>{application.companyName}</h3>
+              <p>{[application.jobRole, application.postingTitle].filter(Boolean).join(" / ")}</p>
+            </div>
+            {activeTab === "planned" ? (
+              <button className="job-application-card__primary" onClick={() => void onApply(application)} type="button">
+                지원하기
+              </button>
+            ) : null}
+          </div>
+
+          <div className="job-step-timeline">
+            {application.steps.map((step) => (
+              <div className="job-step-card" key={step.id}>
+                <span>{jobProcessStepLabels[step.type]}</span>
+                <strong>{step.title}</strong>
+                <small>{formatJobStepRange(step)}</small>
+                {step.sourceText ? <em>{step.sourceText}</em> : null}
+                {activeTab === "applied" ? (
+                  <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
+                    <option value="confirmed">예정</option>
+                    <option value="done">완료</option>
+                    <option value="skipped">해당 없음</option>
+                  </select>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {application.requirements.length > 0 ? (
+            <div className="job-requirement-strip">
+              {application.requirements.slice(0, 5).map((requirement) => (
+                <span key={requirement.id}>
+                  <b>{requirement.title}</b>
+                  {requirement.content}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </article>
+      ))}
     </div>
   );
 }
@@ -559,11 +674,13 @@ function CareerRecordSheet({
   activeTab,
   onClose,
   onSave,
+  onSaveJobPosting,
   record,
 }: {
   activeTab: CareerTab;
   onClose: () => void;
   onSave: (record: CareerRecord) => Promise<void> | void;
+  onSaveJobPosting: (extraction: JobPostingExtraction, file?: { path?: string; name?: string }) => Promise<void> | void;
   record: CareerRecord | null;
 }) {
   const [form, setForm] = useState<CareerRecord>(
@@ -580,6 +697,7 @@ function CareerRecordSheet({
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [postingFile, setPostingFile] = useState<File | null>(null);
   const [aiDraft, setAiDraft] = useState<JobPostingExtraction | null>(null);
+  const [uploadedPostingFile, setUploadedPostingFile] = useState<{ path?: string; name?: string } | null>(null);
   const [aiError, setAiError] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -608,6 +726,7 @@ function CareerRecordSheet({
 
       const extraction = result as JobPostingExtraction;
       const uploadedFile = await uploadJobPostingFileToDb(postingFile);
+      setUploadedPostingFile(uploadedFile);
       await createAiExtractionDraftInDb({
         extraction,
         modelName: extraction.modelName,
@@ -619,6 +738,16 @@ function CareerRecordSheet({
       setAiError(error instanceof Error ? error.message : "PDF 분석에 실패했습니다.");
     } finally {
       setIsExtracting(false);
+    }
+  };
+
+  const saveDraftAsJobPosting = async () => {
+    if (!aiDraft) return;
+    setIsSaving(true);
+    try {
+      await onSaveJobPosting(aiDraft, uploadedPostingFile ?? undefined);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -712,7 +841,8 @@ function CareerRecordSheet({
               onApplyAiDraft={applyAiDraft}
               onExtractPostingDraft={() => void extractPostingDraft()}
               onPostingFileChange={setPostingFile}
-            />
+              onSaveDraft={saveDraftAsJobPosting}
+              />
           ) : null}
           <div className="event-form-card career-field-card career-form-card">
             <div className="career-form-card__title">
@@ -774,6 +904,7 @@ function AppliedAiPostingPanel({
   onApplyAiDraft,
   onExtractPostingDraft,
   onPostingFileChange,
+  onSaveDraft,
   postingFile,
 }: {
   aiDraft: JobPostingExtraction | null;
@@ -782,6 +913,7 @@ function AppliedAiPostingPanel({
   onApplyAiDraft: () => void;
   onExtractPostingDraft: () => void;
   onPostingFileChange: (file: File | null) => void;
+  onSaveDraft: () => Promise<void> | void;
   postingFile: File | null;
 }) {
   return (
@@ -805,7 +937,7 @@ function AppliedAiPostingPanel({
         <div className="career-ai-uploader__file">{postingFile ? postingFile.name : "선택된 PDF가 없습니다."}</div>
         {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
       </div>
-      {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} /> : null}
+      {aiDraft ? <AiDraftReview draft={aiDraft} onApply={onApplyAiDraft} onSave={onSaveDraft} /> : null}
     </div>
   );
 }
@@ -896,7 +1028,7 @@ function CareerSpecificFields({
   return null;
 }
 
-function AiDraftReview({ draft, onApply }: { draft: JobPostingExtraction; onApply: () => void }) {
+function AiDraftReview({ draft, onApply, onSave }: { draft: JobPostingExtraction; onApply: () => void; onSave: () => Promise<void> | void }) {
   return (
     <div className="ai-draft-review">
       <div className="ai-draft-review__header">
@@ -905,9 +1037,14 @@ function AiDraftReview({ draft, onApply }: { draft: JobPostingExtraction; onAppl
           <strong>{draft.companyName || "기업명 미확인"}</strong>
           <p>{[draft.jobRole, draft.postingTitle].filter(Boolean).join(" / ") || draft.summary || "추출된 공고 정보를 확인해 주세요."}</p>
         </div>
-        <button type="button" onClick={onApply}>
-          초안 반영
-        </button>
+        <div className="ai-draft-review__actions">
+          <button type="button" onClick={onApply}>
+            폼에 반영
+          </button>
+          <button type="button" onClick={() => void onSave()}>
+            전형 공고로 저장
+          </button>
+        </div>
       </div>
 
       <div className="ai-draft-review__section">
@@ -1191,6 +1328,13 @@ function formatDraftDateTime(value?: string) {
     hour: value.includes("T") ? "2-digit" : undefined,
     minute: value.includes("T") ? "2-digit" : undefined,
   }).format(date);
+}
+
+function formatJobStepRange(step: JobApplicationStep) {
+  const start = formatDraftDateTime(step.startAt);
+  const end = formatDraftDateTime(step.endAt);
+  if (start && end && start !== end) return `${start} ~ ${end}`;
+  return start || end || "날짜 미정";
 }
 
 function getCompanyProcessStages(record: CareerRecord) {
