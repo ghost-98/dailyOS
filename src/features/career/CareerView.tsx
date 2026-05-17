@@ -102,6 +102,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const [sheetMode, setSheetMode] = useState<CareerSheetMode>(activeTab === "certificates" ? "certificate" : "manual-job");
   const [isLoading, setIsLoading] = useState(true);
   const [jobApplications, setJobApplications] = useState<JobApplicationBundle[]>([]);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [certificateQuery, setCertificateQuery] = useState("");
   const [certificateStatusFilter, setCertificateStatusFilter] = useState("");
 
@@ -150,6 +151,11 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   }, [activeTab, certificateQuery, certificateStatusFilter, visibleRecords]);
   const plannedApplications = useMemo(() => jobApplications.filter((application) => application.status === "planned"), [jobApplications]);
   const appliedApplications = useMemo(() => jobApplications.filter((application) => application.status !== "planned"), [jobApplications]);
+  const activeApplications = activeTab === "planned" ? plannedApplications : appliedApplications;
+  const selectedApplication = useMemo(
+    () => activeApplications.find((application) => application.id === selectedApplicationId) ?? null,
+    [activeApplications, selectedApplicationId],
+  );
 
   const saveRecord = async (record: CareerRecord) => {
     const exists = records.some((item) => item.id === record.id);
@@ -188,6 +194,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const applyJobApplication = async (application: JobApplicationBundle) => {
     const updated = await markJobApplicationAsApplied(application);
     if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setSelectedApplicationId(updated?.id ?? application.id);
     router.push("/career/applied");
   };
 
@@ -301,11 +308,22 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
             />
             <JobApplicationBoard
               activeTab={activeTab}
-              applications={activeTab === "planned" ? plannedApplications : appliedApplications}
+              applications={activeApplications}
               isLoading={isLoading}
+              selectedApplicationId={selectedApplicationId}
               onApply={applyJobApplication}
+              onSelect={setSelectedApplicationId}
               onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
             />
+            {selectedApplication ? (
+              <JobApplicationDetailPanel
+                activeTab={activeTab}
+                application={selectedApplication}
+                onApply={applyJobApplication}
+                onClose={() => setSelectedApplicationId(null)}
+                onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
+              />
+            ) : null}
           </>
         )}
       </SectionCard>
@@ -404,13 +422,17 @@ function JobApplicationBoard({
   activeTab,
   applications,
   isLoading,
+  selectedApplicationId,
   onApply,
+  onSelect,
   onStepStatusChange,
 }: {
   activeTab: CareerTab;
   applications: JobApplicationBundle[];
   isLoading: boolean;
+  selectedApplicationId: string | null;
   onApply: (application: JobApplicationBundle) => Promise<void> | void;
+  onSelect: (applicationId: string) => void;
   onStepStatusChange: (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => void;
 }) {
   if (applications.length === 0) {
@@ -435,7 +457,11 @@ function JobApplicationBoard({
         const visibleJobRole = getVisibleJobRole(application);
 
         return (
-        <article className="job-application-card" key={application.id}>
+        <article
+          className={`job-application-card ${selectedApplicationId === application.id ? "job-application-card--selected" : ""}`}
+          key={application.id}
+          onClick={() => onSelect(application.id)}
+        >
           <div className="job-application-card__header">
             <div>
               <Badge tone={application.status === "planned" ? "amber" : "green"}>{jobApplicationStatusLabels[application.status]}</Badge>
@@ -446,7 +472,10 @@ function JobApplicationBoard({
               </div>
             </div>
             {activeTab === "planned" ? (
-              <button className="job-application-card__primary" onClick={() => void onApply(application)} type="button">
+              <button className="job-application-card__primary" onClick={(event) => {
+                event.stopPropagation();
+                void onApply(application);
+              }} type="button">
                 지원으로 전환
               </button>
             ) : null}
@@ -456,13 +485,16 @@ function JobApplicationBoard({
             <div className="job-application-source-row">
               {application.sourceFileName ? <span>{application.sourceFileName}</span> : null}
               {application.sourceFilePath ? (
-                <button onClick={() => void openJobPostingFile(application.sourceFilePath)} type="button">
+                <button onClick={(event) => {
+                  event.stopPropagation();
+                  void openJobPostingFile(application.sourceFilePath);
+                }} type="button">
                   <FileText aria-hidden size={14} />
                   PDF 보기
                 </button>
               ) : null}
               {application.postingUrl ? (
-                <a href={application.postingUrl} rel="noreferrer" target="_blank">
+                <a href={application.postingUrl} rel="noreferrer" target="_blank" onClick={(event) => event.stopPropagation()}>
                   <LinkIcon aria-hidden size={14} />
                   채용사이트
                 </a>
@@ -479,7 +511,11 @@ function JobApplicationBoard({
                   <small>{formatJobStepRange(step)}</small>
                   {step.sourceText ? <em>{step.sourceText}</em> : null}
                   {activeTab === "applied" ? (
-                    <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
+                    <select
+                      value={step.status}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}
+                    >
                       <option value="confirmed">예정</option>
                       <option value="done">완료</option>
                       <option value="skipped">건너뜀</option>
@@ -516,6 +552,136 @@ function getVisibleJobRole(application: JobApplicationBundle) {
   if (/직급|대졸|신입사원|채용공고|채용형|인턴/i.test(role)) return "";
 
   return role;
+}
+
+function JobApplicationDetailPanel({
+  activeTab,
+  application,
+  onApply,
+  onClose,
+  onStepStatusChange,
+}: {
+  activeTab: CareerTab;
+  application: JobApplicationBundle;
+  onApply: (application: JobApplicationBundle) => Promise<void> | void;
+  onClose: () => void;
+  onStepStatusChange: (applicationId: string, stepId: string, status: JobApplicationStep["status"]) => void;
+}) {
+  const visibleJobRole = getVisibleJobRole(application);
+  const nextStep = application.steps.find((step) => step.status !== "done" && step.status !== "skipped") ?? application.steps[0];
+
+  return (
+    <aside className="job-detail-panel" aria-label="공고 상세">
+      <div className="job-detail-panel__top">
+        <div>
+          <Badge tone={application.status === "planned" ? "amber" : "green"}>{jobApplicationStatusLabels[application.status]}</Badge>
+          <h2>{application.companyName}</h2>
+          <p>{application.postingTitle || "공고명 미입력"}</p>
+        </div>
+        <button aria-label="상세 닫기" className="event-sheet__icon-button" onClick={onClose} type="button">
+          <X aria-hidden size={18} />
+        </button>
+      </div>
+
+      <div className="job-detail-meta-grid">
+        <DetailMeta label="지원 직무" value={visibleJobRole || application.jobRole || "직무 확인 필요"} />
+        <DetailMeta label="다음 일정" value={nextStep ? `${jobProcessStepLabels[nextStep.type]} · ${formatJobStepRange(nextStep) || nextStep.title}` : "등록된 일정 없음"} />
+      </div>
+
+      <div className="job-detail-actions">
+        {application.sourceFilePath ? (
+          <button onClick={() => void openJobPostingFile(application.sourceFilePath)} type="button">
+            <FileText aria-hidden size={15} />
+            PDF 보기
+          </button>
+        ) : null}
+        {application.postingUrl ? (
+          <a href={application.postingUrl} rel="noreferrer" target="_blank">
+            <LinkIcon aria-hidden size={15} />
+            채용사이트
+          </a>
+        ) : null}
+        {activeTab === "planned" ? (
+          <button className="job-detail-actions__primary" onClick={() => void onApply(application)} type="button">
+            지원으로 전환
+          </button>
+        ) : null}
+      </div>
+
+      <section className="job-detail-section">
+        <div className="job-detail-section__heading">
+          <span>전형 일정</span>
+          <small>{activeTab === "planned" ? "지원으로 전환하면 캘린더에 반영됩니다." : "단계별 진행 상태를 관리합니다."}</small>
+        </div>
+        {application.steps.length > 0 ? (
+          <div className="job-detail-step-list">
+            {application.steps.map((step) => (
+              <article className="job-detail-step" key={step.id}>
+                <b>{jobProcessStepLabels[step.type]}</b>
+                <strong>{step.title}</strong>
+                <small>{formatJobStepRange(step) || "날짜 확인 필요"}</small>
+                {step.sourceText ? <em>{step.sourceText}</em> : null}
+                {activeTab === "applied" ? (
+                  <select value={step.status} onChange={(event) => onStepStatusChange(application.id, step.id, event.target.value as JobApplicationStep["status"])}>
+                    <option value="confirmed">예정</option>
+                    <option value="done">완료</option>
+                    <option value="skipped">건너뜀</option>
+                  </select>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="job-detail-empty">PDF 초안에서 추출된 일정이 없습니다.</div>
+        )}
+      </section>
+
+      <section className="job-detail-section">
+        <div className="job-detail-section__heading">
+          <span>지원 요건/가점</span>
+          <small>자격증 매칭은 다음 단계에서 연결합니다.</small>
+        </div>
+        {application.requirements.length > 0 ? (
+          <div className="job-detail-requirements">
+            {application.requirements.map((requirement) => (
+              <article key={requirement.id}>
+                <b>{requirement.title}</b>
+                <p>{requirement.content}</p>
+                {requirement.sourceText ? <em>{requirement.sourceText}</em> : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="job-detail-empty">지원 요건 정보가 아직 없습니다.</div>
+        )}
+      </section>
+
+      {application.checkItems.length > 0 ? (
+        <section className="job-detail-section">
+          <div className="job-detail-section__heading">
+            <span>준비 체크</span>
+          </div>
+          <div className="job-detail-checks">
+            {application.checkItems.map((item) => (
+              <span key={item.id}>
+                <CheckCircle2 aria-hidden size={15} />
+                {item.title}
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </aside>
+  );
+}
+
+function DetailMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="job-detail-meta">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
 }
 
 function CareerRecordCard({ onDelete, onEdit, record }: { onDelete: () => void; onEdit: () => void; record: CareerRecord }) {
@@ -1146,7 +1312,12 @@ function AiDraftReview({
         <div>
           <span>AI 검토 초안</span>
           <strong>{draft.companyName || "기업명 미확인"}</strong>
-          <p>{[draft.jobRole, draft.postingTitle].filter(Boolean).join(" / ") || draft.summary || "추출된 공고 정보를 확인해 주세요."}</p>
+          <div className="ai-draft-summary-grid">
+            <DetailMeta label="공고" value={draft.postingTitle || "공고명 확인 필요"} />
+            <DetailMeta label="지원 직무" value={draft.jobRole || "직무 확인 필요"} />
+            <DetailMeta label="추출 일정" value={`${draft.steps.length}개`} />
+            <DetailMeta label="요건/가점" value={`${draft.requirements.length}개`} />
+          </div>
         </div>
         <div className="ai-draft-review__actions">
           {onApply ? (
@@ -1155,7 +1326,7 @@ function AiDraftReview({
             </button>
           ) : null}
           <button disabled={isSaving} type="button" onClick={() => void onSave()}>
-            {isSaving ? "저장 중" : "전형 공고로 저장"}
+            {isSaving ? "저장 중" : "지원 예정으로 저장"}
           </button>
         </div>
       </div>
