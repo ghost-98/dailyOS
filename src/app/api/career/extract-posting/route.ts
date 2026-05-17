@@ -4,12 +4,6 @@ const allowedTypes = new Set(["application/pdf"]);
 const maxFileSize = 50 * 1024 * 1024;
 
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "OPENAI_API_KEY is not configured." }, { status: 503 });
-  }
-
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -29,6 +23,34 @@ export async function POST(request: Request) {
   const postingTitle = String(formData.get("postingTitle") ?? "");
   const jobRole = String(formData.get("jobRole") ?? "");
   const bytes = Buffer.from(await file.arrayBuffer());
+  const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
+
+  if (provider === "gemini") {
+    return extractWithGemini({ bytes, companyName, file, jobRole, postingTitle });
+  }
+
+  return extractWithOpenAi({ bytes, companyName, file, jobRole, postingTitle });
+}
+
+async function extractWithOpenAi({
+  bytes,
+  companyName,
+  file,
+  jobRole,
+  postingTitle,
+}: {
+  bytes: Buffer;
+  companyName: string;
+  file: File;
+  jobRole: string;
+  postingTitle: string;
+}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "OPENAI_API_KEY is not configured." }, { status: 503 });
+  }
+
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -95,6 +117,86 @@ export async function POST(request: Request) {
   }
 }
 
+async function extractWithGemini({
+  bytes,
+  companyName,
+  file,
+  jobRole,
+  postingTitle,
+}: {
+  bytes: Buffer;
+  companyName: string;
+  file: File;
+  jobRole: string;
+  postingTitle: string;
+}) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "GEMINI_API_KEY is not configured." }, { status: 503 });
+  }
+
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const prompt = buildExtractionPrompt({ companyName, jobRole, postingTitle });
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: file.type,
+                data: bytes.toString("base64"),
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: extractionSchema,
+      },
+    }),
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    return NextResponse.json({ error: payload.error?.message ?? "Gemini extraction failed." }, { status: response.status });
+  }
+
+  const outputText = extractGeminiOutputText(payload);
+  if (!outputText) {
+    return NextResponse.json({ error: "Gemini response did not include JSON output." }, { status: 502 });
+  }
+
+  try {
+    return NextResponse.json({ ...JSON.parse(outputText), modelName: model });
+  } catch {
+    return NextResponse.json({ error: "Gemini response JSON could not be parsed." }, { status: 502 });
+  }
+}
+
+function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { companyName: string; jobRole: string; postingTitle: string }) {
+  return [
+    "너는 한국어 채용공고를 dailyOS 데이터로 정리하는 추출기다.",
+    "추측하지 말고 PDF 원문에 있는 정보만 JSON으로 추출해라.",
+    "날짜는 가능하면 ISO 형식으로 작성하라. 시간이 있으면 +09:00을 포함한 ISO datetime으로 작성하라.",
+    "모든 날짜/자격/준비물에는 sourceText에 근거 원문을 짧게 넣어라.",
+    "확실하지 않은 값은 비워두고 warnings에 남겨라.",
+    `사용자가 미리 입력한 기업명: ${companyName || "(없음)"}`,
+    `사용자가 미리 입력한 공고명: ${postingTitle || "(없음)"}`,
+    `사용자가 미리 입력한 직무: ${jobRole || "(없음)"}`,
+    "반드시 제공된 JSON schema와 호환되는 JSON만 반환해라.",
+  ].join("\n");
+}
+
 function extractOutputText(payload: unknown) {
   if (!payload || typeof payload !== "object") return null;
   const maybePayload = payload as { output_text?: unknown; output?: unknown };
@@ -110,6 +212,26 @@ function extractOutputText(payload: unknown) {
     for (const contentItem of content) {
       if (!contentItem || typeof contentItem !== "object") continue;
       const text = (contentItem as { text?: unknown }).text;
+      if (typeof text === "string") return text;
+    }
+  }
+
+  return null;
+}
+
+function extractGeminiOutputText(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+  const candidates = (payload as { candidates?: unknown }).candidates;
+  if (!Array.isArray(candidates)) return null;
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const parts = (candidate as { content?: { parts?: unknown } }).content?.parts;
+    if (!Array.isArray(parts)) continue;
+
+    for (const part of parts) {
+      if (!part || typeof part !== "object") continue;
+      const text = (part as { text?: unknown }).text;
       if (typeof text === "string") return text;
     }
   }
