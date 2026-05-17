@@ -357,6 +357,72 @@ create trigger set_ai_extraction_drafts_updated_at
 before update on public.ai_extraction_drafts
 for each row execute function public.set_updated_at();
 
+create or replace function public.delete_own_job_application(p_application_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  target_source_file_path text;
+begin
+  if current_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select source_file_path
+    into target_source_file_path
+  from public.job_applications
+  where id = p_application_id
+    and user_id = current_user_id;
+
+  if not found then
+    return false;
+  end if;
+
+  delete from public.job_application_check_items
+  where application_id = p_application_id
+    and user_id = current_user_id;
+
+  delete from public.job_application_requirements
+  where application_id = p_application_id
+    and user_id = current_user_id;
+
+  delete from public.job_application_steps
+  where application_id = p_application_id
+    and user_id = current_user_id;
+
+  delete from public.ai_extraction_drafts
+  where user_id = current_user_id
+    and (
+      application_id = p_application_id
+      or (target_source_file_path is not null and source_file_path = target_source_file_path)
+    );
+
+  delete from public.job_application_files
+  where user_id = current_user_id
+    and (
+      application_id = p_application_id
+      or (target_source_file_path is not null and file_path = target_source_file_path)
+    );
+
+  delete from public.job_applications
+  where id = p_application_id
+    and user_id = current_user_id;
+
+  return not exists (
+    select 1
+    from public.job_applications
+    where id = p_application_id
+      and user_id = current_user_id
+  );
+end;
+$$;
+
+revoke all on function public.delete_own_job_application(uuid) from public;
+grant execute on function public.delete_own_job_application(uuid) to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;

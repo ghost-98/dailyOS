@@ -221,12 +221,18 @@ async function insertJobApplicationTemplateData({
 
 function toDbError(error: unknown, fallback: string) {
   if (error instanceof Error) return error;
+  const message = getDbErrorMessage(error);
+  if (message) return new Error(message);
+  return new Error(fallback);
+}
+
+function getDbErrorMessage(error: unknown) {
   if (error && typeof error === "object") {
     const maybeError = error as { message?: unknown; details?: unknown; code?: unknown };
     const parts = [maybeError.message, maybeError.details, maybeError.code].filter((part): part is string => typeof part === "string" && part.length > 0);
-    if (parts.length > 0) return new Error(parts.join(" "));
+    if (parts.length > 0) return parts.join(" ");
   }
-  return new Error(fallback);
+  return "";
 }
 
 function isJobPostingExtraction(value: unknown): value is JobPostingExtraction {
@@ -611,6 +617,20 @@ export async function updateJobApplicationInDb(
 
 export async function deleteJobApplicationFromDb(applicationId: string) {
   if (!supabase) return false;
+
+  const { data: rpcDeleted, error: rpcError } = await supabase.rpc("delete_own_job_application", {
+    p_application_id: applicationId,
+  });
+
+  if (!rpcError) {
+    if (rpcDeleted) return true;
+    throw new Error("공고가 삭제되지 않았습니다. 현재 로그인 계정이 이 공고의 소유자인지 확인해주세요.");
+  }
+
+  const rpcMessage = getDbErrorMessage(rpcError);
+  if (!rpcMessage.includes("delete_own_job_application")) {
+    throw toDbError(rpcError, "공고 삭제에 실패했습니다.");
+  }
 
   const { data: application, error: readError } = await supabase
     .from("job_applications")
