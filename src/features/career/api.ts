@@ -299,6 +299,10 @@ export async function createAiExtractionDraftInDb({
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.warn("Failed to save AI extraction draft", error);
+    return null;
+  }
+
   return data as { id: string };
 }
