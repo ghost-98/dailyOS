@@ -120,6 +120,105 @@ function emptyToNull(value?: string) {
   return value?.trim() ? value.trim() : null;
 }
 
+export type JobApplicationTemplatePayload = {
+  companyName: string;
+  postingTitle: string;
+  jobRole: string;
+  postingUrl?: string;
+  memo?: string;
+  steps?: Array<{
+    type: JobApplicationStep["type"];
+    title: string;
+    startAt?: string;
+    endAt?: string;
+    memo?: string;
+    sourceText?: string;
+  }>;
+  requirements?: Array<{
+    category: JobApplicationRequirement["category"];
+    title: string;
+    content: string;
+    sourceText?: string;
+  }>;
+  checkItems?: Array<{
+    category: JobApplicationCheckItem["category"];
+    title: string;
+    dueAt?: string;
+    memo?: string;
+  }>;
+};
+
+async function insertJobApplicationTemplateData({
+  applicationId,
+  checkItems = [],
+  requirements = [],
+  steps = [],
+  userId,
+}: {
+  applicationId: string;
+  checkItems?: NonNullable<JobApplicationTemplatePayload["checkItems"]>;
+  requirements?: NonNullable<JobApplicationTemplatePayload["requirements"]>;
+  steps?: NonNullable<JobApplicationTemplatePayload["steps"]>;
+  userId: string;
+}) {
+  if (!supabase) return;
+
+  const stepRows = steps
+    .filter((step) => step.title?.trim())
+    .map((step, index) => ({
+      user_id: userId,
+      application_id: applicationId,
+      type: step.type,
+      title: step.title.trim(),
+      start_at: emptyToNull(step.startAt),
+      end_at: emptyToNull(step.endAt),
+      status: "confirmed",
+      order_index: index,
+      memo: emptyToNull(step.memo),
+      source_text: emptyToNull(step.sourceText),
+      confirmed_by_user: true,
+    }));
+
+  if (stepRows.length > 0) {
+    const { error } = await supabase.from("job_application_steps").insert(stepRows);
+    if (error) throw toDbError(error, "전형 일정 저장에 실패했습니다.");
+  }
+
+  const requirementRows = requirements
+    .filter((requirement) => requirement.title?.trim())
+    .map((requirement) => ({
+      user_id: userId,
+      application_id: applicationId,
+      category: requirement.category,
+      title: requirement.title.trim(),
+      content: requirement.content.trim(),
+      source_text: emptyToNull(requirement.sourceText),
+      confirmed_by_user: true,
+    }));
+
+  if (requirementRows.length > 0) {
+    const { error } = await supabase.from("job_application_requirements").insert(requirementRows);
+    if (error) throw toDbError(error, "지원자격/우대사항 저장에 실패했습니다.");
+  }
+
+  const checkItemRows = checkItems
+    .filter((item) => item.title?.trim())
+    .map((item) => ({
+      user_id: userId,
+      application_id: applicationId,
+      title: item.title.trim(),
+      category: item.category,
+      due_at: emptyToNull(item.dueAt),
+      is_done: false,
+      memo: emptyToNull(item.memo),
+    }));
+
+  if (checkItemRows.length > 0) {
+    const { error } = await supabase.from("job_application_check_items").insert(checkItemRows);
+    if (error) throw toDbError(error, "준비 체크 항목 저장에 실패했습니다.");
+  }
+}
+
 function toDbError(error: unknown, fallback: string) {
   if (error instanceof Error) return error;
   if (error && typeof error === "object") {
@@ -422,32 +521,13 @@ export async function createJobApplicationFromExtraction({
   if (error) throw error;
   const applicationId = (data as { id: string }).id;
 
-  const stepRows = extraction.steps
-    .filter((step) => step.title?.trim())
-    .map((step, index) => mapExtractionStepToRow(step, userId, applicationId, index));
-
-  if (stepRows.length > 0) {
-    const { error: stepsError } = await supabase.from("job_application_steps").insert(stepRows);
-    if (stepsError) throw toDbError(stepsError, "전형 일정 저장에 실패했습니다.");
-  }
-
-  const requirementRows = extraction.requirements
-    .filter((requirement) => requirement.title?.trim())
-    .map((requirement) => mapExtractionRequirementToRow(requirement, userId, applicationId));
-
-  if (requirementRows.length > 0) {
-    const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
-    if (requirementsError) throw toDbError(requirementsError, "지원자격/우대사항 저장에 실패했습니다.");
-  }
-
-  const checkItemRows = extraction.checkItems
-    .filter((item) => item.title?.trim())
-    .map((item) => mapExtractionCheckItemToRow(item, userId, applicationId));
-
-  if (checkItemRows.length > 0) {
-    const { error: checkItemsError } = await supabase.from("job_application_check_items").insert(checkItemRows);
-    if (checkItemsError) throw toDbError(checkItemsError, "준비 체크 항목 저장에 실패했습니다.");
-  }
+  await insertJobApplicationTemplateData({
+    applicationId,
+    userId,
+    steps: extraction.steps,
+    requirements: extraction.requirements,
+    checkItems: extraction.checkItems,
+  });
 
   if (sourceFilePath && sourceFileName) {
     const { error: fileError } = await supabase.from("job_application_files").insert({
@@ -465,18 +545,15 @@ export async function createJobApplicationFromExtraction({
 }
 
 export async function createManualJobApplicationInDb({
+  checkItems,
   companyName,
   postingTitle,
   jobRole,
   postingUrl,
+  requirements,
+  steps,
   memo,
-}: {
-  companyName: string;
-  postingTitle: string;
-  jobRole: string;
-  postingUrl?: string;
-  memo?: string;
-}) {
+}: JobApplicationTemplatePayload) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
@@ -497,6 +574,15 @@ export async function createManualJobApplicationInDb({
 
   if (error) throw error;
   const applicationId = (data as { id: string }).id;
+
+  await insertJobApplicationTemplateData({
+    applicationId,
+    userId,
+    steps,
+    requirements,
+    checkItems,
+  });
+
   const applications = await fetchJobApplicationsFromDb();
   return applications?.find((application) => application.id === applicationId) ?? null;
 }
@@ -714,6 +800,59 @@ export async function deleteJobApplicationRequirementFromDb(applicationId: strin
   if (error) throw toDbError(error, "지원 요건 삭제에 실패했습니다.");
   const applications = await fetchJobApplicationsFromDb();
   return applications?.find((item) => item.id === applicationId) ?? null;
+}
+
+export async function createJobApplicationCheckItemInDb(
+  applicationId: string,
+  item: { category: JobApplicationCheckItem["category"]; title: string; dueAt?: string; memo?: string },
+) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { error } = await supabase.from("job_application_check_items").insert({
+    user_id: userId,
+    application_id: applicationId,
+    category: item.category,
+    title: item.title.trim(),
+    due_at: emptyToNull(item.dueAt),
+    is_done: false,
+    memo: emptyToNull(item.memo),
+  });
+
+  if (error) throw toDbError(error, "준비 체크 추가에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
+}
+
+export async function updateJobApplicationCheckItemInDb(
+  applicationId: string,
+  itemId: string,
+  item: { category: JobApplicationCheckItem["category"]; title: string; dueAt?: string; memo?: string; isDone?: boolean },
+) {
+  if (!supabase) return null;
+  const { error } = await supabase
+    .from("job_application_check_items")
+    .update({
+      category: item.category,
+      title: item.title.trim(),
+      due_at: emptyToNull(item.dueAt),
+      memo: emptyToNull(item.memo),
+      ...(typeof item.isDone === "boolean" ? { is_done: item.isDone } : {}),
+    })
+    .eq("id", itemId);
+
+  if (error) throw toDbError(error, "준비 체크 수정에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
+}
+
+export async function deleteJobApplicationCheckItemFromDb(applicationId: string, itemId: string) {
+  if (!supabase) return null;
+  const { error } = await supabase.from("job_application_check_items").delete().eq("id", itemId);
+  if (error) throw toDbError(error, "준비 체크 삭제에 실패했습니다.");
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((application) => application.id === applicationId) ?? null;
 }
 
 export async function uploadCertificateFileToDb(file: File, recordId: string, existingPath?: string) {

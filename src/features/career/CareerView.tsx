@@ -26,11 +26,13 @@ import {
   applyLatestAiDraftToJobApplication,
   createCareerRecordInDb,
   createAiExtractionDraftInDb,
+  createJobApplicationCheckItemInDb,
   createJobApplicationFromExtraction,
   createJobApplicationRequirementInDb,
   createJobApplicationStepInDb,
   createManualJobApplicationInDb,
   deleteCareerRecordFromDb,
+  deleteJobApplicationCheckItemFromDb,
   deleteJobApplicationFromDb,
   deleteJobApplicationRequirementFromDb,
   deleteJobApplicationStepFromDb,
@@ -40,12 +42,14 @@ import {
   getJobPostingFileDownloadUrl,
   markJobApplicationAsApplied,
   updateCareerRecordInDb,
+  updateJobApplicationCheckItemInDb,
   updateJobApplicationInDb,
   updateJobApplicationRequirementInDb,
   updateJobApplicationStepInDb,
   updateJobApplicationStepStatus,
   uploadCertificateFileToDb,
   uploadJobPostingFileToDb,
+  type JobApplicationTemplatePayload,
 } from "./api";
 import {
   applicationEventStageLabels,
@@ -60,6 +64,7 @@ import {
   jobApplicationStatusLabels,
   jobProcessStepLabels,
   type JobApplicationBundle,
+  type JobApplicationCheckItem,
   type JobApplicationRequirement,
   type JobApplicationStep,
   type JobPostingExtraction,
@@ -194,7 +199,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     router.push("/career/planned");
   };
 
-  const saveManualJobApplication = async (payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string }) => {
+  const saveManualJobApplication = async (payload: JobApplicationTemplatePayload) => {
     const saved = await createManualJobApplicationInDb(payload);
     if (saved) setJobApplications((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
     setIsSheetOpen(false);
@@ -259,6 +264,22 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const deleteApplicationRequirement = async (applicationId: string, requirementId: string) => {
     const updated = await deleteJobApplicationRequirementFromDb(applicationId, requirementId);
     if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
+  const saveApplicationCheckItem = async (
+    applicationId: string,
+    item: { category: JobApplicationCheckItem["category"]; title: string; dueAt?: string; memo?: string; isDone?: boolean },
+    itemId?: string,
+  ) => {
+    const updated = itemId
+      ? await updateJobApplicationCheckItemInDb(applicationId, itemId, item)
+      : await createJobApplicationCheckItemInDb(applicationId, item);
+    if (updated) setJobApplications((current) => current.map((application) => (application.id === updated.id ? updated : application)));
+  };
+
+  const deleteApplicationCheckItem = async (applicationId: string, itemId: string) => {
+    const updated = await deleteJobApplicationCheckItemFromDb(applicationId, itemId);
+    if (updated) setJobApplications((current) => current.map((application) => (application.id === updated.id ? updated : application)));
   };
 
   const applyAiDraftToApplication = async (application: JobApplicationBundle) => {
@@ -386,8 +407,10 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
                 onApply={applyJobApplication}
                 onClose={() => setSelectedApplicationId(null)}
                 onDelete={deleteApplication}
+                onDeleteCheckItem={deleteApplicationCheckItem}
                 onDeleteRequirement={deleteApplicationRequirement}
                 onDeleteStep={deleteApplicationStep}
+                onSaveCheckItem={saveApplicationCheckItem}
                 onSaveRequirement={saveApplicationRequirement}
                 onSaveStep={saveApplicationStep}
                 onApplyAiDraft={applyAiDraftToApplication}
@@ -647,9 +670,11 @@ function JobApplicationDetailPanel({
   onApply,
   onClose,
   onDelete,
+  onDeleteCheckItem,
   onDeleteRequirement,
   onDeleteStep,
   onApplyAiDraft,
+  onSaveCheckItem,
   onSaveRequirement,
   onSaveStep,
   onStepStatusChange,
@@ -660,9 +685,15 @@ function JobApplicationDetailPanel({
   onApply: (application: JobApplicationBundle) => Promise<void> | void;
   onClose: () => void;
   onDelete: (applicationId: string) => Promise<void> | void;
+  onDeleteCheckItem: (applicationId: string, itemId: string) => Promise<void> | void;
   onDeleteRequirement: (applicationId: string, requirementId: string) => Promise<void> | void;
   onDeleteStep: (applicationId: string, stepId: string) => Promise<void> | void;
   onApplyAiDraft: (application: JobApplicationBundle) => Promise<void> | void;
+  onSaveCheckItem: (
+    applicationId: string,
+    item: { category: JobApplicationCheckItem["category"]; title: string; dueAt?: string; memo?: string; isDone?: boolean },
+    itemId?: string,
+  ) => Promise<void> | void;
   onSaveRequirement: (
     applicationId: string,
     requirement: { category: JobApplicationRequirement["category"]; title: string; content: string; sourceText?: string },
@@ -705,6 +736,13 @@ function JobApplicationDetailPanel({
     content: "",
     sourceText: "",
   });
+  const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
+  const [checkItemForm, setCheckItemForm] = useState({
+    category: "document" as JobApplicationCheckItem["category"],
+    title: "",
+    dueAt: "",
+    memo: "",
+  });
 
   const startEditStep = (step: JobApplicationStep) => {
     setEditingStepId(step.id);
@@ -738,6 +776,21 @@ function JobApplicationDetailPanel({
     setRequirementForm({ category: "eligibility", title: "", content: "", sourceText: "" });
   };
 
+  const startEditCheckItem = (item: JobApplicationCheckItem) => {
+    setEditingCheckItemId(item.id);
+    setCheckItemForm({
+      category: item.category,
+      title: item.title,
+      dueAt: toDatetimeLocalValue(item.dueAt),
+      memo: item.memo ?? "",
+    });
+  };
+
+  const resetCheckItemForm = () => {
+    setEditingCheckItemId(null);
+    setCheckItemForm({ category: "document", title: "", dueAt: "", memo: "" });
+  };
+
   useEffect(() => {
     setIsEditingInfo(false);
     setInfoForm({
@@ -749,6 +802,7 @@ function JobApplicationDetailPanel({
     });
     resetStepForm();
     resetRequirementForm();
+    resetCheckItemForm();
   }, [application.id]);
 
   return (
@@ -917,21 +971,53 @@ function JobApplicationDetailPanel({
         )}
       </section>
 
-      {application.checkItems.length > 0 ? (
-        <section className="job-detail-section">
-          <div className="job-detail-section__heading">
-            <span>준비 체크</span>
+      <section className="job-detail-section">
+        <div className="job-detail-section__heading">
+          <span>준비 체크</span>
+          <small>서류 제출, 자소서 작성, 증빙 업로드처럼 실제로 처리할 일을 관리합니다.</small>
+        </div>
+        <div className="job-detail-manage-form">
+          <select value={checkItemForm.category} onChange={(event) => setCheckItemForm((current) => ({ ...current, category: event.target.value as JobApplicationCheckItem["category"] }))}>
+            <option value="document">서류</option>
+            <option value="eligibility">지원자격</option>
+            <option value="preferred">우대/가점</option>
+            <option value="exam">필기</option>
+            <option value="interview">면접</option>
+            <option value="note">메모</option>
+          </select>
+          <input value={checkItemForm.title} placeholder="체크 항목" onChange={(event) => setCheckItemForm((current) => ({ ...current, title: event.target.value }))} />
+          <input type="datetime-local" value={checkItemForm.dueAt} onChange={(event) => setCheckItemForm((current) => ({ ...current, dueAt: event.target.value }))} />
+          <textarea rows={2} value={checkItemForm.memo} placeholder="메모" onChange={(event) => setCheckItemForm((current) => ({ ...current, memo: event.target.value }))} />
+          <div className="job-detail-inline-actions">
+            <button disabled={!checkItemForm.title.trim()} onClick={() => {
+              void onSaveCheckItem(application.id, {
+                ...checkItemForm,
+                dueAt: toIsoFromDatetimeLocal(checkItemForm.dueAt),
+              }, editingCheckItemId ?? undefined);
+              resetCheckItemForm();
+            }} type="button">{editingCheckItemId ? "체크 수정" : "체크 추가"}</button>
+            {editingCheckItemId ? <button onClick={resetCheckItemForm} type="button">취소</button> : null}
           </div>
+        </div>
+        {application.checkItems.length > 0 ? (
           <div className="job-detail-checks">
             {application.checkItems.map((item) => (
-              <span key={item.id}>
-                <CheckCircle2 aria-hidden size={15} />
-                {item.title}
+              <span className={item.isDone ? "job-detail-checks__item job-detail-checks__item--done" : "job-detail-checks__item"} key={item.id}>
+                <button aria-label="준비 체크 완료" onClick={() => void onSaveCheckItem(application.id, { category: item.category, title: item.title, dueAt: item.dueAt, memo: item.memo, isDone: !item.isDone }, item.id)} type="button">
+                  <CheckCircle2 aria-hidden size={15} />
+                </button>
+                <b>{item.title}</b>
+                {item.dueAt ? <small>{formatDraftRange(item.dueAt, item.dueAt)}</small> : null}
+                {item.memo ? <em>{item.memo}</em> : null}
+                <button aria-label="준비 체크 수정" onClick={() => startEditCheckItem(item)} type="button"><Pencil aria-hidden size={13} /></button>
+                <button aria-label="준비 체크 삭제" onClick={() => void onDeleteCheckItem(application.id, item.id)} type="button"><Trash2 aria-hidden size={13} /></button>
               </span>
             ))}
           </div>
-        </section>
-      ) : null}
+        ) : (
+          <div className="job-detail-empty">준비 체크 항목이 아직 없습니다.</div>
+        )}
+      </section>
     </aside>
   );
 }
@@ -1250,6 +1336,7 @@ function JobPostingUploadSheet({
             onJobRoleChange={setJobRole}
             onPostingFileChange={setPostingFile}
             onPostingTitleChange={setPostingTitle}
+            onDraftChange={setAiDraft}
             onSaveDraft={saveDraftAsJobPosting}
           />
         </div>
@@ -1263,13 +1350,16 @@ function ManualJobApplicationSheet({
   onSave,
 }: {
   onClose: () => void;
-  onSave: (payload: { companyName: string; postingTitle: string; jobRole: string; postingUrl?: string; memo?: string }) => Promise<void> | void;
+  onSave: (payload: JobApplicationTemplatePayload) => Promise<void> | void;
 }) {
   const [companyName, setCompanyName] = useState("");
   const [postingTitle, setPostingTitle] = useState("");
   const [jobRole, setJobRole] = useState("");
   const [postingUrl, setPostingUrl] = useState("");
   const [memo, setMemo] = useState("");
+  const [steps, setSteps] = useState<JobApplicationTemplatePayload["steps"]>([]);
+  const [requirements, setRequirements] = useState<JobApplicationTemplatePayload["requirements"]>([]);
+  const [checkItems, setCheckItems] = useState<JobApplicationTemplatePayload["checkItems"]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const canSave = Boolean(companyName.trim() && postingTitle.trim());
 
@@ -1277,7 +1367,7 @@ function ManualJobApplicationSheet({
     if (!canSave) return;
     setIsSaving(true);
     try {
-      await onSave({ companyName, postingTitle, jobRole, postingUrl, memo });
+      await onSave({ checkItems, companyName, postingTitle, jobRole, postingUrl, requirements, steps, memo });
     } finally {
       setIsSaving(false);
     }
@@ -1288,7 +1378,10 @@ function ManualJobApplicationSheet({
       <section aria-labelledby="manual-job-sheet-title" aria-modal="true" className="event-sheet career-sheet manual-job-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
         <header className="event-sheet__header career-sheet__header">
-          <div><h2 id="manual-job-sheet-title">지원 기업 직접 추가</h2></div>
+          <div>
+            <h2 id="manual-job-sheet-title">공고 직접 등록</h2>
+            <p>PDF 분석 결과와 같은 템플릿으로 기본정보, 전형 일정, 자격/가점, 준비 체크를 함께 저장합니다.</p>
+          </div>
           <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
         </header>
         <div className="event-sheet__body career-sheet__body manual-job-sheet__body">
@@ -1303,6 +1396,14 @@ function ManualJobApplicationSheet({
               <label className="event-note"><span>메모</span><textarea rows={5} placeholder="관심 사유, 준비할 내용, 확인해야 할 조건을 적어두세요." value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
             </div>
           </div>
+          <JobTemplateDraftEditor
+            checkItems={checkItems ?? []}
+            requirements={requirements ?? []}
+            steps={steps ?? []}
+            onCheckItemsChange={setCheckItems}
+            onRequirementsChange={setRequirements}
+            onStepsChange={setSteps}
+          />
         </div>
         <footer className="event-sheet__footer">
           <button className="event-sheet__secondary-button" onClick={onClose} type="button">취소</button>
@@ -1406,6 +1507,7 @@ function AppliedAiPostingPanel({
   onApplyAiDraft,
   onCompanyNameChange,
   onExtractPostingDraft,
+  onDraftChange,
   onJobRoleChange,
   onPostingFileChange,
   onPostingTitleChange,
@@ -1422,6 +1524,7 @@ function AppliedAiPostingPanel({
   onApplyAiDraft?: () => void;
   onCompanyNameChange: (value: string) => void;
   onExtractPostingDraft: () => void;
+  onDraftChange: (draft: JobPostingExtraction) => void;
   onJobRoleChange: (value: string) => void;
   onPostingFileChange: (file: File | null) => void;
   onPostingTitleChange: (value: string) => void;
@@ -1465,7 +1568,7 @@ function AppliedAiPostingPanel({
         {isExtracting ? <small className="career-ai-uploader__hint">보통 30초 안팎이지만, PDF가 크거나 Gemini 응답이 느리면 최대 75초 뒤 자동으로 중단됩니다.</small> : null}
         {aiError ? <small className="career-ai-uploader__error">{aiError}</small> : null}
       </div>
-      {aiDraft ? <AiDraftReview draft={aiDraft} isSaving={isSaving} onApply={onApplyAiDraft} onSave={onSaveDraft} /> : null}
+      {aiDraft ? <AiDraftReview draft={aiDraft} isSaving={isSaving} onApply={onApplyAiDraft} onChange={onDraftChange} onSave={onSaveDraft} /> : null}
     </div>
   );
 }
@@ -1556,17 +1659,135 @@ function CareerSpecificFields({
   return null;
 }
 
+type TemplateStepDraft = NonNullable<JobApplicationTemplatePayload["steps"]>[number];
+type TemplateRequirementDraft = NonNullable<JobApplicationTemplatePayload["requirements"]>[number];
+type TemplateCheckItemDraft = NonNullable<JobApplicationTemplatePayload["checkItems"]>[number];
+
+function JobTemplateDraftEditor({
+  checkItems,
+  onCheckItemsChange,
+  onRequirementsChange,
+  onStepsChange,
+  requirements,
+  steps,
+}: {
+  checkItems: TemplateCheckItemDraft[];
+  onCheckItemsChange: (items: TemplateCheckItemDraft[]) => void;
+  onRequirementsChange: (requirements: TemplateRequirementDraft[]) => void;
+  onStepsChange: (steps: TemplateStepDraft[]) => void;
+  requirements: TemplateRequirementDraft[];
+  steps: TemplateStepDraft[];
+}) {
+  const addStep = () => {
+    onStepsChange([...steps, { type: "application", title: "", startAt: "", endAt: "", memo: "" }]);
+  };
+
+  const addRequirement = () => {
+    onRequirementsChange([...requirements, { category: "eligibility", title: "", content: "" }]);
+  };
+
+  const addCheckItem = () => {
+    onCheckItemsChange([...checkItems, { category: "document", title: "", dueAt: "", memo: "" }]);
+  };
+
+  return (
+    <div className="job-template-editor">
+      <section className="job-template-section">
+        <div className="job-template-section__header">
+          <div>
+            <span>전형 일정</span>
+            <small>접수, 서류, 필기, 면접, 결과 발표처럼 날짜가 있는 단계를 순서대로 관리합니다.</small>
+          </div>
+          <button type="button" onClick={addStep}><Plus aria-hidden size={14} />일정 추가</button>
+        </div>
+        {steps.length === 0 ? <p className="job-template-empty">등록된 전형 일정이 없습니다.</p> : null}
+        {steps.map((step, index) => (
+          <div className="job-template-row job-template-row--step" key={`template-step-${index}`}>
+            <select value={step.type} onChange={(event) => onStepsChange(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, type: event.target.value as JobProcessStepType } : item)))}>
+              {defaultJobProcessStepTypes.map((type) => <option key={type} value={type}>{jobProcessStepLabels[type]}</option>)}
+            </select>
+            <input placeholder="전형명" value={step.title} onChange={(event) => onStepsChange(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, title: event.target.value } : item)))} />
+            <input type="datetime-local" value={toDatetimeLocalValue(step.startAt)} onChange={(event) => onStepsChange(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, startAt: toIsoFromDatetimeLocal(event.target.value) } : item)))} />
+            <input type="datetime-local" value={toDatetimeLocalValue(step.endAt)} onChange={(event) => onStepsChange(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, endAt: toIsoFromDatetimeLocal(event.target.value) } : item)))} />
+            <input placeholder="메모" value={step.memo ?? ""} onChange={(event) => onStepsChange(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, memo: event.target.value } : item)))} />
+            <button aria-label="전형 일정 삭제" type="button" onClick={() => onStepsChange(steps.filter((_, itemIndex) => itemIndex !== index))}><Trash2 aria-hidden size={14} /></button>
+          </div>
+        ))}
+      </section>
+
+      <section className="job-template-section">
+        <div className="job-template-section__header">
+          <div>
+            <span>자격/가점 요건</span>
+            <small>지원 가능 여부와 가점 판단에 필요한 내용만 남깁니다.</small>
+          </div>
+          <button type="button" onClick={addRequirement}><Plus aria-hidden size={14} />요건 추가</button>
+        </div>
+        {requirements.length === 0 ? <p className="job-template-empty">등록된 자격/가점 요건이 없습니다.</p> : null}
+        {requirements.map((requirement, index) => (
+          <div className="job-template-row job-template-row--requirement" key={`template-requirement-${index}`}>
+            <select value={requirement.category} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, category: event.target.value as JobApplicationRequirement["category"] } : item)))}>
+              <option value="eligibility">지원자격</option>
+              <option value="preferred">우대/가점</option>
+              <option value="document">서류</option>
+              <option value="exam">필기</option>
+              <option value="interview">면접</option>
+              <option value="note">메모</option>
+            </select>
+            <input placeholder="항목명" value={requirement.title} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, title: event.target.value } : item)))} />
+            <textarea rows={2} placeholder="내용" value={requirement.content} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, content: event.target.value } : item)))} />
+            <button aria-label="자격/가점 요건 삭제" type="button" onClick={() => onRequirementsChange(requirements.filter((_, itemIndex) => itemIndex !== index))}><Trash2 aria-hidden size={14} /></button>
+          </div>
+        ))}
+      </section>
+
+      <section className="job-template-section">
+        <div className="job-template-section__header">
+          <div>
+            <span>준비 체크</span>
+            <small>자소서 작성, 증빙 준비, 서류 업로드처럼 실행할 일을 관리합니다.</small>
+          </div>
+          <button type="button" onClick={addCheckItem}><Plus aria-hidden size={14} />체크 추가</button>
+        </div>
+        {checkItems.length === 0 ? <p className="job-template-empty">등록된 준비 체크가 없습니다.</p> : null}
+        {checkItems.map((item, index) => (
+          <div className="job-template-row job-template-row--check" key={`template-check-${index}`}>
+            <select value={item.category} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, category: event.target.value as JobApplicationCheckItem["category"] } : checkItem)))}>
+              <option value="document">서류</option>
+              <option value="eligibility">지원자격</option>
+              <option value="preferred">우대/가점</option>
+              <option value="exam">필기</option>
+              <option value="interview">면접</option>
+              <option value="note">메모</option>
+            </select>
+            <input placeholder="체크 항목" value={item.title} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, title: event.target.value } : checkItem)))} />
+            <input type="datetime-local" value={toDatetimeLocalValue(item.dueAt)} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, dueAt: toIsoFromDatetimeLocal(event.target.value) } : checkItem)))} />
+            <input placeholder="메모" value={item.memo ?? ""} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, memo: event.target.value } : checkItem)))} />
+            <button aria-label="준비 체크 삭제" type="button" onClick={() => onCheckItemsChange(checkItems.filter((_, itemIndex) => itemIndex !== index))}><Trash2 aria-hidden size={14} /></button>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function AiDraftReview({
   draft,
   isSaving,
   onApply,
+  onChange,
   onSave,
 }: {
   draft: JobPostingExtraction;
   isSaving: boolean;
   onApply?: () => void;
+  onChange: (draft: JobPostingExtraction) => void;
   onSave: () => Promise<void> | void;
 }) {
+  const updateDraftField = (field: "companyName" | "postingTitle" | "jobRole" | "postingUrl", value: string) => {
+    onChange({ ...draft, [field]: value });
+  };
+
   return (
     <div className="ai-draft-review">
       <div className="ai-draft-review__header">
@@ -1593,35 +1814,35 @@ function AiDraftReview({
       </div>
 
       <div className="ai-draft-review__section">
-        <span>전형 일정</span>
-        {draft.steps.length > 0 ? (
-          <div className="ai-draft-step-list">
-            {draft.steps.map((step, index) => (
-              <div className="ai-draft-step" key={`${step.type}-${step.title}-${index}`}>
-                <b>{jobProcessStepLabels[step.type]}</b>
-                <strong>{step.title}</strong>
-                <small>{formatDraftRange(step.startAt, step.endAt) || "날짜 확인 필요"}</small>
-                {step.memo ? <p>{step.memo}</p> : null}
-                {step.sourceText ? <em>{step.sourceText}</em> : null}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>전형 일정이 추출되지 않았습니다.</p>
-        )}
-      </div>
-
-      <div className="ai-draft-review__section">
-        <span>준비/자격</span>
-        <div className="ai-draft-chip-list">
-          {[...draft.requirements, ...draft.checkItems].map((item, index) => (
-            <span key={`${item.title}-${index}`}>
-              <b>{item.title}</b>
-              {"content" in item ? item.content : item.memo}
-            </span>
-          ))}
+        <span>공고 기본정보</span>
+        <div className="ai-draft-basic-grid">
+          <label>
+            <span>기업명</span>
+            <input value={draft.companyName ?? ""} onChange={(event) => updateDraftField("companyName", event.target.value)} />
+          </label>
+          <label>
+            <span>공고명</span>
+            <input value={draft.postingTitle ?? ""} onChange={(event) => updateDraftField("postingTitle", event.target.value)} />
+          </label>
+          <label>
+            <span>지원 직무</span>
+            <input value={draft.jobRole ?? ""} onChange={(event) => updateDraftField("jobRole", event.target.value)} />
+          </label>
+          <label>
+            <span>채용사이트 URL</span>
+            <input value={draft.postingUrl ?? ""} onChange={(event) => updateDraftField("postingUrl", event.target.value)} />
+          </label>
         </div>
       </div>
+
+      <JobTemplateDraftEditor
+        checkItems={draft.checkItems}
+        requirements={draft.requirements}
+        steps={draft.steps}
+        onCheckItemsChange={(checkItems) => onChange({ ...draft, checkItems: checkItems.map((item) => ({ ...item, confidence: (item as { confidence?: number }).confidence ?? 1 })) })}
+        onRequirementsChange={(requirements) => onChange({ ...draft, requirements: requirements.map((requirement) => ({ ...requirement, confidence: (requirement as { confidence?: number }).confidence ?? 1 })) })}
+        onStepsChange={(steps) => onChange({ ...draft, steps: steps.map((step) => ({ ...step, confidence: (step as { confidence?: number }).confidence ?? 1 })) })}
+      />
 
       {draft.warnings.length > 0 ? (
         <div className="ai-draft-review__warnings">
