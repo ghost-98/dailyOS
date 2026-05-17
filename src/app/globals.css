@@ -3090,12 +3090,22 @@ a:focus-visible {
   gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--muted);
-  cursor: not-allowed;
+  background: rgba(201, 184, 255, 0.16);
+  color: var(--violet);
+  cursor: pointer;
   font-size: 13px;
   font-weight: 850;
   padding: 10px 13px;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.company-ai-panel__button:hover {
+  border-color: rgba(201, 184, 255, 0.35);
+  background: rgba(201, 184, 255, 0.22);
+  transform: translateY(-1px);
 }
 
 .company-workflow-grid {

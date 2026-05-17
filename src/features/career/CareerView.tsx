@@ -229,7 +229,13 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
           </div>
         ) : (
           <>
-            <CompanyManagementPreview activeTab={activeTab} />
+            <CompanyManagementPreview
+              activeTab={activeTab}
+              onCreate={() => {
+                setEditingRecord(null);
+                setIsSheetOpen(true);
+              }}
+            />
             <CareerRecordList
               activeTab={activeTab}
               isLoading={isLoading}
@@ -259,7 +265,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   );
 }
 
-function CompanyManagementPreview({ activeTab }: { activeTab: CareerTab }) {
+function CompanyManagementPreview({ activeTab, onCreate }: { activeTab: CareerTab; onCreate: () => void }) {
   const isApplied = activeTab === "applied";
 
   return (
@@ -277,9 +283,9 @@ function CompanyManagementPreview({ activeTab }: { activeTab: CareerTab }) {
               : "아직 공고가 없어도 예상 채용 시기, 필요한 자격증, 준비 서류, 우선순위를 먼저 쌓아둘 수 있어요."}
           </p>
         </div>
-        <button className="company-ai-panel__button" type="button" disabled>
+        <button className="company-ai-panel__button" type="button" onClick={onCreate}>
           <Sparkles aria-hidden size={15} />
-          AI 초안 준비중
+          {isApplied ? "PDF로 초안 만들기" : "기업 추가하기"}
         </button>
       </div>
 
