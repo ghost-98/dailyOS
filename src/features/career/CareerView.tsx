@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import {
+  applyLatestAiDraftToJobApplication,
   createCareerRecordInDb,
   createAiExtractionDraftInDb,
   createJobApplicationFromExtraction,
@@ -257,6 +258,11 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
     if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
   };
 
+  const applyAiDraftToApplication = async (application: JobApplicationBundle) => {
+    const updated = await applyLatestAiDraftToJobApplication(application);
+    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+  };
+
   return (
     <div className="career-page">
       <header className="page-header career-header">
@@ -381,6 +387,7 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
                 onDeleteStep={deleteApplicationStep}
                 onSaveRequirement={saveApplicationRequirement}
                 onSaveStep={saveApplicationStep}
+                onApplyAiDraft={applyAiDraftToApplication}
                 onStepStatusChange={(applicationId, stepId, status) => void updateStepStatus(applicationId, stepId, status)}
                 onUpdateApplication={updateApplication}
               />
@@ -639,6 +646,7 @@ function JobApplicationDetailPanel({
   onDelete,
   onDeleteRequirement,
   onDeleteStep,
+  onApplyAiDraft,
   onSaveRequirement,
   onSaveStep,
   onStepStatusChange,
@@ -651,6 +659,7 @@ function JobApplicationDetailPanel({
   onDelete: (applicationId: string) => Promise<void> | void;
   onDeleteRequirement: (applicationId: string, requirementId: string) => Promise<void> | void;
   onDeleteStep: (applicationId: string, stepId: string) => Promise<void> | void;
+  onApplyAiDraft: (application: JobApplicationBundle) => Promise<void> | void;
   onSaveRequirement: (
     applicationId: string,
     requirement: { category: JobApplicationRequirement["category"]; title: string; content: string; sourceText?: string },
@@ -796,6 +805,12 @@ function JobApplicationDetailPanel({
             <LinkIcon aria-hidden size={15} />
             채용사이트
           </a>
+        ) : null}
+        {application.sourceFilePath ? (
+          <button onClick={() => void onApplyAiDraft(application)} type="button">
+            <Sparkles aria-hidden size={15} />
+            AI 초안 반영
+          </button>
         ) : null}
         {activeTab === "planned" ? (
           <button className="job-detail-actions__primary" onClick={() => void onApply(application)} type="button">

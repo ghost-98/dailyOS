@@ -130,6 +130,40 @@ function toDbError(error: unknown, fallback: string) {
   return new Error(fallback);
 }
 
+function isJobPostingExtraction(value: unknown): value is JobPostingExtraction {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { steps?: unknown; requirements?: unknown; checkItems?: unknown; warnings?: unknown };
+  return Array.isArray(candidate.steps) && Array.isArray(candidate.requirements) && Array.isArray(candidate.checkItems) && Array.isArray(candidate.warnings);
+}
+
+function mapExtractionStepToRow(step: JobPostingExtraction["steps"][number], userId: string, applicationId: string, index: number) {
+  return {
+    user_id: userId,
+    application_id: applicationId,
+    type: step.type,
+    title: step.title.trim(),
+    start_at: emptyToNull(step.startAt),
+    end_at: emptyToNull(step.endAt),
+    status: "confirmed",
+    order_index: index,
+    memo: emptyToNull(step.memo),
+    source_text: emptyToNull(step.sourceText),
+    confirmed_by_user: false,
+  };
+}
+
+function mapExtractionRequirementToRow(requirement: JobPostingExtraction["requirements"][number], userId: string, applicationId: string) {
+  return {
+    user_id: userId,
+    application_id: applicationId,
+    category: requirement.category,
+    title: requirement.title.trim(),
+    content: requirement.content.trim(),
+    source_text: emptyToNull(requirement.sourceText),
+    confirmed_by_user: false,
+  };
+}
+
 function toDateOnly(value?: string) {
   return value?.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
 }
@@ -376,34 +410,18 @@ export async function createJobApplicationFromExtraction({
   if (error) throw error;
   const applicationId = (data as { id: string }).id;
 
-  const stepRows = extraction.steps.map((step, index) => ({
-    user_id: userId,
-    application_id: applicationId,
-    type: step.type,
-    title: step.title,
-    start_at: emptyToNull(step.startAt),
-    end_at: emptyToNull(step.endAt),
-    status: "confirmed",
-    order_index: index,
-    memo: emptyToNull(step.memo),
-    source_text: emptyToNull(step.sourceText),
-    confirmed_by_user: false,
-  }));
+  const stepRows = extraction.steps
+    .filter((step) => step.title?.trim())
+    .map((step, index) => mapExtractionStepToRow(step, userId, applicationId, index));
 
   if (stepRows.length > 0) {
     const { error: stepsError } = await supabase.from("job_application_steps").insert(stepRows);
     if (stepsError) throw toDbError(stepsError, "전형 일정 저장에 실패했습니다.");
   }
 
-  const requirementRows = extraction.requirements.map((requirement) => ({
-    user_id: userId,
-    application_id: applicationId,
-    category: requirement.category,
-    title: requirement.title,
-    content: requirement.content,
-    source_text: emptyToNull(requirement.sourceText),
-    confirmed_by_user: false,
-  }));
+  const requirementRows = extraction.requirements
+    .filter((requirement) => requirement.title?.trim())
+    .map((requirement) => mapExtractionRequirementToRow(requirement, userId, applicationId));
 
   if (requirementRows.length > 0) {
     const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
@@ -787,4 +805,61 @@ export async function createAiExtractionDraftInDb({
   }
 
   return data as { id: string };
+}
+
+export async function applyLatestAiDraftToJobApplication(application: JobApplicationBundle) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId || !application.sourceFilePath) return null;
+
+  const { data, error } = await supabase
+    .from("ai_extraction_drafts")
+    .select("id,extracted_json")
+    .eq("source_file_path", application.sourceFilePath)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw toDbError(error, "AI 초안 조회에 실패했습니다.");
+  const extraction = (data as { extracted_json?: unknown } | null)?.extracted_json;
+  if (!isJobPostingExtraction(extraction)) throw new Error("반영할 AI 초안이 없습니다. PDF를 다시 분석해 주세요.");
+
+  const { error: deleteStepsError } = await supabase.from("job_application_steps").delete().eq("application_id", application.id);
+  if (deleteStepsError) throw toDbError(deleteStepsError, "기존 전형 일정 정리에 실패했습니다.");
+
+  const { error: deleteRequirementsError } = await supabase.from("job_application_requirements").delete().eq("application_id", application.id);
+  if (deleteRequirementsError) throw toDbError(deleteRequirementsError, "기존 지원 요건 정리에 실패했습니다.");
+
+  const stepRows = extraction.steps
+    .filter((step) => step.title?.trim())
+    .map((step, index) => mapExtractionStepToRow(step, userId, application.id, index));
+
+  if (stepRows.length > 0) {
+    const { error: stepsError } = await supabase.from("job_application_steps").insert(stepRows);
+    if (stepsError) throw toDbError(stepsError, "AI 전형 일정 반영에 실패했습니다.");
+  }
+
+  const requirementRows = extraction.requirements
+    .filter((requirement) => requirement.title?.trim())
+    .map((requirement) => mapExtractionRequirementToRow(requirement, userId, application.id));
+
+  if (requirementRows.length > 0) {
+    const { error: requirementsError } = await supabase.from("job_application_requirements").insert(requirementRows);
+    if (requirementsError) throw toDbError(requirementsError, "AI 지원 요건 반영에 실패했습니다.");
+  }
+
+  const { error: appError } = await supabase
+    .from("job_applications")
+    .update({
+      company_name: extraction.companyName?.trim() || application.companyName,
+      posting_title: extraction.postingTitle?.trim() || application.postingTitle,
+      job_role: extraction.jobRole?.trim() || application.jobRole,
+      posting_url: emptyToNull(extraction.postingUrl) ?? emptyToNull(application.postingUrl),
+    })
+    .eq("id", application.id);
+  if (appError) throw toDbError(appError, "AI 기본정보 반영에 실패했습니다.");
+
+  const applications = await fetchJobApplicationsFromDb();
+  return applications?.find((item) => item.id === application.id) ?? null;
 }

@@ -124,7 +124,7 @@ async function extractWithGemini({
   }
 
   try {
-    const extraction = JSON.parse(outputText) as Record<string, unknown>;
+    const extraction = normalizeExtraction(JSON.parse(outputText));
     return NextResponse.json({
       ...extraction,
       companyName: companyName.trim() || extraction.companyName,
@@ -140,25 +140,23 @@ async function extractWithGemini({
 
 function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { companyName: string; jobRole: string; postingTitle: string }) {
   return [
-    "너는 채용공고 PDF에서 dailyOS에 필요한 핵심만 뽑는 추출기다.",
-    "너무 세부적인 회사 설명, 블라인드 채용 안내, 유의사항, 법적 고지, 반환/이의신청 문구는 저장하지 않는다.",
-    "반드시 다음 네 가지 중심으로만 추출한다: 1) 전형 일정 2) 지원자격 3) 우대/가점/자격증/어학 요건 4) 제출 마감 또는 제출물.",
-    "steps에는 접수, 서류, 필기, 코딩테스트, 면접, 결과 발표, 입사/검진처럼 캘린더에 넣을 날짜만 넣는다. 최대 8개만 넣는다.",
-    "requirements에는 지원 가능 여부 판단에 필요한 자격요건과 우대/가점 사항만 넣는다. 최대 8개만 넣는다.",
-    "checkItems에는 사용자가 실제로 준비해야 할 제출물이나 마감 체크만 넣는다. 최대 4개만 넣고, 없으면 빈 배열로 둔다.",
-    "날짜는 가능하면 ISO 형식으로 쓴다. 시간이 명시되면 +09:00 기준 ISO datetime으로 쓴다.",
-    "각 항목의 sourceText에는 원문 근거를 짧게 남긴다.",
+    "너는 채용공고 PDF에서 dailyOS에 필요한 채용관리 데이터만 구조화하는 추출기다.",
+    "반환 JSON은 전형명(title), 전형종류(type), 시작일(startAt), 종료일(endAt), 메모(memo), 원문근거(sourceText)를 명확히 분리해야 한다.",
+    "전형 일정은 접수기간, 서류전형/서류발표, 필기시험, 코딩테스트, 면접, 결과발표, 건강검진, 입사일처럼 사용자가 캘린더에서 관리할 날짜만 넣는다.",
+    "기간이면 startAt과 endAt을 모두 넣고, 단일 날짜이면 startAt과 endAt에 같은 날짜를 넣는다. 시간이 없으면 해당 날짜의 00:00:00+09:00을 사용한다.",
+    "title에는 '2차전형 필기전형', '면접전형', '최종 합격자 발표'처럼 전형명을 짧게 넣고, sourceText에는 PDF 원문 근거 문장을 넣는다.",
+    "requirements에는 지원 가능 여부나 가점 판단에 직접 필요한 자격증, 어학, 전공, 지역인재, 우대/가점, 제출물 요건만 넣는다.",
+    "연령 제한 없음, 병역, 신분증/수험표, 블라인드 채용, 채용서류 반환, 부정행위, 문의처, 회사 소개, 슬로건, 일반 유의사항은 넣지 않는다.",
+    "summary에는 아무 것도 넣지 말고 빈 문자열을 반환한다.",
+    "jobRole은 ICT, 전기, 사무, 토목처럼 지원자가 실제 선택하는 직무/모집분야만 넣는다. 채용 수준이나 직급명은 jobRole에 넣지 않는다.",
+    "steps는 최대 10개, requirements는 최대 8개, checkItems는 최대 4개로 제한한다.",
     "불확실하거나 사용자가 확인해야 하는 내용은 warnings에 넣는다.",
     `사용자가 미리 입력한 기업명: ${companyName || "(없음)"}`,
     `사용자가 미리 입력한 공고명: ${postingTitle || "(없음)"}`,
     `사용자가 미리 입력한 직무: ${jobRole || "(없음)"}`,
-    "summary에는 회사 소개, 슬로건, 채용 홍보 문구를 넣지 말고 빈 문자열을 반환한다.",
-    "jobRole은 ICT, 전기, 사무, 토목처럼 지원자가 실제 선택하는 직무/모집분야만 넣는다. 채용 수준이나 직급명은 jobRole에 넣지 않는다.",
-    "연령 제한 없음, 병역, 신분증/수험표, 블라인드 채용, 채용서류 반환, 부정행위, 문의처 같은 일반 안내는 requirements와 checkItems에 넣지 않는다.",
     "반드시 schema에 맞는 JSON만 반환한다.",
   ].join("\n");
 }
-
 function extractGeminiOutputText(payload: unknown) {
   if (!payload || typeof payload !== "object") return null;
   const candidates = (payload as { candidates?: unknown }).candidates;
@@ -177,6 +175,137 @@ function extractGeminiOutputText(payload: unknown) {
   }
 
   return null;
+}
+
+type RawExtraction = {
+  companyName?: unknown;
+  postingTitle?: unknown;
+  jobRole?: unknown;
+  postingUrl?: unknown;
+  summary?: unknown;
+  steps?: unknown;
+  requirements?: unknown;
+  checkItems?: unknown;
+  warnings?: unknown;
+};
+
+function normalizeExtraction(value: unknown) {
+  const raw = (value && typeof value === "object" ? value : {}) as RawExtraction;
+
+  return {
+    companyName: asString(raw.companyName),
+    postingTitle: asString(raw.postingTitle),
+    jobRole: normalizeJobRole(asString(raw.jobRole)),
+    postingUrl: asString(raw.postingUrl),
+    summary: "",
+    steps: normalizeSteps(raw.steps),
+    requirements: normalizeRequirements(raw.requirements),
+    checkItems: normalizeCheckItems(raw.checkItems),
+    warnings: Array.isArray(raw.warnings) ? raw.warnings.map(asString).filter(Boolean).slice(0, 6) : [],
+  };
+}
+
+function normalizeSteps(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const raw = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      const title = asString(raw.title);
+      const startAt = normalizeDateTime(asString(raw.startAt));
+      const endAt = normalizeDateTime(asString(raw.endAt)) || startAt;
+      return {
+        type: normalizeStepType(asString(raw.type), title),
+        title,
+        startAt,
+        endAt,
+        memo: asString(raw.memo),
+        sourceText: asString(raw.sourceText),
+        confidence: Number(raw.confidence) || 0.7,
+      };
+    })
+    .filter((step) => step.title && (step.startAt || step.endAt))
+    .slice(0, 10);
+}
+
+function normalizeRequirements(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const raw = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      return {
+        category: normalizeRequirementCategory(asString(raw.category)),
+        title: asString(raw.title),
+        content: asString(raw.content),
+        sourceText: asString(raw.sourceText),
+        confidence: Number(raw.confidence) || 0.7,
+      };
+    })
+    .filter((requirement) => requirement.title && requirement.content && !isGenericRequirement(requirement.title, requirement.content))
+    .slice(0, 8);
+}
+
+function normalizeCheckItems(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const raw = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      return {
+        title: asString(raw.title),
+        category: normalizeRequirementCategory(asString(raw.category)),
+        dueAt: normalizeDateTime(asString(raw.dueAt)),
+        memo: asString(raw.memo),
+        sourceText: asString(raw.sourceText),
+        confidence: Number(raw.confidence) || 0.7,
+      };
+    })
+    .filter((item) => item.title)
+    .slice(0, 4);
+}
+
+function asString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeDateTime(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isNaN(date.getTime())) return value.includes("T") ? value : `${value}T00:00:00+09:00`;
+  const dateOnly = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  return dateOnly ? `${dateOnly}T00:00:00+09:00` : "";
+}
+
+function normalizeStepType(type: string, title: string) {
+  const text = `${type} ${title}`.toLowerCase();
+  if (text.includes("접수") || text.includes("지원")) return "application";
+  if (text.includes("서류")) return "document";
+  if (text.includes("필기") || text.includes("ncs")) return "written";
+  if (text.includes("코딩")) return "coding_test";
+  if (text.includes("과제")) return "assignment";
+  if (text.includes("면접")) return "interview";
+  if (text.includes("검진") || text.includes("신체")) return "medical";
+  if (text.includes("결과") || text.includes("발표") || text.includes("합격자")) return "result";
+  if (text.includes("입사") || text.includes("임용")) return "employment";
+  return "etc";
+}
+
+function normalizeRequirementCategory(category: string) {
+  if (["eligibility", "preferred", "document", "exam", "interview", "note"].includes(category)) return category;
+  if (category.includes("가점") || category.includes("우대") || category.includes("자격증")) return "preferred";
+  if (category.includes("서류") || category.includes("제출")) return "document";
+  if (category.includes("필기") || category.includes("시험")) return "exam";
+  if (category.includes("면접")) return "interview";
+  if (category.includes("자격") || category.includes("어학") || category.includes("전공")) return "eligibility";
+  return "note";
+}
+
+function normalizeJobRole(value: string) {
+  if (/직급|대졸|신입사원|채용공고|채용형|인턴/i.test(value)) return "";
+  return value;
+}
+
+function isGenericRequirement(title: string, content: string) {
+  const text = `${title} ${content}`;
+  return /연령|병역|신분증|수험표|블라인드|반환|이의신청|부정행위|문의|회사|슬로건/.test(text);
 }
 
 const extractionSchema = {
