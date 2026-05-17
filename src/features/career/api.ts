@@ -103,10 +103,7 @@ const recordColumns = `
 `;
 
 const jobApplicationColumns = `
-  id,company_name,posting_title,job_role,status,posting_url,source_file_path,source_file_name,memo,
-  job_application_steps(id,application_id,type,title,start_at,end_at,status,order_index,memo,source_text,confirmed_by_user),
-  job_application_requirements(id,application_id,category,title,content,source_text,confirmed_by_user),
-  job_application_check_items(id,application_id,title,category,due_at,is_done,memo)
+  id,company_name,posting_title,job_role,status,posting_url,source_file_path,source_file_name,memo
 `;
 
 async function getUserId() {
@@ -244,6 +241,67 @@ async function insertJobApplicationTemplateData({
     const { error } = await supabase.from("job_application_check_items").insert(checkItemRows);
     if (error) throw toDbError(error, "준비 체크 항목 저장에 실패했습니다.");
   }
+}
+
+async function rollbackJobApplication(applicationId: string) {
+  if (!supabase) return;
+  await Promise.allSettled([
+    supabase.from("job_application_check_items").delete().eq("application_id", applicationId),
+    supabase.from("job_application_requirements").delete().eq("application_id", applicationId),
+    supabase.from("job_application_steps").delete().eq("application_id", applicationId),
+    supabase.from("job_application_files").delete().eq("application_id", applicationId),
+  ]);
+  await supabase.from("job_applications").delete().eq("id", applicationId);
+}
+
+async function assertJobApplicationTemplateVisible({
+  applicationId,
+  checkItemCount = 0,
+  requirementCount = 0,
+  stepCount = 0,
+}: {
+  applicationId: string;
+  checkItemCount?: number;
+  requirementCount?: number;
+  stepCount?: number;
+}) {
+  if (!supabase) return;
+
+  const checks = [
+    { count: stepCount, label: "전형 일정", table: "job_application_steps" },
+    { count: requirementCount, label: "자격/가점 요건", table: "job_application_requirements" },
+    { count: checkItemCount, label: "준비 체크 항목", table: "job_application_check_items" },
+  ];
+
+  for (const check of checks) {
+    if (check.count === 0) continue;
+    const { count, error } = await supabase
+      .from(check.table)
+      .select("id", { count: "exact", head: true })
+      .eq("application_id", applicationId);
+
+    if (error) throw toDbError(error, `${check.label} 저장 확인에 실패했습니다.`);
+    if ((count ?? 0) === 0) {
+      throw new Error(`${check.label}이 저장됐는지 확인할 수 없습니다. Supabase RLS 정책을 다시 적용해주세요.`);
+    }
+  }
+}
+
+async function linkLatestAiDraftToApplication({
+  applicationId,
+  sourceFilePath,
+  userId,
+}: {
+  applicationId: string;
+  sourceFilePath?: string;
+  userId: string;
+}) {
+  if (!supabase || !sourceFilePath) return;
+  await supabase
+    .from("ai_extraction_drafts")
+    .update({ application_id: applicationId, status: "applied" })
+    .eq("user_id", userId)
+    .eq("source_file_path", sourceFilePath);
 }
 
 function toDbError(error: unknown, fallback: string) {
@@ -400,6 +458,48 @@ function mapJobApplicationRow(row: JobApplicationRow): JobApplicationBundle {
   };
 }
 
+function attachJobApplicationChildren(
+  applications: JobApplicationBundle[],
+  children: {
+    checkItems?: JobApplicationCheckItemRow[];
+    requirements?: JobApplicationRequirementRow[];
+    steps?: JobApplicationStepRow[];
+  },
+) {
+  const stepsByApplication = new Map<string, JobApplicationStepRow[]>();
+  const requirementsByApplication = new Map<string, JobApplicationRequirementRow[]>();
+  const checkItemsByApplication = new Map<string, JobApplicationCheckItemRow[]>();
+
+  for (const step of children.steps ?? []) {
+    stepsByApplication.set(step.application_id, [...(stepsByApplication.get(step.application_id) ?? []), step]);
+  }
+
+  for (const requirement of children.requirements ?? []) {
+    requirementsByApplication.set(requirement.application_id, [...(requirementsByApplication.get(requirement.application_id) ?? []), requirement]);
+  }
+
+  for (const item of children.checkItems ?? []) {
+    checkItemsByApplication.set(item.application_id, [...(checkItemsByApplication.get(item.application_id) ?? []), item]);
+  }
+
+  return applications.map((application) =>
+    mapJobApplicationRow({
+      id: application.id,
+      company_name: application.companyName,
+      posting_title: application.postingTitle,
+      job_role: application.jobRole,
+      status: application.status,
+      posting_url: application.postingUrl ?? null,
+      source_file_path: application.sourceFilePath ?? null,
+      source_file_name: application.sourceFileName ?? null,
+      memo: application.memo ?? null,
+      job_application_steps: stepsByApplication.get(application.id) ?? [],
+      job_application_requirements: requirementsByApplication.get(application.id) ?? [],
+      job_application_check_items: checkItemsByApplication.get(application.id) ?? [],
+    }),
+  );
+}
+
 function mapRecordToInsert(record: CareerRecord, userId: string): CareerRecordInsert {
   return {
     user_id: userId,
@@ -519,7 +619,37 @@ export async function fetchJobApplicationsFromDb() {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data as JobApplicationRow[]).map(mapJobApplicationRow);
+  const applications = (data as JobApplicationRow[]).map(mapJobApplicationRow);
+  const applicationIds = applications.map((application) => application.id);
+  if (applicationIds.length === 0) return applications;
+
+  const [stepsResult, requirementsResult, checkItemsResult] = await Promise.all([
+    supabase
+      .from("job_application_steps")
+      .select("id,application_id,type,title,start_at,end_at,status,order_index,memo,source_text,confirmed_by_user")
+      .in("application_id", applicationIds)
+      .order("order_index", { ascending: true }),
+    supabase
+      .from("job_application_requirements")
+      .select("id,application_id,category,title,content,source_text,confirmed_by_user")
+      .in("application_id", applicationIds)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("job_application_check_items")
+      .select("id,application_id,title,category,due_at,is_done,memo")
+      .in("application_id", applicationIds)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (stepsResult.error) throw toDbError(stepsResult.error, "전형 일정 조회에 실패했습니다.");
+  if (requirementsResult.error) throw toDbError(requirementsResult.error, "자격/가점 요건 조회에 실패했습니다.");
+  if (checkItemsResult.error) throw toDbError(checkItemsResult.error, "준비 체크 항목 조회에 실패했습니다.");
+
+  return attachJobApplicationChildren(applications, {
+    steps: stepsResult.data as JobApplicationStepRow[],
+    requirements: requirementsResult.data as JobApplicationRequirementRow[],
+    checkItems: checkItemsResult.data as JobApplicationCheckItemRow[],
+  });
 }
 
 export async function createJobApplicationFromExtraction({
@@ -554,23 +684,35 @@ export async function createJobApplicationFromExtraction({
   if (error) throw error;
   const applicationId = (data as { id: string }).id;
 
-  await insertJobApplicationTemplateData({
-    applicationId,
-    userId,
-    steps: extraction.steps,
-    requirements: extraction.requirements,
-    checkItems: extraction.checkItems,
-  });
-
-  if (sourceFilePath && sourceFileName) {
-    const { error: fileError } = await supabase.from("job_application_files").insert({
-      user_id: userId,
-      application_id: applicationId,
-      kind: "posting",
-      file_path: sourceFilePath,
-      file_name: sourceFileName,
+  try {
+    await insertJobApplicationTemplateData({
+      applicationId,
+      userId,
+      steps: extraction.steps,
+      requirements: extraction.requirements,
+      checkItems: extraction.checkItems,
     });
-    if (fileError) console.warn("Failed to save linked job posting file metadata", fileError);
+    await assertJobApplicationTemplateVisible({
+      applicationId,
+      stepCount: extraction.steps.filter((step) => step.title?.trim()).length,
+      requirementCount: extraction.requirements.filter((requirement) => requirement.title?.trim()).length,
+      checkItemCount: extraction.checkItems.filter((item) => item.title?.trim()).length,
+    });
+
+    if (sourceFilePath && sourceFileName) {
+      const { error: fileError } = await supabase.from("job_application_files").insert({
+        user_id: userId,
+        application_id: applicationId,
+        kind: "posting",
+        file_path: sourceFilePath,
+        file_name: sourceFileName,
+      });
+      if (fileError) console.warn("Failed to save linked job posting file metadata", fileError);
+      await linkLatestAiDraftToApplication({ applicationId, sourceFilePath, userId });
+    }
+  } catch (templateError) {
+    await rollbackJobApplication(applicationId);
+    throw templateError;
   }
 
   const applications = await fetchJobApplicationsFromDb();
@@ -608,13 +750,24 @@ export async function createManualJobApplicationInDb({
   if (error) throw error;
   const applicationId = (data as { id: string }).id;
 
-  await insertJobApplicationTemplateData({
-    applicationId,
-    userId,
-    steps,
-    requirements,
-    checkItems,
-  });
+  try {
+    await insertJobApplicationTemplateData({
+      applicationId,
+      userId,
+      steps,
+      requirements,
+      checkItems,
+    });
+    await assertJobApplicationTemplateVisible({
+      applicationId,
+      stepCount: steps?.filter((step) => step.title?.trim()).length ?? 0,
+      requirementCount: requirements?.filter((requirement) => requirement.title?.trim()).length ?? 0,
+      checkItemCount: checkItems?.filter((item) => item.title?.trim()).length ?? 0,
+    });
+  } catch (templateError) {
+    await rollbackJobApplication(applicationId);
+    throw templateError;
+  }
 
   const applications = await fetchJobApplicationsFromDb();
   return applications?.find((application) => application.id === applicationId) ?? null;

@@ -147,7 +147,9 @@ function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { company
     "title에는 '2차전형 필기전형', '면접전형', '최종 합격자 발표'처럼 전형명을 짧게 넣고, sourceText에는 PDF 원문 근거 문장을 넣는다.",
     "requirements에는 사용자가 지원 가능 여부와 서류 점수/가점 산정을 판단하는 데 필요한 내용만 넣는다.",
     "eligibility에는 필수 자격요건만 넣는다. 예: TOEIC 700점 이상, 기술 분야 전공자 또는 관련 분야 자격증 보유자, 특정 지역인재 지원 가능 조건.",
-    "preferred에는 실제 배점이나 가점 계산에 필요한 우대사항만 넣는다. 예: 자격증 가점, 어학 환산식, 서류전형 배점, 우대가점, 이전지역인재 채용목표제.",
+    "preferred에는 실제 배점이나 가점 계산에 필요한 우대사항만 넣는다. 예: 서류전형 외국어 성적 배점, TOEIC 환산식, 자격증 가점표, 기술사/기사/산업기사 배점, 고급자격증 외국어 면제, 이전지역인재 채용목표제.",
+    "서류전형에서 어학 성적과 자격증이 평가요소로 쓰이면 반드시 preferred 항목으로 분리한다. title 예: '서류전형 어학 배점', '자격증 가점', '고급자격증 외국어 면제'.",
+    "지원자격으로서 필요한 어학/자격증은 eligibility에 넣고, 점수 계산이나 가점으로 쓰이는 어학/자격증은 preferred에 따로 넣는다. 같은 원문이 두 의미를 가지면 두 항목으로 나눠도 된다.",
     "document에는 지원서/자기소개서/증빙서류처럼 제출 시기와 제출물이 명확한 것만 넣는다.",
     "exam/interview에는 필기 과목, NCS/전공 문항 수, 코딩테스트 과목, 면접 평가요소처럼 전형 준비에 필요한 평가정보만 넣는다.",
     "연령 제한 없음, 병역, 결격사유, 신분증/수험표, 블라인드 채용 유의사항, 채용서류 반환, 부정행위, 문의처, 회사 소개, 슬로건, 일반 유의사항은 requirements에 넣지 않는다.",
@@ -316,7 +318,7 @@ function normalizeRequirementCategory(category: string) {
 function normalizeRequirementCategoryByText(category: string, title: string, content: string) {
   const normalized = normalizeRequirementCategory(category);
   const text = `${title} ${content}`;
-  if (/가점|우대|배점|환산|상한점수|채용목표제/.test(text)) return "preferred";
+  if (/가점|우대|배점|환산|상한점수|채용목표제|평가요소|외국어\s*성적\s*\(|자격증\s*가점|서류전형.*성적/.test(text)) return "preferred";
   if (/TOEIC|OPIc|TEPS|JPT|HSK|어학|전공자|자격증\s*보유|지원자격|필수|이상/.test(text)) return "eligibility";
   return normalized;
 }
