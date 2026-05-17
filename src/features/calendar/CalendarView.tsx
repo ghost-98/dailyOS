@@ -115,6 +115,7 @@ export function CalendarView({
   const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
   const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
+  const todayKey = useMemo(() => formatDateKey(new Date()), []);
   const selectedSchedules = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : [];
   const selectedEvents = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : [];
   const selectedTasks = selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : [];
@@ -329,7 +330,7 @@ export function CalendarView({
               const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories);
               return (
                 <button
-                  className={`calendar-day ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
+                  className={`calendar-day ${cell.date === todayKey ? "calendar-day--today" : ""} ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
                   disabled={!cell.date}
                   key={cell.key}
                   onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
