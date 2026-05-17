@@ -9,7 +9,6 @@ import {
   HeartPulse,
   LogOut,
   NotebookPen,
-  Plus,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -124,14 +123,9 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
           </div>
 
           <div className="sidebar__footer">
-            <button className="new-entry">
-              <Plus aria-hidden size={17} />
-              새 항목
-            </button>
-
             <div className="profile">
               <div className="profile__avatar">{avatarInitial}</div>
-              <div>
+              <div className="profile__meta">
                 <strong>{displayName}</strong>
                 <span>
                   <Activity aria-hidden size={13} />

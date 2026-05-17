@@ -599,25 +599,13 @@ button {
 
 .sidebar__footer {
   display: grid;
-  gap: 26px;
-}
-
-.new-entry {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--line-strong);
-  background: var(--violet);
-  border-radius: 10px;
-  box-shadow: 0 12px 24px rgba(200, 182, 255, 0.18);
-  color: #17121f;
-  font-weight: 800;
+  gap: 18px;
+  min-width: 0;
 }
 
 .profile {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 12px;
   border-top: 1px solid var(--line);
@@ -626,6 +614,7 @@ button {
 
 .profile__avatar {
   display: grid;
+  flex: 0 0 48px;
   width: 48px;
   height: 48px;
   place-items: center;
@@ -635,22 +624,39 @@ button {
   font-weight: 900;
 }
 
+.profile__meta {
+  min-width: 0;
+}
+
 .profile strong {
   display: block;
+  overflow: hidden;
   font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile span {
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
   gap: 5px;
+  overflow: hidden;
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile span svg {
+  flex: 0 0 auto;
 }
 
 .profile__logout {
   display: grid;
+  flex: 0 0 34px;
   width: 34px;
   height: 34px;
   margin-left: auto;
