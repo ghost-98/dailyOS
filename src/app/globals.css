@@ -84,12 +84,7 @@ button {
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  background: rgba(157, 178, 255, 0.1);
   color: var(--violet);
-  font-size: 22px;
-  font-weight: 900;
 }
 
 .auth-brand strong {
@@ -347,13 +342,58 @@ button {
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  border-radius: 10px;
-  background: rgba(201, 184, 255, 0.12);
   color: var(--violet);
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1;
+}
+
+.dailyos-mark {
+  display: block;
+}
+
+.brand__mark svg,
+.auth-brand__mark svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.32));
+}
+
+.dailyos-mark__surface {
+  fill: #17171a;
+  stroke: rgba(201, 184, 255, 0.24);
+  stroke-width: 1;
+}
+
+.dailyos-mark__arc {
+  fill: none;
+  stroke: #f4f1eb;
+  stroke-linecap: round;
+  stroke-width: 2.7;
+}
+
+.dailyos-mark__arc--soft {
+  stroke: rgba(244, 241, 235, 0.72);
+  stroke-width: 2.2;
+}
+
+.dailyos-mark__check {
+  fill: none;
+  stroke: #c8b6ff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.8;
+}
+
+.dailyos-mark__grid {
+  fill: none;
+  stroke: rgba(244, 241, 235, 0.34);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.dailyos-mark__point {
+  fill: #89f0c2;
+  stroke: #17171a;
+  stroke-width: 1.2;
 }
 
 .brand__name {

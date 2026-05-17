@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
+import { DailyOSMark } from "@/components/brand/DailyOSMark";
 
 const timeChildren = [
   { label: "캘린더", href: "/schedule", key: "schedule" },
@@ -71,7 +72,9 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
         <aside className="sidebar" aria-label="주요 메뉴">
           <div>
             <Link className="brand" href="/" aria-label="dailyOS 홈으로 이동">
-              <span className="brand__mark">d</span>
+              <span className="brand__mark">
+                <DailyOSMark />
+              </span>
               <div>
                 <span className="brand__name">dailyOS</span>
                 <span className="brand__subtitle">개인 관리</span>
