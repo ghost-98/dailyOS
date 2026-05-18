@@ -17,7 +17,7 @@ import {
   updateWorkoutSessionInDb,
 } from "./api";
 
-const initialDate = new Date().toISOString().slice(0, 10);
+const initialDate = formatDateKey(new Date());
 
 const workoutTypeLabels: Record<WorkoutType, string> = {
   running: "러닝",
@@ -36,7 +36,11 @@ const conditionLabels: Record<WorkoutCondition, string> = {
 function addDays(date: string, days: number) {
   const value = new Date(`${date}T00:00:00`);
   value.setDate(value.getDate() + days);
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  return formatDateKey(value);
+}
+
+function formatDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatSelectedDay(date: string) {
