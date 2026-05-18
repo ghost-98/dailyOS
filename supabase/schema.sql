@@ -207,7 +207,20 @@ create table if not exists public.job_application_requirements (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   application_id uuid not null references public.job_applications(id) on delete cascade,
-  category text not null default 'note' check (category in ('eligibility', 'preferred', 'document', 'exam', 'interview', 'note')),
+  category text not null default 'note' check (
+    category in (
+      'eligibility',
+      'document_evaluation',
+      'language_score',
+      'certificate_bonus',
+      'preferred',
+      'attachment_required',
+      'document',
+      'exam',
+      'interview',
+      'note'
+    )
+  ),
   title text not null,
   content text not null default '',
   source_text text,
@@ -221,7 +234,20 @@ create table if not exists public.job_application_check_items (
   user_id uuid not null references auth.users(id) on delete cascade,
   application_id uuid not null references public.job_applications(id) on delete cascade,
   title text not null,
-  category text not null default 'note' check (category in ('eligibility', 'preferred', 'document', 'exam', 'interview', 'note')),
+  category text not null default 'note' check (
+    category in (
+      'eligibility',
+      'document_evaluation',
+      'language_score',
+      'certificate_bonus',
+      'preferred',
+      'attachment_required',
+      'document',
+      'exam',
+      'interview',
+      'note'
+    )
+  ),
   due_at timestamptz,
   is_done boolean not null default false,
   memo text,

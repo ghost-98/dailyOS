@@ -23,7 +23,17 @@ export type JobProcessStepType =
 
 export type JobProcessStepStatus = "draft" | "confirmed" | "done" | "skipped";
 
-export type JobRequirementCategory = "eligibility" | "preferred" | "document" | "exam" | "interview" | "note";
+export type JobRequirementCategory =
+  | "eligibility"
+  | "document_evaluation"
+  | "language_score"
+  | "certificate_bonus"
+  | "preferred"
+  | "attachment_required"
+  | "document"
+  | "exam"
+  | "interview"
+  | "note";
 
 export type AiExtractionStatus = "draft" | "reviewed" | "applied" | "discarded";
 

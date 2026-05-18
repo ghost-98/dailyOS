@@ -97,12 +97,29 @@ const priorityLabels = {
 
 const requirementCategoryLabels: Record<JobApplicationRequirement["category"], string> = {
   eligibility: "지원자격",
-  preferred: "우대/가점/배점",
+  document_evaluation: "서류평가",
+  language_score: "어학",
+  certificate_bonus: "자격증/가점",
+  preferred: "우대사항",
+  attachment_required: "필요 붙임",
   document: "서류",
   exam: "필기",
   interview: "면접",
   note: "메모",
 };
+
+const requirementCategoryOptions: Array<{ label: string; value: JobApplicationRequirement["category"] }> = [
+  { label: "지원자격", value: "eligibility" },
+  { label: "서류평가", value: "document_evaluation" },
+  { label: "어학", value: "language_score" },
+  { label: "자격증/가점", value: "certificate_bonus" },
+  { label: "우대사항", value: "preferred" },
+  { label: "필요 붙임", value: "attachment_required" },
+  { label: "서류", value: "document" },
+  { label: "필기", value: "exam" },
+  { label: "면접", value: "interview" },
+  { label: "메모", value: "note" },
+];
 
 const statusOptions: Record<CareerTab, string[]> = {
   applied: ["지원중", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
@@ -963,12 +980,7 @@ function JobApplicationDetailPanel({
         </div>
         <div className="job-detail-manage-form">
           <select value={requirementForm.category} onChange={(event) => setRequirementForm((current) => ({ ...current, category: event.target.value as JobApplicationRequirement["category"] }))}>
-            <option value="eligibility">지원자격</option>
-            <option value="preferred">우대/가점/배점</option>
-            <option value="document">서류</option>
-            <option value="exam">필기</option>
-            <option value="interview">면접</option>
-            <option value="note">메모</option>
+            {requirementCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
           <input value={requirementForm.title} placeholder="항목명" onChange={(event) => setRequirementForm((current) => ({ ...current, title: event.target.value }))} />
           <textarea rows={3} value={requirementForm.content} placeholder="내용" onChange={(event) => setRequirementForm((current) => ({ ...current, content: event.target.value }))} />
@@ -1006,12 +1018,7 @@ function JobApplicationDetailPanel({
         </div>
         <div className="job-detail-manage-form">
           <select value={checkItemForm.category} onChange={(event) => setCheckItemForm((current) => ({ ...current, category: event.target.value as JobApplicationCheckItem["category"] }))}>
-            <option value="document">서류</option>
-            <option value="eligibility">지원자격</option>
-            <option value="preferred">우대/가점/배점</option>
-            <option value="exam">필기</option>
-            <option value="interview">면접</option>
-            <option value="note">메모</option>
+            {requirementCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
           <input value={checkItemForm.title} placeholder="체크 항목" onChange={(event) => setCheckItemForm((current) => ({ ...current, title: event.target.value }))} />
           <input type="datetime-local" value={checkItemForm.dueAt} onChange={(event) => setCheckItemForm((current) => ({ ...current, dueAt: event.target.value }))} />
@@ -1755,12 +1762,7 @@ function JobTemplateDraftEditor({
         {requirements.map((requirement, index) => (
           <div className="job-template-row job-template-row--requirement" key={`template-requirement-${index}`}>
             <select value={requirement.category} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, category: event.target.value as JobApplicationRequirement["category"] } : item)))}>
-              <option value="eligibility">지원자격</option>
-              <option value="preferred">우대/가점/배점</option>
-              <option value="document">서류</option>
-              <option value="exam">필기</option>
-              <option value="interview">면접</option>
-              <option value="note">메모</option>
+              {requirementCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <input placeholder="항목명" value={requirement.title} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, title: event.target.value } : item)))} />
             <textarea rows={2} placeholder="내용" value={requirement.content} onChange={(event) => onRequirementsChange(requirements.map((item, itemIndex) => (itemIndex === index ? { ...item, content: event.target.value } : item)))} />
@@ -1781,12 +1783,7 @@ function JobTemplateDraftEditor({
         {checkItems.map((item, index) => (
           <div className="job-template-row job-template-row--check" key={`template-check-${index}`}>
             <select value={item.category} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, category: event.target.value as JobApplicationCheckItem["category"] } : checkItem)))}>
-              <option value="document">서류</option>
-              <option value="eligibility">지원자격</option>
-              <option value="preferred">우대/가점/배점</option>
-              <option value="exam">필기</option>
-              <option value="interview">면접</option>
-              <option value="note">메모</option>
+              {requirementCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
             <input placeholder="체크 항목" value={item.title} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, title: event.target.value } : checkItem)))} />
             <input type="datetime-local" value={toDatetimeLocalValue(item.dueAt)} onChange={(event) => onCheckItemsChange(checkItems.map((checkItem, itemIndex) => (itemIndex === index ? { ...checkItem, dueAt: toIsoFromDatetimeLocal(event.target.value) } : checkItem)))} />

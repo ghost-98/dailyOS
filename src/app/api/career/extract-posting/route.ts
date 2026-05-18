@@ -147,9 +147,14 @@ function buildExtractionPrompt({ companyName, jobRole, postingTitle }: { company
     "title에는 '2차전형 필기전형', '면접전형', '최종 합격자 발표'처럼 전형명을 짧게 넣고, sourceText에는 PDF 원문 근거 문장을 넣는다.",
     "requirements에는 사용자가 지원 가능 여부와 서류 점수/가점 산정을 판단하는 데 필요한 내용만 넣는다.",
     "eligibility에는 필수 자격요건만 넣는다. 예: TOEIC 700점 이상, 기술 분야 전공자 또는 관련 분야 자격증 보유자, 특정 지역인재 지원 가능 조건.",
-    "preferred에는 실제 배점이나 가점 계산에 필요한 우대사항만 넣는다. 예: 서류전형 외국어 성적 배점, TOEIC 환산식, 자격증 가점표, 기술사/기사/산업기사 배점, 고급자격증 외국어 면제, 이전지역인재 채용목표제.",
-    "서류전형에서 어학 성적과 자격증이 평가요소로 쓰이면 반드시 preferred 항목으로 분리한다. title 예: '서류전형 어학 배점', '자격증 가점', '고급자격증 외국어 면제'.",
-    "지원자격으로서 필요한 어학/자격증은 eligibility에 넣고, 점수 계산이나 가점으로 쓰이는 어학/자격증은 preferred에 따로 넣는다. 같은 원문이 두 의미를 가지면 두 항목으로 나눠도 된다.",
+    "document_evaluation에는 서류전형의 평가방식, 평가요소, 배점, 선발배수, 커트라인, 환산식처럼 서류 단계에서 점수가 어떻게 계산되는지 넣는다.",
+    "language_score에는 어학 성적이 지원자격 또는 서류평가 점수로 쓰이는 기준을 넣는다. 지원자격과 평가점수 두 의미가 모두 있으면 eligibility와 language_score를 각각 만든다.",
+    "certificate_bonus에는 자격증 가점, 자격증별 배점, 고급자격증 면제, 기사/산업기사/기술사 점수처럼 사용자의 보유 자격증과 매칭할 내용을 넣는다.",
+    "preferred에는 보훈, 장애, 이전지역인재, 채용목표제처럼 자격증/어학이 아닌 우대 또는 가점 조건만 넣는다.",
+    "attachment_required에는 '붙임 5 자격증 가점표', '별도 첨부파일', 'NCS 직무 설명자료'처럼 현재 PDF에서 세부 표를 확인할 수 없고 추가 파일이 필요한 항목을 넣는다.",
+    "서류전형에서 어학 성적과 자격증이 평가요소로 쓰이면 반드시 document_evaluation, language_score, certificate_bonus로 분리한다. title 예: '서류전형 평가방식', '서류전형 어학 배점', '자격증 가점표'.",
+    "붙임 5 같은 자격증 가점표가 같은 PDF 안에 실제 표로 포함되어 있으면 certificate_bonus에 요약한다. PDF에 '붙임 5 참조'만 있고 표가 없으면 attachment_required에 '붙임 5 자격증 가점표 필요'를 추가하고 warnings에도 확인 필요로 넣는다.",
+    "지원자격으로서 필요한 어학/자격증은 eligibility에 넣고, 점수 계산이나 가점으로 쓰이는 어학/자격증은 language_score/certificate_bonus에 따로 넣는다. 같은 원문이 두 의미를 가지면 두 항목으로 나눠도 된다.",
     "document에는 지원서/자기소개서/증빙서류처럼 제출 시기와 제출물이 명확한 것만 넣는다.",
     "exam/interview에는 필기 과목, NCS/전공 문항 수, 코딩테스트 과목, 면접 평가요소처럼 전형 준비에 필요한 평가정보만 넣는다.",
     "연령 제한 없음, 병역, 결격사유, 신분증/수험표, 블라인드 채용 유의사항, 채용서류 반환, 부정행위, 문의처, 회사 소개, 슬로건, 일반 유의사항은 requirements에 넣지 않는다.",
@@ -306,7 +311,24 @@ function normalizeStepType(type: string, title: string) {
 }
 
 function normalizeRequirementCategory(category: string) {
-  if (["eligibility", "preferred", "document", "exam", "interview", "note"].includes(category)) return category;
+  if (
+    [
+      "eligibility",
+      "document_evaluation",
+      "language_score",
+      "certificate_bonus",
+      "preferred",
+      "attachment_required",
+      "document",
+      "exam",
+      "interview",
+      "note",
+    ].includes(category)
+  ) return category;
+  if (category.includes("붙임") || category.includes("첨부")) return "attachment_required";
+  if (category.includes("서류") && (category.includes("평가") || category.includes("배점") || category.includes("선발"))) return "document_evaluation";
+  if (category.includes("어학") || category.includes("외국어") || category.includes("TOEIC")) return "language_score";
+  if (category.includes("자격증") || category.includes("가점표")) return "certificate_bonus";
   if (category.includes("가점") || category.includes("우대") || category.includes("배점")) return "preferred";
   if (category.includes("서류") || category.includes("제출")) return "document";
   if (category.includes("필기") || category.includes("시험")) return "exam";
@@ -318,7 +340,11 @@ function normalizeRequirementCategory(category: string) {
 function normalizeRequirementCategoryByText(category: string, title: string, content: string) {
   const normalized = normalizeRequirementCategory(category);
   const text = `${title} ${content}`;
-  if (/가점|우대|배점|환산|상한점수|채용목표제|평가요소|외국어\s*성적\s*\(|자격증\s*가점|서류전형.*성적/.test(text)) return "preferred";
+  if (/붙임\s*\d+|별도\s*첨부|첨부파일|가점표\s*참조|직무\s*설명자료/.test(text)) return "attachment_required";
+  if (/서류전형|서류\s*평가|합격배수|선발배수|커트라인|평가요소|환산|상한점수/.test(text)) return "document_evaluation";
+  if (/외국어|어학|TOEIC|OPIc|TEPS|JPT|HSK/.test(text) && /성적|점수|환산|상한|기준|이상|면제/.test(text)) return "language_score";
+  if (/자격증|기사|산업기사|기술사|가점표|고급자격증/.test(text) && /가점|배점|점수|면제|보유/.test(text)) return "certificate_bonus";
+  if (/가점|우대|배점|채용목표제/.test(text)) return "preferred";
   if (/TOEIC|OPIc|TEPS|JPT|HSK|어학|전공자|자격증\s*보유|지원자격|필수|이상/.test(text)) return "eligibility";
   return normalized;
 }
@@ -367,7 +393,18 @@ const extractionSchema = {
         properties: {
           category: {
             type: "string",
-            enum: ["eligibility", "preferred", "document", "exam", "interview", "note"],
+            enum: [
+              "eligibility",
+              "document_evaluation",
+              "language_score",
+              "certificate_bonus",
+              "preferred",
+              "attachment_required",
+              "document",
+              "exam",
+              "interview",
+              "note",
+            ],
           },
           title: { type: "string" },
           content: { type: "string" },
@@ -385,7 +422,18 @@ const extractionSchema = {
           title: { type: "string" },
           category: {
             type: "string",
-            enum: ["eligibility", "preferred", "document", "exam", "interview", "note"],
+            enum: [
+              "eligibility",
+              "document_evaluation",
+              "language_score",
+              "certificate_bonus",
+              "preferred",
+              "attachment_required",
+              "document",
+              "exam",
+              "interview",
+              "note",
+            ],
           },
           dueAt: { type: "string" },
           memo: { type: "string" },
