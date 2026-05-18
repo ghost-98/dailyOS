@@ -17,8 +17,6 @@ import {
   updateWorkoutSessionInDb,
 } from "./api";
 
-const initialDate = formatDateKey(new Date());
-
 const workoutTypeLabels: Record<WorkoutType, string> = {
   running: "러닝",
   stretching: "스트레칭",
@@ -54,7 +52,7 @@ function formatSelectedDay(date: string) {
 export function HealthView() {
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(() => formatDateKey(new Date()));
   const [sheetType, setSheetType] = useState<"weight" | "workout" | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightRecord | null>(null);
   const [editingWorkout, setEditingWorkout] = useState<WorkoutSession | null>(null);
