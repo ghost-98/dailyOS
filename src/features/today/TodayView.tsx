@@ -27,7 +27,6 @@ export function TodayView() {
         <TodayDashboard />
       ) : (
         <CalendarView
-          description="일정, 이벤트, 할 일을 달력으로 확인합니다."
           showEventAddButton
           title="계획"
         />

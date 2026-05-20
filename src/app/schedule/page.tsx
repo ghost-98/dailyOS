@@ -6,7 +6,6 @@ export default function SchedulePage() {
     <AppShell activeKey="schedule">
       <CalendarView
         allowedTypes={["schedule", "event", "todo"]}
-        description="일정, 이벤트, 할 일을 날짜 기준으로 함께 관리합니다."
         showEventAddButton
         title="계획"
       />

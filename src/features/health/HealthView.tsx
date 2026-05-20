@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Activity, CalendarDays, Check, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, Pencil, Plus, Scale, Trash2, X } from "lucide-react";
+import { Activity, Check, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, Pencil, Plus, Scale, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { WeightRecord, WorkoutCondition, WorkoutSession, WorkoutType } from "@/types/domain";

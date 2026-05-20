@@ -63,14 +63,12 @@ const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> = {
 
 type CalendarViewProps = {
   allowedTypes?: EventType[];
-  description?: string;
   showEventAddButton?: boolean;
   title?: string;
 };
 
 export function CalendarView({
   allowedTypes,
-  description = "일정, 이벤트, 할 일을 날짜 기준으로 함께 관리합니다.",
   showEventAddButton = false,
   title = "일정",
 }: CalendarViewProps) {
