@@ -309,8 +309,12 @@ export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   };
 
   const applyAiDraftToApplication = async (application: JobApplicationBundle) => {
-    const updated = await applyLatestAiDraftToJobApplication(application);
-    if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    try {
+      const updated = await applyLatestAiDraftToJobApplication(application);
+      if (updated) setJobApplications((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      window.alert(getErrorMessage(error, "AI 초안을 반영하지 못했습니다. PDF를 다시 분석해 주세요."));
+    }
   };
 
   return (
