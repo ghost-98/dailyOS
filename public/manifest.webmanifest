@@ -1,0 +1,17 @@
+{
+  "name": "dailyOS",
+  "short_name": "dailyOS",
+  "description": "개인 생산성/생활 관리 PWA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101012",
+  "theme_color": "#c8b6ff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
