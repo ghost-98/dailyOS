@@ -10,6 +10,7 @@ import {
   LogOut,
   NotebookPen,
   Settings,
+  WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -31,6 +32,7 @@ const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "계획", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
   { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
+  { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
@@ -40,6 +42,7 @@ const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
   { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
+  { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
 ];
@@ -67,93 +70,93 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-        <aside className="sidebar" aria-label="주요 메뉴">
-          <div>
-            <Link className="brand" href="/" aria-label="dailyOS 홈으로 이동">
-              <span className="brand__mark">d</span>
-              <div>
-                <span className="brand__name">dailyOS</span>
-                <span className="brand__subtitle">개인 관리</span>
-              </div>
-            </Link>
-
-            <nav className="sidebar__nav">
-              {primaryNav.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.key === activeKey || (item.key === "time" && isTimeActive);
-
-                if (item.key === "time") {
-                  return (
-                    <NavGroup
-                      icon={<Icon aria-hidden size={22} />}
-                      isActive={isActive}
-                      isOpen={isTimeOpen}
-                      items={timeChildren}
-                      key={item.key}
-                      label={item.label}
-                      pathname={pathname}
-                      setIsOpen={setIsTimeOpen}
-                    />
-                  );
-                }
-
-                if (item.key === "career") {
-                  return (
-                    <NavGroup
-                      icon={<Icon aria-hidden size={22} />}
-                      isActive={isActive}
-                      isOpen={isCareerOpen}
-                      items={careerChildren}
-                      key={item.key}
-                      label={item.label}
-                      pathname={pathname}
-                      setIsOpen={setIsCareerOpen}
-                    />
-                  );
-                }
-
-                return (
-                  <Link className={`nav-item ${isActive ? "nav-item--active" : ""}`} href={item.href} key={item.key}>
-                    <Icon aria-hidden size={22} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          <div className="sidebar__footer">
-            <div className="profile">
-              <div className="profile__avatar">{avatarInitial}</div>
-              <div className="profile__meta">
-                <strong>{displayName}</strong>
-                <span>
-                  <Activity aria-hidden size={13} />
-                  {user.email ?? "로그인됨"}
-                </span>
-              </div>
-              <button className="profile__logout" aria-label="로그아웃" onClick={() => void signOutDailyOS()} type="button">
-                <LogOut aria-hidden size={16} />
-              </button>
+      <aside className="sidebar" aria-label="주요 메뉴">
+        <div>
+          <Link className="brand" href="/" aria-label="dailyOS 홈으로 이동">
+            <span className="brand__mark">d</span>
+            <div>
+              <span className="brand__name">dailyOS</span>
+              <span className="brand__subtitle">개인 관리</span>
             </div>
+          </Link>
+
+          <nav className="sidebar__nav">
+            {primaryNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.key === activeKey || (item.key === "time" && isTimeActive);
+
+              if (item.key === "time") {
+                return (
+                  <NavGroup
+                    icon={<Icon aria-hidden size={22} />}
+                    isActive={isActive}
+                    isOpen={isTimeOpen}
+                    items={timeChildren}
+                    key={item.key}
+                    label={item.label}
+                    pathname={pathname}
+                    setIsOpen={setIsTimeOpen}
+                  />
+                );
+              }
+
+              if (item.key === "career") {
+                return (
+                  <NavGroup
+                    icon={<Icon aria-hidden size={22} />}
+                    isActive={isActive}
+                    isOpen={isCareerOpen}
+                    items={careerChildren}
+                    key={item.key}
+                    label={item.label}
+                    pathname={pathname}
+                    setIsOpen={setIsCareerOpen}
+                  />
+                );
+              }
+
+              return (
+                <Link className={`nav-item ${isActive ? "nav-item--active" : ""}`} href={item.href} key={item.key}>
+                  <Icon aria-hidden size={22} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="sidebar__footer">
+          <div className="profile">
+            <div className="profile__avatar">{avatarInitial}</div>
+            <div className="profile__meta">
+              <strong>{displayName}</strong>
+              <span>
+                <Activity aria-hidden size={13} />
+                {user.email ?? "로그인됨"}
+              </span>
+            </div>
+            <button className="profile__logout" aria-label="로그아웃" onClick={() => void signOutDailyOS()} type="button">
+              <LogOut aria-hidden size={16} />
+            </button>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        <main className="main-panel">{children}</main>
+      <main className="main-panel">{children}</main>
 
-        <nav className="bottom-nav" aria-label="하단 메뉴">
-          {mobileNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.key === activeKey || (item.key === "career" && activeKey === "career");
-            return (
-              <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
-                <Icon aria-hidden size={20} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      <nav className="bottom-nav" aria-label="하단 메뉴">
+        {mobileNav.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.key === activeKey || (item.key === "career" && activeKey === "career");
+          return (
+            <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
+              <Icon aria-hidden size={20} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 

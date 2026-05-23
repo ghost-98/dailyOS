@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career" | "expense";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -36,5 +36,16 @@ export type WorkoutSession = {
   type: WorkoutType;
   condition: WorkoutCondition;
   durationMinutes: number;
+  memo?: string;
+};
+
+export type ExpenseCategory = "food" | "transport" | "shopping" | "housing" | "health" | "culture" | "education" | "etc";
+
+export type ExpenseRecord = {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: ExpenseCategory;
   memo?: string;
 };

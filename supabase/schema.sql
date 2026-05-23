@@ -75,7 +75,7 @@ create table if not exists public.calendar_events (
   user_id uuid not null references auth.users(id) on delete cascade,
   event_date date not null,
   event_time time,
-  type text not null default 'schedule' check (type in ('schedule', 'todo', 'event', 'health', 'weight', 'career')),
+  type text not null default 'schedule' check (type in ('schedule', 'todo', 'event', 'health', 'weight', 'career', 'expense')),
   title text not null,
   meta text not null default '',
   created_at timestamptz not null default now(),
@@ -103,6 +103,18 @@ create table if not exists public.workout_sessions (
   type text not null check (type in ('running', 'stretching', 'bodyweight', 'weight', 'etc')),
   condition text not null default 'normal' check (condition in ('good', 'normal', 'low')),
   duration_minutes integer not null check (duration_minutes > 0),
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.expense_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  expense_date date not null,
+  title text not null,
+  amount numeric(12, 0) not null check (amount > 0),
+  category text not null default 'etc' check (category in ('food', 'transport', 'shopping', 'housing', 'health', 'culture', 'education', 'etc')),
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -287,6 +299,7 @@ create index if not exists calendar_events_user_date_idx on public.calendar_even
 create index if not exists calendar_events_user_type_date_idx on public.calendar_events(user_id, type, event_date);
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
+create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
 create index if not exists application_events_record_idx on public.application_events(career_record_id, event_date);
 create index if not exists job_applications_user_status_idx on public.job_applications(user_id, status, created_at desc);
@@ -346,6 +359,11 @@ for each row execute function public.set_updated_at();
 drop trigger if exists set_workout_sessions_updated_at on public.workout_sessions;
 create trigger set_workout_sessions_updated_at
 before update on public.workout_sessions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_expense_records_updated_at on public.expense_records;
+create trigger set_expense_records_updated_at
+before update on public.expense_records
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_career_records_updated_at on public.career_records;
@@ -454,6 +472,7 @@ alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
 alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
+alter table public.expense_records enable row level security;
 alter table public.career_records enable row level security;
 alter table public.application_events enable row level security;
 alter table public.job_applications enable row level security;
@@ -579,6 +598,31 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own workout sessions" on public.workout_sessions;
 create policy "Users can delete own workout sessions"
 on public.workout_sessions for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own expense records" on public.expense_records;
+create policy "Users can read own expense records"
+on public.expense_records for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own expense records" on public.expense_records;
+create policy "Users can insert own expense records"
+on public.expense_records for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own expense records" on public.expense_records;
+create policy "Users can update own expense records"
+on public.expense_records for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own expense records" on public.expense_records;
+create policy "Users can delete own expense records"
+on public.expense_records for delete
 to authenticated
 using (user_id = auth.uid());
 
