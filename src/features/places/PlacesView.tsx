@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { Folder, MapPin, Plus, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { PlaceRecord } from "@/types/domain";
-import { createPlaceInDb, deletePlaceFromDb, fetchPlacesFromDb } from "./api";
+import type { PlaceFolder, PlaceRecord } from "@/types/domain";
+import { createPlaceInDb, deletePlaceFromDb, ensureDefaultPlaceFoldersInDb, fetchPlacesFromDb } from "./api";
 
 type SearchResponse = {
   error?: string;
@@ -39,10 +39,13 @@ declare global {
 
 const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 const defaultCenter = { latitude: 37.5666103, longitude: 126.9783882 };
+const allFolderId = "all";
 
 export function PlacesView() {
+  const [folders, setFolders] = useState<PlaceFolder[]>([]);
   const [places, setPlaces] = useState<PlaceRecord[]>([]);
   const [searchResults, setSearchResults] = useState<PlaceRecord[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState(allFolderId);
   const [selectedPlace, setSelectedPlace] = useState<PlaceRecord | null>(null);
   const [query, setQuery] = useState("");
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
@@ -56,10 +59,12 @@ export function PlacesView() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchPlacesFromDb()
-      .then((dbPlaces) => {
+    Promise.all([ensureDefaultPlaceFoldersInDb(), fetchPlacesFromDb()])
+      .then(([dbFolders, dbPlaces]) => {
         if (!isMounted) return;
+        const nextFolders = dbFolders ?? [];
         const nextPlaces = dbPlaces ?? [];
+        setFolders(nextFolders);
         setPlaces(nextPlaces);
         setSelectedPlace(nextPlaces[0] ?? null);
       })
@@ -103,11 +108,23 @@ export function PlacesView() {
     document.head.appendChild(script);
   }, []);
 
+  const filteredSavedPlaces = useMemo(
+    () => (selectedFolderId === allFolderId ? places : places.filter((place) => place.folderId === selectedFolderId)),
+    [places, selectedFolderId],
+  );
+
+  const visiblePlaces = useMemo(() => {
+    const merged = new Map<string, PlaceRecord>();
+    for (const place of filteredSavedPlaces) merged.set(place.id, place);
+    for (const place of searchResults) merged.set(place.id, place);
+    return [...merged.values()];
+  }, [filteredSavedPlaces, searchResults]);
+
   useEffect(() => {
     if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
 
     if (!mapRef.current) {
-      const initialPlace = selectedPlace ?? places[0];
+      const initialPlace = selectedPlace ?? visiblePlaces[0];
       const center = new window.naver.maps.LatLng(initialPlace?.latitude ?? defaultCenter.latitude, initialPlace?.longitude ?? defaultCenter.longitude);
       mapRef.current = new window.naver.maps.Map(mapElementRef.current, {
         center,
@@ -116,14 +133,7 @@ export function PlacesView() {
     }
 
     renderMarkers();
-  }, [mapStatus, places, selectedPlace]);
-
-  const visiblePlaces = useMemo(() => {
-    const merged = new Map<string, PlaceRecord>();
-    for (const place of places) merged.set(place.id, place);
-    for (const place of searchResults) merged.set(place.id, place);
-    return [...merged.values()];
-  }, [places, searchResults]);
+  }, [mapStatus, visiblePlaces, selectedPlace]);
 
   const searchPlaces = async () => {
     const trimmedQuery = query.trim();
@@ -133,7 +143,7 @@ export function PlacesView() {
     setMessage("");
 
     try {
-      const response = await fetch(`/api/maps/geocode?query=${encodeURIComponent(trimmedQuery)}`);
+      const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
       const payload = (await response.json()) as SearchResponse;
 
       if (!response.ok) {
@@ -144,7 +154,7 @@ export function PlacesView() {
 
       setSearchResults(payload.places);
       setSelectedPlace(payload.places[0] ?? null);
-      if (payload.places.length === 0) setMessage("검색 결과가 없습니다. 주소를 조금 더 구체적으로 입력해 주세요.");
+      if (payload.places.length === 0) setMessage("검색 결과가 없습니다. 다른 장소명이나 주소로 다시 검색해 주세요.");
     } catch (error) {
       console.error("Failed to search places", error);
       setMessage("장소 검색 중 문제가 발생했습니다.");
@@ -154,9 +164,10 @@ export function PlacesView() {
   };
 
   const savePlace = async (place: PlaceRecord) => {
-    const savedPlace = await createPlaceInDb(place);
-    const nextPlace = savedPlace ?? place;
-    setPlaces((current) => (current.some((item) => item.id === nextPlace.id) ? current : [nextPlace, ...current]));
+    const folderId = selectedFolderId === allFolderId ? folders[0]?.id : selectedFolderId;
+    const savedPlace = await createPlaceInDb({ ...place, folderId });
+    const nextPlace = savedPlace ?? { ...place, folderId };
+    setPlaces((current) => (current.some((item) => isSamePlace(item, nextPlace)) ? current : [nextPlace, ...current]));
     setSelectedPlace(nextPlace);
   };
 
@@ -187,12 +198,14 @@ export function PlacesView() {
       return marker;
     });
 
-    if (selectedPlace) {
-      mapRef.current.setCenter(new window.naver.maps.LatLng(selectedPlace.latitude, selectedPlace.longitude));
+    const centerPlace = selectedPlace ?? visiblePlaces[0];
+    if (centerPlace) {
+      mapRef.current.setCenter(new window.naver.maps.LatLng(centerPlace.latitude, centerPlace.longitude));
     }
   };
 
-  const savedIds = new Set(places.map((place) => `${place.latitude},${place.longitude},${place.address}`));
+  const savedPlaceKeys = new Set(places.map(getPlaceKey));
+  const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
 
   return (
     <div className="places-page">
@@ -210,7 +223,7 @@ export function PlacesView() {
               <div className="places-search__control">
                 <Search aria-hidden size={17} />
                 <input
-                  placeholder="주소나 장소명을 입력하세요"
+                  placeholder="서울시청, 강남역 카페, 한국전력공사"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={(event) => {
@@ -218,11 +231,25 @@ export function PlacesView() {
                   }}
                 />
                 <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
-                  검색
+                  {isSearching ? "검색 중" : "검색"}
                 </button>
               </div>
             </label>
             {message ? <p className="places-message">{message}</p> : null}
+          </div>
+
+          <div className="places-folder-strip" aria-label="장소 폴더">
+            <FolderButton count={places.length} isActive={selectedFolderId === allFolderId} label="전체" onClick={() => setSelectedFolderId(allFolderId)} />
+            {folders.map((folder) => (
+              <FolderButton
+                color={folder.color}
+                count={places.filter((place) => place.folderId === folder.id).length}
+                isActive={selectedFolderId === folder.id}
+                key={folder.id}
+                label={folder.name}
+                onClick={() => setSelectedFolderId(folder.id)}
+              />
+            ))}
           </div>
 
           <div className="places-section">
@@ -233,11 +260,11 @@ export function PlacesView() {
             <div className="places-list">
               {searchResults.length > 0 ? (
                 searchResults.map((place) => {
-                  const isSaved = savedIds.has(`${place.latitude},${place.longitude},${place.address}`);
+                  const isSaved = savedPlaceKeys.has(getPlaceKey(place));
                   return (
                     <PlaceItem
                       action={
-                        <button disabled={isSaved} onClick={() => void savePlace(place)} type="button">
+                        <button disabled={isSaved || folders.length === 0} onClick={() => void savePlace(place)} title={selectedFolder ? `${selectedFolder.name}에 저장` : "저장"} type="button">
                           <Plus aria-hidden size={14} />
                         </button>
                       }
@@ -256,18 +283,19 @@ export function PlacesView() {
 
           <div className="places-section">
             <div className="places-section__title">
-              <strong>저장한 장소</strong>
-              <span>{places.length}개</span>
+              <strong>{selectedFolderId === allFolderId ? "저장한 장소" : `${selectedFolder?.name ?? "폴더"} 장소`}</strong>
+              <span>{filteredSavedPlaces.length}개</span>
             </div>
             <div className="places-list">
-              {places.length > 0 ? (
-                places.map((place) => (
+              {filteredSavedPlaces.length > 0 ? (
+                filteredSavedPlaces.map((place) => (
                   <PlaceItem
                     action={
                       <button aria-label="장소 삭제" onClick={() => void deletePlace(place.id)} type="button">
                         <Trash2 aria-hidden size={14} />
                       </button>
                     }
+                    folder={folders.find((folder) => folder.id === place.folderId)}
                     isActive={selectedPlace?.id === place.id}
                     key={place.id}
                     onSelect={() => focusPlace(place)}
@@ -296,9 +324,7 @@ export function PlacesView() {
               <div className="places-map-state">
                 <MapPin aria-hidden size={32} />
                 <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 불러오는 중입니다."}</strong>
-                <p>
-                  `.env.local`에 `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID`를 넣으면 이 영역에 네이버 지도가 표시됩니다.
-                </p>
+                <p>`.env.local`에 `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID`를 넣으면 이 영역에 네이버 지도가 표시됩니다.</p>
               </div>
             ) : null}
           </div>
@@ -308,6 +334,15 @@ export function PlacesView() {
               <span>선택 장소</span>
               <strong>{selectedPlace.name}</strong>
               <p>{selectedPlace.address}</p>
+              <div className="places-selected__meta">
+                {selectedPlace.category ? <Badge tone="violet">{selectedPlace.category}</Badge> : null}
+                {selectedPlace.phone ? <span>{selectedPlace.phone}</span> : null}
+                {selectedPlace.url ? (
+                  <a href={selectedPlace.url} rel="noreferrer" target="_blank">
+                    링크 열기
+                  </a>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </SectionCard>
@@ -316,13 +351,39 @@ export function PlacesView() {
   );
 }
 
+function FolderButton({
+  color,
+  count,
+  isActive,
+  label,
+  onClick,
+}: {
+  color?: string;
+  count: number;
+  isActive: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button className={`places-folder ${isActive ? "places-folder--active" : ""}`} onClick={onClick} type="button">
+      <span className="places-folder__mark" style={{ backgroundColor: color ?? "var(--violet)" }}>
+        <Folder aria-hidden size={13} />
+      </span>
+      <strong>{label}</strong>
+      <em>{count}</em>
+    </button>
+  );
+}
+
 function PlaceItem({
   action,
+  folder,
   isActive,
   onSelect,
   place,
 }: {
   action: ReactNode;
+  folder?: PlaceFolder;
   isActive: boolean;
   onSelect: () => void;
   place: PlaceRecord;
@@ -334,6 +395,10 @@ function PlaceItem({
         <span>
           <strong>{place.name}</strong>
           <em>{place.address}</em>
+          <small>
+            {folder ? <i style={{ backgroundColor: folder.color }} /> : null}
+            {place.category || folder?.name || "장소"}
+          </small>
         </span>
       </button>
       <div className="place-item__action">{action}</div>
@@ -348,4 +413,12 @@ function EmptyPlaces({ label }: { label: string }) {
       <span>{label}</span>
     </div>
   );
+}
+
+function getPlaceKey(place: PlaceRecord) {
+  return `${place.providerPlaceId ?? ""}|${place.name}|${place.address}`;
+}
+
+function isSamePlace(left: PlaceRecord, right: PlaceRecord) {
+  return getPlaceKey(left) === getPlaceKey(right);
 }

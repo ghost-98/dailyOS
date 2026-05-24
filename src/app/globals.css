@@ -483,6 +483,48 @@ button {
   font-size: 13px;
 }
 
+.places-folder-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.places-folder {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 8px 11px 8px 8px;
+  white-space: nowrap;
+}
+
+.places-folder--active {
+  border-color: rgba(157, 178, 255, 0.44);
+  background: rgba(157, 178, 255, 0.13);
+  color: var(--text);
+}
+
+.places-folder__mark {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  color: #111216;
+}
+
+.places-folder em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .places-section {
   display: grid;
   gap: 10px;
@@ -548,6 +590,23 @@ button {
   font-style: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.place-item__main small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.place-item__main small i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
 }
 
 .place-item__action {
@@ -619,6 +678,22 @@ button {
 .places-selected p {
   margin: 8px 0 0;
   color: var(--muted);
+}
+
+.places-selected__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.places-selected__meta a {
+  color: var(--violet);
+  font-weight: 800;
+  text-decoration: none;
 }
 
 @media (max-width: 1180px) {

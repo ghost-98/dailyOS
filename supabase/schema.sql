@@ -120,15 +120,31 @@ create table if not exists public.expense_records (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.place_folders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  color text not null default '#9db2ff',
+  icon text not null default 'dot',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.places (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  folder_id uuid references public.place_folders(id) on delete set null,
   name text not null,
   address text not null default '',
   latitude numeric(10, 7) not null,
   longitude numeric(10, 7) not null,
   provider text not null default 'manual' check (provider in ('naver', 'manual')),
   provider_place_id text,
+  phone text,
+  category text,
+  url text,
+  is_favorite boolean not null default false,
   memo text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -328,8 +344,10 @@ create index if not exists calendar_events_user_type_date_idx on public.calendar
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
+create index if not exists place_folders_user_sort_idx on public.place_folders(user_id, sort_order, created_at);
 create index if not exists places_user_created_idx on public.places(user_id, created_at desc);
 create index if not exists places_user_provider_idx on public.places(user_id, provider, provider_place_id);
+create index if not exists places_user_folder_idx on public.places(user_id, folder_id, created_at desc);
 create index if not exists place_links_user_target_idx on public.place_links(user_id, target_type, target_id);
 create index if not exists place_links_place_idx on public.place_links(place_id, target_date);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
@@ -401,6 +419,11 @@ for each row execute function public.set_updated_at();
 drop trigger if exists set_places_updated_at on public.places;
 create trigger set_places_updated_at
 before update on public.places
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_place_folders_updated_at on public.place_folders;
+create trigger set_place_folders_updated_at
+before update on public.place_folders
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_place_links_updated_at on public.place_links;
@@ -515,6 +538,7 @@ alter table public.calendar_events enable row level security;
 alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
 alter table public.expense_records enable row level security;
+alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
 alter table public.place_links enable row level security;
 alter table public.career_records enable row level security;
@@ -670,6 +694,31 @@ on public.expense_records for delete
 to authenticated
 using (user_id = auth.uid());
 
+drop policy if exists "Users can read own place folders" on public.place_folders;
+create policy "Users can read own place folders"
+on public.place_folders for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own place folders" on public.place_folders;
+create policy "Users can insert own place folders"
+on public.place_folders for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own place folders" on public.place_folders;
+create policy "Users can update own place folders"
+on public.place_folders for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own place folders" on public.place_folders;
+create policy "Users can delete own place folders"
+on public.place_folders for delete
+to authenticated
+using (user_id = auth.uid());
+
 drop policy if exists "Users can read own places" on public.places;
 create policy "Users can read own places"
 on public.places for select
@@ -680,14 +729,36 @@ drop policy if exists "Users can insert own places" on public.places;
 create policy "Users can insert own places"
 on public.places for insert
 to authenticated
-with check (user_id = auth.uid());
+with check (
+  user_id = auth.uid()
+  and (
+    folder_id is null
+    or exists (
+      select 1
+      from public.place_folders
+      where place_folders.id = places.folder_id
+        and place_folders.user_id = auth.uid()
+    )
+  )
+);
 
 drop policy if exists "Users can update own places" on public.places;
 create policy "Users can update own places"
 on public.places for update
 to authenticated
 using (user_id = auth.uid())
-with check (user_id = auth.uid());
+with check (
+  user_id = auth.uid()
+  and (
+    folder_id is null
+    or exists (
+      select 1
+      from public.place_folders
+      where place_folders.id = places.folder_id
+        and place_folders.user_id = auth.uid()
+    )
+  )
+);
 
 drop policy if exists "Users can delete own places" on public.places;
 create policy "Users can delete own places"

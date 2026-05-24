@@ -52,13 +52,26 @@ export type ExpenseRecord = {
 
 export type PlaceProvider = "naver" | "manual";
 
+export type PlaceFolder = {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+};
+
 export type PlaceRecord = {
   id: string;
+  folderId?: string;
   name: string;
   address: string;
   latitude: number;
   longitude: number;
   provider: PlaceProvider;
   providerPlaceId?: string;
+  phone?: string;
+  category?: string;
+  url?: string;
+  isFavorite?: boolean;
   memo?: string;
 };
