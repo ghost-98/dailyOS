@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Folder, MapPin, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
@@ -40,6 +40,7 @@ declare global {
         LatLng: new (latitude: number, longitude: number) => NaverLatLng;
         Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
         Marker: new (options: Record<string, unknown>) => NaverMarker;
+        Point: new (x: number, y: number) => unknown;
       };
     };
   }
@@ -59,6 +60,7 @@ export function PlacesView() {
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [message, setMessage] = useState("");
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
+  const [placePendingSave, setPlacePendingSave] = useState<PlaceRecord | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -172,12 +174,22 @@ export function PlacesView() {
     }
   };
 
-  const savePlace = async (place: PlaceRecord) => {
-    const folderId = selectedFolderId === allFolderId ? folders[0]?.id : selectedFolderId;
+  const savePlace = async (place: PlaceRecord, folderId: string) => {
+    const existingPlace = places.find((item) => isSamePlace(item, place));
+    if (existingPlace) {
+      setSelectedPlace(existingPlace);
+      setPlacePendingSave(null);
+      setMessage(`${existingPlace.name}은 이미 저장된 장소입니다.`);
+      return;
+    }
+
     const savedPlace = await createPlaceInDb({ ...place, folderId });
     const nextPlace = savedPlace ?? { ...place, folderId };
-    setPlaces((current) => (current.some((item) => isSamePlace(item, nextPlace)) ? current : [nextPlace, ...current]));
+    setPlaces((current) => [nextPlace, ...current]);
     setSelectedPlace(nextPlace);
+    setSelectedFolderId(folderId);
+    setPlacePendingSave(null);
+    setMessage(`${nextPlace.name}을 저장했습니다.`);
   };
 
   const deletePlace = async (id: string) => {
@@ -215,7 +227,13 @@ export function PlacesView() {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = visiblePlaces.map((place) => {
+      const folder = folders.find((item) => item.id === place.folderId);
+      const isSaved = places.some((item) => isSamePlace(item, place));
       const marker = new window.naver!.maps.Marker({
+        icon: {
+          anchor: new window.naver!.maps.Point(18, 42),
+          content: getMarkerContent(place, folder, isSaved),
+        },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
         title: place.name,
@@ -232,6 +250,7 @@ export function PlacesView() {
 
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
+  const selectedPlaceFolder = folders.find((folder) => folder.id === selectedPlace?.folderId);
 
   return (
     <div className="places-page">
@@ -282,6 +301,16 @@ export function PlacesView() {
             </button>
           </div>
 
+          {selectedPlace ? (
+            <SelectedPlacePanel
+              folder={selectedPlaceFolder}
+              isSaved={savedPlaceKeys.has(getPlaceKey(selectedPlace))}
+              onDelete={selectedPlace.id && places.some((place) => place.id === selectedPlace.id) ? () => void deletePlace(selectedPlace.id) : undefined}
+              onSave={() => setPlacePendingSave(selectedPlace)}
+              place={selectedPlace}
+            />
+          ) : null}
+
           <div className="places-section">
             <div className="places-section__title">
               <strong>검색 결과</strong>
@@ -291,13 +320,23 @@ export function PlacesView() {
               {searchResults.length > 0 ? (
                 searchResults.map((place) => {
                   const isSaved = savedPlaceKeys.has(getPlaceKey(place));
+                  const savedPlace = places.find((item) => isSamePlace(item, place));
+                  const savedFolder = folders.find((folder) => folder.id === savedPlace?.folderId);
                   return (
                     <PlaceItem
                       action={
-                        <button disabled={isSaved || folders.length === 0} onClick={() => void savePlace(place)} title={selectedFolder ? `${selectedFolder.name}에 저장` : "저장"} type="button">
-                          <Plus aria-hidden size={14} />
+                        <button
+                          className={isSaved ? "place-item__saved-button" : ""}
+                          disabled={folders.length === 0}
+                          onClick={() => (isSaved && savedPlace ? focusPlace(savedPlace) : setPlacePendingSave(place))}
+                          title={isSaved ? `${savedFolder?.name ?? "내 장소"}에 저장됨` : "폴더 선택 후 저장"}
+                          type="button"
+                        >
+                          {isSaved ? <Check aria-hidden size={14} /> : <Plus aria-hidden size={14} />}
                         </button>
                       }
+                      folder={savedFolder}
+                      isSaved={isSaved}
                       isActive={selectedPlace?.id === place.id}
                       key={place.id}
                       onSelect={() => focusPlace(place)}
@@ -343,9 +382,9 @@ export function PlacesView() {
           <div className="places-map-toolbar">
             <div>
               <span>지도 보기</span>
-              <strong>{selectedPlace?.name ?? "장소를 검색하거나 선택하세요"}</strong>
+              <strong>{selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`}</strong>
             </div>
-            {selectedPlace ? <Badge tone="green">{selectedPlace.provider === "naver" ? "NAVER" : "직접 입력"}</Badge> : null}
+            <Badge tone="green">{visiblePlaces.length}개</Badge>
           </div>
 
           <div className="places-map-shell">
@@ -359,24 +398,18 @@ export function PlacesView() {
             ) : null}
           </div>
 
-          {selectedPlace ? (
-            <div className="places-selected">
-              <span>선택 장소</span>
-              <strong>{selectedPlace.name}</strong>
-              <p>{selectedPlace.address}</p>
-              <div className="places-selected__meta">
-                {selectedPlace.category ? <Badge tone="violet">{selectedPlace.category}</Badge> : null}
-                {selectedPlace.phone ? <span>{selectedPlace.phone}</span> : null}
-                {selectedPlace.url ? (
-                  <a href={selectedPlace.url} rel="noreferrer" target="_blank">
-                    링크 열기
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
         </SectionCard>
       </div>
+
+      {placePendingSave ? (
+        <SavePlaceSheet
+          folders={folders}
+          onClose={() => setPlacePendingSave(null)}
+          onSave={(folderId) => void savePlace(placePendingSave, folderId)}
+          place={placePendingSave}
+          recommendedFolderId={selectedFolderId === allFolderId ? selectedPlaceFolder?.id ?? folders[0]?.id : selectedFolderId}
+        />
+      ) : null}
 
       {isFolderManagerOpen ? (
         <FolderManagerSheet
@@ -481,6 +514,122 @@ function FolderManagerSheet({
   );
 }
 
+function SavePlaceSheet({
+  folders,
+  onClose,
+  onSave,
+  place,
+  recommendedFolderId,
+}: {
+  folders: PlaceFolder[];
+  onClose: () => void;
+  onSave: (folderId: string) => void;
+  place: PlaceRecord;
+  recommendedFolderId?: string;
+}) {
+  const [folderId, setFolderId] = useState(recommendedFolderId ?? folders[0]?.id ?? "");
+
+  return (
+    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
+      <section aria-labelledby="save-place-title" aria-modal="true" className="event-sheet places-save-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="event-sheet__grabber" aria-hidden />
+        <header className="event-sheet__header">
+          <div>
+            <h2 id="save-place-title">장소 저장</h2>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
+          </button>
+        </header>
+
+        <div className="places-save-target">
+          <MapPin aria-hidden size={17} />
+          <div>
+            <strong>{place.name}</strong>
+            <span>{place.address}</span>
+          </div>
+        </div>
+
+        <div className="places-save-folder-grid">
+          {folders.map((folder) => (
+            <button className={folder.id === folderId ? "places-save-folder places-save-folder--active" : "places-save-folder"} key={folder.id} onClick={() => setFolderId(folder.id)} type="button">
+              <span style={{ backgroundColor: folder.color }}>
+                <Star aria-hidden size={13} />
+              </span>
+              <strong>{folder.name}</strong>
+            </button>
+          ))}
+        </div>
+
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+            취소
+          </button>
+          <button className="event-sheet__primary-button" disabled={!folderId} onClick={() => onSave(folderId)} type="button">
+            저장
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function SelectedPlacePanel({
+  folder,
+  isSaved,
+  onDelete,
+  onSave,
+  place,
+}: {
+  folder?: PlaceFolder;
+  isSaved: boolean;
+  onDelete?: () => void;
+  onSave: () => void;
+  place: PlaceRecord;
+}) {
+  return (
+    <section className="places-selected-panel" aria-label="선택 장소 정보">
+      <div className="places-selected-panel__head">
+        <div className="places-selected-panel__mark" style={{ backgroundColor: folder?.color ?? "var(--violet)" }}>
+          {isSaved ? <Star aria-hidden size={17} /> : <MapPin aria-hidden size={17} />}
+        </div>
+        <div>
+          <span>{isSaved ? folder?.name ?? "저장됨" : "검색 결과"}</span>
+          <strong>{place.name}</strong>
+        </div>
+      </div>
+      <p>{place.address}</p>
+      <div className="places-selected__meta">
+        {place.category ? <Badge tone="violet">{place.category}</Badge> : null}
+        {place.phone ? <span>{place.phone}</span> : null}
+        {place.url ? (
+          <a href={place.url} rel="noreferrer" target="_blank">
+            링크 열기
+          </a>
+        ) : null}
+      </div>
+      <div className="places-selected-panel__actions">
+        {isSaved ? (
+          <button className="places-selected-panel__button places-selected-panel__button--muted" disabled type="button">
+            <Check aria-hidden size={15} />
+            저장됨
+          </button>
+        ) : (
+          <button className="places-selected-panel__button" onClick={onSave} type="button">
+            <Star aria-hidden size={15} />
+            폴더에 저장
+          </button>
+        )}
+        {onDelete ? (
+          <button className="places-selected-panel__icon" aria-label="장소 삭제" onClick={onDelete} type="button">
+            <Trash2 aria-hidden size={15} />
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function FolderButton({
   color,
   count,
@@ -508,12 +657,14 @@ function FolderButton({
 function PlaceItem({
   action,
   folder,
+  isSaved,
   isActive,
   onSelect,
   place,
 }: {
   action: ReactNode;
   folder?: PlaceFolder;
+  isSaved?: boolean;
   isActive: boolean;
   onSelect: () => void;
   place: PlaceRecord;
@@ -527,7 +678,7 @@ function PlaceItem({
           <em>{place.address}</em>
           <small>
             {folder ? <i style={{ backgroundColor: folder.color }} /> : null}
-            {place.category || folder?.name || "장소"}
+            {isSaved ? `${folder?.name ?? "저장됨"}에 저장됨` : place.category || folder?.name || "장소"}
           </small>
         </span>
       </button>
@@ -551,4 +702,28 @@ function getPlaceKey(place: PlaceRecord) {
 
 function isSamePlace(left: PlaceRecord, right: PlaceRecord) {
   return getPlaceKey(left) === getPlaceKey(right);
+}
+
+function getMarkerContent(place: PlaceRecord, folder: PlaceFolder | undefined, isSaved: boolean) {
+  const color = folder?.color ?? (isSaved ? "#9db2ff" : "#a7a8ae");
+  const safeName = escapeHtml(place.name);
+  return `
+    <button class="map-place-marker ${isSaved ? "map-place-marker--saved" : "map-place-marker--search"}" type="button">
+      <span class="map-place-marker__star" style="background:${color}">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2.8l2.73 5.54 6.12.89-4.43 4.32 1.05 6.1L12 16.78l-5.47 2.87 1.05-6.1-4.43-4.32 6.12-.89L12 2.8z"></path>
+        </svg>
+      </span>
+      <strong>${safeName}</strong>
+    </button>
+  `;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
