@@ -8,6 +8,7 @@ import {
   Grid2X2,
   HeartPulse,
   LogOut,
+  Map,
   NotebookPen,
   Settings,
   WalletCards,
@@ -33,6 +34,7 @@ const primaryNav = [
   { label: "계획", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
   { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
+  { label: "지도", href: "/places", key: "places", icon: Map },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
@@ -43,8 +45,8 @@ const mobileNav = [
   { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
   { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
+  { label: "지도", href: "/places", key: "places", icon: Map },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
-  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
 ];
 
 type AppShellProps = {

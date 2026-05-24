@@ -49,3 +49,16 @@ export type ExpenseRecord = {
   category: ExpenseCategory;
   memo?: string;
 };
+
+export type PlaceProvider = "naver" | "manual";
+
+export type PlaceRecord = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  provider: PlaceProvider;
+  providerPlaceId?: string;
+  memo?: string;
+};
