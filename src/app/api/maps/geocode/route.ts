@@ -36,7 +36,20 @@ export async function GET(request: Request) {
   });
 
   if (!response.ok) {
-    return NextResponse.json({ error: "장소 검색에 실패했습니다.", places: [] }, { status: response.status });
+    const errorText = await response.text();
+    const hint =
+      response.status === 401
+        ? "네이버 클라우드 콘솔에서 Maps의 Geocoding API가 이 Application에 활성화되어 있는지, API Key ID/Key가 맞는지 확인해 주세요."
+        : "잠시 후 다시 검색해 주세요.";
+
+    return NextResponse.json(
+      {
+        detail: errorText,
+        error: `장소 검색에 실패했습니다. ${hint}`,
+        places: [],
+      },
+      { status: response.status },
+    );
   }
 
   const payload = await response.json();
