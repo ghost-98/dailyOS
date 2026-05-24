@@ -127,8 +127,11 @@ export function PlacesView() {
 
   const visiblePlaces = useMemo(() => {
     const merged = new Map<string, PlaceRecord>();
-    for (const place of filteredSavedPlaces) merged.set(place.id, place);
-    for (const place of searchResults) merged.set(place.id, place);
+    for (const place of filteredSavedPlaces) merged.set(getPlaceKey(place), place);
+    for (const place of searchResults) {
+      const key = getPlaceKey(place);
+      if (!merged.has(key)) merged.set(key, place);
+    }
     return [...merged.values()];
   }, [filteredSavedPlaces, searchResults]);
 
@@ -145,7 +148,7 @@ export function PlacesView() {
     }
 
     renderMarkers();
-  }, [mapStatus, visiblePlaces, selectedPlace]);
+  }, [mapStatus, visiblePlaces, selectedPlace, folders, places, selectedFolderId]);
 
   const searchPlaces = async () => {
     const trimmedQuery = query.trim();
@@ -258,8 +261,8 @@ export function PlacesView() {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = visiblePlaces.map((place) => {
-      const folder = folders.find((item) => getPlaceFolderIds(place).includes(item.id));
       const isSaved = places.some((item) => isSamePlace(item, place));
+      const folder = resolveMarkerFolder(place, folders, selectedFolderId, isSaved);
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 42),
@@ -750,6 +753,17 @@ function formatFolderNames(folders: PlaceFolder[]) {
 
 function isSamePlace(left: PlaceRecord, right: PlaceRecord) {
   return getPlaceKey(left) === getPlaceKey(right);
+}
+
+function resolveMarkerFolder(place: PlaceRecord, folders: PlaceFolder[], selectedFolderId: string, isSaved: boolean) {
+  if (!isSaved) return undefined;
+
+  const placeFolderIds = getPlaceFolderIds(place);
+  if (selectedFolderId !== allFolderId && placeFolderIds.includes(selectedFolderId)) {
+    return folders.find((folder) => folder.id === selectedFolderId);
+  }
+
+  return folders.find((folder) => placeFolderIds.includes(folder.id));
 }
 
 function getMarkerContent(place: PlaceRecord, folder: PlaceFolder | undefined, isSaved: boolean) {
