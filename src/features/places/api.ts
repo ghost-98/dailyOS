@@ -45,14 +45,6 @@ const placeColumns = "id,folder_id,name,address,latitude,longitude,provider,prov
 const folderColumns = "id,name,color,icon,sort_order";
 const folderLinkColumns = "place_id,folder_id";
 
-const defaultFolderDrafts = [
-  { color: "#9db2ff", icon: "briefcase", name: "취업", sortOrder: 10 },
-  { color: "#65c9a4", icon: "heart", name: "생활", sortOrder: 20 },
-  { color: "#d9ad63", icon: "book", name: "공부", sortOrder: 30 },
-  { color: "#f09aaa", icon: "star", name: "가보고 싶은 곳", sortOrder: 40 },
-  { color: "#a7a8ae", icon: "dot", name: "기타", sortOrder: 50 },
-];
-
 async function getUserId() {
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getUser();
@@ -118,27 +110,6 @@ export async function fetchPlaceFoldersFromDb() {
   if (!userId) return null;
 
   const { data, error } = await supabase.from("place_folders").select(folderColumns).order("sort_order", { ascending: true });
-  if (error) throw error;
-  return (data as PlaceFolderRow[]).map(mapFolderRow);
-}
-
-export async function ensureDefaultPlaceFoldersInDb() {
-  if (!supabase) return null;
-  const userId = await getUserId();
-  if (!userId) return null;
-
-  const existingFolders = await fetchPlaceFoldersFromDb();
-  if (existingFolders && existingFolders.length > 0) return existingFolders;
-
-  const rows = defaultFolderDrafts.map((folder) => ({
-    user_id: userId,
-    name: folder.name,
-    color: folder.color,
-    icon: folder.icon,
-    sort_order: folder.sortOrder,
-  }));
-
-  const { data, error } = await supabase.from("place_folders").insert(rows).select(folderColumns).order("sort_order", { ascending: true });
   if (error) throw error;
   return (data as PlaceFolderRow[]).map(mapFolderRow);
 }
@@ -230,14 +201,14 @@ export async function updatePlaceFolderInDb(folder: PlaceFolder) {
 
 export async function deletePlaceFolderFromDb(id: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("place_folders").delete().eq("id", id);
+  const { data, error } = await supabase.from("place_folders").delete().eq("id", id).select("id").maybeSingle();
   if (error) throw error;
-  return true;
+  return Boolean(data);
 }
 
 export async function deletePlaceFromDb(id: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("places").delete().eq("id", id);
+  const { data, error } = await supabase.from("places").delete().eq("id", id).select("id").maybeSingle();
   if (error) throw error;
-  return true;
+  return Boolean(data);
 }

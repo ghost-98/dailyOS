@@ -11,7 +11,7 @@ import {
   createPlaceInDb,
   deletePlaceFolderFromDb,
   deletePlaceFromDb,
-  ensureDefaultPlaceFoldersInDb,
+  fetchPlaceFoldersFromDb,
   fetchPlacesFromDb,
   setPlaceFolderLinksInDb,
   updatePlaceFolderInDb,
@@ -71,11 +71,11 @@ export function PlacesView() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([ensureDefaultPlaceFoldersInDb(), fetchPlacesFromDb()])
+    Promise.all([fetchPlaceFoldersFromDb(), fetchPlacesFromDb()])
       .then(([dbFolders, dbPlaces]) => {
         if (!isMounted) return;
         const nextFolders = dbFolders ?? [];
-        const nextPlaces = dbPlaces ?? [];
+        const nextPlaces = normalizePlaceRecords(dbPlaces ?? []);
         setFolders(nextFolders);
         setPlaces(nextPlaces);
         setSelectedPlace(nextPlaces[0] ?? null);
@@ -214,7 +214,7 @@ export function PlacesView() {
     const nextPlace = { ...(savedPlace ?? place), folderId: uniqueFolderIds[0], folderIds: uniqueFolderIds };
     const didSyncFolders = await setPlaceFolderLinksInDb(nextPlace.id, uniqueFolderIds);
     const storedPlace = didSyncFolders ? nextPlace : { ...nextPlace, folderIds: [uniqueFolderIds[0]] };
-    setPlaces((current) => [storedPlace, ...current]);
+    setPlaces((current) => normalizePlaceRecords([storedPlace, ...current]));
     setSelectedPlace(storedPlace);
     setSelectedFolderId(uniqueFolderIds[0]);
     setPlacePendingSave(null);
@@ -222,23 +222,56 @@ export function PlacesView() {
   };
 
   const deletePlace = async (id: string) => {
-    await deletePlaceFromDb(id);
-    setPlaces((current) => current.filter((place) => place.id !== id));
-    if (selectedPlace?.id === id) setSelectedPlace(null);
+    const targetPlace = places.find((place) => place.id === id || place.sourceIds?.includes(id));
+    const targetIds = targetPlace?.sourceIds ?? [id];
+
+    try {
+      const results = await Promise.all(targetIds.map((targetId) => deletePlaceFromDb(targetId)));
+      if (results.some((didDelete) => !didDelete)) {
+        setMessage("장소가 삭제되지 않았습니다. Supabase RLS 정책이나 소유자 정보를 확인해 주세요.");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to delete place", error);
+      setMessage("장소 삭제 중 문제가 발생했습니다. Supabase 권한이나 연결 상태를 확인해 주세요.");
+      return;
+    }
+
+    setPlaces((current) => current.filter((place) => !getPlaceSourceIds(place).some((sourceId) => targetIds.includes(sourceId))));
+    if (selectedPlace && getPlaceSourceIds(selectedPlace).some((sourceId) => targetIds.includes(sourceId))) setSelectedPlace(null);
+    setMessage(`${targetPlace?.name ?? "장소"}를 삭제했습니다.`);
   };
 
   const saveFolder = async (folder: PlaceFolder) => {
-    const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
-    if (!savedFolder) return;
-    setFolders((current) => {
-      const exists = current.some((item) => item.id === savedFolder.id);
-      const next = exists ? current.map((item) => (item.id === savedFolder.id ? savedFolder : item)) : [...current, savedFolder];
-      return next.sort((a, b) => a.sortOrder - b.sortOrder);
-    });
+    try {
+      const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
+      if (!savedFolder) return;
+      setFolders((current) => {
+        const exists = current.some((item) => item.id === savedFolder.id);
+        const next = exists ? current.map((item) => (item.id === savedFolder.id ? savedFolder : item)) : [...current, savedFolder];
+        return next.sort((a, b) => a.sortOrder - b.sortOrder);
+      });
+      setMessage(`${savedFolder.name} 폴더를 저장했습니다.`);
+    } catch (error) {
+      console.error("Failed to save place folder", error);
+      setMessage("폴더를 저장하지 못했습니다. Supabase 권한이나 네트워크 상태를 확인해 주세요.");
+    }
   };
 
   const deleteFolder = async (folderId: string) => {
-    await deletePlaceFolderFromDb(folderId);
+    const targetFolder = folders.find((folder) => folder.id === folderId);
+    try {
+      const didDelete = await deletePlaceFolderFromDb(folderId);
+      if (!didDelete) {
+        setMessage("폴더가 삭제되지 않았습니다. Supabase RLS 정책이나 소유자 정보를 확인해 주세요.");
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to delete place folder", error);
+      setMessage("폴더 삭제 중 문제가 발생했습니다. Supabase 권한이나 연결 상태를 확인해 주세요.");
+      return;
+    }
+
     setFolders((current) => current.filter((folder) => folder.id !== folderId));
     setPlaces((current) =>
       current.map((place) => {
@@ -247,6 +280,7 @@ export function PlacesView() {
       }),
     );
     if (selectedFolderId === folderId) setSelectedFolderId(allFolderId);
+    setMessage(`${targetFolder?.name ?? "폴더"}를 삭제했습니다.`);
   };
 
   const focusPlace = (place: PlaceRecord) => {
@@ -743,6 +777,35 @@ function getPlaceKey(place: PlaceRecord) {
 
 function getPlaceFolderIds(place: PlaceRecord) {
   return [...new Set([...(place.folderIds ?? []), place.folderId].filter((folderId): folderId is string => Boolean(folderId)))];
+}
+
+function getPlaceSourceIds(place: PlaceRecord) {
+  return [...new Set([...(place.sourceIds ?? []), place.id])];
+}
+
+function normalizePlaceRecords(records: PlaceRecord[]) {
+  const mergedPlaces = new Map<string, PlaceRecord>();
+
+  for (const record of records) {
+    const key = getPlaceKey(record);
+    const existingRecord = mergedPlaces.get(key);
+    if (!existingRecord) {
+      mergedPlaces.set(key, { ...record, folderIds: getPlaceFolderIds(record), sourceIds: getPlaceSourceIds(record) });
+      continue;
+    }
+
+    const folderIds = [...new Set([...getPlaceFolderIds(existingRecord), ...getPlaceFolderIds(record)])];
+    const sourceIds = [...new Set([...getPlaceSourceIds(existingRecord), ...getPlaceSourceIds(record)])];
+    mergedPlaces.set(key, {
+      ...existingRecord,
+      folderId: folderIds[0],
+      folderIds,
+      sourceIds,
+      isFavorite: existingRecord.isFavorite || record.isFavorite,
+    });
+  }
+
+  return [...mergedPlaces.values()];
 }
 
 function formatFolderNames(folders: PlaceFolder[]) {

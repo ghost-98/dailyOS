@@ -64,6 +64,7 @@ export type PlaceRecord = {
   id: string;
   folderId?: string;
   folderIds?: string[];
+  sourceIds?: string[];
   name: string;
   address: string;
   latitude: number;
