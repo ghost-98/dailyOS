@@ -28,6 +28,10 @@ type PlaceFolderRow = {
 type PlaceInsert = Omit<PlaceRow, "id"> & {
   user_id: string;
 };
+type PlaceFolderInsert = Omit<PlaceFolderRow, "id"> & {
+  user_id: string;
+};
+type PlaceFolderUpdate = Partial<Omit<PlaceFolderInsert, "user_id">>;
 
 const placeColumns = "id,folder_id,name,address,latitude,longitude,provider,provider_place_id,phone,category,url,is_favorite,memo";
 const folderColumns = "id,name,color,icon,sort_order";
@@ -142,6 +146,44 @@ export async function createPlaceInDb(place: PlaceRecord) {
   const { data, error } = await supabase.from("places").insert(mapPlaceInsert(place, userId)).select(placeColumns).single();
   if (error) throw error;
   return mapPlaceRow(data as PlaceRow);
+}
+
+export async function createPlaceFolderInDb(folder: Omit<PlaceFolder, "id">) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const row: PlaceFolderInsert = {
+    user_id: userId,
+    name: folder.name.trim(),
+    color: folder.color,
+    icon: folder.icon,
+    sort_order: folder.sortOrder,
+  };
+  const { data, error } = await supabase.from("place_folders").insert(row).select(folderColumns).single();
+  if (error) throw error;
+  return mapFolderRow(data as PlaceFolderRow);
+}
+
+export async function updatePlaceFolderInDb(folder: PlaceFolder) {
+  if (!supabase) return null;
+
+  const row: PlaceFolderUpdate = {
+    name: folder.name.trim(),
+    color: folder.color,
+    icon: folder.icon,
+    sort_order: folder.sortOrder,
+  };
+  const { data, error } = await supabase.from("place_folders").update(row).eq("id", folder.id).select(folderColumns).single();
+  if (error) throw error;
+  return mapFolderRow(data as PlaceFolderRow);
+}
+
+export async function deletePlaceFolderFromDb(id: string) {
+  if (!supabase) return false;
+  const { error } = await supabase.from("place_folders").delete().eq("id", id);
+  if (error) throw error;
+  return true;
 }
 
 export async function deletePlaceFromDb(id: string) {

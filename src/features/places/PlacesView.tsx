@@ -2,11 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Folder, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { Folder, MapPin, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
-import { createPlaceInDb, deletePlaceFromDb, ensureDefaultPlaceFoldersInDb, fetchPlacesFromDb } from "./api";
+import {
+  createPlaceFolderInDb,
+  createPlaceInDb,
+  deletePlaceFolderFromDb,
+  deletePlaceFromDb,
+  ensureDefaultPlaceFoldersInDb,
+  fetchPlacesFromDb,
+  updatePlaceFolderInDb,
+} from "./api";
 
 type SearchResponse = {
   error?: string;
@@ -50,6 +58,7 @@ export function PlacesView() {
   const [query, setQuery] = useState("");
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -177,6 +186,23 @@ export function PlacesView() {
     if (selectedPlace?.id === id) setSelectedPlace(null);
   };
 
+  const saveFolder = async (folder: PlaceFolder) => {
+    const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
+    if (!savedFolder) return;
+    setFolders((current) => {
+      const exists = current.some((item) => item.id === savedFolder.id);
+      const next = exists ? current.map((item) => (item.id === savedFolder.id ? savedFolder : item)) : [...current, savedFolder];
+      return next.sort((a, b) => a.sortOrder - b.sortOrder);
+    });
+  };
+
+  const deleteFolder = async (folderId: string) => {
+    await deletePlaceFolderFromDb(folderId);
+    setFolders((current) => current.filter((folder) => folder.id !== folderId));
+    setPlaces((current) => current.map((place) => (place.folderId === folderId ? { ...place, folderId: undefined } : place)));
+    if (selectedFolderId === folderId) setSelectedFolderId(allFolderId);
+  };
+
   const focusPlace = (place: PlaceRecord) => {
     setSelectedPlace(place);
     if (!mapRef.current || !window.naver?.maps) return;
@@ -250,6 +276,10 @@ export function PlacesView() {
                 onClick={() => setSelectedFolderId(folder.id)}
               />
             ))}
+            <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
+              <Plus aria-hidden size={14} />
+              <strong>폴더 관리</strong>
+            </button>
           </div>
 
           <div className="places-section">
@@ -347,6 +377,106 @@ export function PlacesView() {
           ) : null}
         </SectionCard>
       </div>
+
+      {isFolderManagerOpen ? (
+        <FolderManagerSheet
+          folders={folders}
+          onClose={() => setIsFolderManagerOpen(false)}
+          onDelete={(folderId) => void deleteFolder(folderId)}
+          onSave={(folder) => void saveFolder(folder)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function FolderManagerSheet({
+  folders,
+  onClose,
+  onDelete,
+  onSave,
+}: {
+  folders: PlaceFolder[];
+  onClose: () => void;
+  onDelete: (folderId: string) => void;
+  onSave: (folder: PlaceFolder) => void;
+}) {
+  const [editingFolder, setEditingFolder] = useState<PlaceFolder | null>(null);
+
+  const startCreate = () => {
+    setEditingFolder({
+      id: "",
+      color: "#9db2ff",
+      icon: "dot",
+      name: "",
+      sortOrder: (folders.at(-1)?.sortOrder ?? 0) + 10,
+    });
+  };
+
+  const save = () => {
+    if (!editingFolder || editingFolder.name.trim().length === 0) return;
+    onSave({ ...editingFolder, name: editingFolder.name.trim() });
+    setEditingFolder(null);
+  };
+
+  return (
+    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
+      <section aria-labelledby="folder-manager-title" aria-modal="true" className="event-sheet places-folder-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="event-sheet__grabber" aria-hidden />
+        <header className="event-sheet__header">
+          <div>
+            <h2 id="folder-manager-title">폴더 관리</h2>
+          </div>
+          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
+          </button>
+        </header>
+
+        <div className="places-folder-manager">
+          <div className="places-folder-manager__list">
+            {folders.map((folder) => (
+              <article className="places-folder-row" key={folder.id}>
+                <span style={{ backgroundColor: folder.color }} />
+                <strong>{folder.name}</strong>
+                <div>
+                  <button aria-label="폴더 수정" onClick={() => setEditingFolder(folder)} type="button">
+                    <Pencil aria-hidden size={14} />
+                  </button>
+                  <button aria-label="폴더 삭제" onClick={() => onDelete(folder.id)} type="button">
+                    <Trash2 aria-hidden size={14} />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {editingFolder ? (
+            <div className="places-folder-form">
+              <label>
+                <span>폴더명</span>
+                <input value={editingFolder.name} onChange={(event) => setEditingFolder((current) => (current ? { ...current, name: event.target.value } : current))} />
+              </label>
+              <label>
+                <span>색상</span>
+                <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
+              </label>
+              <footer>
+                <button className="event-sheet__secondary-button" onClick={() => setEditingFolder(null)} type="button">
+                  취소
+                </button>
+                <button className="event-sheet__primary-button" disabled={editingFolder.name.trim().length === 0} onClick={save} type="button">
+                  저장
+                </button>
+              </footer>
+            </div>
+          ) : (
+            <button className="places-folder-add" onClick={startCreate} type="button">
+              <Plus aria-hidden size={15} />
+              새 폴더 추가
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

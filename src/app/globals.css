@@ -509,6 +509,10 @@ button {
   color: var(--text);
 }
 
+.places-folder--manage {
+  color: var(--text);
+}
+
 .places-folder__mark {
   display: grid;
   width: 22px;
@@ -694,6 +698,106 @@ button {
   color: var(--violet);
   font-weight: 800;
   text-decoration: none;
+}
+
+.places-folder-sheet {
+  width: min(560px, 100%);
+}
+
+.places-folder-manager {
+  display: grid;
+  gap: 18px;
+}
+
+.places-folder-manager__list {
+  display: grid;
+  gap: 8px;
+}
+
+.places-folder-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+}
+
+.places-folder-row > span {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.places-folder-row div {
+  display: flex;
+  gap: 6px;
+}
+
+.places-folder-row button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.places-folder-form {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.places-folder-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.places-folder-form label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.places-folder-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.places-folder-form input[type="color"] {
+  height: 42px;
+  padding: 5px;
+}
+
+.places-folder-form footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.places-folder-add {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(157, 178, 255, 0.12);
+  color: var(--text);
+  padding: 12px;
+  font-weight: 900;
 }
 
 @media (max-width: 1180px) {
