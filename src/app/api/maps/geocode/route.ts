@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const response = await fetch(`https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}&count=8`, {
+  const response = await fetch(`https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}&count=8`, {
     headers: {
       Accept: "application/json",
       "x-ncp-apigw-api-key": naverKey,
