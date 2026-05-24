@@ -150,6 +150,15 @@ create table if not exists public.places (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.place_folder_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  place_id uuid not null references public.places(id) on delete cascade,
+  folder_id uuid not null references public.place_folders(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, place_id, folder_id)
+);
+
 create table if not exists public.place_links (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -348,6 +357,8 @@ create index if not exists place_folders_user_sort_idx on public.place_folders(u
 create index if not exists places_user_created_idx on public.places(user_id, created_at desc);
 create index if not exists places_user_provider_idx on public.places(user_id, provider, provider_place_id);
 create index if not exists places_user_folder_idx on public.places(user_id, folder_id, created_at desc);
+create index if not exists place_folder_links_user_folder_idx on public.place_folder_links(user_id, folder_id);
+create index if not exists place_folder_links_place_idx on public.place_folder_links(place_id);
 create index if not exists place_links_user_target_idx on public.place_links(user_id, target_type, target_id);
 create index if not exists place_links_place_idx on public.place_links(place_id, target_date);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
@@ -540,6 +551,7 @@ alter table public.workout_sessions enable row level security;
 alter table public.expense_records enable row level security;
 alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
+alter table public.place_folder_links enable row level security;
 alter table public.place_links enable row level security;
 alter table public.career_records enable row level security;
 alter table public.application_events enable row level security;
@@ -763,6 +775,38 @@ with check (
 drop policy if exists "Users can delete own places" on public.places;
 create policy "Users can delete own places"
 on public.places for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own place folder links" on public.place_folder_links;
+create policy "Users can read own place folder links"
+on public.place_folder_links for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own place folder links" on public.place_folder_links;
+create policy "Users can insert own place folder links"
+on public.place_folder_links for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from public.places
+    where places.id = place_folder_links.place_id
+      and places.user_id = auth.uid()
+  )
+  and exists (
+    select 1
+    from public.place_folders
+    where place_folders.id = place_folder_links.folder_id
+      and place_folders.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can delete own place folder links" on public.place_folder_links;
+create policy "Users can delete own place folder links"
+on public.place_folder_links for delete
 to authenticated
 using (user_id = auth.uid());
 

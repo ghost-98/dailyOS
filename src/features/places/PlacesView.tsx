@@ -13,6 +13,7 @@ import {
   deletePlaceFromDb,
   ensureDefaultPlaceFoldersInDb,
   fetchPlacesFromDb,
+  setPlaceFolderLinksInDb,
   updatePlaceFolderInDb,
 } from "./api";
 
@@ -120,7 +121,7 @@ export function PlacesView() {
   }, []);
 
   const filteredSavedPlaces = useMemo(
-    () => (selectedFolderId === allFolderId ? places : places.filter((place) => place.folderId === selectedFolderId)),
+    () => (selectedFolderId === allFolderId ? places : places.filter((place) => getPlaceFolderIds(place).includes(selectedFolderId))),
     [places, selectedFolderId],
   );
 
@@ -174,22 +175,47 @@ export function PlacesView() {
     }
   };
 
-  const savePlace = async (place: PlaceRecord, folderId: string) => {
+  const savePlaceFolders = async (place: PlaceRecord, folderIds: string[]) => {
+    const uniqueFolderIds = [...new Set(folderIds)];
     const existingPlace = places.find((item) => isSamePlace(item, place));
+
     if (existingPlace) {
-      setSelectedPlace(existingPlace);
+      if (uniqueFolderIds.length === 0) {
+        await deletePlace(existingPlace.id);
+        setPlacePendingSave(null);
+        setMessage(`${existingPlace.name} 저장을 해제했습니다.`);
+        return;
+      }
+
+      const didSyncFolders = await setPlaceFolderLinksInDb(existingPlace.id, uniqueFolderIds);
+      if (!didSyncFolders) {
+        setPlacePendingSave(null);
+        setMessage("여러 폴더 저장을 쓰려면 Supabase에 장소 폴더 연결 SQL을 먼저 적용해 주세요.");
+        return;
+      }
+      const nextPlace = { ...existingPlace, folderId: uniqueFolderIds[0], folderIds: uniqueFolderIds };
+      setPlaces((current) => current.map((item) => (item.id === existingPlace.id ? nextPlace : item)));
+      setSelectedPlace(nextPlace);
       setPlacePendingSave(null);
-      setMessage(`${existingPlace.name}은 이미 저장된 장소입니다.`);
+      setSelectedFolderId(uniqueFolderIds[0] ?? allFolderId);
+      setMessage(`${existingPlace.name} 저장 폴더를 변경했습니다.`);
       return;
     }
 
-    const savedPlace = await createPlaceInDb({ ...place, folderId });
-    const nextPlace = savedPlace ?? { ...place, folderId };
-    setPlaces((current) => [nextPlace, ...current]);
-    setSelectedPlace(nextPlace);
-    setSelectedFolderId(folderId);
+    if (uniqueFolderIds.length === 0) {
+      setPlacePendingSave(null);
+      return;
+    }
+
+    const savedPlace = await createPlaceInDb({ ...place, folderId: uniqueFolderIds[0], folderIds: uniqueFolderIds });
+    const nextPlace = { ...(savedPlace ?? place), folderId: uniqueFolderIds[0], folderIds: uniqueFolderIds };
+    const didSyncFolders = await setPlaceFolderLinksInDb(nextPlace.id, uniqueFolderIds);
+    const storedPlace = didSyncFolders ? nextPlace : { ...nextPlace, folderIds: [uniqueFolderIds[0]] };
+    setPlaces((current) => [storedPlace, ...current]);
+    setSelectedPlace(storedPlace);
+    setSelectedFolderId(uniqueFolderIds[0]);
     setPlacePendingSave(null);
-    setMessage(`${nextPlace.name}을 저장했습니다.`);
+    setMessage(didSyncFolders ? `${nextPlace.name}을 저장했습니다.` : `${nextPlace.name}을 저장했습니다. 여러 폴더 저장은 Supabase SQL 적용 후 사용할 수 있습니다.`);
   };
 
   const deletePlace = async (id: string) => {
@@ -211,7 +237,12 @@ export function PlacesView() {
   const deleteFolder = async (folderId: string) => {
     await deletePlaceFolderFromDb(folderId);
     setFolders((current) => current.filter((folder) => folder.id !== folderId));
-    setPlaces((current) => current.map((place) => (place.folderId === folderId ? { ...place, folderId: undefined } : place)));
+    setPlaces((current) =>
+      current.map((place) => {
+        const nextFolderIds = getPlaceFolderIds(place).filter((id) => id !== folderId);
+        return { ...place, folderId: nextFolderIds[0], folderIds: nextFolderIds };
+      }),
+    );
     if (selectedFolderId === folderId) setSelectedFolderId(allFolderId);
   };
 
@@ -227,7 +258,7 @@ export function PlacesView() {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = visiblePlaces.map((place) => {
-      const folder = folders.find((item) => item.id === place.folderId);
+      const folder = folders.find((item) => getPlaceFolderIds(place).includes(item.id));
       const isSaved = places.some((item) => isSamePlace(item, place));
       const marker = new window.naver!.maps.Marker({
         icon: {
@@ -250,7 +281,7 @@ export function PlacesView() {
 
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
-  const selectedPlaceFolder = folders.find((folder) => folder.id === selectedPlace?.folderId);
+  const selectedPlaceFolders = folders.filter((folder) => selectedPlace && getPlaceFolderIds(selectedPlace).includes(folder.id));
 
   return (
     <div className="places-page">
@@ -288,7 +319,7 @@ export function PlacesView() {
             {folders.map((folder) => (
               <FolderButton
                 color={folder.color}
-                count={places.filter((place) => place.folderId === folder.id).length}
+                count={places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}
                 isActive={selectedFolderId === folder.id}
                 key={folder.id}
                 label={folder.name}
@@ -303,7 +334,7 @@ export function PlacesView() {
 
           {selectedPlace ? (
             <SelectedPlacePanel
-              folder={selectedPlaceFolder}
+              folders={selectedPlaceFolders}
               isSaved={savedPlaceKeys.has(getPlaceKey(selectedPlace))}
               onDelete={selectedPlace.id && places.some((place) => place.id === selectedPlace.id) ? () => void deletePlace(selectedPlace.id) : undefined}
               onSave={() => setPlacePendingSave(selectedPlace)}
@@ -321,21 +352,21 @@ export function PlacesView() {
                 searchResults.map((place) => {
                   const isSaved = savedPlaceKeys.has(getPlaceKey(place));
                   const savedPlace = places.find((item) => isSamePlace(item, place));
-                  const savedFolder = folders.find((folder) => folder.id === savedPlace?.folderId);
+                  const savedFolders = folders.filter((folder) => savedPlace && getPlaceFolderIds(savedPlace).includes(folder.id));
                   return (
                     <PlaceItem
                       action={
                         <button
                           className={isSaved ? "place-item__saved-button" : ""}
                           disabled={folders.length === 0}
-                          onClick={() => (isSaved && savedPlace ? focusPlace(savedPlace) : setPlacePendingSave(place))}
-                          title={isSaved ? `${savedFolder?.name ?? "내 장소"}에 저장됨` : "폴더 선택 후 저장"}
+                          onClick={() => setPlacePendingSave(savedPlace ?? place)}
+                          title={isSaved ? "저장 폴더 편집" : "폴더 선택 후 저장"}
                           type="button"
                         >
                           {isSaved ? <Check aria-hidden size={14} /> : <Plus aria-hidden size={14} />}
                         </button>
                       }
-                      folder={savedFolder}
+                      folders={savedFolders}
                       isSaved={isSaved}
                       isActive={selectedPlace?.id === place.id}
                       key={place.id}
@@ -364,7 +395,7 @@ export function PlacesView() {
                         <Trash2 aria-hidden size={14} />
                       </button>
                     }
-                    folder={folders.find((folder) => folder.id === place.folderId)}
+                    folders={folders.filter((folder) => getPlaceFolderIds(place).includes(folder.id))}
                     isActive={selectedPlace?.id === place.id}
                     key={place.id}
                     onSelect={() => focusPlace(place)}
@@ -405,9 +436,10 @@ export function PlacesView() {
         <SavePlaceSheet
           folders={folders}
           onClose={() => setPlacePendingSave(null)}
-          onSave={(folderId) => void savePlace(placePendingSave, folderId)}
+          onSave={(folderIds) => void savePlaceFolders(placePendingSave, folderIds)}
           place={placePendingSave}
-          recommendedFolderId={selectedFolderId === allFolderId ? selectedPlaceFolder?.id ?? folders[0]?.id : selectedFolderId}
+          savedFolderIds={getPlaceFolderIds(places.find((item) => isSamePlace(item, placePendingSave)) ?? placePendingSave)}
+          recommendedFolderId={selectedFolderId === allFolderId ? selectedPlaceFolders[0]?.id ?? folders[0]?.id : selectedFolderId}
         />
       ) : null}
 
@@ -520,14 +552,20 @@ function SavePlaceSheet({
   onSave,
   place,
   recommendedFolderId,
+  savedFolderIds,
 }: {
   folders: PlaceFolder[];
   onClose: () => void;
-  onSave: (folderId: string) => void;
+  onSave: (folderIds: string[]) => void;
   place: PlaceRecord;
   recommendedFolderId?: string;
+  savedFolderIds: string[];
 }) {
-  const [folderId, setFolderId] = useState(recommendedFolderId ?? folders[0]?.id ?? "");
+  const initialFolderIds = savedFolderIds.length > 0 ? savedFolderIds : recommendedFolderId ? [recommendedFolderId] : [];
+  const [checkedFolderIds, setCheckedFolderIds] = useState(initialFolderIds);
+  const toggleFolder = (folderId: string) => {
+    setCheckedFolderIds((current) => (current.includes(folderId) ? current.filter((id) => id !== folderId) : [...current, folderId]));
+  };
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
@@ -552,9 +590,9 @@ function SavePlaceSheet({
 
         <div className="places-save-folder-grid">
           {folders.map((folder) => (
-            <button className={folder.id === folderId ? "places-save-folder places-save-folder--active" : "places-save-folder"} key={folder.id} onClick={() => setFolderId(folder.id)} type="button">
+            <button className={checkedFolderIds.includes(folder.id) ? "places-save-folder places-save-folder--active" : "places-save-folder"} key={folder.id} onClick={() => toggleFolder(folder.id)} type="button">
               <span style={{ backgroundColor: folder.color }}>
-                <Star aria-hidden size={13} />
+                {checkedFolderIds.includes(folder.id) ? <Check aria-hidden size={13} /> : <Star aria-hidden size={13} />}
               </span>
               <strong>{folder.name}</strong>
             </button>
@@ -565,8 +603,8 @@ function SavePlaceSheet({
           <button className="event-sheet__secondary-button" onClick={onClose} type="button">
             취소
           </button>
-          <button className="event-sheet__primary-button" disabled={!folderId} onClick={() => onSave(folderId)} type="button">
-            저장
+          <button className="event-sheet__primary-button" onClick={() => onSave(checkedFolderIds)} type="button">
+            적용
           </button>
         </footer>
       </section>
@@ -575,13 +613,13 @@ function SavePlaceSheet({
 }
 
 function SelectedPlacePanel({
-  folder,
+  folders,
   isSaved,
   onDelete,
   onSave,
   place,
 }: {
-  folder?: PlaceFolder;
+  folders: PlaceFolder[];
   isSaved: boolean;
   onDelete?: () => void;
   onSave: () => void;
@@ -590,11 +628,11 @@ function SelectedPlacePanel({
   return (
     <section className="places-selected-panel" aria-label="선택 장소 정보">
       <div className="places-selected-panel__head">
-        <div className="places-selected-panel__mark" style={{ backgroundColor: folder?.color ?? "var(--violet)" }}>
+        <div className="places-selected-panel__mark" style={{ backgroundColor: folders[0]?.color ?? "var(--violet)" }}>
           {isSaved ? <Star aria-hidden size={17} /> : <MapPin aria-hidden size={17} />}
         </div>
         <div>
-          <span>{isSaved ? folder?.name ?? "저장됨" : "검색 결과"}</span>
+          <span>{isSaved ? folders.map((folder) => folder.name).join(", ") || "저장됨" : "검색 결과"}</span>
           <strong>{place.name}</strong>
         </div>
       </div>
@@ -610,9 +648,9 @@ function SelectedPlacePanel({
       </div>
       <div className="places-selected-panel__actions">
         {isSaved ? (
-          <button className="places-selected-panel__button places-selected-panel__button--muted" disabled type="button">
+          <button className="places-selected-panel__button places-selected-panel__button--muted" onClick={onSave} type="button">
             <Check aria-hidden size={15} />
-            저장됨
+            저장 폴더 편집
           </button>
         ) : (
           <button className="places-selected-panel__button" onClick={onSave} type="button">
@@ -656,14 +694,14 @@ function FolderButton({
 
 function PlaceItem({
   action,
-  folder,
+  folders = [],
   isSaved,
   isActive,
   onSelect,
   place,
 }: {
   action: ReactNode;
-  folder?: PlaceFolder;
+  folders?: PlaceFolder[];
   isSaved?: boolean;
   isActive: boolean;
   onSelect: () => void;
@@ -677,8 +715,8 @@ function PlaceItem({
           <strong>{place.name}</strong>
           <em>{place.address}</em>
           <small>
-            {folder ? <i style={{ backgroundColor: folder.color }} /> : null}
-            {isSaved ? `${folder?.name ?? "저장됨"}에 저장됨` : place.category || folder?.name || "장소"}
+            {folders[0] ? <i style={{ backgroundColor: folders[0].color }} /> : null}
+            {isSaved ? `${formatFolderNames(folders)}에 저장됨` : place.category || folders[0]?.name || "장소"}
           </small>
         </span>
       </button>
@@ -698,6 +736,16 @@ function EmptyPlaces({ label }: { label: string }) {
 
 function getPlaceKey(place: PlaceRecord) {
   return `${place.providerPlaceId ?? ""}|${place.name}|${place.address}`;
+}
+
+function getPlaceFolderIds(place: PlaceRecord) {
+  return [...new Set([...(place.folderIds ?? []), place.folderId].filter((folderId): folderId is string => Boolean(folderId)))];
+}
+
+function formatFolderNames(folders: PlaceFolder[]) {
+  if (folders.length === 0) return "저장됨";
+  if (folders.length <= 2) return folders.map((folder) => folder.name).join(", ");
+  return `${folders[0].name} 외 ${folders.length - 1}`;
 }
 
 function isSamePlace(left: PlaceRecord, right: PlaceRecord) {

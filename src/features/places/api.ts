@@ -24,6 +24,10 @@ type PlaceFolderRow = {
   icon: string;
   sort_order: number;
 };
+type PlaceFolderLinkRow = {
+  place_id: string;
+  folder_id: string;
+};
 
 type PlaceInsert = Omit<PlaceRow, "id"> & {
   user_id: string;
@@ -32,9 +36,14 @@ type PlaceFolderInsert = Omit<PlaceFolderRow, "id"> & {
   user_id: string;
 };
 type PlaceFolderUpdate = Partial<Omit<PlaceFolderInsert, "user_id">>;
+type SupabaseErrorLike = {
+  code?: string;
+  message?: string;
+};
 
 const placeColumns = "id,folder_id,name,address,latitude,longitude,provider,provider_place_id,phone,category,url,is_favorite,memo";
 const folderColumns = "id,name,color,icon,sort_order";
+const folderLinkColumns = "place_id,folder_id";
 
 const defaultFolderDrafts = [
   { color: "#9db2ff", icon: "briefcase", name: "취업", sortOrder: 10 },
@@ -51,10 +60,12 @@ async function getUserId() {
   return data.user.id;
 }
 
-function mapPlaceRow(row: PlaceRow): PlaceRecord {
+function mapPlaceRow(row: PlaceRow, folderIds: string[] = []): PlaceRecord {
+  const mergedFolderIds = [...new Set([row.folder_id, ...folderIds].filter((folderId): folderId is string => Boolean(folderId)))];
   return {
     id: row.id,
-    folderId: row.folder_id ?? undefined,
+    folderId: mergedFolderIds[0] ?? undefined,
+    folderIds: mergedFolderIds,
     name: row.name,
     address: row.address,
     latitude: Number(row.latitude),
@@ -97,6 +108,10 @@ function mapPlaceInsert(place: PlaceRecord, userId: string): PlaceInsert {
   };
 }
 
+function isMissingRelationError(error: SupabaseErrorLike | null | undefined) {
+  return error?.code === "42P01" || error?.message?.includes("does not exist") || false;
+}
+
 export async function fetchPlaceFoldersFromDb() {
   if (!supabase) return null;
   const userId = await getUserId();
@@ -133,9 +148,19 @@ export async function fetchPlacesFromDb() {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const { data, error } = await supabase.from("places").select(placeColumns).order("created_at", { ascending: false });
+  const [{ data, error }, { data: linkData, error: linkError }] = await Promise.all([
+    supabase.from("places").select(placeColumns).order("created_at", { ascending: false }),
+    supabase.from("place_folder_links").select(folderLinkColumns),
+  ]);
   if (error) throw error;
-  return (data as PlaceRow[]).map(mapPlaceRow);
+  if (linkError && !isMissingRelationError(linkError)) throw linkError;
+
+  const linksByPlaceId = new Map<string, string[]>();
+  for (const link of (linkData ?? []) as PlaceFolderLinkRow[]) {
+    linksByPlaceId.set(link.place_id, [...(linksByPlaceId.get(link.place_id) ?? []), link.folder_id]);
+  }
+
+  return (data as PlaceRow[]).map((row) => mapPlaceRow(row, linksByPlaceId.get(row.id) ?? []));
 }
 
 export async function createPlaceInDb(place: PlaceRecord) {
@@ -146,6 +171,30 @@ export async function createPlaceInDb(place: PlaceRecord) {
   const { data, error } = await supabase.from("places").insert(mapPlaceInsert(place, userId)).select(placeColumns).single();
   if (error) throw error;
   return mapPlaceRow(data as PlaceRow);
+}
+
+export async function setPlaceFolderLinksInDb(placeId: string, folderIds: string[]) {
+  if (!supabase) return false;
+  const userId = await getUserId();
+  if (!userId) return false;
+
+  const { error: deleteError } = await supabase.from("place_folder_links").delete().eq("place_id", placeId);
+  if (isMissingRelationError(deleteError)) return false;
+  if (deleteError) throw deleteError;
+
+  const uniqueFolderIds = [...new Set(folderIds)];
+  if (uniqueFolderIds.length === 0) return true;
+
+  const { error: insertError } = await supabase.from("place_folder_links").insert(
+    uniqueFolderIds.map((folderId) => ({
+      user_id: userId,
+      place_id: placeId,
+      folder_id: folderId,
+    })),
+  );
+  if (isMissingRelationError(insertError)) return false;
+  if (insertError) throw insertError;
+  return true;
 }
 
 export async function createPlaceFolderInDb(folder: Omit<PlaceFolder, "id">) {
