@@ -993,32 +993,32 @@ button {
 
 .map-place-marker {
   display: grid;
-  grid-template-columns: auto;
+  width: 96px;
   justify-items: center;
   border: 0;
   background: transparent;
   color: var(--text);
-  transform: translateY(-2px);
+  pointer-events: none;
 }
 
 .map-place-marker__star {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 18px;
+  height: 18px;
   place-items: center;
-  border: 2px solid rgba(17, 18, 22, 0.72);
+  border: 1px solid rgba(17, 18, 22, 0.72);
   border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
 }
 
 .map-place-marker__star svg {
-  width: 18px;
-  height: 18px;
+  width: 10px;
+  height: 10px;
   fill: #111216;
 }
 
 .map-place-marker strong {
-  max-width: 110px;
+  max-width: 96px;
   overflow: hidden;
   margin-top: 4px;
   border: 1px solid rgba(17, 18, 22, 0.42);
@@ -1026,8 +1026,8 @@ button {
   background: rgba(17, 18, 22, 0.86);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
   color: #fff;
-  font-size: 11px;
-  padding: 4px 8px;
+  font-size: 10px;
+  padding: 3px 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

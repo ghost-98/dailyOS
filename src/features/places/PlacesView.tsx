@@ -360,7 +360,7 @@ export function PlacesView() {
       const markerFolder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
       const marker = new window.naver!.maps.Marker({
         icon: {
-          anchor: new window.naver!.maps.Point(17, 17),
+          anchor: new window.naver!.maps.Point(48, 9),
           content: getMarkerContent(markerPlace, markerFolder, isSaved),
         },
         map: mapRef.current,
@@ -975,14 +975,14 @@ function getMarkerContent(place: PlaceRecord, folder: PlaceFolder | undefined, i
   const color = folder?.color ?? (isSaved ? "#9db2ff" : "#a7a8ae");
   const safeName = escapeHtml(place.name);
   return `
-    <button class="map-place-marker ${isSaved ? "map-place-marker--saved" : "map-place-marker--search"}" type="button">
+    <div class="map-place-marker ${isSaved ? "map-place-marker--saved" : "map-place-marker--search"}">
       <span class="map-place-marker__star" style="background:${color}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2.8l2.73 5.54 6.12.89-4.43 4.32 1.05 6.1L12 16.78l-5.47 2.87 1.05-6.1-4.43-4.32 6.12-.89L12 2.8z"></path>
         </svg>
       </span>
       <strong>${safeName}</strong>
-    </button>
+    </div>
   `;
 }
 
