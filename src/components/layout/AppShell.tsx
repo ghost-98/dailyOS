@@ -32,21 +32,23 @@ const careerChildren = [
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "계획", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
-  { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
+  { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
+  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "지도", href: "/places", key: "places", icon: Map },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
-  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
-  { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
+  { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
+  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
   { label: "지도", href: "/places", key: "places", icon: Map },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
+  { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 type AppShellProps = {

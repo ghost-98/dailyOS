@@ -1748,8 +1748,106 @@ button {
 
 .today-work-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
   gap: 22px;
+}
+
+.today-side-grid,
+.today-plan-sections,
+.today-health-grid,
+.today-ledger-list {
+  display: grid;
+  gap: 14px;
+}
+
+.today-side-grid {
+  align-content: start;
+  gap: 22px;
+}
+
+.today-plan-section {
+  display: grid;
+  gap: 10px;
+}
+
+.today-plan-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.today-plan-section__head strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.today-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.today-heading-actions strong {
+  color: var(--green);
+  font-size: 14px;
+}
+
+.today-ledger-total {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+
+.today-ledger-total span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.today-ledger-total strong {
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.today-ledger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 15px 16px;
+}
+
+.today-ledger-item strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+
+.today-ledger-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.today-ledger-item b {
+  color: var(--text);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.workout-plan--weight {
+  border-color: rgba(61, 220, 151, 0.34);
+  background: rgba(61, 220, 151, 0.08);
 }
 
 .today-health-card {
@@ -6509,11 +6607,17 @@ a:focus-visible {
     left: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(56px, 1fr));
+    overflow-x: auto;
     border-top: 1px solid var(--line);
     background: rgba(12, 13, 16, 0.94);
     backdrop-filter: blur(18px);
     padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+    scrollbar-width: none;
+  }
+
+  .bottom-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .bottom-nav__item {
