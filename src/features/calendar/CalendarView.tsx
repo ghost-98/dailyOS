@@ -885,8 +885,12 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = places.map(
-      (place) =>
+      (place, index) =>
         new window.naver!.maps.Marker({
+          icon: {
+            anchor: new window.naver!.maps.Point(16, 42),
+            content: getSchedulePlaceMarkerContent(place, index),
+          },
           map: mapRef.current!,
           position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
           title: place.name,
@@ -936,8 +940,11 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
             {mapStatus === "error" ? <span>지도를 불러오지 못했습니다.</span> : null}
           </div>
           <div className="schedule-date-map__places">
-            {places.map((place) => (
-              <span key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>{place.name}</span>
+            {places.map((place, index) => (
+              <span key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
+                <b>{index + 1}</b>
+                {place.name}
+              </span>
             ))}
           </div>
         </div>
@@ -1314,6 +1321,25 @@ function uniquePlanPlaces(places: PlanPlace[]) {
     if (!uniquePlaces.has(key)) uniquePlaces.set(key, place);
   });
   return [...uniquePlaces.values()];
+}
+
+function getSchedulePlaceMarkerContent(place: PlanPlace, index: number) {
+  const safeName = escapeHtml(place.name);
+  return `
+    <div class="schedule-place-marker">
+      <span>${index + 1}</span>
+      <strong>${safeName}</strong>
+    </div>
+  `;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function reorderScopedItems<T extends { id: string }>(
