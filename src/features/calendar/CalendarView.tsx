@@ -40,6 +40,9 @@ type NaverMap = {
 type NaverMarker = {
   setMap: (map: NaverMap | null) => void;
 };
+type NaverPolyline = {
+  setMap: (map: NaverMap | null) => void;
+};
 
 declare global {
   interface Window {
@@ -52,6 +55,7 @@ declare global {
         LatLngBounds: new () => NaverLatLngBounds;
         Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
         Marker: new (options: Record<string, unknown>) => NaverMarker;
+        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
         Point: new (x: number, y: number) => unknown;
       };
     };
@@ -836,15 +840,102 @@ async function readPlaceSearchResponse(response: Response): Promise<{ places?: P
 }
 
 function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLargeMapOpen, setIsLargeMapOpen] = useState(false);
+  const [isRouteVisible, setIsRouteVisible] = useState(false);
+
+  if (places.length === 0) {
+    return (
+      <div className="schedule-date-map schedule-date-map--empty">
+        <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
+          <span>
+            <MapPin aria-hidden size={18} />
+            이날 간 장소
+          </span>
+          <strong>0곳</strong>
+        </button>
+        {isOpen ? <p>이 날짜에 연결된 장소가 없습니다.</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className={`schedule-date-map ${isOpen ? "schedule-date-map--open" : ""}`}>
+      <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
+        <span>
+          <MapPin aria-hidden size={18} />
+          이날 간 장소
+        </span>
+        <strong>{places.length}곳</strong>
+      </button>
+      {isOpen ? (
+        <div className="schedule-date-map__body">
+          <DatePlacesMapCanvas className="schedule-date-map__canvas" places={places} routeVisible={false} />
+          <div className="schedule-date-map__actions">
+            <button onClick={() => setIsLargeMapOpen(true)} type="button">크게 보기</button>
+            <button className={isRouteVisible ? "schedule-date-map__route-button schedule-date-map__route-button--active" : "schedule-date-map__route-button"} onClick={() => {
+              setIsRouteVisible((current) => !current);
+              setIsLargeMapOpen(true);
+            }} type="button">
+              경로 그리기
+            </button>
+          </div>
+          <div className="schedule-date-map__places">
+            {places.map((place, index) => (
+              <span key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
+                <b>{index + 1}</b>
+                {place.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      </div>
+      {isLargeMapOpen ? (
+        <div className="schedule-map-modal-backdrop" role="presentation" onMouseDown={() => setIsLargeMapOpen(false)}>
+          <section aria-modal="true" className="schedule-map-modal" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+            <header className="schedule-map-modal__header">
+              <div>
+                <span>이날 간 장소</span>
+                <h2>{places.length}곳 지도</h2>
+              </div>
+              <div className="schedule-map-modal__actions">
+                <button className={isRouteVisible ? "schedule-date-map__route-button schedule-date-map__route-button--active" : "schedule-date-map__route-button"} onClick={() => setIsRouteVisible((current) => !current)} type="button">
+                  경로 그리기
+                </button>
+                <button onClick={() => setIsLargeMapOpen(false)} type="button">닫기</button>
+              </div>
+            </header>
+            <div className="schedule-map-modal__content">
+              <DatePlacesMapCanvas className="schedule-map-modal__canvas" places={places} routeVisible={isRouteVisible} />
+              <ol className="schedule-map-modal__list">
+                {places.map((place, index) => (
+                  <li key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
+                    <b>{index + 1}</b>
+                    <div>
+                      <strong>{place.name}</strong>
+                      {place.address ? <span>{place.address}</span> : null}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function DatePlacesMapCanvas({ className, places, routeVisible }: { className: string; places: PlanPlace[]; routeVisible: boolean }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
   const markersRef = useRef<NaverMarker[]>([]);
+  const routeRef = useRef<NaverPolyline | null>(null);
   const [mapStatus, setMapStatus] = useState<"idle" | "loading" | "ready" | "missing" | "error">("idle");
-  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
-
     if (!naverMapClientId) {
       setMapStatus("missing");
       return;
@@ -870,10 +961,10 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
     script.onload = () => setMapStatus("ready");
     script.onerror = () => setMapStatus("error");
     document.head.appendChild(script);
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
-    if (!isOpen || mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps || places.length === 0) return;
+    if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps || places.length === 0) return;
 
     const firstPlace = places[0];
     if (!mapRef.current) {
@@ -897,6 +988,20 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
         }),
     );
 
+    routeRef.current?.setMap(null);
+    routeRef.current = null;
+    if (routeVisible && places.length > 1) {
+      routeRef.current = new window.naver.maps.Polyline({
+        map: mapRef.current,
+        path: places.map((place) => new window.naver!.maps.LatLng(place.latitude, place.longitude)),
+        strokeColor: "#c8b6ff",
+        strokeLineCap: "round",
+        strokeLineJoin: "round",
+        strokeOpacity: 0.95,
+        strokeWeight: 5,
+      });
+    }
+
     if (places.length === 1) {
       mapRef.current.setCenter(new window.naver.maps.LatLng(firstPlace.latitude, firstPlace.longitude));
       mapRef.current.setZoom(15);
@@ -906,49 +1011,13 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
     const bounds = new window.naver.maps.LatLngBounds();
     places.forEach((place) => bounds.extend(new window.naver!.maps.LatLng(place.latitude, place.longitude)));
     mapRef.current.fitBounds(bounds);
-  }, [isOpen, mapStatus, places]);
-
-  if (places.length === 0) {
-    return (
-      <div className="schedule-date-map schedule-date-map--empty">
-        <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
-          <span>
-            <MapPin aria-hidden size={18} />
-            이날 간 장소
-          </span>
-          <strong>0곳</strong>
-        </button>
-        {isOpen ? <p>이 날짜에 연결된 장소가 없습니다.</p> : null}
-      </div>
-    );
-  }
+  }, [mapStatus, places, routeVisible]);
 
   return (
-    <div className={`schedule-date-map ${isOpen ? "schedule-date-map--open" : ""}`}>
-      <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
-        <span>
-          <MapPin aria-hidden size={18} />
-          이날 간 장소
-        </span>
-        <strong>{places.length}곳</strong>
-      </button>
-      {isOpen ? (
-        <div className="schedule-date-map__body">
-          <div className="schedule-date-map__canvas" ref={mapElementRef}>
-            {mapStatus === "loading" ? <span>지도를 불러오는 중입니다.</span> : null}
-            {mapStatus === "missing" ? <span>네이버 지도 키가 필요합니다.</span> : null}
-            {mapStatus === "error" ? <span>지도를 불러오지 못했습니다.</span> : null}
-          </div>
-          <div className="schedule-date-map__places">
-            {places.map((place, index) => (
-              <span key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
-                <b>{index + 1}</b>
-                {place.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
+    <div className={className} ref={mapElementRef}>
+      {mapStatus === "loading" ? <span>지도를 불러오는 중입니다.</span> : null}
+      {mapStatus === "missing" ? <span>네이버 지도 키가 필요합니다.</span> : null}
+      {mapStatus === "error" ? <span>지도를 불러오지 못했습니다.</span> : null}
     </div>
   );
 }

@@ -35,6 +35,9 @@ type NaverMap = {
 type NaverMarker = {
   setMap: (map: NaverMap | null) => void;
 };
+type NaverPolyline = {
+  setMap: (map: NaverMap | null) => void;
+};
 
 declare global {
   interface Window {
@@ -47,6 +50,7 @@ declare global {
         LatLngBounds: new () => NaverLatLngBounds;
         Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
         Marker: new (options: Record<string, unknown>) => NaverMarker;
+        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
         Point: new (x: number, y: number) => unknown;
       };
     };

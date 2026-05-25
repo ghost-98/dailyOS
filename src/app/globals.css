@@ -2915,6 +2915,145 @@ a:focus-visible {
   font-size: 11px;
 }
 
+.schedule-date-map__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-date-map__actions button,
+.schedule-map-modal__actions button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+  padding: 0 11px;
+}
+
+.schedule-date-map__route-button--active {
+  border-color: rgba(200, 182, 255, 0.5) !important;
+  background: rgba(200, 182, 255, 0.18) !important;
+  color: var(--violet) !important;
+}
+
+.schedule-map-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 5, 8, 0.72);
+  padding: 28px;
+}
+
+.schedule-map-modal {
+  display: grid;
+  width: min(1040px, 100%);
+  max-height: min(760px, calc(100vh - 56px));
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: rgba(24, 25, 29, 0.98);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.46);
+}
+
+.schedule-map-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 18px 20px;
+}
+
+.schedule-map-modal__header span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.schedule-map-modal__header h2 {
+  margin: 4px 0 0;
+  font-size: 24px;
+}
+
+.schedule-map-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.schedule-map-modal__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  min-height: 520px;
+  padding: 16px;
+}
+
+.schedule-map-modal__canvas {
+  display: grid;
+  min-height: 520px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(10, 11, 14, 0.72);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.schedule-map-modal__list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-map-modal__list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+}
+
+.schedule-map-modal__list b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--violet);
+  color: #111216;
+  font-size: 13px;
+}
+
+.schedule-map-modal__list div {
+  min-width: 0;
+}
+
+.schedule-map-modal__list strong,
+.schedule-map-modal__list span {
+  display: block;
+}
+
+.schedule-map-modal__list span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .schedule-place-marker {
   display: inline-flex;
   max-width: 140px;
