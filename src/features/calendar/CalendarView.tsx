@@ -1,7 +1,7 @@
 "use client";
 
 import type { DragEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -11,14 +11,16 @@ import {
   Clock3,
   ListChecks,
   ListFilter,
+  MapPin,
   Pencil,
   Plus,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { EventType, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
+import type { EventType, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import type { CalendarEvent } from "./data";
@@ -26,10 +28,41 @@ import type { CalendarEvent } from "./data";
 type CalendarCategory = "schedule" | "event" | "todo";
 type DragPlacement = "before" | "after";
 
+type NaverLatLng = unknown;
+type NaverLatLngBounds = {
+  extend: (latLng: NaverLatLng) => void;
+};
+type NaverMap = {
+  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
+  setCenter: (latLng: NaverLatLng) => void;
+  setZoom: (zoom: number) => void;
+};
+type NaverMarker = {
+  setMap: (map: NaverMap | null) => void;
+};
+
+declare global {
+  interface Window {
+    naver?: {
+      maps: {
+        Event: {
+          addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
+        };
+        LatLng: new (latitude: number, longitude: number) => NaverLatLng;
+        LatLngBounds: new () => NaverLatLngBounds;
+        Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
+        Marker: new (options: Record<string, unknown>) => NaverMarker;
+        Point: new (x: number, y: number) => unknown;
+      };
+    };
+  }
+}
+
 const categoryDisplayOrder: CalendarCategory[] = ["schedule", "todo", "event"];
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
+const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 
 const categoryLabels: Record<CalendarCategory, string> = {
   schedule: "일정",
@@ -136,6 +169,10 @@ export function CalendarView({
       todo: selectedTasks.length,
     };
   }, [selectedDate, selectedTasks.length, visibleEvents]);
+  const selectedPlanPlaces = useMemo(
+    () => uniquePlanPlaces([...selectedSchedules, ...selectedEvents, ...selectedTasks].map((item) => item.place).filter((place): place is PlanPlace => Boolean(place))),
+    [selectedEvents, selectedSchedules, selectedTasks],
+  );
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
@@ -363,6 +400,8 @@ export function CalendarView({
                   <h2>{formatSelectedDate(selectedDate)}</h2>
                 </div>
               </div>
+
+              <SelectedDatePlacesMap places={selectedPlanPlaces} />
 
               <div className="date-event-list">
                 <div className="date-category-tabs" aria-label="날짜별 항목">
@@ -601,6 +640,7 @@ function EventDateItem({
           {event.time ? <span>{event.time}</span> : null}
         </div>
         <h3>{event.title}</h3>
+        {event.place ? <PlaceLine place={event.place} /> : null}
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
       <div className="date-event__actions">
@@ -664,6 +704,7 @@ function TaskDateItem({
         </div>
         <h3>{task.title}</h3>
         {task.dueDate ? <p>마감 {formatShortDate(task.dueDate)}</p> : null}
+        {task.place ? <PlaceLine place={task.place} /> : null}
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
       <div className="date-event__actions">
@@ -694,6 +735,198 @@ function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean; label
   );
 }
 
+function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
+  const [query, setQuery] = useState(selectedPlace?.name ?? "");
+  const [results, setResults] = useState<PlaceRecord[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const searchPlaces = async () => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
+
+    setIsSearching(true);
+    setMessage("");
+
+    try {
+      const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
+      const payload = (await response.json()) as { places?: PlaceRecord[]; error?: string };
+      if (!response.ok) {
+        setMessage(payload.error ?? "장소 검색에 실패했습니다.");
+        setResults([]);
+        return;
+      }
+
+      const nextResults = payload.places ?? [];
+      setResults(nextResults);
+      if (nextResults.length === 0) setMessage("검색 결과가 없습니다.");
+    } catch (error) {
+      console.error("Failed to search plan place", error);
+      setMessage("장소 검색 중 문제가 발생했습니다.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const choosePlace = (place: PlaceRecord) => {
+    onSelect(convertPlaceRecordToPlanPlace(place));
+    setQuery(place.name);
+    setResults([]);
+    setMessage("");
+  };
+
+  return (
+    <div className="event-form-card schedule-place-card">
+      <div className="schedule-place-card__header">
+        <div>
+          <span>장소</span>
+          <strong>{selectedPlace ? selectedPlace.name : "장소 검색"}</strong>
+        </div>
+        {selectedPlace ? (
+          <button onClick={() => onSelect(undefined)} type="button">
+            선택 해제
+          </button>
+        ) : null}
+      </div>
+      <div className="schedule-place-search">
+        <MapPin aria-hidden size={18} />
+        <input
+          placeholder="장소명이나 주소 검색"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void searchPlaces();
+            }
+          }}
+        />
+        <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
+          <Search aria-hidden size={16} />
+          {isSearching ? "검색 중" : "검색"}
+        </button>
+      </div>
+      {selectedPlace ? <PlaceLine place={selectedPlace} /> : null}
+      {message ? <p className="schedule-place-message">{message}</p> : null}
+      {results.length > 0 ? (
+        <div className="schedule-place-results">
+          {results.map((place) => (
+            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => choosePlace(place)} type="button">
+              <strong>{place.name}</strong>
+              <span>{place.address || place.category || "주소 정보 없음"}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
+  const mapElementRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<NaverMap | null>(null);
+  const markersRef = useRef<NaverMarker[]>([]);
+  const [mapStatus, setMapStatus] = useState<"idle" | "loading" | "ready" | "missing" | "error">("idle");
+
+  useEffect(() => {
+    if (!naverMapClientId) {
+      setMapStatus("missing");
+      return;
+    }
+
+    if (window.naver?.maps) {
+      setMapStatus("ready");
+      return;
+    }
+
+    setMapStatus("loading");
+    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
+      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.dataset.dailyosNaverMap = "true";
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
+    script.async = true;
+    script.onload = () => setMapStatus("ready");
+    script.onerror = () => setMapStatus("error");
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps || places.length === 0) return;
+
+    const firstPlace = places[0];
+    if (!mapRef.current) {
+      mapRef.current = new window.naver.maps.Map(mapElementRef.current, {
+        center: new window.naver.maps.LatLng(firstPlace.latitude, firstPlace.longitude),
+        zoom: places.length === 1 ? 15 : 12,
+      });
+    }
+
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = places.map(
+      (place) =>
+        new window.naver!.maps.Marker({
+          map: mapRef.current!,
+          position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
+          title: place.name,
+        }),
+    );
+
+    if (places.length === 1) {
+      mapRef.current.setCenter(new window.naver.maps.LatLng(firstPlace.latitude, firstPlace.longitude));
+      mapRef.current.setZoom(15);
+      return;
+    }
+
+    const bounds = new window.naver.maps.LatLngBounds();
+    places.forEach((place) => bounds.extend(new window.naver!.maps.LatLng(place.latitude, place.longitude)));
+    mapRef.current.fitBounds(bounds);
+  }, [mapStatus, places]);
+
+  if (places.length === 0) {
+    return (
+      <div className="schedule-date-map schedule-date-map--empty">
+        <MapPin aria-hidden size={18} />
+        <span>이 날짜에 연결된 장소가 없습니다.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="schedule-date-map">
+      <div className="schedule-date-map__head">
+        <span>이날 간 장소</span>
+        <strong>{places.length}곳</strong>
+      </div>
+      <div className="schedule-date-map__canvas" ref={mapElementRef}>
+        {mapStatus === "loading" ? <span>지도를 불러오는 중입니다.</span> : null}
+        {mapStatus === "missing" ? <span>네이버 지도 키가 필요합니다.</span> : null}
+        {mapStatus === "error" ? <span>지도를 불러오지 못했습니다.</span> : null}
+      </div>
+      <div className="schedule-date-map__places">
+        {places.map((place) => (
+          <span key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>{place.name}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlaceLine({ place }: { place: PlanPlace }) {
+  return (
+    <p className="date-event__place">
+      <MapPin aria-hidden size={14} />
+      <span>{place.name}</span>
+      {place.address ? <em>{place.address}</em> : null}
+    </p>
+  );
+}
+
 function EventCreateSheet({
   allowedTypes,
   defaultDate,
@@ -714,6 +947,7 @@ function EventCreateSheet({
   const [time, setTime] = useState(event?.time ?? "");
   const [type, setType] = useState<CalendarCategory>(event?.type === "event" ? "event" : defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
+  const [place, setPlace] = useState<PlanPlace | undefined>(event?.place);
 
   const saveCurrentEvent = () => {
     const trimmedTitle = title.trim();
@@ -726,6 +960,7 @@ function EventCreateSheet({
       title: trimmedTitle,
       time: time || undefined,
       meta: meta.trim() || "메모 없음",
+      place,
     });
   };
 
@@ -751,9 +986,11 @@ function EventCreateSheet({
             </label>
             <label className="schedule-field schedule-field--wide">
               <span>메모</span>
-              <input placeholder="장소, 링크, 간단한 설명" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
+              <input placeholder="링크, 준비물, 간단한 설명" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
             </label>
           </div>
+
+          <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
@@ -818,6 +1055,7 @@ function TaskCreateSheet({
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "normal");
   const [scheduledDate, setScheduledDate] = useState(task?.scheduledDate ?? defaultDate);
   const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [place, setPlace] = useState<PlanPlace | undefined>(task?.place);
 
   const saveTask = () => {
     const trimmedTitle = title.trim();
@@ -833,6 +1071,7 @@ function TaskCreateSheet({
       completedAt: status === "done" ? task?.completedAt ?? new Date().toISOString() : undefined,
       deferredCount: task?.deferredCount ?? 0,
       memo: memo.trim() || undefined,
+      place,
     });
   };
 
@@ -861,6 +1100,8 @@ function TaskCreateSheet({
               <input placeholder="필요한 내용을 적어주세요." value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
           </div>
+
+          <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--select schedule-field">
@@ -1022,6 +1263,28 @@ function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: Ca
       count: type === "todo" ? tasks.length : events.filter((event) => event.type === type).length,
     }))
     .filter((summary) => summary.count > 0);
+}
+
+function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {
+  return {
+    name: place.name,
+    address: place.address,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    providerPlaceId: place.providerPlaceId,
+    phone: place.phone,
+    category: place.category,
+    url: place.url,
+  };
+}
+
+function uniquePlanPlaces(places: PlanPlace[]) {
+  const uniquePlaces = new Map<string, PlanPlace>();
+  places.forEach((place) => {
+    const key = `${place.providerPlaceId ?? ""}|${place.name}|${place.latitude}|${place.longitude}`;
+    if (!uniquePlaces.has(key)) uniquePlaces.set(key, place);
+  });
+  return [...uniquePlaces.values()];
 }
 
 function reorderScopedItems<T extends { id: string }>(

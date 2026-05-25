@@ -11,6 +11,14 @@ type TaskRow = {
   completed_at: string | null;
   deferred_count: number;
   memo: string | null;
+  place_name: string | null;
+  place_address: string | null;
+  place_latitude: number | string | null;
+  place_longitude: number | string | null;
+  place_provider_id: string | null;
+  place_phone: string | null;
+  place_category: string | null;
+  place_url: string | null;
 };
 
 type TaskInsert = Omit<TaskRow, "id"> & {
@@ -26,6 +34,25 @@ async function getUserId() {
   return data.user.id;
 }
 
+const taskColumns = "id,title,status,priority,scheduled_date,due_date,completed_at,deferred_count,memo,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
+
+function mapRowPlace(row: TaskRow) {
+  const latitude = row.place_latitude === null ? null : Number(row.place_latitude);
+  const longitude = row.place_longitude === null ? null : Number(row.place_longitude);
+  if (!row.place_name || latitude === null || longitude === null || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return undefined;
+
+  return {
+    name: row.place_name,
+    address: row.place_address ?? "",
+    latitude,
+    longitude,
+    providerPlaceId: row.place_provider_id ?? undefined,
+    phone: row.place_phone ?? undefined,
+    category: row.place_category ?? undefined,
+    url: row.place_url ?? undefined,
+  };
+}
+
 function mapRowToTask(row: TaskRow): TaskItem {
   return {
     id: row.id,
@@ -37,6 +64,7 @@ function mapRowToTask(row: TaskRow): TaskItem {
     completedAt: row.completed_at ?? undefined,
     deferredCount: row.deferred_count,
     memo: row.memo ?? undefined,
+    place: mapRowPlace(row),
   };
 }
 
@@ -51,6 +79,14 @@ function mapTaskToInsert(task: TaskItem, userId: string): TaskInsert {
     completed_at: task.completedAt ?? null,
     deferred_count: task.deferredCount,
     memo: task.memo ?? null,
+    place_name: task.place?.name ?? null,
+    place_address: task.place?.address ?? null,
+    place_latitude: task.place?.latitude ?? null,
+    place_longitude: task.place?.longitude ?? null,
+    place_provider_id: task.place?.providerPlaceId ?? null,
+    place_phone: task.place?.phone ?? null,
+    place_category: task.place?.category ?? null,
+    place_url: task.place?.url ?? null,
   };
 }
 
@@ -64,6 +100,14 @@ function mapTaskToUpdate(task: TaskItem): TaskUpdate {
     completed_at: task.completedAt ?? null,
     deferred_count: task.deferredCount,
     memo: task.memo ?? null,
+    place_name: task.place?.name ?? null,
+    place_address: task.place?.address ?? null,
+    place_latitude: task.place?.latitude ?? null,
+    place_longitude: task.place?.longitude ?? null,
+    place_provider_id: task.place?.providerPlaceId ?? null,
+    place_phone: task.place?.phone ?? null,
+    place_category: task.place?.category ?? null,
+    place_url: task.place?.url ?? null,
   };
 }
 
@@ -74,7 +118,7 @@ export async function fetchTasksFromDb() {
 
   const { data, error } = await supabase
     .from("tasks")
-    .select("id,title,status,priority,scheduled_date,due_date,completed_at,deferred_count,memo")
+    .select(taskColumns)
     .order("scheduled_date", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -90,7 +134,7 @@ export async function createTaskInDb(task: TaskItem) {
   const { data, error } = await supabase
     .from("tasks")
     .insert(mapTaskToInsert(task, userId))
-    .select("id,title,status,priority,scheduled_date,due_date,completed_at,deferred_count,memo")
+    .select(taskColumns)
     .single();
 
   if (error) throw error;
@@ -104,7 +148,7 @@ export async function updateTaskInDb(task: TaskItem) {
     .from("tasks")
     .update(mapTaskToUpdate(task))
     .eq("id", task.id)
-    .select("id,title,status,priority,scheduled_date,due_date,completed_at,deferred_count,memo")
+    .select(taskColumns)
     .single();
 
   if (error) throw error;

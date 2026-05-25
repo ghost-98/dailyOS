@@ -7,7 +7,7 @@ export default function SchedulePage() {
       <CalendarView
         allowedTypes={["schedule", "event", "todo"]}
         showEventAddButton
-        title="계획"
+        title="시간 관리"
       />
     </AppShell>
   );

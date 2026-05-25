@@ -2776,6 +2776,66 @@ a:focus-visible {
   gap: 18px;
 }
 
+.schedule-date-map {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 12px;
+}
+
+.schedule-date-map--empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.schedule-date-map__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.schedule-date-map__head strong {
+  color: var(--violet);
+}
+
+.schedule-date-map__canvas {
+  position: relative;
+  display: grid;
+  min-height: 180px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(10, 11, 14, 0.72);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.schedule-date-map__places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-date-map__places span {
+  border: 1px solid rgba(157, 178, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(157, 178, 255, 0.08);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
 .date-detail-section {
   display: grid;
   gap: 12px;
@@ -2947,6 +3007,29 @@ a:focus-visible {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.date-event__place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--text);
+}
+
+.date-event__place svg {
+  color: var(--violet);
+}
+
+.date-event__place span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.date-event__place em {
+  color: var(--muted);
+  font-style: normal;
 }
 
 .date-event__content,
@@ -3317,6 +3400,103 @@ a:focus-visible {
 
 .event-form-card--title label + label {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.schedule-place-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.schedule-place-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.schedule-place-card__header div {
+  display: grid;
+  gap: 4px;
+}
+
+.schedule-place-card__header span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.schedule-place-card__header strong {
+  font-size: 16px;
+}
+
+.schedule-place-card__header button {
+  border: 0;
+  background: transparent;
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.schedule-place-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px 10px;
+}
+
+.schedule-place-search svg {
+  color: var(--violet);
+}
+
+.schedule-place-search input {
+  min-width: 0;
+  font-size: 15px;
+}
+
+.schedule-place-search button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(157, 178, 255, 0.28);
+  border-radius: 9px;
+  background: rgba(157, 178, 255, 0.13);
+  color: var(--text);
+  font-weight: 850;
+  padding: 0 10px;
+}
+
+.schedule-place-search button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.schedule-place-results {
+  display: grid;
+  gap: 8px;
+}
+
+.schedule-place-results button {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.schedule-place-results span,
+.schedule-place-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .event-form-card label > span,

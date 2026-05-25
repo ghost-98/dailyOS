@@ -31,7 +31,7 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "계획", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
+  { label: "시간 관리", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
   { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },
@@ -42,7 +42,7 @@ const primaryNav = [
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "계획", href: "/schedule", key: "schedule", icon: CalendarDays },
+  { label: "시간", href: "/schedule", key: "schedule", icon: CalendarDays },
   { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
   { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
   { label: "건강", href: "/health", key: "health", icon: HeartPulse },

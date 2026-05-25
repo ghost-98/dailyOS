@@ -119,7 +119,7 @@ export function TodayDashboard() {
 
       <div className="today-summary-grid">
         <SectionCard className="today-focus-card">
-          <span>오늘 계획</span>
+          <span>오늘 시간 관리</span>
           <strong>{todayEvents.length + openTasks.length}</strong>
           <p>{isLoading ? "불러오는 중입니다." : `${todayEvents.length}개 일정 · ${openTasks.length}개 할 일`}</p>
         </SectionCard>
@@ -137,7 +137,7 @@ export function TodayDashboard() {
 
       <div className="today-work-grid">
         <SectionCard className="schedule-card today-plan-card">
-          <DashboardHeader href="/schedule" icon={<CalendarDays aria-hidden size={20} />} title="계획" trailing={`${completionRate}% 완료`} />
+          <DashboardHeader href="/schedule" icon={<CalendarDays aria-hidden size={20} />} title="시간 관리" trailing={`${completionRate}% 완료`} />
           <div className="today-plan-sections">
             <section className="today-plan-section">
               <div className="today-plan-section__head">

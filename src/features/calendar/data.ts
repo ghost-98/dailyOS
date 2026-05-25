@@ -1,4 +1,4 @@
-import type { EventType } from "@/types/domain";
+import type { EventType, PlanPlace } from "@/types/domain";
 
 export type CalendarEvent = {
   id: string;
@@ -7,4 +7,5 @@ export type CalendarEvent = {
   title: string;
   time?: string;
   meta: string;
+  place?: PlanPlace;
 };

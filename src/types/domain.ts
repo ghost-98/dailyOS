@@ -4,6 +4,17 @@ export type TaskStatus = "todo" | "inProgress" | "done";
 
 export type TaskPriority = "high" | "normal" | "low";
 
+export type PlanPlace = {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  providerPlaceId?: string;
+  phone?: string;
+  category?: string;
+  url?: string;
+};
+
 export type TaskItem = {
   id: string;
   title: string;
@@ -14,6 +25,7 @@ export type TaskItem = {
   completedAt?: string;
   deferredCount: number;
   memo?: string;
+  place?: PlanPlace;
 };
 
 export type WeightRecord = {

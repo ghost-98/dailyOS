@@ -66,6 +66,14 @@ create table if not exists public.tasks (
   completed_at timestamptz,
   deferred_count integer not null default 0 check (deferred_count >= 0),
   memo text,
+  place_name text,
+  place_address text,
+  place_latitude numeric(10, 7),
+  place_longitude numeric(10, 7),
+  place_provider_id text,
+  place_phone text,
+  place_category text,
+  place_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -78,9 +86,37 @@ create table if not exists public.calendar_events (
   type text not null default 'schedule' check (type in ('schedule', 'todo', 'event', 'health', 'weight', 'career', 'expense')),
   title text not null,
   meta text not null default '',
+  place_name text,
+  place_address text,
+  place_latitude numeric(10, 7),
+  place_longitude numeric(10, 7),
+  place_provider_id text,
+  place_phone text,
+  place_category text,
+  place_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.tasks
+  add column if not exists place_name text,
+  add column if not exists place_address text,
+  add column if not exists place_latitude numeric(10, 7),
+  add column if not exists place_longitude numeric(10, 7),
+  add column if not exists place_provider_id text,
+  add column if not exists place_phone text,
+  add column if not exists place_category text,
+  add column if not exists place_url text;
+
+alter table public.calendar_events
+  add column if not exists place_name text,
+  add column if not exists place_address text,
+  add column if not exists place_latitude numeric(10, 7),
+  add column if not exists place_longitude numeric(10, 7),
+  add column if not exists place_provider_id text,
+  add column if not exists place_phone text,
+  add column if not exists place_category text,
+  add column if not exists place_url text;
 
 create table if not exists public.weight_records (
   id uuid primary key default gen_random_uuid(),
