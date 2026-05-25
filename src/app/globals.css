@@ -2787,25 +2787,47 @@ a:focus-visible {
 }
 
 .schedule-date-map--empty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.schedule-date-map__head {
+.schedule-date-map__toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 13px;
   font-weight: 850;
+  padding: 0;
+  text-align: left;
 }
 
-.schedule-date-map__head strong {
+.schedule-date-map__toggle span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-date-map__toggle svg {
   color: var(--violet);
+}
+
+.schedule-date-map__toggle strong {
+  color: var(--violet);
+}
+
+.schedule-date-map--empty p {
+  margin: 2px 0 0;
+}
+
+.schedule-date-map__body {
+  display: grid;
+  gap: 10px;
+  animation: calendarPanelDown 160ms ease both;
 }
 
 .schedule-date-map__canvas {
@@ -2834,6 +2856,18 @@ a:focus-visible {
   font-size: 12px;
   font-weight: 800;
   padding: 5px 9px;
+}
+
+@keyframes calendarPanelDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .date-detail-section {
@@ -3405,6 +3439,7 @@ a:focus-visible {
 .schedule-place-card {
   display: grid;
   gap: 12px;
+  overflow: visible;
   padding: 16px;
 }
 
@@ -3478,7 +3513,20 @@ a:focus-visible {
 
 .schedule-place-results {
   display: grid;
+  max-height: min(300px, 36vh);
+  overflow-y: auto;
   gap: 8px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.schedule-place-results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.schedule-place-results::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .schedule-place-results button {
