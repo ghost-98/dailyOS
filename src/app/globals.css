@@ -537,6 +537,49 @@ button {
   font-weight: 900;
 }
 
+.places-folder-select {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  max-width: 180px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 8px 10px 8px 8px;
+}
+
+.places-folder-select--active {
+  border-color: rgba(157, 178, 255, 0.44);
+  background: rgba(157, 178, 255, 0.13);
+  color: var(--text);
+}
+
+.places-folder-select select {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.places-folder-select option {
+  background: #17181d;
+  color: #f7f7fb;
+}
+
+.places-folder-select em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .places-section {
   display: grid;
   gap: 10px;
@@ -796,12 +839,8 @@ button {
   min-width: 0;
 }
 
-.places-folder-picker {
-  position: relative;
-  min-width: 0;
-}
-
 .places-map-folder-actions .places-folder,
+.places-map-folder-actions .places-folder-select,
 .places-map-search .places-search__control,
 .places-map-overlay--bottom,
 .places-map-overlay--selection .places-selected-panel {
@@ -819,65 +858,6 @@ button {
 
 .places-search__submit {
   flex: 0 0 auto;
-}
-
-.places-folder-picker__menu {
-  display: grid;
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(280px, 78vw);
-  max-height: 280px;
-  overflow-y: auto;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 14px;
-  background: rgba(17, 18, 22, 0.94);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
-  padding: 8px;
-  backdrop-filter: blur(18px);
-}
-
-.places-folder-picker__item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 9px;
-  align-items: center;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text);
-  padding: 9px;
-  text-align: left;
-}
-
-.places-folder-picker__item--active,
-.places-folder-picker__item:hover {
-  background: rgba(157, 178, 255, 0.13);
-}
-
-.places-folder-picker__item i {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}
-
-.places-folder-picker__item span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.places-folder-picker__item em,
-.places-folder-picker__empty {
-  color: var(--muted);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.places-folder-picker__empty {
-  padding: 12px;
 }
 
 .places-map-overlay--selection {
@@ -1240,7 +1220,8 @@ button {
     grid-auto-columns: minmax(230px, 82vw);
   }
 
-  .places-folder {
+  .places-folder,
+  .places-folder-select {
     max-width: 150px;
   }
 }

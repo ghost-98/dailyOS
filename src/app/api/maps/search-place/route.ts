@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=10&sort=random`, {
+  const response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=random`, {
     headers: {
       Accept: "application/json",
       "X-Naver-Client-Id": searchClientId,
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   }
 
   const payload = await response.json();
-  const items = ((payload.items ?? []) as NaverLocalItem[]).slice(0, 10);
+  const items = ((payload.items ?? []) as NaverLocalItem[]).slice(0, 5);
   const places = await Promise.all(items.map((item, index) => toPlace(item, index, query)));
 
   return NextResponse.json({ places: places.filter(Boolean) });

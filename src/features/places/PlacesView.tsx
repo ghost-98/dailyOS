@@ -68,7 +68,6 @@ export function PlacesView() {
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [message, setMessage] = useState("");
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
-  const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [placePendingSave, setPlacePendingSave] = useState<PlaceRecord | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
@@ -186,7 +185,6 @@ export function PlacesView() {
     setQuery("");
     setSearchResults([]);
     setViewMode("none");
-    setIsFolderPickerOpen(false);
     setSelectedPlace(null);
     setMessage("");
   };
@@ -196,7 +194,6 @@ export function PlacesView() {
       setViewMode("none");
       setSearchResults([]);
       setSelectedPlace(null);
-      setIsFolderPickerOpen(false);
       setMessage("");
       return;
     }
@@ -204,9 +201,21 @@ export function PlacesView() {
     setSelectedFolderId(folderId);
     setSearchResults([]);
     setViewMode("folder");
-    setIsFolderPickerOpen(false);
     setSelectedPlace(null);
     setMessage("");
+  };
+
+  const changeFolderFilter = (folderId: string) => {
+    if (!folderId) {
+      setViewMode("none");
+      setSelectedFolderId(allFolderId);
+      setSearchResults([]);
+      setSelectedPlace(null);
+      setMessage("");
+      return;
+    }
+
+    selectFolder(folderId);
   };
 
   const savePlaceFolders = async (place: PlaceRecord, folderIds: string[]) => {
@@ -331,18 +340,20 @@ export function PlacesView() {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = visiblePlaces.map((place) => {
-      const isSaved = places.some((item) => isSamePlace(item, place));
-      const folder = resolveMarkerFolder(place, folders, selectedFolderId, isSaved);
+      const savedPlace = places.find((item) => isSamePlace(item, place));
+      const markerPlace = savedPlace ?? place;
+      const isSaved = Boolean(savedPlace);
+      const folder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 42),
-          content: getMarkerContent(place, folder, isSaved),
+          content: getMarkerContent(markerPlace, folder, isSaved),
         },
         map: mapRef.current,
-        position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
-        title: place.name,
+        position: new window.naver!.maps.LatLng(markerPlace.latitude, markerPlace.longitude),
+        title: markerPlace.name,
       });
-      window.naver!.maps.Event.addListener(marker, "click", () => focusPlace(place));
+      window.naver!.maps.Event.addListener(marker, "click", () => focusPlace(markerPlace));
       return marker;
     });
 
@@ -382,8 +393,6 @@ export function PlacesView() {
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
   const selectedPlaceFolders = folders.filter((folder) => selectedPlace && getPlaceFolderIds(selectedPlace).includes(folder.id));
   const selectedFolderCount = selectedFolder ? places.filter((place) => getPlaceFolderIds(place).includes(selectedFolder.id)).length : 0;
-  const folderPickerLabel = selectedFolder ? selectedFolder.name : "폴더 선택";
-  const folderPickerCount = selectedFolder ? selectedFolderCount : folders.length;
   const listTitle = viewMode === "none" ? "장소 표시 없음" : viewMode === "search" ? "검색 결과" : selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`;
   const listEmptyLabel =
     viewMode === "none"
@@ -436,35 +445,13 @@ export function PlacesView() {
 
               <div className="places-map-folder-actions">
                 <FolderButton count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
-                <div className="places-folder-picker">
-                  <FolderButton
-                    color={selectedFolder?.color}
-                    count={folderPickerCount}
-                    isActive={viewMode === "folder" && selectedFolderId !== allFolderId}
-                    label={folderPickerLabel}
-                    onClick={() => setIsFolderPickerOpen((current) => !current)}
-                  />
-                  {isFolderPickerOpen ? (
-                    <div className="places-folder-picker__menu" role="menu">
-                      {folders.length > 0 ? (
-                        folders.map((folder) => (
-                          <button
-                            className={selectedFolderId === folder.id && viewMode === "folder" ? "places-folder-picker__item places-folder-picker__item--active" : "places-folder-picker__item"}
-                            key={folder.id}
-                            onClick={() => selectFolder(folder.id)}
-                            type="button"
-                          >
-                            <i style={{ backgroundColor: folder.color }} />
-                            <span>{folder.name}</span>
-                            <em>{places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}</em>
-                          </button>
-                        ))
-                      ) : (
-                        <span className="places-folder-picker__empty">폴더가 없습니다.</span>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
+                <FolderSelect
+                  folders={folders}
+                  isActive={viewMode === "folder" && selectedFolderId !== allFolderId}
+                  onChange={changeFolderFilter}
+                  selectedFolderId={viewMode === "folder" && selectedFolderId !== allFolderId ? selectedFolderId : ""}
+                  selectedFolderCount={selectedFolderCount}
+                />
                 <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
                   <Plus aria-hidden size={14} />
                   <strong>폴더 관리</strong>
@@ -838,6 +825,39 @@ function FolderButton({
       <strong>{label}</strong>
       <em>{count}</em>
     </button>
+  );
+}
+
+function FolderSelect({
+  folders,
+  isActive,
+  onChange,
+  selectedFolderCount,
+  selectedFolderId,
+}: {
+  folders: PlaceFolder[];
+  isActive: boolean;
+  onChange: (folderId: string) => void;
+  selectedFolderCount: number;
+  selectedFolderId: string;
+}) {
+  const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
+
+  return (
+    <label className={`places-folder-select ${isActive ? "places-folder-select--active" : ""}`}>
+      <span className="places-folder__mark" style={{ backgroundColor: selectedFolder?.color ?? "var(--violet)" }}>
+        <Folder aria-hidden size={13} />
+      </span>
+      <select aria-label="폴더 선택" onChange={(event) => onChange(event.target.value)} value={selectedFolderId}>
+        <option value="">폴더 선택</option>
+        {folders.map((folder) => (
+          <option key={folder.id} value={folder.id}>
+            {folder.name}
+          </option>
+        ))}
+      </select>
+      <em>{selectedFolder ? selectedFolderCount : folders.length}</em>
+    </label>
   );
 }
 
