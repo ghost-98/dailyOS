@@ -245,16 +245,18 @@ export function PlacesView() {
   const saveFolder = async (folder: PlaceFolder) => {
     try {
       const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
-      if (!savedFolder) return;
+      if (!savedFolder) return false;
       setFolders((current) => {
         const exists = current.some((item) => item.id === savedFolder.id);
         const next = exists ? current.map((item) => (item.id === savedFolder.id ? savedFolder : item)) : [...current, savedFolder];
         return next.sort((a, b) => a.sortOrder - b.sortOrder);
       });
       setMessage(`${savedFolder.name} 폴더를 저장했습니다.`);
+      return true;
     } catch (error) {
       console.error("Failed to save place folder", error);
       setMessage("폴더를 저장하지 못했습니다. Supabase 권한이나 네트워크 상태를 확인해 주세요.");
+      return false;
     }
   };
 
@@ -274,12 +276,15 @@ export function PlacesView() {
 
     setFolders((current) => current.filter((folder) => folder.id !== folderId));
     setPlaces((current) =>
-      current.map((place) => {
-        const nextFolderIds = getPlaceFolderIds(place).filter((id) => id !== folderId);
-        return { ...place, folderId: nextFolderIds[0], folderIds: nextFolderIds };
-      }),
+      current
+        .map((place) => {
+          const nextFolderIds = getPlaceFolderIds(place).filter((id) => id !== folderId);
+          return { ...place, folderId: nextFolderIds[0], folderIds: nextFolderIds };
+        })
+        .filter((place) => getPlaceFolderIds(place).length > 0),
     );
     if (selectedFolderId === folderId) setSelectedFolderId(allFolderId);
+    if (selectedPlace && getPlaceFolderIds(selectedPlace).includes(folderId) && getPlaceFolderIds(selectedPlace).length === 1) setSelectedPlace(null);
     setMessage(`${targetFolder?.name ?? "폴더"}를 삭제했습니다.`);
   };
 
@@ -484,8 +489,8 @@ export function PlacesView() {
         <FolderManagerSheet
           folders={folders}
           onClose={() => setIsFolderManagerOpen(false)}
-          onDelete={(folderId) => void deleteFolder(folderId)}
-          onSave={(folder) => void saveFolder(folder)}
+          onDelete={deleteFolder}
+          onSave={saveFolder}
         />
       ) : null}
     </div>
@@ -501,9 +506,11 @@ function FolderManagerSheet({
   folders: PlaceFolder[];
   onClose: () => void;
   onDelete: (folderId: string) => void;
-  onSave: (folder: PlaceFolder) => void;
+  onSave: (folder: PlaceFolder) => Promise<boolean>;
 }) {
   const [editingFolder, setEditingFolder] = useState<PlaceFolder | null>(null);
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const startCreate = () => {
     setEditingFolder({
@@ -515,10 +522,19 @@ function FolderManagerSheet({
     });
   };
 
-  const save = () => {
+  const save = async () => {
     if (!editingFolder || editingFolder.name.trim().length === 0) return;
-    onSave({ ...editingFolder, name: editingFolder.name.trim() });
-    setEditingFolder(null);
+    setIsSaving(true);
+    const didSave = await onSave({ ...editingFolder, name: editingFolder.name.trim() });
+    setIsSaving(false);
+    if (didSave) setEditingFolder(null);
+  };
+
+  const remove = async (folderId: string) => {
+    setDeletingFolderId(folderId);
+    await onDelete(folderId);
+    setDeletingFolderId(null);
+    if (editingFolder?.id === folderId) setEditingFolder(null);
   };
 
   return (
@@ -544,7 +560,7 @@ function FolderManagerSheet({
                   <button aria-label="폴더 수정" onClick={() => setEditingFolder(folder)} type="button">
                     <Pencil aria-hidden size={14} />
                   </button>
-                  <button aria-label="폴더 삭제" onClick={() => onDelete(folder.id)} type="button">
+                  <button aria-label="폴더 삭제" disabled={deletingFolderId === folder.id} onClick={() => void remove(folder.id)} type="button">
                     <Trash2 aria-hidden size={14} />
                   </button>
                 </div>
@@ -563,11 +579,11 @@ function FolderManagerSheet({
                 <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
               </label>
               <footer>
-                <button className="event-sheet__secondary-button" onClick={() => setEditingFolder(null)} type="button">
+                <button className="event-sheet__secondary-button" disabled={isSaving} onClick={() => setEditingFolder(null)} type="button">
                   취소
                 </button>
-                <button className="event-sheet__primary-button" disabled={editingFolder.name.trim().length === 0} onClick={save} type="button">
-                  저장
+                <button className="event-sheet__primary-button" disabled={isSaving || editingFolder.name.trim().length === 0} onClick={() => void save()} type="button">
+                  {isSaving ? "저장 중" : "확인"}
                 </button>
               </footer>
             </div>

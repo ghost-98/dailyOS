@@ -131,7 +131,9 @@ export async function fetchPlacesFromDb() {
     linksByPlaceId.set(link.place_id, [...(linksByPlaceId.get(link.place_id) ?? []), link.folder_id]);
   }
 
-  return (data as PlaceRow[]).map((row) => mapPlaceRow(row, linksByPlaceId.get(row.id) ?? []));
+  return (data as PlaceRow[])
+    .map((row) => mapPlaceRow(row, linksByPlaceId.get(row.id) ?? []))
+    .filter((place) => (place.folderIds?.length ?? 0) > 0);
 }
 
 export async function createPlaceInDb(place: PlaceRecord) {
