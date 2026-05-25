@@ -68,6 +68,7 @@ export function PlacesView() {
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [message, setMessage] = useState("");
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
+  const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false);
   const [placePendingSave, setPlacePendingSave] = useState<PlaceRecord | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(true);
@@ -185,6 +186,7 @@ export function PlacesView() {
     setQuery("");
     setSearchResults([]);
     setViewMode("none");
+    setIsFolderPickerOpen(false);
     setSelectedPlace(null);
     setMessage("");
   };
@@ -194,6 +196,7 @@ export function PlacesView() {
       setViewMode("none");
       setSearchResults([]);
       setSelectedPlace(null);
+      setIsFolderPickerOpen(false);
       setMessage("");
       return;
     }
@@ -201,6 +204,7 @@ export function PlacesView() {
     setSelectedFolderId(folderId);
     setSearchResults([]);
     setViewMode("folder");
+    setIsFolderPickerOpen(false);
     setSelectedPlace(null);
     setMessage("");
   };
@@ -377,6 +381,9 @@ export function PlacesView() {
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
   const selectedPlaceFolders = folders.filter((folder) => selectedPlace && getPlaceFolderIds(selectedPlace).includes(folder.id));
+  const selectedFolderCount = selectedFolder ? places.filter((place) => getPlaceFolderIds(place).includes(selectedFolder.id)).length : 0;
+  const folderPickerLabel = selectedFolder ? selectedFolder.name : "폴더 선택";
+  const folderPickerCount = selectedFolder ? selectedFolderCount : folders.length;
   const listTitle = viewMode === "none" ? "장소 표시 없음" : viewMode === "search" ? "검색 결과" : selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`;
   const listEmptyLabel =
     viewMode === "none"
@@ -402,46 +409,67 @@ export function PlacesView() {
           <div className="places-map" ref={mapElementRef} />
 
           <div className="places-map-overlay places-map-overlay--top">
-            <div className="places-search places-map-search">
-              <div className="places-search__control">
-                <Search aria-hidden size={17} />
-                <input
-                  aria-label="장소 검색"
-                  placeholder="서울시청, 강남역 카페, 한국전력공사"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void searchPlaces();
-                  }}
-                />
-                {query || viewMode === "search" ? (
-                  <button aria-label="검색 지우기" className="places-search__clear" onClick={clearSearch} type="button">
-                    <X aria-hidden size={15} />
+            <div className="places-map-commandbar">
+              <div className="places-search places-map-search">
+                <div className="places-search__control">
+                  <Search aria-hidden size={17} />
+                  <input
+                    aria-label="장소 검색"
+                    placeholder="장소 검색"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void searchPlaces();
+                    }}
+                  />
+                  {query || viewMode === "search" ? (
+                    <button aria-label="검색 지우기" className="places-search__clear" onClick={clearSearch} type="button">
+                      <X aria-hidden size={15} />
+                    </button>
+                  ) : null}
+                  <button className="places-search__submit" disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
+                    {isSearching ? "검색 중" : "검색"}
                   </button>
-                ) : null}
-                <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
-                  {isSearching ? "검색 중" : "검색"}
+                </div>
+                {message ? <p className="places-message">{message}</p> : null}
+              </div>
+
+              <div className="places-map-folder-actions">
+                <FolderButton count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
+                <div className="places-folder-picker">
+                  <FolderButton
+                    color={selectedFolder?.color}
+                    count={folderPickerCount}
+                    isActive={viewMode === "folder" && selectedFolderId !== allFolderId}
+                    label={folderPickerLabel}
+                    onClick={() => setIsFolderPickerOpen((current) => !current)}
+                  />
+                  {isFolderPickerOpen ? (
+                    <div className="places-folder-picker__menu" role="menu">
+                      {folders.length > 0 ? (
+                        folders.map((folder) => (
+                          <button
+                            className={selectedFolderId === folder.id && viewMode === "folder" ? "places-folder-picker__item places-folder-picker__item--active" : "places-folder-picker__item"}
+                            key={folder.id}
+                            onClick={() => selectFolder(folder.id)}
+                            type="button"
+                          >
+                            <i style={{ backgroundColor: folder.color }} />
+                            <span>{folder.name}</span>
+                            <em>{places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}</em>
+                          </button>
+                        ))
+                      ) : (
+                        <span className="places-folder-picker__empty">폴더가 없습니다.</span>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
+                  <Plus aria-hidden size={14} />
+                  <strong>폴더 관리</strong>
                 </button>
               </div>
-              {message ? <p className="places-message">{message}</p> : null}
-            </div>
-
-            <div className="places-map-folder-bar">
-              <FolderButton count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
-              {folders.map((folder) => (
-                <FolderButton
-                  color={folder.color}
-                  count={places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}
-                  isActive={viewMode === "folder" && selectedFolderId === folder.id}
-                  key={folder.id}
-                  label={folder.name}
-                  onClick={() => selectFolder(folder.id)}
-                />
-              ))}
-              <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
-                <Plus aria-hidden size={14} />
-                <strong>폴더 관리</strong>
-              </button>
             </div>
           </div>
 

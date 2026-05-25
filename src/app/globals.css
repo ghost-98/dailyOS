@@ -278,7 +278,7 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
   gap: 18px;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .ledger-calendar-card {
@@ -415,7 +415,7 @@ button {
   display: grid;
   grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: flex-start;
 }
 
 .places-panel {
@@ -440,8 +440,8 @@ button {
 
 .places-search__control {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 8px;
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -487,13 +487,6 @@ button {
   margin: 10px 0 0;
   color: var(--amber);
   font-size: 13px;
-}
-
-.places-folder-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .places-folder {
@@ -775,31 +768,40 @@ button {
   top: 16px;
   right: 16px;
   left: 16px;
-  display: grid;
-  gap: 10px;
 }
 
-.places-map-search {
-  width: min(720px, 100%);
-}
-
-.places-map-folder-bar {
+.places-map-commandbar {
   display: flex;
-  width: 100%;
+  gap: 10px;
+  align-items: flex-start;
   max-width: 100%;
-  gap: 8px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding-bottom: 3px;
   scrollbar-width: thin;
 }
 
-.places-map-folder-bar::after {
-  flex: 0 0 1px;
-  content: "";
+.places-map-search {
+  flex: 0 0 clamp(300px, 42vw, 560px);
+  min-width: 0;
 }
 
-.places-map-folder-bar .places-folder,
+.places-map-folder-actions {
+  display: grid;
+  position: relative;
+  grid-template-columns: auto minmax(132px, 170px) auto;
+  flex: 0 0 auto;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.places-folder-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.places-map-folder-actions .places-folder,
 .places-map-search .places-search__control,
 .places-map-overlay--bottom,
 .places-map-overlay--selection .places-selected-panel {
@@ -813,6 +815,69 @@ button {
   min-width: 34px !important;
   width: 34px;
   padding: 0;
+}
+
+.places-search__submit {
+  flex: 0 0 auto;
+}
+
+.places-folder-picker__menu {
+  display: grid;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, 78vw);
+  max-height: 280px;
+  overflow-y: auto;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(17, 18, 22, 0.94);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+  padding: 8px;
+  backdrop-filter: blur(18px);
+}
+
+.places-folder-picker__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  padding: 9px;
+  text-align: left;
+}
+
+.places-folder-picker__item--active,
+.places-folder-picker__item:hover {
+  background: rgba(157, 178, 255, 0.13);
+}
+
+.places-folder-picker__item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.places-folder-picker__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.places-folder-picker__item em,
+.places-folder-picker__empty {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.places-folder-picker__empty {
+  padding: 12px;
 }
 
 .places-map-overlay--selection {
@@ -1142,6 +1207,18 @@ button {
     top: 10px;
     right: 10px;
     left: 10px;
+  }
+
+  .places-map-commandbar {
+    align-items: flex-start;
+  }
+
+  .places-map-search {
+    flex-basis: 250px;
+  }
+
+  .places-map-folder-actions {
+    grid-template-columns: auto minmax(116px, 1fr) auto;
   }
 
   .places-map-overlay--selection {
