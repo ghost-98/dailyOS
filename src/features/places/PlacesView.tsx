@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
@@ -21,6 +21,7 @@ type SearchResponse = {
   error?: string;
   places: PlaceRecord[];
 };
+type PlacesViewMode = "folder" | "search";
 
 type NaverLatLng = unknown;
 type NaverMap = {
@@ -57,6 +58,7 @@ export function PlacesView() {
   const [searchResults, setSearchResults] = useState<PlaceRecord[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState(allFolderId);
   const [selectedPlace, setSelectedPlace] = useState<PlaceRecord | null>(null);
+  const [viewMode, setViewMode] = useState<PlacesViewMode>("folder");
   const [query, setQuery] = useState("");
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -78,7 +80,7 @@ export function PlacesView() {
         const nextPlaces = normalizePlaceRecords(dbPlaces ?? []);
         setFolders(nextFolders);
         setPlaces(nextPlaces);
-        setSelectedPlace(nextPlaces[0] ?? null);
+        setSelectedPlace(null);
       })
       .catch((error) => {
         console.error("Failed to load places from Supabase", error);
@@ -125,15 +127,7 @@ export function PlacesView() {
     [places, selectedFolderId],
   );
 
-  const visiblePlaces = useMemo(() => {
-    const merged = new Map<string, PlaceRecord>();
-    for (const place of filteredSavedPlaces) merged.set(getPlaceKey(place), place);
-    for (const place of searchResults) {
-      const key = getPlaceKey(place);
-      if (!merged.has(key)) merged.set(key, place);
-    }
-    return [...merged.values()];
-  }, [filteredSavedPlaces, searchResults]);
+  const visiblePlaces = useMemo(() => (viewMode === "search" ? searchResults : filteredSavedPlaces), [filteredSavedPlaces, searchResults, viewMode]);
 
   useEffect(() => {
     if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
@@ -168,6 +162,7 @@ export function PlacesView() {
       }
 
       setSearchResults(payload.places);
+      setViewMode("search");
       setSelectedPlace(payload.places[0] ?? null);
       if (payload.places.length === 0) setMessage("검색 결과가 없습니다. 다른 장소명이나 주소로 다시 검색해 주세요.");
     } catch (error) {
@@ -176,6 +171,22 @@ export function PlacesView() {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setSearchResults([]);
+    setViewMode("folder");
+    setSelectedPlace(null);
+    setMessage("");
+  };
+
+  const selectFolder = (folderId: string) => {
+    setSelectedFolderId(folderId);
+    setSearchResults([]);
+    setViewMode("folder");
+    setSelectedPlace(null);
+    setMessage("");
   };
 
   const savePlaceFolders = async (place: PlaceRecord, folderIds: string[]) => {
@@ -324,6 +335,15 @@ export function PlacesView() {
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
   const selectedPlaceFolders = folders.filter((folder) => selectedPlace && getPlaceFolderIds(selectedPlace).includes(folder.id));
+  const listTitle = viewMode === "search" ? "검색 결과" : selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`;
+  const listEmptyLabel =
+    viewMode === "search"
+      ? "검색 결과가 없습니다."
+      : isLoadingPlaces
+        ? "저장한 장소를 불러오는 중입니다."
+        : selectedFolderId === allFolderId
+          ? "저장한 장소가 없습니다."
+          : "이 폴더에 저장된 장소가 없습니다.";
 
   return (
     <div className="places-page">
@@ -333,14 +353,16 @@ export function PlacesView() {
         </div>
       </header>
 
-      <div className="places-layout">
-        <SectionCard className="places-panel">
-          <div className="places-search">
-            <label>
-              <span>장소 검색</span>
+      <SectionCard className="places-map-card places-map-card--full">
+        <div className="places-map-shell">
+          <div className="places-map" ref={mapElementRef} />
+
+          <div className="places-map-overlay places-map-overlay--top">
+            <div className="places-search places-map-search">
               <div className="places-search__control">
                 <Search aria-hidden size={17} />
                 <input
+                  aria-label="장소 검색"
                   placeholder="서울시청, 강남역 카페, 한국전력공사"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -348,131 +370,104 @@ export function PlacesView() {
                     if (event.key === "Enter") void searchPlaces();
                   }}
                 />
+                {query || viewMode === "search" ? (
+                  <button aria-label="검색 지우기" className="places-search__clear" onClick={clearSearch} type="button">
+                    <X aria-hidden size={15} />
+                  </button>
+                ) : null}
                 <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
                   {isSearching ? "검색 중" : "검색"}
                 </button>
               </div>
-            </label>
-            {message ? <p className="places-message">{message}</p> : null}
-          </div>
+              {message ? <p className="places-message">{message}</p> : null}
+            </div>
 
-          <div className="places-folder-strip" aria-label="장소 폴더">
-            <FolderButton count={places.length} isActive={selectedFolderId === allFolderId} label="전체" onClick={() => setSelectedFolderId(allFolderId)} />
-            {folders.map((folder) => (
-              <FolderButton
-                color={folder.color}
-                count={places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}
-                isActive={selectedFolderId === folder.id}
-                key={folder.id}
-                label={folder.name}
-                onClick={() => setSelectedFolderId(folder.id)}
-              />
-            ))}
-            <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
-              <Plus aria-hidden size={14} />
-              <strong>폴더 관리</strong>
-            </button>
+            <div className="places-map-folder-bar">
+              <FolderButton count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
+              {folders.map((folder) => (
+                <FolderButton
+                  color={folder.color}
+                  count={places.filter((place) => getPlaceFolderIds(place).includes(folder.id)).length}
+                  isActive={viewMode === "folder" && selectedFolderId === folder.id}
+                  key={folder.id}
+                  label={folder.name}
+                  onClick={() => selectFolder(folder.id)}
+                />
+              ))}
+              <button className="places-folder places-folder--manage" onClick={() => setIsFolderManagerOpen(true)} type="button">
+                <Plus aria-hidden size={14} />
+                <strong>폴더 관리</strong>
+              </button>
+            </div>
           </div>
 
           {selectedPlace ? (
-            <SelectedPlacePanel
-              folders={selectedPlaceFolders}
-              isSaved={savedPlaceKeys.has(getPlaceKey(selectedPlace))}
-              onDelete={selectedPlace.id && places.some((place) => place.id === selectedPlace.id) ? () => void deletePlace(selectedPlace.id) : undefined}
-              onSave={() => setPlacePendingSave(selectedPlace)}
-              place={selectedPlace}
-            />
+            <div className="places-map-overlay places-map-overlay--selection">
+              <SelectedPlacePanel
+                folders={selectedPlaceFolders}
+                isSaved={savedPlaceKeys.has(getPlaceKey(selectedPlace))}
+                onBack={() => setSelectedPlace(null)}
+                onDelete={selectedPlace.id && places.some((place) => place.id === selectedPlace.id) ? () => void deletePlace(selectedPlace.id) : undefined}
+                onSave={() => setPlacePendingSave(selectedPlace)}
+                place={selectedPlace}
+              />
+            </div>
           ) : null}
 
-          <div className="places-section">
+          <div className="places-map-overlay places-map-overlay--bottom">
             <div className="places-section__title">
-              <strong>검색 결과</strong>
-              <span>{searchResults.length}개</span>
+              <strong>{listTitle}</strong>
+              <span>{visiblePlaces.length}개</span>
             </div>
-            <div className="places-list">
-              {searchResults.length > 0 ? (
-                searchResults.map((place) => {
+            <div className="places-list places-map-list">
+              {visiblePlaces.length > 0 ? (
+                visiblePlaces.map((place) => {
                   const isSaved = savedPlaceKeys.has(getPlaceKey(place));
                   const savedPlace = places.find((item) => isSamePlace(item, place));
-                  const savedFolders = folders.filter((folder) => savedPlace && getPlaceFolderIds(savedPlace).includes(folder.id));
+                  const savedFolders = folders.filter((folder) => getPlaceFolderIds(savedPlace ?? place).includes(folder.id));
                   return (
                     <PlaceItem
                       action={
-                        <button
-                          className={isSaved ? "place-item__saved-button" : ""}
-                          disabled={folders.length === 0}
-                          onClick={() => setPlacePendingSave(savedPlace ?? place)}
-                          title={isSaved ? "저장 폴더 편집" : "폴더 선택 후 저장"}
-                          type="button"
-                        >
-                          {isSaved ? <Check aria-hidden size={14} /> : <Plus aria-hidden size={14} />}
-                        </button>
+                        viewMode === "search" ? (
+                          <button
+                            className={isSaved ? "place-item__saved-button" : ""}
+                            disabled={folders.length === 0}
+                            onClick={() => setPlacePendingSave(savedPlace ?? place)}
+                            title={isSaved ? "저장 폴더 편집" : "폴더 선택 후 저장"}
+                            type="button"
+                          >
+                            {isSaved ? <Check aria-hidden size={14} /> : <Plus aria-hidden size={14} />}
+                          </button>
+                        ) : (
+                          <button aria-label="장소 삭제" onClick={() => void deletePlace(place.id)} type="button">
+                            <Trash2 aria-hidden size={14} />
+                          </button>
+                        )
                       }
                       folders={savedFolders}
                       isSaved={isSaved}
-                      isActive={selectedPlace?.id === place.id}
-                      key={place.id}
-                      onSelect={() => focusPlace(place)}
-                      place={place}
+                      isActive={selectedPlace ? isSamePlace(selectedPlace, place) : false}
+                      key={getPlaceKey(place)}
+                      onSelect={() => focusPlace(savedPlace ?? place)}
+                      place={savedPlace ?? place}
                     />
                   );
                 })
               ) : (
-                <EmptyPlaces label="검색 결과가 없습니다." />
+                <EmptyPlaces label={listEmptyLabel} />
               )}
             </div>
           </div>
 
-          <div className="places-section">
-            <div className="places-section__title">
-              <strong>{selectedFolderId === allFolderId ? "저장한 장소" : `${selectedFolder?.name ?? "폴더"} 장소`}</strong>
-              <span>{filteredSavedPlaces.length}개</span>
+          {mapStatus !== "ready" ? (
+            <div className="places-map-state">
+              <MapPin aria-hidden size={32} />
+              <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 불러오는 중입니다."}</strong>
+              <p>`.env.local`에 `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID`를 넣으면 이 영역에 네이버 지도가 표시됩니다.</p>
             </div>
-            <div className="places-list">
-              {filteredSavedPlaces.length > 0 ? (
-                filteredSavedPlaces.map((place) => (
-                  <PlaceItem
-                    action={
-                      <button aria-label="장소 삭제" onClick={() => void deletePlace(place.id)} type="button">
-                        <Trash2 aria-hidden size={14} />
-                      </button>
-                    }
-                    folders={folders.filter((folder) => getPlaceFolderIds(place).includes(folder.id))}
-                    isActive={selectedPlace?.id === place.id}
-                    key={place.id}
-                    onSelect={() => focusPlace(place)}
-                    place={place}
-                  />
-                ))
-              ) : (
-                <EmptyPlaces label={isLoadingPlaces ? "저장한 장소를 불러오는 중입니다." : "저장한 장소가 없습니다."} />
-              )}
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard className="places-map-card">
-          <div className="places-map-toolbar">
-            <div>
-              <span>지도 보기</span>
-              <strong>{selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`}</strong>
-            </div>
-            <Badge tone="green">{visiblePlaces.length}개</Badge>
-          </div>
-
-          <div className="places-map-shell">
-            <div className="places-map" ref={mapElementRef} />
-            {mapStatus !== "ready" ? (
-              <div className="places-map-state">
-                <MapPin aria-hidden size={32} />
-                <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 불러오는 중입니다."}</strong>
-                <p>`.env.local`에 `NEXT_PUBLIC_NAVER_MAP_CLIENT_ID`를 넣으면 이 영역에 네이버 지도가 표시됩니다.</p>
-              </div>
-            ) : null}
-          </div>
-
-        </SectionCard>
-      </div>
+          ) : null}
+        </div>
+      </SectionCard>
 
       {placePendingSave ? (
         <SavePlaceSheet
@@ -692,12 +687,14 @@ function SavePlaceSheet({
 function SelectedPlacePanel({
   folders,
   isSaved,
+  onBack,
   onDelete,
   onSave,
   place,
 }: {
   folders: PlaceFolder[];
   isSaved: boolean;
+  onBack: () => void;
   onDelete?: () => void;
   onSave: () => void;
   place: PlaceRecord;
@@ -705,6 +702,9 @@ function SelectedPlacePanel({
   return (
     <section className="places-selected-panel" aria-label="선택 장소 정보">
       <div className="places-selected-panel__head">
+        <button className="places-selected-panel__back" aria-label="선택 장소 닫기" onClick={onBack} type="button">
+          <ArrowLeft aria-hidden size={17} />
+        </button>
         <div className="places-selected-panel__mark" style={{ backgroundColor: folders[0]?.color ?? "var(--violet)" }}>
           {isSaved ? <Star aria-hidden size={17} /> : <MapPin aria-hidden size={17} />}
         </div>
