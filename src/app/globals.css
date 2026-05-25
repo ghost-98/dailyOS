@@ -498,14 +498,22 @@ button {
 
 .places-folder {
   display: inline-grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto minmax(0, auto) auto;
   gap: 8px;
   align-items: center;
+  max-width: 180px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
   padding: 8px 11px 8px 8px;
+  white-space: nowrap;
+}
+
+.places-folder strong {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -516,6 +524,7 @@ button {
 }
 
 .places-folder--manage {
+  max-width: none;
   color: var(--text);
 }
 
@@ -777,9 +786,17 @@ button {
 .places-map-folder-bar {
   display: flex;
   width: 100%;
+  max-width: 100%;
   gap: 8px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 3px;
+  scrollbar-width: thin;
+}
+
+.places-map-folder-bar::after {
+  flex: 0 0 1px;
+  content: "";
 }
 
 .places-map-folder-bar .places-folder,
@@ -1144,6 +1161,10 @@ button {
 
   .places-map-list {
     grid-auto-columns: minmax(230px, 82vw);
+  }
+
+  .places-folder {
+    max-width: 150px;
   }
 }
 

@@ -21,10 +21,14 @@ type SearchResponse = {
   error?: string;
   places: PlaceRecord[];
 };
-type PlacesViewMode = "folder" | "search";
+type PlacesViewMode = "folder" | "search" | "none";
 
 type NaverLatLng = unknown;
+type NaverLatLngBounds = {
+  extend: (latLng: NaverLatLng) => void;
+};
 type NaverMap = {
+  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
   setCenter: (latLng: NaverLatLng) => void;
   setZoom: (zoom: number) => void;
 };
@@ -40,6 +44,7 @@ declare global {
           addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
         };
         LatLng: new (latitude: number, longitude: number) => NaverLatLng;
+        LatLngBounds: new () => NaverLatLngBounds;
         Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
         Marker: new (options: Record<string, unknown>) => NaverMarker;
         Point: new (x: number, y: number) => unknown;
@@ -127,7 +132,10 @@ export function PlacesView() {
     [places, selectedFolderId],
   );
 
-  const visiblePlaces = useMemo(() => (viewMode === "search" ? searchResults : filteredSavedPlaces), [filteredSavedPlaces, searchResults, viewMode]);
+  const visiblePlaces = useMemo(() => {
+    if (viewMode === "none") return [];
+    return viewMode === "search" ? searchResults : filteredSavedPlaces;
+  }, [filteredSavedPlaces, searchResults, viewMode]);
 
   useEffect(() => {
     if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
@@ -163,7 +171,7 @@ export function PlacesView() {
 
       setSearchResults(payload.places);
       setViewMode("search");
-      setSelectedPlace(payload.places[0] ?? null);
+      setSelectedPlace(null);
       if (payload.places.length === 0) setMessage("검색 결과가 없습니다. 다른 장소명이나 주소로 다시 검색해 주세요.");
     } catch (error) {
       console.error("Failed to search places", error);
@@ -176,12 +184,20 @@ export function PlacesView() {
   const clearSearch = () => {
     setQuery("");
     setSearchResults([]);
-    setViewMode("folder");
+    setViewMode("none");
     setSelectedPlace(null);
     setMessage("");
   };
 
   const selectFolder = (folderId: string) => {
+    if (viewMode === "folder" && selectedFolderId === folderId) {
+      setViewMode("none");
+      setSearchResults([]);
+      setSelectedPlace(null);
+      setMessage("");
+      return;
+    }
+
     setSelectedFolderId(folderId);
     setSearchResults([]);
     setViewMode("folder");
@@ -326,18 +342,46 @@ export function PlacesView() {
       return marker;
     });
 
-    const centerPlace = selectedPlace ?? visiblePlaces[0];
-    if (centerPlace) {
-      mapRef.current.setCenter(new window.naver.maps.LatLng(centerPlace.latitude, centerPlace.longitude));
+    fitMapToVisiblePlaces();
+  };
+
+  const fitMapToVisiblePlaces = () => {
+    if (!mapRef.current || !window.naver?.maps) return;
+
+    if (selectedPlace) {
+      mapRef.current.setCenter(new window.naver.maps.LatLng(selectedPlace.latitude, selectedPlace.longitude));
+      mapRef.current.setZoom(15);
+      return;
     }
+
+    if (visiblePlaces.length === 0) {
+      mapRef.current.setCenter(new window.naver.maps.LatLng(defaultCenter.latitude, defaultCenter.longitude));
+      mapRef.current.setZoom(11);
+      return;
+    }
+
+    if (visiblePlaces.length === 1) {
+      const [place] = visiblePlaces;
+      mapRef.current.setCenter(new window.naver.maps.LatLng(place.latitude, place.longitude));
+      mapRef.current.setZoom(15);
+      return;
+    }
+
+    const bounds = new window.naver.maps.LatLngBounds();
+    for (const place of visiblePlaces) {
+      bounds.extend(new window.naver.maps.LatLng(place.latitude, place.longitude));
+    }
+    mapRef.current.fitBounds(bounds, { bottom: 230, left: 80, right: 80, top: 170 });
   };
 
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
   const selectedPlaceFolders = folders.filter((folder) => selectedPlace && getPlaceFolderIds(selectedPlace).includes(folder.id));
-  const listTitle = viewMode === "search" ? "검색 결과" : selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`;
+  const listTitle = viewMode === "none" ? "장소 표시 없음" : viewMode === "search" ? "검색 결과" : selectedFolderId === allFolderId ? "전체 저장 장소" : `${selectedFolder?.name ?? "폴더"} 장소`;
   const listEmptyLabel =
-    viewMode === "search"
+    viewMode === "none"
+      ? "폴더를 선택하거나 장소를 검색해 주세요."
+      : viewMode === "search"
       ? "검색 결과가 없습니다."
       : isLoadingPlaces
         ? "저장한 장소를 불러오는 중입니다."
