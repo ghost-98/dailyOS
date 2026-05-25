@@ -522,12 +522,27 @@ function FolderManagerSheet({
     });
   };
 
-  const save = async () => {
-    if (!editingFolder || editingFolder.name.trim().length === 0) return;
+  const saveEditingFolder = async () => {
+    if (!editingFolder || editingFolder.name.trim().length === 0) return false;
     setIsSaving(true);
     const didSave = await onSave({ ...editingFolder, name: editingFolder.name.trim() });
     setIsSaving(false);
+    return didSave;
+  };
+
+  const save = async () => {
+    const didSave = await saveEditingFolder();
     if (didSave) setEditingFolder(null);
+  };
+
+  const confirm = async () => {
+    if (!editingFolder) {
+      onClose();
+      return;
+    }
+
+    const didSave = await saveEditingFolder();
+    if (didSave) onClose();
   };
 
   const remove = async (folderId: string) => {
@@ -594,6 +609,15 @@ function FolderManagerSheet({
             </button>
           )}
         </div>
+
+        <footer className="event-sheet__footer">
+          <button className="event-sheet__secondary-button" disabled={isSaving || Boolean(deletingFolderId)} onClick={onClose} type="button">
+            닫기
+          </button>
+          <button className="event-sheet__primary-button" disabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)} onClick={() => void confirm()} type="button">
+            {isSaving ? "저장 중" : "확인"}
+          </button>
+        </footer>
       </section>
     </div>
   );
