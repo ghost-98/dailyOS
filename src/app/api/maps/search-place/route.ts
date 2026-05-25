@@ -6,13 +6,15 @@ const mapsKeyId = process.env.NAVER_MAPS_API_KEY_ID ?? process.env.NAVER_MAPS_CL
 const mapsKey = process.env.NAVER_MAPS_API_KEY ?? process.env.NAVER_MAPS_CLIENT_SECRET;
 
 type NaverLocalItem = {
-  title?: string;
-  link?: string;
+  address?: string;
   category?: string;
   description?: string;
-  telephone?: string;
-  address?: string;
+  link?: string;
+  mapx?: string;
+  mapy?: string;
   roadAddress?: string;
+  telephone?: string;
+  title?: string;
 };
 
 type NaverGeocodeAddress = {
@@ -60,7 +62,7 @@ export async function GET(request: Request) {
 
 async function toPlace(item: NaverLocalItem, index: number, query: string) {
   const address = stripTags(item.roadAddress || item.address || "");
-  const coordinates = await geocodeAddress(address || query);
+  const coordinates = getCoordinatesFromLocalItem(item) ?? (await geocodeAddress(address || query));
   if (!coordinates) return null;
 
   return {
@@ -75,6 +77,17 @@ async function toPlace(item: NaverLocalItem, index: number, query: string) {
     category: stripTags(item.category || ""),
     url: item.link || "",
   };
+}
+
+function getCoordinatesFromLocalItem(item: NaverLocalItem) {
+  if (!item.mapx || !item.mapy) return null;
+
+  const longitude = Number(item.mapx) / 10000000;
+  const latitude = Number(item.mapy) / 10000000;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+
+  return { latitude, longitude };
 }
 
 async function geocodeAddress(address: string) {

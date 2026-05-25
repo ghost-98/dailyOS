@@ -852,7 +852,7 @@ function JobApplicationDetailPanel({
     resetStepForm();
     resetRequirementForm();
     resetCheckItemForm();
-  }, [application.id]);
+  }, [application.companyName, application.id, application.jobRole, application.memo, application.postingTitle, application.postingUrl]);
 
   return (
     <aside className="job-detail-panel" aria-label="공고 상세">

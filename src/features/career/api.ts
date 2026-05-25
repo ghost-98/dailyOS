@@ -527,7 +527,8 @@ function mapRecordToInsert(record: CareerRecord, userId: string): CareerRecordIn
 }
 
 function mapRecordToUpdate(record: CareerRecord): CareerRecordUpdate {
-  const { user_id: _userId, ...update } = mapRecordToInsert(record, "");
+  const update = mapRecordToInsert(record, "") as CareerRecordUpdate & { user_id?: string };
+  delete update.user_id;
   return update;
 }
 

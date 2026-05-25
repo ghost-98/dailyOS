@@ -114,9 +114,9 @@ export function CalendarView({
   const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
-  const selectedSchedules = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : [];
-  const selectedEvents = selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : [];
-  const selectedTasks = selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : [];
+  const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : []), [selectedDate, visibleEvents]);
+  const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : []), [selectedDate, visibleEvents]);
+  const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : []), [selectedDate, tasks]);
   const detailSections = useMemo(
     () =>
       [

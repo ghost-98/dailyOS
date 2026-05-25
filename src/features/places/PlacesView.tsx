@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -136,21 +136,6 @@ export function PlacesView() {
     if (viewMode === "none") return [];
     return viewMode === "search" ? searchResults : filteredSavedPlaces;
   }, [filteredSavedPlaces, searchResults, viewMode]);
-
-  useEffect(() => {
-    if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
-
-    if (!mapRef.current) {
-      const initialPlace = selectedPlace ?? visiblePlaces[0];
-      const center = new window.naver.maps.LatLng(initialPlace?.latitude ?? defaultCenter.latitude, initialPlace?.longitude ?? defaultCenter.longitude);
-      mapRef.current = new window.naver.maps.Map(mapElementRef.current, {
-        center,
-        zoom: initialPlace ? 14 : 11,
-      });
-    }
-
-    renderMarkers();
-  }, [mapStatus, visiblePlaces, selectedPlace, folders, places, selectedFolderId]);
 
   const searchPlaces = async () => {
     const trimmedQuery = query.trim();
@@ -328,39 +313,14 @@ export function PlacesView() {
     setMessage(`${targetFolder?.name ?? "폴더"}를 삭제했습니다.`);
   };
 
-  const focusPlace = (place: PlaceRecord) => {
+  const focusPlace = useCallback((place: PlaceRecord) => {
     setSelectedPlace(place);
     if (!mapRef.current || !window.naver?.maps) return;
     mapRef.current.setCenter(new window.naver.maps.LatLng(place.latitude, place.longitude));
     mapRef.current.setZoom(15);
-  };
+  }, []);
 
-  const renderMarkers = () => {
-    if (!mapRef.current || !window.naver?.maps) return;
-
-    markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = visiblePlaces.map((place) => {
-      const savedPlace = places.find((item) => isSamePlace(item, place));
-      const markerPlace = savedPlace ?? place;
-      const isSaved = Boolean(savedPlace);
-      const markerFolder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
-      const marker = new window.naver!.maps.Marker({
-        icon: {
-          anchor: new window.naver!.maps.Point(18, 42),
-          content: getMarkerContent(markerPlace, markerFolder, isSaved),
-        },
-        map: mapRef.current,
-        position: new window.naver!.maps.LatLng(markerPlace.latitude, markerPlace.longitude),
-        title: markerPlace.name,
-      });
-      window.naver!.maps.Event.addListener(marker, "click", () => focusPlace(markerPlace));
-      return marker;
-    });
-
-    fitMapToVisiblePlaces();
-  };
-
-  const fitMapToVisiblePlaces = () => {
+  const fitMapToVisiblePlaces = useCallback(() => {
     if (!mapRef.current || !window.naver?.maps) return;
 
     if (selectedPlace) {
@@ -387,7 +347,47 @@ export function PlacesView() {
       bounds.extend(new window.naver.maps.LatLng(place.latitude, place.longitude));
     }
     mapRef.current.fitBounds(bounds, { bottom: 230, left: 80, right: 80, top: 170 });
-  };
+  }, [selectedPlace, visiblePlaces]);
+
+  const renderMarkers = useCallback(() => {
+    if (!mapRef.current || !window.naver?.maps) return;
+
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = visiblePlaces.map((place) => {
+      const savedPlace = places.find((item) => isSamePlace(item, place));
+      const markerPlace = savedPlace ?? place;
+      const isSaved = Boolean(savedPlace);
+      const markerFolder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
+      const marker = new window.naver!.maps.Marker({
+        icon: {
+          anchor: new window.naver!.maps.Point(18, 42),
+          content: getMarkerContent(markerPlace, markerFolder, isSaved),
+        },
+        map: mapRef.current,
+        position: new window.naver!.maps.LatLng(markerPlace.latitude, markerPlace.longitude),
+        title: markerPlace.name,
+      });
+      window.naver!.maps.Event.addListener(marker, "click", () => focusPlace(markerPlace));
+      return marker;
+    });
+
+    fitMapToVisiblePlaces();
+  }, [fitMapToVisiblePlaces, focusPlace, folders, places, selectedFolderId, visiblePlaces]);
+
+  useEffect(() => {
+    if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
+
+    if (!mapRef.current) {
+      const initialPlace = selectedPlace ?? visiblePlaces[0];
+      const center = new window.naver.maps.LatLng(initialPlace?.latitude ?? defaultCenter.latitude, initialPlace?.longitude ?? defaultCenter.longitude);
+      mapRef.current = new window.naver.maps.Map(mapElementRef.current, {
+        center,
+        zoom: initialPlace ? 14 : 11,
+      });
+    }
+
+    renderMarkers();
+  }, [mapStatus, renderMarkers, selectedPlace, visiblePlaces]);
 
   const savedPlaceKeys = new Set(places.map(getPlaceKey));
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
