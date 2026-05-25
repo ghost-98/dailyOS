@@ -343,11 +343,11 @@ export function PlacesView() {
       const savedPlace = places.find((item) => isSamePlace(item, place));
       const markerPlace = savedPlace ?? place;
       const isSaved = Boolean(savedPlace);
-      const folder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
+      const markerFolder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 42),
-          content: getMarkerContent(markerPlace, folder, isSaved),
+          content: getMarkerContent(markerPlace, markerFolder, isSaved),
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(markerPlace.latitude, markerPlace.longitude),
@@ -444,7 +444,7 @@ export function PlacesView() {
               </div>
 
               <div className="places-map-folder-actions">
-                <FolderButton count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
+                <FolderButton color={getAllFoldersSwatch(folders)} count={places.length} isActive={viewMode === "folder" && selectedFolderId === allFolderId} label="전체" onClick={() => selectFolder(allFolderId)} />
                 <FolderSelect
                   folders={folders}
                   isActive={viewMode === "folder" && selectedFolderId !== allFolderId}
@@ -819,7 +819,7 @@ function FolderButton({
 }) {
   return (
     <button className={`places-folder ${isActive ? "places-folder--active" : ""}`} onClick={onClick} type="button">
-      <span className="places-folder__mark" style={{ backgroundColor: color ?? "var(--violet)" }}>
+      <span className="places-folder__mark" style={{ background: color ?? "rgba(255, 255, 255, 0.2)" }}>
         <Folder aria-hidden size={13} />
       </span>
       <strong>{label}</strong>
@@ -950,6 +950,14 @@ function isSamePlace(left: PlaceRecord, right: PlaceRecord) {
   return getPlaceKey(left) === getPlaceKey(right);
 }
 
+function getAllFoldersSwatch(folders: PlaceFolder[]) {
+  if (folders.length === 0) return "rgba(255, 255, 255, 0.2)";
+  if (folders.length === 1) return folders[0].color;
+
+  const colors = folders.slice(0, 4).map((folder) => folder.color);
+  return `conic-gradient(${colors.join(", ")}, ${colors[0]})`;
+}
+
 function resolveMarkerFolder(place: PlaceRecord, folders: PlaceFolder[], selectedFolderId: string, isSaved: boolean) {
   if (!isSaved) return undefined;
 
@@ -958,7 +966,9 @@ function resolveMarkerFolder(place: PlaceRecord, folders: PlaceFolder[], selecte
     return folders.find((folder) => folder.id === selectedFolderId);
   }
 
-  return folders.find((folder) => placeFolderIds.includes(folder.id));
+  return folders
+    .filter((folder) => placeFolderIds.includes(folder.id))
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name))[0];
 }
 
 function getMarkerContent(place: PlaceRecord, folder: PlaceFolder | undefined, isSaved: boolean) {
