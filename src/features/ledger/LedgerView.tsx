@@ -176,7 +176,7 @@ export function LedgerView() {
                 >
                   {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
                   {dayTotal > 0 ? <span className="ledger-day__amount">{formatCompactCurrency(dayTotal)}</span> : <span className="ledger-day__empty" />}
-                  {dayRecords.length > 1 ? <em>{dayRecords.length}건</em> : null}
+                  {dayRecords.length > 0 ? <em>{dayRecords.length}건</em> : null}
                 </button>
               );
             })}
