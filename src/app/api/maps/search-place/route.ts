@@ -39,14 +39,26 @@ export async function GET(request: Request) {
     );
   }
 
-  const response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=random`, {
-    headers: {
-      Accept: "application/json",
-      "X-Naver-Client-Id": searchClientId,
-      "X-Naver-Client-Secret": searchClientSecret,
-    },
-    next: { revalidate: 0 },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=random`, {
+      headers: {
+        Accept: "application/json",
+        "X-Naver-Client-Id": searchClientId,
+        "X-Naver-Client-Secret": searchClientSecret,
+      },
+      next: { revalidate: 0 },
+    });
+  } catch (error) {
+    console.error("Failed to call Naver local search API", error);
+    return NextResponse.json(
+      {
+        error: "네이버 장소 검색 서버에 연결하지 못했습니다. 네트워크 권한이나 API 키 설정을 확인해 주세요.",
+        places: [],
+      },
+      { status: 503 },
+    );
+  }
 
   if (!response.ok) {
     const detail = await response.text();

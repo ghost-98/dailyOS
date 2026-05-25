@@ -750,7 +750,7 @@ function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanP
 
     try {
       const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
-      const payload = (await response.json()) as { places?: PlaceRecord[]; error?: string };
+      const payload = await readPlaceSearchResponse(response);
       if (!response.ok) {
         setMessage(payload.error ?? "장소 검색에 실패했습니다.");
         setResults([]);
@@ -820,6 +820,19 @@ function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanP
       ) : null}
     </div>
   );
+}
+
+async function readPlaceSearchResponse(response: Response): Promise<{ places?: PlaceRecord[]; error?: string }> {
+  const body = await response.text();
+  if (!body.trim()) {
+    return { error: "장소 검색 응답이 비어 있습니다.", places: [] };
+  }
+
+  try {
+    return JSON.parse(body) as { places?: PlaceRecord[]; error?: string };
+  } catch {
+    return { error: "장소 검색 응답을 읽지 못했습니다.", places: [] };
+  }
 }
 
 function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
