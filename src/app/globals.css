@@ -2748,6 +2748,9 @@ a:focus-visible {
 }
 
 .date-detail-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
   min-height: 720px;
   border-color: rgba(255, 255, 255, 0.11);
   background:
@@ -2762,12 +2765,17 @@ a:focus-visible {
   font-weight: 850;
 }
 
+.date-detail-card .section-heading {
+  margin-bottom: 0;
+}
+
 .date-category-tabs {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  margin: -4px 0 22px;
-  padding-bottom: 4px;
+  margin: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  padding-bottom: 12px;
   scrollbar-width: none;
 }
 
@@ -2816,17 +2824,22 @@ a:focus-visible {
 
 .date-event-list {
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
 }
 
 .schedule-date-map {
   display: grid;
   gap: 10px;
-  margin-bottom: 16px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 12px;
+  border: 1px solid rgba(157, 178, 255, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(157, 178, 255, 0.075), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  padding: 14px;
 }
 
 .schedule-date-map--empty {
@@ -2944,15 +2957,18 @@ a:focus-visible {
   inset: 0;
   z-index: 60;
   display: grid;
-  place-items: center;
+  place-items: stretch;
   background: rgba(4, 5, 8, 0.72);
-  padding: 28px;
+  padding: 24px 24px 24px 284px;
 }
 
 .schedule-map-modal {
   display: grid;
-  width: min(1040px, 100%);
-  max-height: min(760px, calc(100vh - 56px));
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--line-strong);
   border-radius: 18px;
@@ -2989,15 +3005,19 @@ a:focus-visible {
 
 .schedule-map-modal__content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
-  min-height: 520px;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   padding: 16px;
 }
 
 .schedule-map-modal__canvas {
   display: grid;
-  min-height: 520px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
   overflow: hidden;
   place-items: center;
   border-radius: 14px;
@@ -3010,7 +3030,10 @@ a:focus-visible {
   display: grid;
   align-content: start;
   gap: 10px;
-  max-height: 520px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  max-height: none;
   overflow-y: auto;
   margin: 0;
   padding: 0;
@@ -6725,6 +6748,14 @@ a:focus-visible {
     grid-template-columns: 240px minmax(0, 1fr);
   }
 
+  .schedule-map-modal-backdrop {
+    padding-left: 264px;
+  }
+
+  .schedule-map-modal__content {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+
   .sidebar {
     padding: 28px 22px;
   }
@@ -6789,6 +6820,39 @@ a:focus-visible {
 
   .main-panel {
     padding: 28px 16px 34px;
+  }
+
+  .schedule-map-modal-backdrop {
+    padding: 10px;
+  }
+
+  .schedule-map-modal {
+    height: calc(100vh - 20px);
+    border-radius: 16px;
+  }
+
+  .schedule-map-modal__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .schedule-map-modal__actions {
+    justify-content: stretch;
+  }
+
+  .schedule-map-modal__actions button {
+    flex: 1 1 140px;
+  }
+
+  .schedule-map-modal__content {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(160px, 32vh);
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .schedule-map-modal__canvas {
+    min-height: 320px;
   }
 
   .today__header {
