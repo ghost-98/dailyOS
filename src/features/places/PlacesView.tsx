@@ -360,7 +360,7 @@ export function PlacesView() {
       const markerFolder = resolveMarkerFolder(markerPlace, folders, selectedFolderId, isSaved);
       const marker = new window.naver!.maps.Marker({
         icon: {
-          anchor: new window.naver!.maps.Point(18, 42),
+          anchor: new window.naver!.maps.Point(17, 17),
           content: getMarkerContent(markerPlace, markerFolder, isSaved),
         },
         map: mapRef.current,
