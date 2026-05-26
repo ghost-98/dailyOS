@@ -2880,6 +2880,28 @@ a:focus-visible {
   margin: 2px 0 0;
 }
 
+.schedule-date-map__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.schedule-date-map__header .schedule-date-map__toggle {
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.schedule-date-map__header .schedule-date-map__toggle svg {
+  display: none;
+}
+
+.schedule-date-map__header .schedule-date-map__toggle span,
+.schedule-date-map__header .schedule-date-map__toggle strong {
+  white-space: nowrap;
+}
+
 .schedule-date-map__body {
   position: relative;
   display: grid;

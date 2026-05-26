@@ -888,33 +888,35 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
   return (
     <>
       <div className={`schedule-date-map ${isOpen ? "schedule-date-map--open" : ""}`}>
-        <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
-          <span>
-            <MapPin aria-hidden size={18} />
-            이날 간 장소
-          </span>
-          <strong>{places.length}곳</strong>
-        </button>
+        <div className="schedule-date-map__header">
+          <button className="schedule-date-map__toggle" onClick={() => setIsOpen((current) => !current)} type="button">
+            <span>
+              <MapPin aria-hidden size={18} />
+              이날 간 장소
+            </span>
+            <strong>{places.length}곳</strong>
+          </button>
+          <div className="schedule-date-map__actions" aria-label="지도 동작">
+            <button aria-label="크게 보기" title="크게 보기" onClick={() => setIsLargeMapOpen(true)} type="button">
+              <Maximize2 aria-hidden size={16} />
+            </button>
+            <button
+              aria-label="경로 그리기"
+              className={isRouteVisible ? "schedule-date-map__route-button schedule-date-map__route-button--active" : "schedule-date-map__route-button"}
+              disabled={visiblePlaces.length < 2}
+              onClick={() => {
+                setIsRouteVisible((current) => !current);
+                setIsLargeMapOpen(true);
+              }}
+              title="경로 그리기"
+              type="button"
+            >
+              <Route aria-hidden size={16} />
+            </button>
+          </div>
+        </div>
         {isOpen ? (
           <div className="schedule-date-map__body">
-            <div className="schedule-date-map__actions">
-              <button aria-label="크게 보기" title="크게 보기" onClick={() => setIsLargeMapOpen(true)} type="button">
-                <Maximize2 aria-hidden size={16} />
-              </button>
-              <button
-                aria-label="경로 그리기"
-                className={isRouteVisible ? "schedule-date-map__route-button schedule-date-map__route-button--active" : "schedule-date-map__route-button"}
-                disabled={visiblePlaces.length < 2}
-                onClick={() => {
-                  setIsRouteVisible((current) => !current);
-                  setIsLargeMapOpen(true);
-                }}
-                title="경로 그리기"
-                type="button"
-              >
-                <Route aria-hidden size={16} />
-              </button>
-            </div>
             <DatePlacesMapCanvas className="schedule-date-map__canvas" places={visiblePlaces} routeVisible={false} />
             <div className="schedule-date-map__places">
               {places.map((place, index) => {
