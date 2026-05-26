@@ -2881,6 +2881,7 @@ a:focus-visible {
 }
 
 .schedule-date-map__body {
+  position: relative;
   display: grid;
   gap: 10px;
   animation: calendarPanelDown 160ms ease both;
@@ -2904,7 +2905,7 @@ a:focus-visible {
   gap: 6px;
 }
 
-.schedule-date-map__places span {
+.schedule-date-map__place {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2917,7 +2918,14 @@ a:focus-visible {
   padding: 5px 9px;
 }
 
-.schedule-date-map__places b {
+.schedule-date-map__place:not(.schedule-date-map__place--active) {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted-dark);
+  opacity: 0.62;
+}
+
+.schedule-date-map__place b {
   display: grid;
   width: 18px;
   height: 18px;
@@ -2932,18 +2940,30 @@ a:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .schedule-date-map__actions button,
 .schedule-map-modal__actions button {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
   min-height: 34px;
+  place-items: center;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   font-size: 13px;
   font-weight: 850;
-  padding: 0 11px;
+  padding: 0;
+}
+
+.schedule-date-map__actions button:disabled,
+.schedule-map-modal__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
 
 .schedule-date-map__route-button--active {
@@ -3003,6 +3023,11 @@ a:focus-visible {
   justify-content: flex-end;
 }
 
+.schedule-map-modal__actions button:last-child {
+  width: auto;
+  padding: 0 13px;
+}
+
 .schedule-map-modal__content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -3040,14 +3065,25 @@ a:focus-visible {
   list-style: none;
 }
 
-.schedule-map-modal__list li {
+.schedule-map-modal__place button {
   display: grid;
+  width: 100%;
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
+  align-items: start;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
   padding: 12px;
+  text-align: left;
+}
+
+.schedule-map-modal__place:not(.schedule-map-modal__place--active) button {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted-dark);
+  opacity: 0.62;
 }
 
 .schedule-map-modal__list b {
@@ -6837,11 +6873,11 @@ a:focus-visible {
   }
 
   .schedule-map-modal__actions {
-    justify-content: stretch;
+    justify-content: flex-end;
   }
 
   .schedule-map-modal__actions button {
-    flex: 1 1 140px;
+    flex: 0 0 auto;
   }
 
   .schedule-map-modal__content {
