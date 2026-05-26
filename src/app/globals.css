@@ -230,6 +230,115 @@ button {
   padding: 0 14px;
 }
 
+.life-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.life-header {
+  align-items: flex-start;
+}
+
+.life-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.life-switcher__item {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 7px;
+  min-height: 112px;
+  padding: 18px;
+  text-align: left;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.life-switcher__item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(207, 185, 255, 0.34);
+  transform: translateY(-1px);
+}
+
+.life-switcher__item svg {
+  color: var(--violet);
+}
+
+.life-switcher__item span {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.life-switcher__item small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.life-switcher__item--active {
+  background: rgba(207, 185, 255, 0.14);
+  border-color: rgba(207, 185, 255, 0.55);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+.life-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.life-list-overview {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-list-overview__item {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+}
+
+.life-list-overview__item svg {
+  color: var(--violet);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.life-list-overview__item strong {
+  display: block;
+  font-size: 0.96rem;
+  margin-bottom: 5px;
+}
+
+.life-list-overview__item p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.life-daily-log-panel {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  padding: 22px;
+}
+
 .ledger-page {
   display: grid;
   gap: 28px;
@@ -6863,4 +6972,15 @@ a:focus-visible {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.55;
+}
+
+@media (max-width: 820px) {
+  .life-switcher,
+  .life-list-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .life-switcher__item {
+    min-height: auto;
+  }
 }

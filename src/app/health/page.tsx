@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { HealthView } from "@/features/health/HealthView";
+import { redirect } from "next/navigation";
 
 export default function HealthPage() {
-  return (
-    <AppShell activeKey="health">
-      <HealthView />
-    </AppShell>
-  );
+  redirect("/life?view=list");
 }

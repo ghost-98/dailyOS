@@ -3,25 +3,17 @@
 import {
   Activity,
   BriefcaseBusiness,
-  CalendarDays,
   ChevronDown,
   Grid2X2,
-  HeartPulse,
+  Layers3,
   LogOut,
-  Map,
-  NotebookPen,
   Settings,
-  WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
-
-const timeChildren = [
-  { label: "캘린더", href: "/schedule", key: "schedule" },
-];
 
 const careerChildren = [
   { label: "지원한 기업", href: "/career/applied", key: "applied" },
@@ -31,22 +23,14 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "시간 관리", href: "/schedule", key: "time", icon: CalendarDays, children: timeChildren },
-  { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
-  { label: "하루 기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
-  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
-  { label: "지도", href: "/places", key: "places", icon: Map },
+  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "시간", href: "/schedule", key: "schedule", icon: CalendarDays },
-  { label: "가계부", href: "/ledger", key: "ledger", icon: WalletCards },
-  { label: "기록", href: "/daily-log", key: "daily-log", icon: NotebookPen },
-  { label: "건강", href: "/health", key: "health", icon: HeartPulse },
-  { label: "지도", href: "/places", key: "places", icon: Map },
+  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
@@ -66,8 +50,6 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 
 function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
-  const isTimeActive = activeKey === "schedule" || activeKey === "time";
-  const [isTimeOpen, setIsTimeOpen] = useState(isTimeActive);
   const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
   const { displayName, user } = useDailyOSUser();
   const avatarInitial = displayName.trim().slice(0, 1).toUpperCase() || "D";
@@ -87,22 +69,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
           <nav className="sidebar__nav">
             {primaryNav.map((item) => {
               const Icon = item.icon;
-              const isActive = item.key === activeKey || (item.key === "time" && isTimeActive);
-
-              if (item.key === "time") {
-                return (
-                  <NavGroup
-                    icon={<Icon aria-hidden size={22} />}
-                    isActive={isActive}
-                    isOpen={isTimeOpen}
-                    items={timeChildren}
-                    key={item.key}
-                    label={item.label}
-                    pathname={pathname}
-                    setIsOpen={setIsTimeOpen}
-                  />
-                );
-              }
+              const isActive = item.key === activeKey;
 
               if (item.key === "career") {
                 return (
@@ -151,7 +118,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive = item.key === activeKey || (item.key === "career" && activeKey === "career");
+          const isActive = item.key === activeKey;
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />
