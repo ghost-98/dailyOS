@@ -3,10 +3,13 @@
 import {
   Activity,
   BriefcaseBusiness,
+  CalendarDays,
   ChevronDown,
   Grid2X2,
   Layers3,
   LogOut,
+  Map,
+  MapPinned,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +17,11 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
+
+const lifeChildren = [
+  { label: "캘린더", href: "/life/calendar", key: "life-calendar" },
+  { label: "지도", href: "/life/map", key: "life-map" },
+];
 
 const careerChildren = [
   { label: "지원한 기업", href: "/career/applied", key: "applied" },
@@ -23,14 +31,17 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
+  { label: "라이프", href: "/life/calendar", key: "life", icon: Layers3, children: lifeChildren },
+  { label: "장소", href: "/places", key: "places", icon: MapPinned },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
+  { label: "캘린더", href: "/life/calendar", key: "life", icon: CalendarDays },
+  { label: "라이프 지도", href: "/life/map", key: "life-map", icon: Map },
+  { label: "장소", href: "/places", key: "places", icon: MapPinned },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
@@ -50,6 +61,7 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 
 function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
+  const [isLifeOpen, setIsLifeOpen] = useState(activeKey === "life");
   const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
   const { displayName, user } = useDailyOSUser();
   const avatarInitial = displayName.trim().slice(0, 1).toUpperCase() || "D";
@@ -70,6 +82,21 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
             {primaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = item.key === activeKey;
+
+              if (item.key === "life") {
+                return (
+                  <NavGroup
+                    icon={<Icon aria-hidden size={22} />}
+                    isActive={isActive}
+                    isOpen={isLifeOpen}
+                    items={lifeChildren}
+                    key={item.key}
+                    label={item.label}
+                    pathname={pathname}
+                    setIsOpen={setIsLifeOpen}
+                  />
+                );
+              }
 
               if (item.key === "career") {
                 return (
@@ -118,7 +145,8 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive = item.key === activeKey;
+          const isActive =
+            item.key === "life-map" ? pathname === "/life/map" : item.key === "life" ? activeKey === "life" && pathname !== "/life/map" : item.key === activeKey;
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />

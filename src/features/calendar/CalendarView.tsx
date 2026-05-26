@@ -29,6 +29,14 @@ import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEvents
 import type { CalendarEvent } from "./data";
 
 type CalendarCategory = "schedule" | "event" | "todo";
+type ExternalCalendarCategory = "expense" | "workout" | "weight" | "daily_log";
+export type ExternalCalendarItem = {
+  date: string;
+  id: string;
+  meta?: string;
+  title: string;
+  type: ExternalCalendarCategory;
+};
 type DragPlacement = "before" | "after";
 
 type NaverLatLng = unknown;
@@ -103,12 +111,14 @@ const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> = {
 
 type CalendarViewProps = {
   allowedTypes?: EventType[];
+  externalItems?: ExternalCalendarItem[];
   showEventAddButton?: boolean;
   title?: string;
 };
 
 export function CalendarView({
   allowedTypes,
+  externalItems = [],
   showEventAddButton = false,
   title = "일정",
 }: CalendarViewProps) {
@@ -157,6 +167,7 @@ export function CalendarView({
   const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : []), [selectedDate, visibleEvents]);
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : []), [selectedDate, tasks]);
+  const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
   const detailSections = useMemo(
     () =>
       [
@@ -369,7 +380,8 @@ export function CalendarView({
                 ? visibleEvents.filter((event) => event.date === cell.date && visibleCalendarCategories.includes(event.type as CalendarCategory))
                 : [];
               const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => task.scheduledDate === cell.date) : [];
-              const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories);
+              const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date) : [];
+              const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
               return (
                 <button
                   className={`calendar-day ${cell.date === todayKey ? "calendar-day--today" : ""} ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
@@ -382,10 +394,10 @@ export function CalendarView({
                   <div className="calendar-day__events">
                     {eventSummaries.slice(0, 4).map((summary) => (
                       <span
-                        aria-label={`${categoryLabels[summary.type]} ${summary.count}개`}
+                        aria-label={`${getCalendarSummaryLabel(summary.type)} ${summary.count}개`}
                         className="calendar-day__event-chip"
                         key={summary.type}
-                        title={`${categoryLabels[summary.type]} ${summary.count}개`}
+                        title={`${getCalendarSummaryLabel(summary.type)} ${summary.count}개`}
                       >
                         <span className={`calendar-dot calendar-dot--${summary.type}`} />
                         {summary.count > 1 ? <span className="calendar-day__event-count">+{summary.count}</span> : null}
@@ -459,6 +471,24 @@ export function CalendarView({
                     section={selectedDetailSection}
                     showHeader={false}
                   />
+                ) : null}
+
+                {selectedExternalItems.length > 0 ? (
+                  <div className="date-life-section">
+                    <div className="date-life-section__head">
+                      <span>생활 기록</span>
+                      <strong>{selectedExternalItems.length}</strong>
+                    </div>
+                    {selectedExternalItems.map((item) => (
+                      <article className="date-life-item" key={`${item.type}-${item.id}`}>
+                        <span className={`calendar-dot calendar-dot--${item.type}`} />
+                        <div>
+                          <strong>{item.title}</strong>
+                          {item.meta ? <p>{item.meta}</p> : null}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </SectionCard>
@@ -1430,14 +1460,31 @@ function formatShortDate(dateKey: string) {
   return `${Number(dateKey.slice(5, 7))}/${Number(dateKey.slice(8, 10))}`;
 }
 
-function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[]) {
-  return categoryDisplayOrder
+function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
+  const planSummaries = categoryDisplayOrder
     .filter((type) => categories.includes(type))
     .map((type) => ({
       type,
       count: type === "todo" ? tasks.length : events.filter((event) => event.type === type).length,
     }))
     .filter((summary) => summary.count > 0);
+
+  const externalSummaries = (["expense", "workout", "weight", "daily_log"] as const)
+    .map((type) => ({
+      type,
+      count: externalItems.filter((item) => item.type === type).length,
+    }))
+    .filter((summary) => summary.count > 0);
+
+  return [...planSummaries, ...externalSummaries];
+}
+
+function getCalendarSummaryLabel(type: CalendarCategory | ExternalCalendarCategory) {
+  if (type === "expense") return "가계부";
+  if (type === "workout") return "운동";
+  if (type === "weight") return "몸무게";
+  if (type === "daily_log") return "기록";
+  return categoryLabels[type];
 }
 
 function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {

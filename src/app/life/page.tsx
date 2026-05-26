@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { LifeView } from "@/features/life/LifeView";
+import { redirect } from "next/navigation";
 
 export default function LifePage() {
-  return (
-    <AppShell activeKey="life">
-      <LifeView />
-    </AppShell>
-  );
+  redirect("/life/calendar");
 }

@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/layout/AppShell";
+import { PlacesView } from "@/features/places/PlacesView";
 
 export default function PlacesPage() {
-  redirect("/life?view=map");
+  return (
+    <AppShell activeKey="places">
+      <PlacesView />
+    </AppShell>
+  );
 }

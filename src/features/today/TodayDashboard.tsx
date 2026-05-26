@@ -148,7 +148,7 @@ export function TodayDashboard() {
 
       <div className="today-work-grid">
         <SectionCard className="schedule-card today-plan-card">
-          <DashboardHeader href="/life?view=calendar" icon={<CalendarDays aria-hidden size={20} />} title="라이프" trailing={`${completionRate}% 완료`} />
+          <DashboardHeader href="/life/calendar" icon={<CalendarDays aria-hidden size={20} />} title="라이프" trailing={`${completionRate}% 완료`} />
           <div className="today-plan-tabs" aria-label="오늘 시간 관리 분류">
             {planTabs.map((tab) => {
               const count = tab.key === "schedule" ? todaySchedules.length : tab.key === "todo" ? openTasks.length : todayEvents.length;
@@ -180,7 +180,7 @@ export function TodayDashboard() {
                     </article>
                   ))
                 ) : (
-                  <EmptyBlock href="/life?view=calendar" text="오늘 처리할 할 일이 없습니다." />
+                  <EmptyBlock href="/life/calendar" text="오늘 처리할 할 일이 없습니다." />
                 )}
               </div>
             ) : (
@@ -197,7 +197,7 @@ export function TodayDashboard() {
                     </article>
                   ))
                 ) : (
-                  <EmptyBlock href="/life?view=calendar" text={activePlanTab === "schedule" ? "오늘 등록된 일정이 없습니다." : "오늘 등록된 이벤트가 없습니다."} />
+                  <EmptyBlock href="/life/calendar" text={activePlanTab === "schedule" ? "오늘 등록된 일정이 없습니다." : "오늘 등록된 이벤트가 없습니다."} />
                 )}
               </div>
             )}
@@ -206,7 +206,7 @@ export function TodayDashboard() {
 
         <div className="today-side-grid">
           <SectionCard className="schedule-card today-ledger-card">
-            <DashboardHeader href="/life?view=list" icon={<WalletCards aria-hidden size={20} />} title="가계부" trailing={`${todayExpenses.length}건`} />
+            <DashboardHeader href="/life/calendar" icon={<WalletCards aria-hidden size={20} />} title="가계부" trailing={`${todayExpenses.length}건`} />
             <div className="today-ledger-total">
               <span>오늘 사용</span>
               <strong>{formatCurrency(todayExpenseTotal)}</strong>
@@ -223,13 +223,13 @@ export function TodayDashboard() {
                   </article>
                 ))
               ) : (
-                <EmptyBlock href="/life?view=list" text="오늘 기록된 지출이 없습니다." />
+                <EmptyBlock href="/life/calendar" text="오늘 기록된 지출이 없습니다." />
               )}
             </div>
           </SectionCard>
 
           <SectionCard className="vitals-card today-health-card">
-            <DashboardHeader href="/life?view=list" icon={<HeartPulse aria-hidden size={20} />} title="건강" />
+            <DashboardHeader href="/life/calendar" icon={<HeartPulse aria-hidden size={20} />} title="건강" />
             <div className="today-health-grid">
               <div className="workout-plan">
                 <Dumbbell aria-hidden size={18} />
