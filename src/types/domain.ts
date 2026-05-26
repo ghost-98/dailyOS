@@ -1,20 +1,5 @@
 export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career" | "expense";
 
-export type TaskStatus = "todo" | "inProgress" | "done";
-
-export type TaskPriority = "high" | "normal" | "low";
-
-export type PlanPlace = {
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  providerPlaceId?: string;
-  phone?: string;
-  category?: string;
-  url?: string;
-};
-
 export type TaskItem = {
   id: string;
   title: string;
@@ -25,7 +10,15 @@ export type TaskItem = {
   completedAt?: string;
   deferredCount: number;
   memo?: string;
-  place?: PlanPlace;
+};
+
+export type CalendarEventItem = {
+  id: string;
+  eventDate: string;
+  eventTime?: string;
+  type: EventType;
+  title: string;
+  meta: string;
 };
 
 export type WeightRecord = {
@@ -60,6 +53,8 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
+  targetType?: EventType;
+  targetId?: string;
 };
 
 export type PlaceProvider = "naver" | "manual";

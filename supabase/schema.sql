@@ -66,14 +66,6 @@ create table if not exists public.tasks (
   completed_at timestamptz,
   deferred_count integer not null default 0 check (deferred_count >= 0),
   memo text,
-  place_name text,
-  place_address text,
-  place_latitude numeric(10, 7),
-  place_longitude numeric(10, 7),
-  place_provider_id text,
-  place_phone text,
-  place_category text,
-  place_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -86,37 +78,9 @@ create table if not exists public.calendar_events (
   type text not null default 'schedule' check (type in ('schedule', 'todo', 'event', 'health', 'weight', 'career', 'expense')),
   title text not null,
   meta text not null default '',
-  place_name text,
-  place_address text,
-  place_latitude numeric(10, 7),
-  place_longitude numeric(10, 7),
-  place_provider_id text,
-  place_phone text,
-  place_category text,
-  place_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
-alter table public.tasks
-  add column if not exists place_name text,
-  add column if not exists place_address text,
-  add column if not exists place_latitude numeric(10, 7),
-  add column if not exists place_longitude numeric(10, 7),
-  add column if not exists place_provider_id text,
-  add column if not exists place_phone text,
-  add column if not exists place_category text,
-  add column if not exists place_url text;
-
-alter table public.calendar_events
-  add column if not exists place_name text,
-  add column if not exists place_address text,
-  add column if not exists place_latitude numeric(10, 7),
-  add column if not exists place_longitude numeric(10, 7),
-  add column if not exists place_provider_id text,
-  add column if not exists place_phone text,
-  add column if not exists place_category text,
-  add column if not exists place_url text;
 
 create table if not exists public.weight_records (
   id uuid primary key default gen_random_uuid(),
@@ -152,6 +116,8 @@ create table if not exists public.expense_records (
   amount numeric(12, 0) not null check (amount > 0),
   category text not null default 'etc' check (category in ('food', 'transport', 'shopping', 'housing', 'health', 'culture', 'education', 'etc')),
   memo text,
+  target_type text check (target_type in ('task', 'schedule', 'event', 'workout', 'career', 'daily_log')),
+  target_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -199,7 +165,7 @@ create table if not exists public.place_links (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   place_id uuid not null references public.places(id) on delete cascade,
-  target_type text not null check (target_type in ('schedule', 'todo', 'career_event', 'workout', 'expense', 'daily_log')),
+  target_type text not null check (target_type in ('schedule', 'todo', 'career_event', 'workout', 'expense', 'daily_log', 'task')),
   target_id uuid not null,
   target_date date,
   starts_at timestamptz,
