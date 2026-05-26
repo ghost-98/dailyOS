@@ -3983,17 +3983,6 @@ a:focus-visible {
   color: var(--muted);
 }
 
-.tasks-page {
-  display: grid;
-  gap: 30px;
-}
-
-.task-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
 .task-day-switcher {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -4028,267 +4017,6 @@ a:focus-visible {
   line-height: 1.25;
   text-align: center;
   white-space: nowrap;
-}
-
-.task-stat-card {
-  display: grid;
-  gap: 8px;
-  min-height: 150px;
-  padding: 22px;
-}
-
-.task-stat-card span {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 750;
-}
-
-.task-stat-card strong {
-  font-size: 42px;
-  line-height: 1;
-}
-
-.task-stat-card p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.task-stat-card--urgent {
-  border-color: rgba(255, 156, 175, 0.34);
-  background: linear-gradient(145deg, rgba(48, 31, 38, 0.92), rgba(28, 28, 33, 0.9));
-}
-
-.task-progress {
-  height: 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.task-progress span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--green);
-}
-
-.task-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.task-column {
-  min-height: 640px;
-  padding: 20px;
-}
-
-.task-column__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.task-column__header div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.task-column__header span {
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 850;
-}
-
-.task-column__header strong {
-  display: grid;
-  min-width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.task-column__header button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--muted);
-}
-
-.task-list {
-  display: grid;
-  gap: 14px;
-}
-
-.task-empty-column {
-  display: grid;
-  min-height: 220px;
-  place-items: center;
-  border: 1px dashed var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
-  padding: 24px;
-  text-align: center;
-}
-
-.task-empty-column svg {
-  color: var(--violet);
-}
-
-.task-empty-column strong {
-  margin-top: 10px;
-  font-size: 16px;
-}
-
-.task-empty-column p {
-  max-width: 210px;
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.task-card {
-  display: grid;
-  gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 16px;
-}
-
-.task-card--inProgress {
-  border-color: rgba(72, 214, 160, 0.24);
-  background: rgba(72, 214, 160, 0.06);
-}
-
-.task-card--done {
-  opacity: 0.68;
-}
-
-.task-card__top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.task-check {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: #07140f;
-}
-
-.task-card--done .task-check {
-  border-color: var(--green);
-  background: var(--green);
-}
-
-.task-card h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 850;
-  line-height: 1.35;
-}
-
-.task-card__meta {
-  display: grid;
-  gap: 7px;
-}
-
-.task-card__meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.task-card p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.deadline-badge {
-  display: inline-flex;
-  min-height: 24px;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.deadline-badge--danger {
-  background: rgba(255, 156, 175, 0.18);
-  color: var(--pink);
-}
-
-.deadline-badge--warning {
-  background: rgba(243, 181, 98, 0.18);
-  color: var(--amber);
-}
-
-.deadline-badge--quiet {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--muted);
-}
-
-.task-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 12px;
-}
-
-.defer-count,
-.completed-label {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.task-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.task-card__footer button,
-.task-card__actions button {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--violet);
-  font-size: 13px;
-  font-weight: 800;
-  padding: 0 12px;
 }
 
 .task-sheet {
@@ -4620,86 +4348,6 @@ a:focus-visible {
   gap: 28px;
 }
 
-.events-page {
-  display: grid;
-  gap: 28px;
-}
-
-.events-card {
-  padding: 24px;
-}
-
-.event-record-list {
-  display: grid;
-  gap: 14px;
-}
-
-.event-record-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--pink);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 20px;
-}
-
-.event-record-card h3 {
-  margin: 10px 0 6px;
-  font-size: 21px;
-  font-weight: 850;
-}
-
-.event-record-card p,
-.event-record-card small {
-  display: block;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.event-record-card small {
-  margin-top: 8px;
-}
-
-.career-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.career-tab {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--muted);
-  font-weight: 800;
-  padding: 0 14px;
-  text-decoration: none;
-}
-
-.career-tab strong {
-  display: grid;
-  min-width: 22px;
-  height: 22px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.career-tab--active {
-  border-color: var(--line-strong);
-  background: rgba(201, 184, 255, 0.12);
-  color: var(--violet);
-}
-
 .career-management-card {
   padding: 24px;
 }
@@ -4836,30 +4484,6 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.career-overview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.career-overview-card {
-  display: grid;
-  gap: 8px;
-  padding: 22px;
-}
-
-.career-overview-card span {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.career-overview-card strong {
-  font-size: 36px;
-  line-height: 1;
-}
-
-.career-overview-card p,
 .section-description {
   margin: 0;
   color: var(--muted);
@@ -5465,124 +5089,6 @@ a:focus-visible {
 
 .manual-job-form {
   width: 100%;
-}
-
-.company-management-preview {
-  display: grid;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.company-ai-panel {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid rgba(201, 184, 255, 0.18);
-  border-radius: 16px;
-  background:
-    linear-gradient(135deg, rgba(201, 184, 255, 0.12), rgba(61, 220, 151, 0.05)),
-    rgba(255, 255, 255, 0.035);
-  padding: 18px;
-}
-
-.company-ai-panel__icon {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 1px solid rgba(201, 184, 255, 0.22);
-  border-radius: 13px;
-  background: rgba(201, 184, 255, 0.12);
-  color: var(--violet);
-}
-
-.company-ai-panel span,
-.company-workflow-card span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.company-ai-panel strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--text);
-  font-size: 18px;
-}
-
-.company-ai-panel p,
-.company-workflow-card p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.company-ai-panel__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.16);
-  color: var(--violet);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 850;
-  padding: 10px 13px;
-  transition:
-    border-color 150ms ease,
-    background 150ms ease,
-    transform 150ms ease;
-}
-
-.company-ai-panel__button:hover {
-  border-color: rgba(201, 184, 255, 0.35);
-  background: rgba(201, 184, 255, 0.22);
-  transform: translateY(-1px);
-}
-
-.company-workflow-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.company-workflow-card {
-  min-height: 128px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.12);
-  padding: 15px;
-}
-
-.company-workflow-card strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--text);
-  font-size: 17px;
-}
-
-.company-stage-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.company-stage-strip__item {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 12px;
-  padding: 6px 9px;
-}
-
-.company-stage-strip__item--active {
-  border-color: rgba(201, 184, 255, 0.35);
-  background: rgba(201, 184, 255, 0.14);
-  color: var(--violet);
 }
 
 .career-record-card {
@@ -6818,10 +6324,6 @@ a:focus-visible {
     padding: 28px 22px;
   }
 
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
   .today-summary-grid,
   .today-work-grid {
     grid-template-columns: 1fr;
@@ -6839,13 +6341,6 @@ a:focus-visible {
     animation: detail-slide-up 220ms ease-out both;
   }
 
-  .task-board {
-    grid-template-columns: 1fr;
-  }
-
-  .task-column {
-    min-height: 0;
-  }
 }
 
 @media (max-width: 820px) {
@@ -6974,16 +6469,10 @@ a:focus-visible {
   .vitals-card,
   .calendar-board,
   .date-detail-card,
-  .task-column,
-  .task-stat-card,
   .weight-card,
   .health-metric-card,
   .workout-section {
     padding: 22px;
-  }
-
-  .task-stats {
-    grid-template-columns: 1fr;
   }
 
   .health-summary-grid {
@@ -6991,10 +6480,6 @@ a:focus-visible {
   }
 
   .health-daily-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .career-overview {
     grid-template-columns: 1fr;
   }
 
@@ -7007,8 +6492,6 @@ a:focus-visible {
     max-height: none;
   }
 
-  .company-ai-panel,
-  .company-workflow-grid,
   .career-ai-uploader,
   .company-process-rail {
     grid-template-columns: 1fr;
@@ -7019,7 +6502,6 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 
-  .company-ai-panel__button,
   .career-ai-uploader__actions {
     grid-template-columns: 1fr;
     justify-content: center;
@@ -7094,10 +6576,6 @@ a:focus-visible {
 
   .certificate-detail-grid {
     grid-template-columns: 1fr;
-  }
-
-  .event-record-card {
-    flex-direction: column;
   }
 
   .application-event-row {

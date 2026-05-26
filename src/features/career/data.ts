@@ -39,5 +39,3 @@ export const applicationEventStageLabels: Record<ApplicationEventStage, string> 
   written: "필기",
   interview: "면접",
 };
-
-export const careerRecords: CareerRecord[] = [];

@@ -53,7 +53,6 @@ import {
 } from "./api";
 import {
   applicationEventStageLabels,
-  careerRecords,
   type ApplicationEvent,
   type ApplicationEventStage,
   type CareerRecord,
@@ -137,7 +136,7 @@ type CareerSheetMode = "certificate" | "manual-job" | "posting-upload";
 
 export function CareerView({ activeTab }: { activeTab: CareerTab }) {
   const router = useRouter();
-  const [records, setRecords] = useState<CareerRecord[]>(careerRecords);
+  const [records, setRecords] = useState<CareerRecord[]>([]);
   const [editingRecord, setEditingRecord] = useState<CareerRecord | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<CareerSheetMode>(activeTab === "certificates" ? "certificate" : "manual-job");
