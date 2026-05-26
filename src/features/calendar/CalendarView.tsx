@@ -2,6 +2,7 @@
 
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell,
   CalendarDays,
@@ -843,6 +844,11 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLargeMapOpen, setIsLargeMapOpen] = useState(false);
   const [isRouteVisible, setIsRouteVisible] = useState(false);
+  const [isPortalReady, setIsPortalReady] = useState(false);
+
+  useEffect(() => {
+    setIsPortalReady(true);
+  }, []);
 
   if (places.length === 0) {
     return (
@@ -892,7 +898,7 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
         </div>
       ) : null}
       </div>
-      {isLargeMapOpen ? (
+      {isLargeMapOpen && isPortalReady ? createPortal(
         <div className="schedule-map-modal-backdrop" role="presentation" onMouseDown={() => setIsLargeMapOpen(false)}>
           <section aria-modal="true" className="schedule-map-modal" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
             <header className="schedule-map-modal__header">
@@ -922,7 +928,8 @@ function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
               </ol>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );
