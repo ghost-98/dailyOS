@@ -256,6 +256,15 @@ button {
 .life-axis-view .calendar-page,
 .life-axis-view .ledger-page {
   display: grid;
+  gap: 18px;
+}
+
+.life-axis-view .calendar-layout--detail-open,
+.life-places-view,
+.life-axis-view .ledger-layout {
+  align-items: flex-start;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
 }
 
 .life-tab-heading {
@@ -1467,6 +1476,7 @@ button {
 @media (max-width: 1180px) {
   .ledger-summary-grid,
   .ledger-layout,
+  .life-axis-view .calendar-layout--detail-open,
   .life-places-view,
   .places-layout {
     grid-template-columns: 1fr;
