@@ -19,6 +19,8 @@ import {
   Route,
   Search,
   Trash2,
+  UsersRound,
+  WalletCards,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -164,9 +166,9 @@ export function CalendarView({
   const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
-  const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule") : []), [selectedDate, visibleEvents]);
-  const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => event.date === selectedDate && event.type === "event") : []), [selectedDate, visibleEvents]);
-  const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => task.scheduledDate === selectedDate) : []), [selectedDate, tasks]);
+  const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule") : []), [selectedDate, visibleEvents]);
+  const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
+  const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
   const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
   const detailSections = useMemo(
     () =>
@@ -182,8 +184,8 @@ export function CalendarView({
   const countsByCategory = useMemo(() => {
     if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
     return {
-      schedule: visibleEvents.filter((event) => event.date === selectedDate && event.type === "schedule").length,
-      event: visibleEvents.filter((event) => event.date === selectedDate && event.type === "event").length,
+      schedule: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule").length,
+      event: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event").length,
       todo: selectedTasks.length,
     };
   }, [selectedDate, selectedTasks.length, visibleEvents]);
@@ -377,9 +379,9 @@ export function CalendarView({
           <div className="calendar-grid">
             {monthDays.map((cell) => {
               const dayEvents = cell.date
-                ? visibleEvents.filter((event) => event.date === cell.date && visibleCalendarCategories.includes(event.type as CalendarCategory))
+                ? visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory))
                 : [];
-              const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => task.scheduledDate === cell.date) : [];
+              const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
               const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date) : [];
               const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
               return (
@@ -674,10 +676,12 @@ function EventDateItem({
       <div className="date-event__content">
         <div className="date-event__topline">
           <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
-          {event.time ? <span>{event.time}</span> : null}
+          <span>{formatPlanDateTime(event.date, event.endDate, event.time, event.endTime, event.isAllDay)}</span>
         </div>
         <h3>{event.title}</h3>
         {event.place ? <PlaceLine place={event.place} /> : null}
+        {event.companions ? <PeopleLine companions={event.companions} /> : null}
+        {event.expenseAmount !== undefined ? <ExpenseLine amount={event.expenseAmount} /> : null}
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
       <div className="date-event__actions">
@@ -738,10 +742,12 @@ function TaskDateItem({
         <div className="date-event__topline">
           <Badge tone={taskPriorityTone[task.priority]}>{taskPriorityLabels[task.priority]}</Badge>
           <span>{taskStatusLabels[task.status]}</span>
+          <span>{formatPlanDateTime(task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay)}</span>
         </div>
         <h3>{task.title}</h3>
-        {task.dueDate ? <p>마감 {formatShortDate(task.dueDate)}</p> : null}
         {task.place ? <PlaceLine place={task.place} /> : null}
+        {task.companions ? <PeopleLine companions={task.companions} /> : null}
+        {task.expenseAmount !== undefined ? <ExpenseLine amount={task.expenseAmount} /> : null}
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
       <div className="date-event__actions">
@@ -1132,6 +1138,24 @@ function PlaceLine({ place }: { place: PlanPlace }) {
   );
 }
 
+function PeopleLine({ companions }: { companions: string }) {
+  return (
+    <p className="date-event__place">
+      <UsersRound aria-hidden size={14} />
+      <span>{companions}</span>
+    </p>
+  );
+}
+
+function ExpenseLine({ amount }: { amount: number }) {
+  return (
+    <p className="date-event__place">
+      <WalletCards aria-hidden size={14} />
+      <span>{formatCurrency(amount)}</span>
+    </p>
+  );
+}
+
 function EventCreateSheet({
   allowedTypes,
   defaultDate,
@@ -1149,9 +1173,14 @@ function EventCreateSheet({
 }) {
   const [title, setTitle] = useState(event?.title ?? "");
   const [date, setDate] = useState(event?.date ?? defaultDate);
+  const [endDate, setEndDate] = useState(event?.endDate ?? event?.date ?? defaultDate);
   const [time, setTime] = useState(event?.time ?? "");
+  const [endTime, setEndTime] = useState(event?.endTime ?? "");
+  const [isAllDay, setIsAllDay] = useState(event?.isAllDay ?? !event?.time);
   const [type, setType] = useState<CalendarCategory>(event?.type === "event" ? "event" : defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
+  const [expenseAmount, setExpenseAmount] = useState(event?.expenseAmount !== undefined ? String(event.expenseAmount) : "");
+  const [companions, setCompanions] = useState(event?.companions ?? "");
   const [place, setPlace] = useState<PlanPlace | undefined>(event?.place);
 
   const saveCurrentEvent = () => {
@@ -1161,10 +1190,15 @@ function EventCreateSheet({
     onSave({
       id: event?.id ?? `calendar-${Date.now()}`,
       date,
+      endDate: endDate && endDate !== date ? endDate : undefined,
       type,
       title: trimmedTitle,
-      time: time || undefined,
+      time: isAllDay ? undefined : time || undefined,
+      endTime: isAllDay ? undefined : endTime || undefined,
+      isAllDay,
       meta: meta.trim() || "메모 없음",
+      expenseAmount: parseOptionalAmount(expenseAmount),
+      companions: companions.trim() || undefined,
       place,
     });
   };
@@ -1200,6 +1234,24 @@ function EventCreateSheet({
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
+                <UsersRound aria-hidden size={18} />
+                <span>함께한 사람</span>
+              </div>
+              <input placeholder="이름을 쉼표로 구분" value={companions} onChange={(changeEvent) => setCompanions(changeEvent.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <WalletCards aria-hidden size={18} />
+                <span>지출</span>
+              </div>
+              <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(changeEvent) => setExpenseAmount(changeEvent.target.value.replace(/[^\d]/g, ""))} />
+            </label>
+          </div>
+
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
                 <CalendarDays aria-hidden size={18} />
                 <span>날짜</span>
               </div>
@@ -1208,10 +1260,37 @@ function EventCreateSheet({
 
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
+                <CalendarDays aria-hidden size={18} />
+                <span>종료일</span>
+              </div>
+              <input type="date" value={endDate} onChange={(changeEvent) => setEndDate(changeEvent.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--select schedule-field">
+              <div className="event-form-row__label">
+                <Clock3 aria-hidden size={18} />
+                <span>시간 형태</span>
+              </div>
+              <select value={isAllDay ? "all-day" : "time-range"} onChange={(changeEvent) => setIsAllDay(changeEvent.target.value === "all-day")}>
+                <option value="all-day">하루종일</option>
+                <option value="time-range">시간 지정</option>
+              </select>
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시간</span>
               </div>
-              <input type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
+              <input disabled={isAllDay} type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <Clock3 aria-hidden size={18} />
+                <span>종료 시간</span>
+              </div>
+              <input disabled={isAllDay} type="time" value={endTime} onChange={(changeEvent) => setEndTime(changeEvent.target.value)} />
             </label>
 
             <label className="event-form-row event-form-row--select schedule-field">
@@ -1259,7 +1338,12 @@ function TaskCreateSheet({
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "todo");
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "normal");
   const [scheduledDate, setScheduledDate] = useState(task?.scheduledDate ?? defaultDate);
-  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? task?.scheduledDate ?? defaultDate);
+  const [startTime, setStartTime] = useState(task?.startTime ?? "");
+  const [endTime, setEndTime] = useState(task?.endTime ?? "");
+  const [isAllDay, setIsAllDay] = useState(task?.isAllDay ?? !task?.startTime);
+  const [expenseAmount, setExpenseAmount] = useState(task?.expenseAmount !== undefined ? String(task.expenseAmount) : "");
+  const [companions, setCompanions] = useState(task?.companions ?? "");
   const [place, setPlace] = useState<PlanPlace | undefined>(task?.place);
 
   const saveTask = () => {
@@ -1272,10 +1356,15 @@ function TaskCreateSheet({
       status,
       priority,
       scheduledDate,
-      dueDate: dueDate || undefined,
+      dueDate: dueDate && dueDate !== scheduledDate ? dueDate : undefined,
+      startTime: isAllDay ? undefined : startTime || undefined,
+      endTime: isAllDay ? undefined : endTime || undefined,
+      isAllDay,
       completedAt: status === "done" ? task?.completedAt ?? new Date().toISOString() : undefined,
       deferredCount: task?.deferredCount ?? 0,
       memo: memo.trim() || undefined,
+      expenseAmount: parseOptionalAmount(expenseAmount),
+      companions: companions.trim() || undefined,
       place,
     });
   };
@@ -1307,6 +1396,24 @@ function TaskCreateSheet({
           </div>
 
           <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
+
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <UsersRound aria-hidden size={18} />
+                <span>함께한 사람</span>
+              </div>
+              <input placeholder="이름을 쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <WalletCards aria-hidden size={18} />
+                <span>지출</span>
+              </div>
+              <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
+            </label>
+          </div>
 
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--select schedule-field">
@@ -1349,6 +1456,33 @@ function TaskCreateSheet({
                 <span>마감일</span>
               </div>
               <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--select schedule-field">
+              <div className="event-form-row__label">
+                <Clock3 aria-hidden size={18} />
+                <span>시간 형태</span>
+              </div>
+              <select value={isAllDay ? "all-day" : "time-range"} onChange={(event) => setIsAllDay(event.target.value === "all-day")}>
+                <option value="all-day">하루종일</option>
+                <option value="time-range">시간 지정</option>
+              </select>
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <Clock3 aria-hidden size={18} />
+                <span>시작 시간</span>
+              </div>
+              <input disabled={isAllDay} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+            </label>
+
+            <label className="event-form-row event-form-row--field schedule-field">
+              <div className="event-form-row__label">
+                <Clock3 aria-hidden size={18} />
+                <span>종료 시간</span>
+              </div>
+              <input disabled={isAllDay} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
             </label>
           </div>
         </div>
@@ -1458,6 +1592,29 @@ function formatSelectedDate(dateKey: string) {
 
 function formatShortDate(dateKey: string) {
   return `${Number(dateKey.slice(5, 7))}/${Number(dateKey.slice(8, 10))}`;
+}
+
+function isDateInRange(date: string, startDate: string, endDate?: string) {
+  const normalizedEndDate = endDate || startDate;
+  return startDate <= date && date <= normalizedEndDate;
+}
+
+function formatPlanDateTime(startDate: string, endDate?: string, startTime?: string, endTime?: string, isAllDay = true) {
+  const dateLabel = endDate && endDate !== startDate ? `${formatShortDate(startDate)}-${formatShortDate(endDate)}` : formatShortDate(startDate);
+  if (isAllDay) return `${dateLabel} · 하루종일`;
+  if (startTime && endTime) return `${dateLabel} · ${startTime}-${endTime}`;
+  if (startTime) return `${dateLabel} · ${startTime}`;
+  return dateLabel;
+}
+
+function parseOptionalAmount(value: string) {
+  if (!value.trim()) return undefined;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : undefined;
+}
+
+function formatCurrency(value: number) {
+  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }
 
 function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {

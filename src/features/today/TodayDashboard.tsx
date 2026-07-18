@@ -53,7 +53,14 @@ function formatCurrency(amount: number) {
 }
 
 function formatEventTime(event: CalendarEvent) {
+  if (event.isAllDay) return "하루종일";
+  if (event.time && event.endTime) return `${event.time}-${event.endTime}`;
   return event.time ?? "시간 없음";
+}
+
+function isDateInRange(date: string, startDate: string, endDate?: string) {
+  const normalizedEndDate = endDate || startDate;
+  return startDate <= date && date <= normalizedEndDate;
 }
 
 async function safeLoad<T>(loader: () => Promise<T | null>, fallback: T) {
@@ -102,9 +109,9 @@ export function TodayDashboard() {
     };
   }, []);
 
-  const todaySchedules = events.filter((event) => event.date === todayKey && event.type === "schedule");
-  const todayEvents = events.filter((event) => event.date === todayKey && event.type === "event");
-  const todayTasks = tasks.filter((task) => task.scheduledDate === todayKey);
+  const todaySchedules = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "schedule");
+  const todayEvents = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "event");
+  const todayTasks = tasks.filter((task) => isDateInRange(todayKey, task.scheduledDate, task.dueDate));
   const openTasks = todayTasks.filter((task) => task.status !== "done");
   const completedCount = todayTasks.filter((task) => task.status === "done").length;
   const completionRate = todayTasks.length > 0 ? Math.round((completedCount / todayTasks.length) * 100) : 0;

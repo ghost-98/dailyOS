@@ -1,13 +1,12 @@
 "use client";
 
-import { Activity, HeartPulse, MapPin, NotebookPen, WalletCards } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import { CalendarView, type ExternalCalendarItem } from "@/features/calendar/CalendarView";
+import { CalendarView } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
-import { HealthView } from "@/features/health/HealthView";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
 import { fetchTasksFromDb } from "@/features/tasks/api";
@@ -19,6 +18,8 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
+type LifeCalendarTab = "events" | "ledger";
+
 type PlaceTimelineItem = {
   date: string;
   id: string;
@@ -28,24 +29,6 @@ type PlaceTimelineItem = {
   title: string;
 };
 
-const lifeCalendarSections = [
-  {
-    label: "가계부",
-    description: "지출은 날짜별 금액과 카테고리로 시간축에 붙습니다.",
-    icon: WalletCards,
-  },
-  {
-    label: "건강",
-    description: "몸무게와 운동 기록은 하루 단위 생활 기록으로 관리합니다.",
-    icon: HeartPulse,
-  },
-  {
-    label: "하루 기록",
-    description: "하루 회고와 메모는 같은 날짜 흐름 안에서 이어갈 영역입니다.",
-    icon: NotebookPen,
-  },
-];
-
 const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
   schedule: "일정",
   task: "할 일",
@@ -53,75 +36,32 @@ const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
 };
 
 export function LifeView({ mode }: LifeViewProps) {
-  return (
-    <div className="life-page">
-      <header className="page-header life-header">
-        <div>
-          <h1>라이프</h1>
-          <div className="today__date">
-            <Activity aria-hidden size={20} />
-            <span>{mode === "calendar" ? "시간축으로 생활 기록을 관리합니다." : "장소축으로 일정과 할 일을 확인합니다."}</span>
-          </div>
-        </div>
-      </header>
-
-      {mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}
-    </div>
-  );
+  return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
 }
 
 function LifeCalendarView() {
-  const [externalItems, setExternalItems] = useState<ExternalCalendarItem[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([fetchExpenseRecordsFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
-      .then(([expenses, weights, workouts]) => {
-        if (!isMounted) return;
-        setExternalItems(buildExternalCalendarItems(expenses ?? [], weights ?? [], workouts ?? []));
-      })
-      .catch((error) => console.error("Failed to load life calendar records from Supabase", error));
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
 
   return (
     <div className="life-axis-view">
-      <CalendarView allowedTypes={["schedule", "event", "todo"]} externalItems={externalItems} showEventAddButton title="라이프 캘린더" />
+      <div className="life-calendar-switch" aria-label="라이프 캘린더 보기 전환">
+        <button
+          className={activeTab === "events" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("events")}
+          type="button"
+        >
+          사건
+        </button>
+        <button
+          className={activeTab === "ledger" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("ledger")}
+          type="button"
+        >
+          가계부
+        </button>
+      </div>
 
-      <section className="life-axis-summary" aria-label="시간축 생활 관리 영역">
-        {lifeCalendarSections.map((section) => {
-          const Icon = section.icon;
-
-          return (
-            <article className="life-axis-summary__item" key={section.label}>
-              <Icon aria-hidden size={19} />
-              <div>
-                <strong>{section.label}</strong>
-                <p>{section.description}</p>
-              </div>
-            </article>
-          );
-        })}
-      </section>
-
-      <LedgerView />
-      <HealthView />
-
-      <section className="daily-log-page life-daily-log-panel">
-        <header className="page-header">
-          <div>
-            <h2>하루 기록</h2>
-            <div className="today__date">
-              <NotebookPen aria-hidden size={18} />
-              <span>하루 회고와 메모를 같은 날짜 흐름에 연결할 예정입니다.</span>
-            </div>
-          </div>
-        </header>
-      </section>
+      {activeTab === "events" ? <CalendarView allowedTypes={["schedule", "event", "todo"]} showEventAddButton title="라이프 캘린더" /> : <LedgerView />}
     </div>
   );
 }
@@ -166,7 +106,7 @@ function LifeMapView() {
         <div>
           <MapPin aria-hidden size={22} />
           <h2>장소축 라이프</h2>
-          <p>장소가 연결된 일정과 할 일을 모아서 어디에서 무엇을 했는지 확인합니다. 가계부, 운동, 몸무게는 장소 필드가 연결되는 다음 단계부터 같은 지도축에 올라갑니다.</p>
+          <p>장소가 연결된 일정과 할 일을 모아서 어디에서 무엇이 있었는지 확인합니다.</p>
         </div>
       </section>
 
@@ -177,7 +117,7 @@ function LifeMapView() {
           <p>일정, 이벤트, 할 일</p>
         </article>
         <article>
-          <span>장소 필드 필요</span>
+          <span>장소 연결 필요</span>
           <strong>{unlinkedCount}건</strong>
           <p>가계부, 운동, 몸무게</p>
         </article>
@@ -228,7 +168,7 @@ function buildPlaceTimeline(events: CalendarEvent[], tasks: TaskItem[]) {
       date: event.date,
       kind: event.type === "event" ? "event" : "schedule",
       title: event.title,
-      meta: event.time ?? event.meta,
+      meta: formatTimelineMeta(formatEventTimeRange(event.time, event.endTime, event.isAllDay), event.companions, event.expenseAmount, event.meta),
       place: event.place as PlanPlace,
     }));
 
@@ -239,11 +179,21 @@ function buildPlaceTimeline(events: CalendarEvent[], tasks: TaskItem[]) {
       date: task.scheduledDate,
       kind: "task",
       title: task.title,
-      meta: task.dueDate ? `마감 ${task.dueDate}` : task.status,
+      meta: formatTimelineMeta(formatEventTimeRange(task.startTime, task.endTime, task.isAllDay), task.companions, task.expenseAmount, task.memo ?? task.status),
       place: task.place as PlanPlace,
     }));
 
   return [...eventItems, ...taskItems].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function formatEventTimeRange(startTime?: string, endTime?: string, isAllDay = true) {
+  if (isAllDay) return "하루종일";
+  if (startTime && endTime) return `${startTime}-${endTime}`;
+  return startTime;
+}
+
+function formatTimelineMeta(timeLabel?: string, companions?: string, expenseAmount?: number, memo?: string) {
+  return [timeLabel, companions, expenseAmount !== undefined ? `${new Intl.NumberFormat("ko-KR").format(expenseAmount)}원` : undefined, memo].filter(Boolean).join(" · ");
 }
 
 function groupTimelineByPlace(items: PlaceTimelineItem[]) {
@@ -260,32 +210,4 @@ function groupTimelineByPlace(items: PlaceTimelineItem[]) {
   }
 
   return [...grouped.values()].sort((a, b) => b.items.length - a.items.length || a.place.name.localeCompare(b.place.name));
-}
-
-function buildExternalCalendarItems(expenses: ExpenseRecord[], weights: WeightRecord[], workouts: WorkoutSession[]): ExternalCalendarItem[] {
-  const expenseItems = expenses.map((expense) => ({
-    id: expense.id,
-    date: expense.date,
-    type: "expense" as const,
-    title: expense.title,
-    meta: `${expense.amount.toLocaleString("ko-KR")}원`,
-  }));
-
-  const weightItems = weights.map((weight) => ({
-    id: weight.id,
-    date: weight.date,
-    type: "weight" as const,
-    title: "몸무게",
-    meta: `${weight.weightKg}kg${weight.measuredFasted ? " · 공복" : ""}`,
-  }));
-
-  const workoutItems = workouts.map((workout) => ({
-    id: workout.id,
-    date: workout.date,
-    type: "workout" as const,
-    title: "운동",
-    meta: `${workout.durationMinutes}분`,
-  }));
-
-  return [...expenseItems, ...weightItems, ...workoutItems].sort((a, b) => a.date.localeCompare(b.date));
 }

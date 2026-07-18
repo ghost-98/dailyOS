@@ -5,10 +5,15 @@ import type { CalendarEvent } from "./data";
 type CalendarEventRow = {
   id: string;
   event_date: string;
+  end_date: string | null;
   event_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean | null;
   type: EventType;
   title: string;
   meta: string;
+  expense_amount: number | string | null;
+  companions: string | null;
   place_name: string | null;
   place_address: string | null;
   place_latitude: number | string | null;
@@ -25,7 +30,8 @@ type CalendarEventInsert = Omit<CalendarEventRow, "id"> & {
 
 type CalendarEventUpdate = Partial<Omit<CalendarEventInsert, "user_id">>;
 
-const selectColumns = "id,event_date,event_time,type,title,meta,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
+const selectColumns =
+  "id,event_date,end_date,event_time,end_time,is_all_day,type,title,meta,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
 
 async function getUserId() {
   if (!supabase) return null;
@@ -38,10 +44,15 @@ function mapRowToEvent(row: CalendarEventRow): CalendarEvent {
   return {
     id: row.id,
     date: row.event_date,
+    endDate: row.end_date ?? undefined,
     type: row.type,
     title: row.title,
     time: row.event_time?.slice(0, 5) || undefined,
+    endTime: row.end_time?.slice(0, 5) || undefined,
+    isAllDay: row.is_all_day ?? true,
     meta: row.meta,
+    expenseAmount: row.expense_amount === null ? undefined : Number(row.expense_amount),
+    companions: row.companions ?? undefined,
     place: mapRowPlace(row),
   };
 }
@@ -67,10 +78,15 @@ function mapEventToInsert(event: CalendarEvent, userId: string): CalendarEventIn
   return {
     user_id: userId,
     event_date: event.date,
-    event_time: event.time ?? null,
+    end_date: event.endDate ?? null,
+    event_time: event.isAllDay ? null : event.time ?? null,
+    end_time: event.isAllDay ? null : event.endTime ?? null,
+    is_all_day: event.isAllDay ?? true,
     type: event.type,
     title: event.title,
     meta: event.meta,
+    expense_amount: event.expenseAmount ?? null,
+    companions: event.companions ?? null,
     place_name: event.place?.name ?? null,
     place_address: event.place?.address ?? null,
     place_latitude: event.place?.latitude ?? null,
@@ -85,10 +101,15 @@ function mapEventToInsert(event: CalendarEvent, userId: string): CalendarEventIn
 function mapEventToUpdate(event: CalendarEvent): CalendarEventUpdate {
   return {
     event_date: event.date,
-    event_time: event.time ?? null,
+    end_date: event.endDate ?? null,
+    event_time: event.isAllDay ? null : event.time ?? null,
+    end_time: event.isAllDay ? null : event.endTime ?? null,
+    is_all_day: event.isAllDay ?? true,
     type: event.type,
     title: event.title,
     meta: event.meta,
+    expense_amount: event.expenseAmount ?? null,
+    companions: event.companions ?? null,
     place_name: event.place?.name ?? null,
     place_address: event.place?.address ?? null,
     place_latitude: event.place?.latitude ?? null,

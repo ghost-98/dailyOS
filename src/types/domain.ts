@@ -22,9 +22,14 @@ export type TaskItem = {
   priority: TaskPriority;
   scheduledDate: string;
   dueDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
   completedAt?: string;
   deferredCount: number;
   memo?: string;
+  expenseAmount?: number;
+  companions?: string;
   place?: PlanPlace;
 };
 
