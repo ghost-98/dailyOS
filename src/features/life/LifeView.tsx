@@ -1,10 +1,10 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import { CalendarView } from "@/features/calendar/CalendarView";
+import { CalendarView, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
@@ -18,7 +18,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "ledger";
+type LifeCalendarTab = "events" | "places" | "ledger";
 
 type PlaceTimelineItem = {
   date: string;
@@ -53,6 +53,13 @@ function LifeCalendarView() {
           사건
         </button>
         <button
+          className={activeTab === "places" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("places")}
+          type="button"
+        >
+          장소
+        </button>
+        <button
           className={activeTab === "ledger" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
           onClick={() => setActiveTab("ledger")}
           type="button"
@@ -61,7 +68,151 @@ function LifeCalendarView() {
         </button>
       </div>
 
-      {activeTab === "events" ? <CalendarView allowedTypes={["schedule", "event", "todo"]} showEventAddButton title="라이프 캘린더" /> : <LedgerView />}
+      {activeTab === "events" ? (
+        <CalendarView allowedTypes={["schedule", "event", "todo"]} showEventAddButton showSelectedDatePlacesMap={false} title="라이프 캘린더" />
+      ) : activeTab === "places" ? (
+        <LifePlacesView />
+      ) : (
+        <LedgerView />
+      )}
+    </div>
+  );
+}
+
+function LifePlacesView() {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
+      .then(([dbEvents, dbTasks]) => {
+        if (!isMounted) return;
+        setEvents(dbEvents ?? []);
+        setTasks(dbTasks ?? []);
+      })
+      .catch((error) => console.error("Failed to load life place data from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
+  const placesByDate = useMemo(() => {
+    const grouped = new Map<string, PlanPlace[]>();
+    for (const event of events) {
+      if (!event.place) continue;
+      for (const date of expandDateRange(event.date, event.endDate)) {
+        grouped.set(date, uniquePlanPlaces([...(grouped.get(date) ?? []), event.place]));
+      }
+    }
+    for (const task of tasks) {
+      if (!task.place) continue;
+      for (const date of expandDateRange(task.scheduledDate, task.dueDate)) {
+        grouped.set(date, uniquePlanPlaces([...(grouped.get(date) ?? []), task.place]));
+      }
+    }
+    return grouped;
+  }, [events, tasks]);
+  const selectedPlaces = placesByDate.get(selectedDate) ?? [];
+
+  const moveMonth = (direction: -1 | 1) => {
+    const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
+    setCurrentMonth(nextMonth);
+    setSelectedDate(formatDateKey(nextMonth));
+  };
+
+  return (
+    <div className="life-places-view">
+      <SectionCard className="calendar-board life-places-calendar">
+        <div className="calendar-toolbar">
+          <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+            <ChevronLeft aria-hidden size={20} />
+          </button>
+          <div className="calendar-month-trigger">
+            <CalendarDays aria-hidden size={18} />
+            <span>{currentMonth.getFullYear()}</span>
+            <strong>{currentMonth.getMonth() + 1}월</strong>
+          </div>
+          <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+            <ChevronRight aria-hidden size={20} />
+          </button>
+        </div>
+
+        <div className="calendar-weekdays">
+          {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+            <span key={weekday}>{weekday}</span>
+          ))}
+        </div>
+
+        <div className="calendar-grid">
+          {monthDays.map((cell) => {
+            const places = cell.date ? placesByDate.get(cell.date) ?? [] : [];
+            const isSelected = cell.date === selectedDate;
+            const isToday = cell.date === formatDateKey(new Date());
+
+            return (
+              <button
+                className={`calendar-day ${isToday ? "calendar-day--today" : ""} ${isSelected ? "calendar-day--selected" : ""}`}
+                disabled={!cell.date}
+                key={cell.key}
+                onClick={() => (cell.date ? setSelectedDate(cell.date) : undefined)}
+                type="button"
+              >
+                {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
+                <div className="calendar-day__events">
+                  {places.length > 0 ? (
+                    <span className="calendar-day__event-chip" title={`장소 ${places.length}곳`}>
+                      <span className="calendar-dot calendar-dot--event" />
+                      <span className="calendar-day__event-count">{places.length}</span>
+                    </span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      <SectionCard className="date-detail-card life-places-detail">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">이날 간 장소</p>
+            <h2>{formatFullDate(selectedDate)}</h2>
+          </div>
+          <strong className="life-places-count">{selectedPlaces.length}곳</strong>
+        </div>
+
+        <SelectedDatePlacesMap places={selectedPlaces} />
+
+        {selectedPlaces.length > 0 ? (
+          <div className="life-place-card__items">
+            {selectedPlaces.map((place) => (
+              <article className="life-place-event" key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
+                <span>장소</span>
+                <div>
+                  <strong>{place.name}</strong>
+                  <p>{place.address || place.category || "주소 정보 없음"}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="life-map-empty life-map-empty--compact">
+            <MapPin aria-hidden size={28} />
+            <strong>{isLoading ? "장소를 불러오는 중입니다." : "이날 연결된 장소가 없습니다."}</strong>
+            <p>사건 탭에서 일정이나 할 일에 장소를 추가하면 이곳에 날짜별 장소가 모입니다.</p>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }
@@ -210,4 +361,56 @@ function groupTimelineByPlace(items: PlaceTimelineItem[]) {
   }
 
   return [...grouped.values()].sort((a, b) => b.items.length - a.items.length || a.place.name.localeCompare(b.place.name));
+}
+
+function getMonthDays(year: number, monthIndex: number) {
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const cells: Array<{ date: string | null; day: number | null; key: string }> = [];
+
+  for (let index = 0; index < firstDay.getDay(); index += 1) {
+    cells.push({ date: null, day: null, key: `empty-start-${index}` });
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    cells.push({ date, day, key: date });
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push({ date: null, day: null, key: `empty-end-${cells.length}` });
+  }
+
+  return cells;
+}
+
+function formatDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatFullDate(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", { day: "numeric", month: "long", weekday: "long" }).format(new Date(`${value}T00:00:00`));
+}
+
+function expandDateRange(startDate: string, endDate?: string) {
+  const dates: string[] = [];
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate || startDate}T00:00:00`);
+
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start > end) return [startDate];
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    dates.push(formatDateKey(cursor));
+  }
+
+  return dates;
+}
+
+function uniquePlanPlaces(places: PlanPlace[]) {
+  const uniquePlaces = new Map<string, PlanPlace>();
+  places.forEach((place) => {
+    const key = `${place.providerPlaceId ?? ""}|${place.name}|${place.latitude}|${place.longitude}`;
+    if (!uniquePlaces.has(key)) uniquePlaces.set(key, place);
+  });
+  return [...uniquePlaces.values()];
 }

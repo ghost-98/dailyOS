@@ -172,9 +172,15 @@ create table if not exists public.expense_records (
   amount numeric(12, 0) not null check (amount > 0),
   category text not null default 'etc' check (category in ('food', 'transport', 'shopping', 'housing', 'health', 'culture', 'education', 'etc')),
   memo text,
+  target_type text check (target_type in ('schedule', 'todo', 'event')),
+  target_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.expense_records
+  add column if not exists target_type text check (target_type in ('schedule', 'todo', 'event')),
+  add column if not exists target_id uuid;
 
 create table if not exists public.place_folders (
   id uuid primary key default gen_random_uuid(),
@@ -409,6 +415,49 @@ create index if not exists calendar_events_user_type_date_idx on public.calendar
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
+create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
+insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)
+select
+  user_id,
+  event_date,
+  title,
+  expense_amount,
+  'etc',
+  nullif(meta, ''),
+  case when type = 'event' then 'event' else 'schedule' end,
+  id
+from public.calendar_events
+where expense_amount is not null
+  and expense_amount > 0
+  and type in ('schedule', 'event')
+  and not exists (
+    select 1
+    from public.expense_records
+    where expense_records.user_id = calendar_events.user_id
+      and expense_records.target_type = case when calendar_events.type = 'event' then 'event' else 'schedule' end
+      and expense_records.target_id = calendar_events.id
+  );
+
+insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)
+select
+  user_id,
+  scheduled_date,
+  title,
+  expense_amount,
+  'etc',
+  memo,
+  'todo',
+  id
+from public.tasks
+where expense_amount is not null
+  and expense_amount > 0
+  and not exists (
+    select 1
+    from public.expense_records
+    where expense_records.user_id = tasks.user_id
+      and expense_records.target_type = 'todo'
+      and expense_records.target_id = tasks.id
+  );
 create index if not exists place_folders_user_sort_idx on public.place_folders(user_id, sort_order, created_at);
 create index if not exists places_user_created_idx on public.places(user_id, created_at desc);
 create index if not exists places_user_provider_idx on public.places(user_id, provider, provider_place_id);

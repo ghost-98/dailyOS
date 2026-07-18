@@ -65,6 +65,8 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
+  targetType?: "schedule" | "todo" | "event";
+  targetId?: string;
 };
 
 export type PlaceProvider = "naver" | "manual";

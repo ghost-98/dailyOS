@@ -8,6 +8,8 @@ type ExpenseRow = {
   amount: number | string;
   category: ExpenseCategory;
   memo: string | null;
+  target_type: ExpenseRecord["targetType"] | null;
+  target_id: string | null;
 };
 
 type ExpenseInsert = Omit<ExpenseRow, "id"> & {
@@ -16,7 +18,7 @@ type ExpenseInsert = Omit<ExpenseRow, "id"> & {
 
 type ExpenseUpdate = Partial<Omit<ExpenseInsert, "user_id">>;
 
-const expenseColumns = "id,expense_date,title,amount,category,memo";
+const expenseColumns = "id,expense_date,title,amount,category,memo,target_type,target_id";
 
 async function getUserId() {
   if (!supabase) return null;
@@ -33,6 +35,8 @@ function mapExpenseRow(row: ExpenseRow): ExpenseRecord {
     amount: Number(row.amount),
     category: row.category,
     memo: row.memo ?? undefined,
+    targetType: row.target_type ?? undefined,
+    targetId: row.target_id ?? undefined,
   };
 }
 
@@ -44,6 +48,8 @@ function mapExpenseInsert(record: ExpenseRecord, userId: string): ExpenseInsert 
     amount: record.amount,
     category: record.category,
     memo: record.memo?.trim() || null,
+    target_type: record.targetType ?? null,
+    target_id: record.targetId ?? null,
   };
 }
 
@@ -54,6 +60,8 @@ function mapExpenseUpdate(record: ExpenseRecord): ExpenseUpdate {
     amount: record.amount,
     category: record.category,
     memo: record.memo?.trim() || null,
+    target_type: record.targetType ?? null,
+    target_id: record.targetId ?? null,
   };
 }
 
@@ -104,6 +112,85 @@ export async function updateExpenseRecordInDb(record: ExpenseRecord) {
 export async function deleteExpenseRecordFromDb(id: string) {
   if (!supabase) return false;
   const { error } = await supabase.from("expense_records").delete().eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
+export async function syncLinkedExpenseRecordInDb({
+  amount,
+  date,
+  memo,
+  targetId,
+  targetType,
+  title,
+}: {
+  amount?: number;
+  date: string;
+  memo?: string;
+  targetId: string;
+  targetType: NonNullable<ExpenseRecord["targetType"]>;
+  title: string;
+}) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("expense_records")
+    .select(expenseColumns)
+    .eq("user_id", userId)
+    .eq("target_type", targetType)
+    .eq("target_id", targetId)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  if (!amount || amount <= 0) {
+    if (!existing) return null;
+    const { error } = await supabase.from("expense_records").delete().eq("id", (existing as ExpenseRow).id);
+    if (error) throw error;
+    return null;
+  }
+
+  const record: ExpenseRecord = {
+    id: (existing as ExpenseRow | null)?.id ?? `expense-${Date.now()}`,
+    amount,
+    category: (existing as ExpenseRow | null)?.category ?? "etc",
+    date,
+    memo,
+    targetId,
+    targetType,
+    title,
+  };
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from("expense_records")
+      .update(mapExpenseUpdate(record))
+      .eq("id", (existing as ExpenseRow).id)
+      .select(expenseColumns)
+      .single();
+
+    if (error) throw error;
+    return mapExpenseRow(data as ExpenseRow);
+  }
+
+  const { data, error } = await supabase
+    .from("expense_records")
+    .insert(mapExpenseInsert(record, userId))
+    .select(expenseColumns)
+    .single();
+
+  if (error) throw error;
+  return mapExpenseRow(data as ExpenseRow);
+}
+
+export async function deleteLinkedExpenseRecordInDb(targetType: NonNullable<ExpenseRecord["targetType"]>, targetId: string) {
+  if (!supabase) return false;
+  const userId = await getUserId();
+  if (!userId) return false;
+
+  const { error } = await supabase.from("expense_records").delete().eq("user_id", userId).eq("target_type", targetType).eq("target_id", targetId);
   if (error) throw error;
   return true;
 }

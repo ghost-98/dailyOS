@@ -276,6 +276,32 @@ button {
   color: #221833;
 }
 
+.life-places-view {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
+}
+
+.life-places-calendar,
+.life-places-detail {
+  min-height: 100%;
+}
+
+.life-places-count {
+  background: rgba(157, 178, 255, 0.14);
+  border: 1px solid rgba(157, 178, 255, 0.22);
+  border-radius: 999px;
+  color: var(--violet);
+  font-size: 0.82rem;
+  padding: 7px 11px;
+}
+
+.life-map-empty--compact {
+  margin-top: 14px;
+  min-height: 180px;
+}
+
 .life-axis-summary {
   display: grid;
   gap: 12px;
@@ -3956,6 +3982,25 @@ a:focus-visible {
   background: rgba(255, 255, 255, 0.048);
 }
 
+.schedule-form-section-title {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin: 2px 2px -4px;
+}
+
+.schedule-form-section-title strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+}
+
+.schedule-form-section-title span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-align: right;
+}
+
 .schedule-form-card--primary {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
@@ -7164,6 +7209,7 @@ a:focus-visible {
 @media (max-width: 820px) {
   .life-axis-summary,
   .life-map-coverage,
+  .life-places-view,
   .life-place-grid {
     grid-template-columns: 1fr;
   }

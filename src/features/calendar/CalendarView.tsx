@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
+import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import type { CalendarEvent } from "./data";
@@ -115,6 +116,7 @@ type CalendarViewProps = {
   allowedTypes?: EventType[];
   externalItems?: ExternalCalendarItem[];
   showEventAddButton?: boolean;
+  showSelectedDatePlacesMap?: boolean;
   title?: string;
 };
 
@@ -122,6 +124,7 @@ export function CalendarView({
   allowedTypes,
   externalItems = [],
   showEventAddButton = false,
+  showSelectedDatePlacesMap = true,
   title = "일정",
 }: CalendarViewProps) {
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
@@ -224,8 +227,20 @@ export function CalendarView({
 
   const saveEvent = async (event: CalendarEvent) => {
     const exists = events.some((item) => item.id === event.id);
+    const previousEvent = events.find((item) => item.id === event.id);
     const savedEvent = exists ? await updateCalendarEventInDb(event) : await createCalendarEventInDb(event);
     const nextEvent = savedEvent ?? event;
+    const nextTargetType = nextEvent.type === "event" ? "event" : "schedule";
+    const previousTargetType = previousEvent?.type === "event" ? "event" : previousEvent ? "schedule" : nextTargetType;
+    if (previousEvent && previousTargetType !== nextTargetType) await deleteLinkedExpenseRecordInDb(previousTargetType, nextEvent.id);
+    await syncLinkedExpenseRecordInDb({
+      amount: nextEvent.expenseAmount,
+      date: nextEvent.date,
+      memo: nextEvent.meta,
+      targetId: nextEvent.id,
+      targetType: nextTargetType,
+      title: nextEvent.title,
+    });
 
     setEvents((current) => (exists ? current.map((item) => (item.id === event.id ? nextEvent : item)) : [nextEvent, ...current]));
     setIsEventSheetOpen(false);
@@ -233,7 +248,9 @@ export function CalendarView({
   };
 
   const deleteEvent = async (id: string) => {
+    const targetEvent = events.find((event) => event.id === id);
     await deleteCalendarEventFromDb(id);
+    if (targetEvent) await deleteLinkedExpenseRecordInDb(targetEvent.type === "event" ? "event" : "schedule", id);
     setEvents((current) => current.filter((item) => item.id !== id));
   };
 
@@ -241,6 +258,14 @@ export function CalendarView({
     const exists = tasks.some((item) => item.id === task.id);
     const savedTask = exists ? await updateTaskInDb(task) : await createTaskInDb(task);
     const nextTask = savedTask ?? task;
+    await syncLinkedExpenseRecordInDb({
+      amount: nextTask.expenseAmount,
+      date: nextTask.scheduledDate,
+      memo: nextTask.memo,
+      targetId: nextTask.id,
+      targetType: "todo",
+      title: nextTask.title,
+    });
 
     setTasks((current) => (exists ? current.map((item) => (item.id === task.id ? nextTask : item)) : [nextTask, ...current]));
     setIsTaskSheetOpen(false);
@@ -249,6 +274,7 @@ export function CalendarView({
 
   const deleteTask = async (id: string) => {
     await deleteTaskFromDb(id);
+    await deleteLinkedExpenseRecordInDb("todo", id);
     setTasks((current) => current.filter((item) => item.id !== id));
   };
 
@@ -422,7 +448,7 @@ export function CalendarView({
                 </div>
               </div>
 
-              <SelectedDatePlacesMap places={selectedPlanPlaces} />
+              {showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
               <div className="date-event-list">
                 <div className="date-category-tabs" aria-label="날짜별 항목">
@@ -878,7 +904,7 @@ async function readPlaceSearchResponse(response: Response): Promise<{ places?: P
   }
 }
 
-function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
+export function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLargeMapOpen, setIsLargeMapOpen] = useState(false);
   const [isRouteVisible, setIsRouteVisible] = useState(false);
@@ -1156,6 +1182,15 @@ function ExpenseLine({ amount }: { amount: number }) {
   );
 }
 
+function FormSectionTitle({ description, title }: { description: string; title: string }) {
+  return (
+    <div className="schedule-form-section-title">
+      <strong>{title}</strong>
+      <span>{description}</span>
+    </div>
+  );
+}
+
 function EventCreateSheet({
   allowedTypes,
   defaultDate,
@@ -1218,6 +1253,7 @@ function EventCreateSheet({
         </header>
 
         <div className="event-sheet__body schedule-sheet__body">
+          <FormSectionTitle title="기본 정보" description="제목과 메모를 먼저 잡아두세요." />
           <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
             <label className="schedule-field schedule-field--wide">
               <span>제목</span>
@@ -1229,8 +1265,10 @@ function EventCreateSheet({
             </label>
           </div>
 
+          <FormSectionTitle title="장소" description="이날 간 장소 탭과 지도에 함께 연결됩니다." />
           <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
+          <FormSectionTitle title="관계와 지출" description="지출은 가계부에 자동으로 연동됩니다." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
@@ -1249,6 +1287,7 @@ function EventCreateSheet({
             </label>
           </div>
 
+          <FormSectionTitle title="날짜와 시간" description="기본은 하루종일이며, 필요할 때 시간 범위를 지정하세요." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
@@ -1384,6 +1423,7 @@ function TaskCreateSheet({
         </header>
 
         <div className="event-sheet__body schedule-sheet__body">
+          <FormSectionTitle title="기본 정보" description="할 일의 핵심 내용과 메모를 적어두세요." />
           <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
             <label className="schedule-field schedule-field--wide">
               <span>제목</span>
@@ -1395,8 +1435,10 @@ function TaskCreateSheet({
             </label>
           </div>
 
+          <FormSectionTitle title="장소" description="장소 탭의 날짜별 동선에 함께 반영됩니다." />
           <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
+          <FormSectionTitle title="관계와 지출" description="금액을 입력하면 가계부에 연결 지출로 기록됩니다." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
@@ -1415,6 +1457,7 @@ function TaskCreateSheet({
             </label>
           </div>
 
+          <FormSectionTitle title="진행 상태" description="상태와 우선순위로 오늘 할 일을 정리하세요." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
@@ -1441,6 +1484,7 @@ function TaskCreateSheet({
             </label>
           </div>
 
+          <FormSectionTitle title="날짜와 시간" description="시작일과 종료일을 기준으로 달력에 표시됩니다." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
