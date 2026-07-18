@@ -114,7 +114,11 @@ const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> = {
 
 type CalendarViewProps = {
   allowedTypes?: EventType[];
+  defaultSelectedDate?: string | null;
+  description?: string;
   externalItems?: ExternalCalendarItem[];
+  headerVariant?: "page" | "tab";
+  keepDateSelected?: boolean;
   showEventAddButton?: boolean;
   showSelectedDatePlacesMap?: boolean;
   title?: string;
@@ -122,7 +126,11 @@ type CalendarViewProps = {
 
 export function CalendarView({
   allowedTypes,
+  defaultSelectedDate = null,
+  description,
   externalItems = [],
+  headerVariant = "page",
+  keepDateSelected = false,
   showEventAddButton = false,
   showSelectedDatePlacesMap = true,
   title = "일정",
@@ -138,7 +146,7 @@ export function CalendarView({
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [activeDateCategory, setActiveDateCategory] = useState<CalendarCategory>("schedule");
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
@@ -198,12 +206,19 @@ export function CalendarView({
   );
 
   const moveMonth = (direction: -1 | 1) => {
-    setCurrentMonth((month) => new Date(month.getFullYear(), month.getMonth() + direction, 1));
-    setSelectedDate(null);
+    setCurrentMonth((month) => {
+      const nextMonth = new Date(month.getFullYear(), month.getMonth() + direction, 1);
+      if (keepDateSelected) {
+        setSelectedDate(formatDateKey(nextMonth));
+      } else {
+        setSelectedDate(null);
+      }
+      return nextMonth;
+    });
   };
 
   const handleDateClick = (date: string) => {
-    setSelectedDate((current) => (current === date ? null : date));
+    setSelectedDate((current) => (keepDateSelected ? date : current === date ? null : date));
     setActiveDateCategory(categories.includes("schedule") ? "schedule" : categories[0]);
   };
 
@@ -332,9 +347,10 @@ export function CalendarView({
 
   return (
     <div className="calendar-page">
-      <header className="calendar-header page-header">
+      <header className={headerVariant === "tab" ? "life-tab-heading calendar-header" : "calendar-header page-header"}>
         <div>
           <h1>{title}</h1>
+          {description ? <p>{description}</p> : null}
         </div>
         <div className="header-actions">
           <div className="add-menu">

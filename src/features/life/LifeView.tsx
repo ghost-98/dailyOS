@@ -69,11 +69,20 @@ function LifeCalendarView() {
       </div>
 
       {activeTab === "events" ? (
-        <CalendarView allowedTypes={["schedule", "event", "todo"]} showEventAddButton showSelectedDatePlacesMap={false} title="라이프 캘린더" />
+        <CalendarView
+          allowedTypes={["schedule", "event", "todo"]}
+          defaultSelectedDate={formatDateKey(new Date())}
+          description="일정과 할 일을 날짜별로 묶고, 필요한 항목을 바로 추가하세요."
+          headerVariant="tab"
+          keepDateSelected
+          showEventAddButton
+          showSelectedDatePlacesMap={false}
+          title="사건"
+        />
       ) : activeTab === "places" ? (
         <LifePlacesView />
       ) : (
-        <LedgerView />
+        <LedgerView variant="tab" />
       )}
     </div>
   );
@@ -131,89 +140,104 @@ function LifePlacesView() {
   };
 
   return (
-    <div className="life-places-view">
-      <SectionCard className="calendar-board life-places-calendar">
-        <div className="calendar-toolbar">
-          <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
-            <ChevronLeft aria-hidden size={20} />
-          </button>
-          <div className="calendar-month-trigger">
-            <CalendarDays aria-hidden size={18} />
-            <span>{currentMonth.getFullYear()}</span>
-            <strong>{currentMonth.getMonth() + 1}월</strong>
+    <div className="life-tab-panel">
+      <LifeTabHeading title="장소" description="일정과 할 일에 연결된 장소를 날짜별 동선으로 확인하세요." />
+
+      <div className="life-places-view">
+        <SectionCard className="calendar-board life-places-calendar">
+          <div className="calendar-toolbar">
+            <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+              <ChevronLeft aria-hidden size={20} />
+            </button>
+            <div className="calendar-month-trigger">
+              <CalendarDays aria-hidden size={18} />
+              <span>{currentMonth.getFullYear()}</span>
+              <strong>{currentMonth.getMonth() + 1}월</strong>
+            </div>
+            <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+              <ChevronRight aria-hidden size={20} />
+            </button>
           </div>
-          <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
-            <ChevronRight aria-hidden size={20} />
-          </button>
-        </div>
 
-        <div className="calendar-weekdays">
-          {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
-            <span key={weekday}>{weekday}</span>
-          ))}
-        </div>
-
-        <div className="calendar-grid">
-          {monthDays.map((cell) => {
-            const places = cell.date ? placesByDate.get(cell.date) ?? [] : [];
-            const isSelected = cell.date === selectedDate;
-            const isToday = cell.date === formatDateKey(new Date());
-
-            return (
-              <button
-                className={`calendar-day ${isToday ? "calendar-day--today" : ""} ${isSelected ? "calendar-day--selected" : ""}`}
-                disabled={!cell.date}
-                key={cell.key}
-                onClick={() => (cell.date ? setSelectedDate(cell.date) : undefined)}
-                type="button"
-              >
-                {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
-                <div className="calendar-day__events">
-                  {places.length > 0 ? (
-                    <span className="calendar-day__event-chip" title={`장소 ${places.length}곳`}>
-                      <span className="calendar-dot calendar-dot--event" />
-                      <span className="calendar-day__event-count">{places.length}</span>
-                    </span>
-                  ) : null}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </SectionCard>
-
-      <SectionCard className="date-detail-card life-places-detail">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">이날 간 장소</p>
-            <h2>{formatFullDate(selectedDate)}</h2>
-          </div>
-          <strong className="life-places-count">{selectedPlaces.length}곳</strong>
-        </div>
-
-        <SelectedDatePlacesMap places={selectedPlaces} />
-
-        {selectedPlaces.length > 0 ? (
-          <div className="life-place-card__items">
-            {selectedPlaces.map((place) => (
-              <article className="life-place-event" key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
-                <span>장소</span>
-                <div>
-                  <strong>{place.name}</strong>
-                  <p>{place.address || place.category || "주소 정보 없음"}</p>
-                </div>
-              </article>
+          <div className="calendar-weekdays">
+            {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => (
+              <span key={weekday}>{weekday}</span>
             ))}
           </div>
-        ) : (
-          <div className="life-map-empty life-map-empty--compact">
-            <MapPin aria-hidden size={28} />
-            <strong>{isLoading ? "장소를 불러오는 중입니다." : "이날 연결된 장소가 없습니다."}</strong>
-            <p>사건 탭에서 일정이나 할 일에 장소를 추가하면 이곳에 날짜별 장소가 모입니다.</p>
+
+          <div className="calendar-grid">
+            {monthDays.map((cell) => {
+              const places = cell.date ? placesByDate.get(cell.date) ?? [] : [];
+              const isSelected = cell.date === selectedDate;
+              const isToday = cell.date === formatDateKey(new Date());
+
+              return (
+                <button
+                  className={`calendar-day ${isToday ? "calendar-day--today" : ""} ${isSelected ? "calendar-day--selected" : ""}`}
+                  disabled={!cell.date}
+                  key={cell.key}
+                  onClick={() => (cell.date ? setSelectedDate(cell.date) : undefined)}
+                  type="button"
+                >
+                  {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
+                  <div className="calendar-day__events">
+                    {places.length > 0 ? (
+                      <span className="calendar-day__event-chip" title={`장소 ${places.length}곳`}>
+                        <span className="calendar-dot calendar-dot--event" />
+                        <span className="calendar-day__event-count">{places.length}</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        )}
-      </SectionCard>
+        </SectionCard>
+
+        <SectionCard className="date-detail-card life-places-detail">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">이날 간 장소</p>
+              <h2>{formatFullDate(selectedDate)}</h2>
+            </div>
+            <strong className="life-places-count">{selectedPlaces.length}곳</strong>
+          </div>
+
+          <SelectedDatePlacesMap places={selectedPlaces} />
+
+          {selectedPlaces.length > 0 ? (
+            <div className="life-place-card__items">
+              {selectedPlaces.map((place) => (
+                <article className="life-place-event" key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
+                  <span>장소</span>
+                  <div>
+                    <strong>{place.name}</strong>
+                    <p>{place.address || place.category || "주소 정보 없음"}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <MapPin aria-hidden size={28} />
+              <strong>{isLoading ? "장소를 불러오는 중입니다." : "이날 연결된 장소가 없습니다."}</strong>
+              <p>사건 탭에서 일정이나 할 일에 장소를 추가하면 이곳에 날짜별 장소가 모입니다.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
     </div>
+  );
+}
+
+function LifeTabHeading({ description, title }: { description: string; title: string }) {
+  return (
+    <header className="life-tab-heading">
+      <div>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+    </header>
   );
 }
 

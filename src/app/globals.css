@@ -252,6 +252,39 @@ button {
   gap: 18px;
 }
 
+.life-tab-panel,
+.life-axis-view .calendar-page,
+.life-axis-view .ledger-page {
+  display: grid;
+}
+
+.life-tab-heading {
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  min-height: 78px;
+  padding: 18px 20px;
+}
+
+.life-tab-heading h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 860;
+  line-height: 1.18;
+}
+
+.life-tab-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .life-calendar-switch {
   align-self: flex-start;
   background: rgba(255, 255, 255, 0.055);
@@ -514,6 +547,11 @@ button {
   padding-bottom: 18px;
 }
 
+.ledger-header.life-tab-heading {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 20px;
+}
+
 .ledger-summary-grid {
   display: grid;
   grid-template-columns: minmax(280px, 1.2fr) repeat(2, minmax(220px, 0.8fr));
@@ -546,6 +584,22 @@ button {
 .ledger-metric p {
   margin: 0;
   color: var(--muted);
+}
+
+.ledger-tab-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ledger-tab-summary span {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 7px 10px;
 }
 
 .ledger-layout {
@@ -2712,6 +2766,12 @@ a:focus-visible {
   min-height: 44px;
   border-bottom: 1px solid var(--line);
   padding-bottom: 14px;
+}
+
+.calendar-header.life-tab-heading {
+  min-height: 78px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px 20px;
 }
 
 .page-header {

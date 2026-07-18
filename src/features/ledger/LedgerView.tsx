@@ -38,7 +38,11 @@ const categoryTones: Record<ExpenseCategory, "violet" | "green" | "pink" | "ambe
   etc: "muted",
 };
 
-export function LedgerView() {
+type LedgerViewProps = {
+  variant?: "page" | "tab";
+};
+
+export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const [records, setRecords] = useState<ExpenseRecord[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
@@ -83,14 +87,14 @@ export function LedgerView() {
 
   return (
     <div className="ledger-page">
-      <header className="page-header ledger-header">
+      <header className={variant === "tab" ? "life-tab-heading ledger-header" : "page-header ledger-header"}>
         <div>
           <h1>가계부</h1>
           <p className="ledger-header__note">지출은 일정이나 할 일에 입력한 금액에서 자동으로 생성됩니다.</p>
         </div>
       </header>
 
-      <section className="ledger-summary-grid" aria-label="가계부 요약">
+      {variant === "page" ? <section className="ledger-summary-grid" aria-label="가계부 요약">
         <SectionCard className="ledger-metric ledger-metric--main">
           <span>이번 달 지출</span>
           <strong>{formatCurrency(monthTotal)}</strong>
@@ -106,7 +110,7 @@ export function LedgerView() {
           <strong>{formatCurrency(dailyAverage)}</strong>
           <p>{topCategory ? `가장 많은 항목: ${categoryLabels[topCategory]}` : "카테고리 없음"}</p>
         </SectionCard>
-      </section>
+      </section> : null}
 
       <div className="ledger-layout">
         <SectionCard className="ledger-calendar-card">
@@ -166,6 +170,14 @@ export function LedgerView() {
               <span>합계</span>
               <strong>{formatCurrency(selectedTotal)}</strong>
             </div>
+
+            {variant === "tab" ? (
+              <div className="ledger-tab-summary" aria-label="월간 지출 요약">
+                <span>이번 달 {formatCurrency(monthTotal)}</span>
+                <span>{spendingDays > 0 ? `${spendingDays}일 기록` : "이번 달 기록 없음"}</span>
+                <span>하루 평균 {formatCurrency(dailyAverage)}</span>
+              </div>
+            ) : null}
 
             <div className="ledger-record-list">
               {selectedRecords.length > 0 ? (
