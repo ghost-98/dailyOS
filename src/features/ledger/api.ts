@@ -8,8 +8,8 @@ type ExpenseRow = {
   amount: number | string;
   category: ExpenseCategory;
   memo: string | null;
-  target_type: ExpenseRecord["targetType"] | null;
-  target_id: string | null;
+  target_type: ExpenseRecord["targetType"];
+  target_id: string;
 };
 
 type ExpenseInsert = Omit<ExpenseRow, "id"> & {
@@ -35,8 +35,8 @@ function mapExpenseRow(row: ExpenseRow): ExpenseRecord {
     amount: Number(row.amount),
     category: row.category,
     memo: row.memo ?? undefined,
-    targetType: row.target_type ?? undefined,
-    targetId: row.target_id ?? undefined,
+    targetType: row.target_type,
+    targetId: row.target_id,
   };
 }
 
@@ -48,8 +48,8 @@ function mapExpenseInsert(record: ExpenseRecord, userId: string): ExpenseInsert 
     amount: record.amount,
     category: record.category,
     memo: record.memo?.trim() || null,
-    target_type: record.targetType ?? null,
-    target_id: record.targetId ?? null,
+    target_type: record.targetType,
+    target_id: record.targetId,
   };
 }
 
@@ -60,8 +60,8 @@ function mapExpenseUpdate(record: ExpenseRecord): ExpenseUpdate {
     amount: record.amount,
     category: record.category,
     memo: record.memo?.trim() || null,
-    target_type: record.targetType ?? null,
-    target_id: record.targetId ?? null,
+    target_type: record.targetType,
+    target_id: record.targetId,
   };
 }
 
@@ -78,42 +78,6 @@ export async function fetchExpenseRecordsFromDb() {
 
   if (error) throw error;
   return (data as ExpenseRow[]).map(mapExpenseRow);
-}
-
-export async function createExpenseRecordInDb(record: ExpenseRecord) {
-  if (!supabase) return null;
-  const userId = await getUserId();
-  if (!userId) return null;
-
-  const { data, error } = await supabase
-    .from("expense_records")
-    .insert(mapExpenseInsert(record, userId))
-    .select(expenseColumns)
-    .single();
-
-  if (error) throw error;
-  return mapExpenseRow(data as ExpenseRow);
-}
-
-export async function updateExpenseRecordInDb(record: ExpenseRecord) {
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("expense_records")
-    .update(mapExpenseUpdate(record))
-    .eq("id", record.id)
-    .select(expenseColumns)
-    .single();
-
-  if (error) throw error;
-  return mapExpenseRow(data as ExpenseRow);
-}
-
-export async function deleteExpenseRecordFromDb(id: string) {
-  if (!supabase) return false;
-  const { error } = await supabase.from("expense_records").delete().eq("id", id);
-  if (error) throw error;
-  return true;
 }
 
 export async function syncLinkedExpenseRecordInDb({

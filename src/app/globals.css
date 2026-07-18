@@ -4001,6 +4001,36 @@ a:focus-visible {
   text-align: right;
 }
 
+.schedule-option-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-option-toggle {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 7px;
+  padding: 8px 11px;
+}
+
+.schedule-option-toggle input {
+  accent-color: var(--violet);
+  margin: 0;
+}
+
+.schedule-option-toggle:has(input:disabled) {
+  cursor: default;
+  opacity: 0.48;
+}
+
 .schedule-form-card--primary {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);

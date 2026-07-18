@@ -172,8 +172,8 @@ create table if not exists public.expense_records (
   amount numeric(12, 0) not null check (amount > 0),
   category text not null default 'etc' check (category in ('food', 'transport', 'shopping', 'housing', 'health', 'culture', 'education', 'etc')),
   memo text,
-  target_type text check (target_type in ('schedule', 'todo', 'event')),
-  target_id uuid,
+  target_type text not null check (target_type in ('schedule', 'todo', 'event')),
+  target_id uuid not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -181,6 +181,14 @@ create table if not exists public.expense_records (
 alter table public.expense_records
   add column if not exists target_type text check (target_type in ('schedule', 'todo', 'event')),
   add column if not exists target_id uuid;
+
+delete from public.expense_records
+where target_type is null
+   or target_id is null;
+
+alter table public.expense_records
+  alter column target_type set not null,
+  alter column target_id set not null;
 
 create table if not exists public.place_folders (
   id uuid primary key default gen_random_uuid(),

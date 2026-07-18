@@ -1212,6 +1212,7 @@ function EventCreateSheet({
   const [time, setTime] = useState(event?.time ?? "");
   const [endTime, setEndTime] = useState(event?.endTime ?? "");
   const [isAllDay, setIsAllDay] = useState(event?.isAllDay ?? !event?.time);
+  const [isSingleTime, setIsSingleTime] = useState(!event?.endTime);
   const [type, setType] = useState<CalendarCategory>(event?.type === "event" ? "event" : defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
   const [expenseAmount, setExpenseAmount] = useState(event?.expenseAmount !== undefined ? String(event.expenseAmount) : "");
@@ -1229,7 +1230,7 @@ function EventCreateSheet({
       type,
       title: trimmedTitle,
       time: isAllDay ? undefined : time || undefined,
-      endTime: isAllDay ? undefined : endTime || undefined,
+      endTime: isAllDay || isSingleTime ? undefined : endTime || undefined,
       isAllDay,
       meta: meta.trim() || "메모 없음",
       expenseAmount: parseOptionalAmount(expenseAmount),
@@ -1310,27 +1311,35 @@ function EventCreateSheet({
                 <Clock3 aria-hidden size={18} />
                 <span>시간 형태</span>
               </div>
-              <select value={isAllDay ? "all-day" : "time-range"} onChange={(changeEvent) => setIsAllDay(changeEvent.target.value === "all-day")}>
-                <option value="all-day">하루종일</option>
-                <option value="time-range">시간 지정</option>
-              </select>
+              <div className="schedule-option-toggle-group">
+                <label className="schedule-option-toggle">
+                  <input checked={isAllDay} type="checkbox" onChange={(changeEvent) => setIsAllDay(changeEvent.target.checked)} />
+                  <span>하루종일</span>
+                </label>
+                <label className="schedule-option-toggle">
+                  <input checked={isSingleTime} disabled={isAllDay} type="checkbox" onChange={(changeEvent) => setIsSingleTime(changeEvent.target.checked)} />
+                  <span>단일 시간</span>
+                </label>
+              </div>
             </label>
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            {!isAllDay ? (
+              <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시간</span>
               </div>
-              <input disabled={isAllDay} type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
-            </label>
+              <input type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
+              </label>
+            ) : null}
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            {!isAllDay && !isSingleTime ? <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>종료 시간</span>
               </div>
-              <input disabled={isAllDay} type="time" value={endTime} onChange={(changeEvent) => setEndTime(changeEvent.target.value)} />
-            </label>
+              <input type="time" value={endTime} onChange={(changeEvent) => setEndTime(changeEvent.target.value)} />
+            </label> : null}
 
             <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
@@ -1381,6 +1390,7 @@ function TaskCreateSheet({
   const [startTime, setStartTime] = useState(task?.startTime ?? "");
   const [endTime, setEndTime] = useState(task?.endTime ?? "");
   const [isAllDay, setIsAllDay] = useState(task?.isAllDay ?? !task?.startTime);
+  const [isSingleTime, setIsSingleTime] = useState(!task?.endTime);
   const [expenseAmount, setExpenseAmount] = useState(task?.expenseAmount !== undefined ? String(task.expenseAmount) : "");
   const [companions, setCompanions] = useState(task?.companions ?? "");
   const [place, setPlace] = useState<PlanPlace | undefined>(task?.place);
@@ -1397,7 +1407,7 @@ function TaskCreateSheet({
       scheduledDate,
       dueDate: dueDate && dueDate !== scheduledDate ? dueDate : undefined,
       startTime: isAllDay ? undefined : startTime || undefined,
-      endTime: isAllDay ? undefined : endTime || undefined,
+      endTime: isAllDay || isSingleTime ? undefined : endTime || undefined,
       isAllDay,
       completedAt: status === "done" ? task?.completedAt ?? new Date().toISOString() : undefined,
       deferredCount: task?.deferredCount ?? 0,
@@ -1507,27 +1517,35 @@ function TaskCreateSheet({
                 <Clock3 aria-hidden size={18} />
                 <span>시간 형태</span>
               </div>
-              <select value={isAllDay ? "all-day" : "time-range"} onChange={(event) => setIsAllDay(event.target.value === "all-day")}>
-                <option value="all-day">하루종일</option>
-                <option value="time-range">시간 지정</option>
-              </select>
+              <div className="schedule-option-toggle-group">
+                <label className="schedule-option-toggle">
+                  <input checked={isAllDay} type="checkbox" onChange={(event) => setIsAllDay(event.target.checked)} />
+                  <span>하루종일</span>
+                </label>
+                <label className="schedule-option-toggle">
+                  <input checked={isSingleTime} disabled={isAllDay} type="checkbox" onChange={(event) => setIsSingleTime(event.target.checked)} />
+                  <span>단일 시간</span>
+                </label>
+              </div>
             </label>
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            {!isAllDay ? (
+              <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시작 시간</span>
               </div>
-              <input disabled={isAllDay} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-            </label>
+              <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+              </label>
+            ) : null}
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            {!isAllDay && !isSingleTime ? <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>종료 시간</span>
               </div>
-              <input disabled={isAllDay} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
-            </label>
+              <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+            </label> : null}
           </div>
         </div>
 
