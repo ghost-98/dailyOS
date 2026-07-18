@@ -173,9 +173,18 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
 
             {variant === "tab" ? (
               <div className="ledger-tab-summary" aria-label="월간 지출 요약">
-                <span>이번 달 {formatCurrency(monthTotal)}</span>
-                <span>{spendingDays > 0 ? `${spendingDays}일 기록` : "이번 달 기록 없음"}</span>
-                <span>하루 평균 {formatCurrency(dailyAverage)}</span>
+                <div>
+                  <span>이번 달</span>
+                  <strong>{formatCurrency(monthTotal)}</strong>
+                </div>
+                <div>
+                  <span>하루 평균</span>
+                  <strong>{formatCurrency(dailyAverage)}</strong>
+                </div>
+                <div>
+                  <span>기록일</span>
+                  <strong>{spendingDays > 0 ? `${spendingDays}일` : "없음"}</strong>
+                </div>
               </div>
             ) : null}
 

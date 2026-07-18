@@ -267,6 +267,29 @@ button {
   grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
 }
 
+.life-axis-view .calendar-board,
+.life-axis-view .ledger-calendar-card,
+.life-places-calendar,
+.life-axis-view .date-detail-card {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+}
+
+.life-axis-view .calendar-board,
+.life-axis-view .ledger-calendar-card,
+.life-places-calendar {
+  min-height: 720px;
+  padding: 28px;
+}
+
+.life-axis-view .date-detail-card {
+  min-height: 720px;
+  padding: 24px;
+}
+
 .life-tab-heading {
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -596,19 +619,34 @@ button {
 }
 
 .ledger-tab-summary {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.ledger-tab-summary span {
+.ledger-tab-summary div {
+  display: grid;
+  gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 999px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.045);
+  padding: 12px;
+}
+
+.ledger-tab-summary span {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 800;
-  padding: 7px 10px;
+}
+
+.ledger-tab-summary strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ledger-layout {
@@ -1491,6 +1529,10 @@ button {
   .ledger-metric,
   .ledger-calendar-card {
     padding: 20px;
+  }
+
+  .ledger-tab-summary {
+    grid-template-columns: 1fr;
   }
 
   .ledger-metric--main strong {
