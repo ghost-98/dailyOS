@@ -1289,7 +1289,7 @@ function EventCreateSheet({
           </div>
 
           <FormSectionTitle title="날짜와 시간" description="기본은 하루종일이며, 필요할 때 시간 범위를 지정하세요." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <CalendarDays aria-hidden size={18} />
@@ -1306,7 +1306,7 @@ function EventCreateSheet({
               <input type="date" value={endDate} onChange={(changeEvent) => setEndDate(changeEvent.target.value)} />
             </label>
 
-            <label className="event-form-row event-form-row--select schedule-field">
+            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시간 형태</span>
@@ -1495,7 +1495,7 @@ function TaskCreateSheet({
           </div>
 
           <FormSectionTitle title="날짜와 시간" description="시작일과 종료일을 기준으로 달력에 표시됩니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <div className="event-form-row__label">
                 <CalendarDays aria-hidden size={18} />
@@ -1512,7 +1512,7 @@ function TaskCreateSheet({
               <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
             </label>
 
-            <label className="event-form-row event-form-row--select schedule-field">
+            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field">
               <div className="event-form-row__label">
                 <Clock3 aria-hidden size={18} />
                 <span>시간 형태</span>

@@ -247,6 +247,11 @@ button {
   gap: 24px;
 }
 
+.life-axis-view .calendar-page,
+.life-axis-view .ledger-page {
+  gap: 18px;
+}
+
 .life-calendar-switch {
   align-self: flex-start;
   background: rgba(255, 255, 255, 0.055);
@@ -285,6 +290,12 @@ button {
 
 .life-places-calendar,
 .life-places-detail {
+  min-height: 100%;
+}
+
+.life-places-detail,
+.life-axis-view .ledger-detail .date-detail-card,
+.life-axis-view .calendar-detail .date-detail-card {
   min-height: 100%;
 }
 
@@ -539,13 +550,13 @@ button {
 
 .ledger-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
   gap: 18px;
   align-items: flex-start;
 }
 
 .ledger-calendar-card {
-  min-height: 650px;
+  min-height: 720px;
   padding: 28px;
 }
 
@@ -1402,6 +1413,7 @@ button {
 @media (max-width: 1180px) {
   .ledger-summary-grid,
   .ledger-layout,
+  .life-places-view,
   .places-layout {
     grid-template-columns: 1fr;
   }
@@ -4029,6 +4041,23 @@ a:focus-visible {
 .schedule-option-toggle:has(input:disabled) {
   cursor: default;
   opacity: 0.48;
+}
+
+.schedule-time-grid {
+  align-items: stretch;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+}
+
+.schedule-time-grid .event-form-row {
+  min-height: 82px;
+}
+
+.schedule-time-grid .event-form-row--time-options {
+  grid-column: 1 / -1;
+}
+
+.schedule-time-grid .schedule-option-toggle-group {
+  margin-top: 2px;
 }
 
 .schedule-form-card--primary {
