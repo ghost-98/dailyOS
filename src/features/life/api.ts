@@ -26,11 +26,58 @@ type LifePhotoRow = {
 const dailyLogColumns = "id,log_date,content,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,taken_at,created_at";
 
+type SupabaseErrorLike = {
+  code?: unknown;
+  details?: unknown;
+  error?: unknown;
+  hint?: unknown;
+  message?: unknown;
+  name?: unknown;
+  status?: unknown;
+  statusCode?: unknown;
+};
+
 async function getUserId() {
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
   return data.user.id;
+}
+
+function getObjectErrorEntries(error: SupabaseErrorLike) {
+  return Object.getOwnPropertyNames(error)
+    .map((key) => [key, error[key as keyof SupabaseErrorLike]])
+    .filter(([, value]) => value !== undefined && value !== null && value !== "");
+}
+
+function getSupabaseErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (!error || typeof error !== "object") return String(error);
+
+  const errorLike = error as SupabaseErrorLike;
+  const directMessage = [errorLike.message, errorLike.error, errorLike.details, errorLike.hint].find((value) => typeof value === "string" && value.length > 0);
+  if (directMessage) return directMessage;
+
+  const entries = getObjectErrorEntries(errorLike);
+  if (entries.length > 0) {
+    return entries.map(([key, value]) => `${key}: ${String(value)}`).join(", ");
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return Object.prototype.toString.call(error);
+  }
+}
+
+function createLifePhotoDbError(context: string, error: unknown) {
+  const errorLike = error && typeof error === "object" ? (error as SupabaseErrorLike) : {};
+  const status = errorLike.statusCode ?? errorLike.status;
+  const code = errorLike.code;
+  const suffix = [status ? `status=${status}` : null, code ? `code=${code}` : null].filter(Boolean).join(", ");
+  const detail = getSupabaseErrorMessage(error);
+  return new Error(`${context}: ${detail}${suffix ? ` (${suffix})` : ""}`);
 }
 
 function mapDailyLogRow(row: DailyLogRow): DailyLogRecord {
@@ -129,7 +176,7 @@ export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploa
       upsert: false,
     });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) throw createLifePhotoDbError("life-media storage upload failed", uploadError);
 
     const { data, error } = await supabase
       .from("life_photos")
@@ -149,7 +196,7 @@ export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploa
       .select(lifePhotoColumns)
       .single();
 
-    if (error) throw error;
+    if (error) throw createLifePhotoDbError("life_photos metadata insert failed", error);
     uploadedRows.push(data as LifePhotoRow);
   }
 
