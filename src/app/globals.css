@@ -3276,12 +3276,8 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  background:
-    linear-gradient(135deg, rgba(201, 184, 255, 0.09), rgba(255, 255, 255, 0.035)),
-    rgba(255, 255, 255, 0.035);
-  padding: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 2px 16px;
 }
 
 .day-timeline__summary span {
@@ -3294,7 +3290,7 @@ a:focus-visible {
   display: block;
   margin-top: 4px;
   color: var(--text);
-  font-size: 1.18rem;
+  font-size: 1.08rem;
   font-weight: 900;
 }
 
@@ -3317,7 +3313,8 @@ a:focus-visible {
   cursor: pointer;
   font-size: 0.76rem;
   font-weight: 850;
-  padding: 7px 10px;
+  line-height: 1;
+  padding: 7px 8px 7px 10px;
   transition:
     background 150ms ease,
     border-color 150ms ease,
@@ -3332,13 +3329,28 @@ a:focus-visible {
   color: var(--text);
 }
 
+.day-timeline__chip:hover strong,
+.day-timeline__chip--active strong {
+  background: rgba(201, 184, 255, 0.2);
+  color: var(--violet);
+}
+
 .day-timeline__chip .calendar-dot {
   width: 14px;
   height: 5px;
 }
 
 .day-timeline__chip strong {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
   color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .day-timeline__items {
