@@ -3933,6 +3933,18 @@ a:focus-visible {
   width: 100%;
 }
 
+.life-photo-upload-error {
+  margin: -4px 0 2px;
+  border: 1px solid rgba(255, 107, 149, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 107, 149, 0.08);
+  color: var(--pink);
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
 .life-photo-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
