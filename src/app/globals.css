@@ -3268,7 +3268,7 @@ a:focus-visible {
 
 .day-timeline {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .day-timeline__summary {
@@ -3276,6 +3276,12 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(201, 184, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  padding: 14px;
 }
 
 .day-timeline__summary span {
@@ -3288,7 +3294,7 @@ a:focus-visible {
   display: block;
   margin-top: 4px;
   color: var(--text);
-  font-size: 1.1rem;
+  font-size: 1.18rem;
   font-weight: 900;
 }
 
@@ -3301,6 +3307,7 @@ a:focus-visible {
 
 .day-timeline__chip {
   display: inline-flex;
+  min-height: 34px;
   align-items: center;
   gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -3337,16 +3344,16 @@ a:focus-visible {
 .day-timeline__items {
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .day-timeline__items::before {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
+  top: 14px;
+  bottom: 14px;
   left: 74px;
   width: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(201, 184, 255, 0.22), rgba(255, 255, 255, 0.055));
   content: "";
 }
 
@@ -3363,7 +3370,7 @@ a:focus-visible {
   font-size: 0.72rem;
   font-weight: 850;
   line-height: 1.35;
-  padding-top: 14px;
+  padding-top: 18px;
   text-align: right;
 }
 
@@ -3371,7 +3378,7 @@ a:focus-visible {
   position: relative;
   z-index: 1;
   display: grid;
-  height: 42px;
+  height: 50px;
   place-items: center;
 }
 
@@ -3388,7 +3395,21 @@ a:focus-visible {
 
 .day-timeline .date-event,
 .day-timeline-external {
-  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.032)),
+    rgba(255, 255, 255, 0.025);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.11);
+}
+
+.day-timeline .date-event h3 {
+  font-size: 1rem;
+  line-height: 1.32;
+}
+
+.day-timeline .date-event__topline {
+  gap: 8px;
+  margin-bottom: 7px;
 }
 
 .date-life-section {
@@ -4327,6 +4348,15 @@ a:focus-visible {
 
 .schedule-time-grid .schedule-option-toggle-group {
   margin-top: 2px;
+}
+
+.schedule-time-grid .schedule-toggle-row {
+  border-style: dashed;
+  background: rgba(201, 184, 255, 0.045);
+}
+
+.schedule-time-grid .schedule-toggle-row .event-form-row__label {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .schedule-form-card--primary {
