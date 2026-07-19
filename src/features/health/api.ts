@@ -17,6 +17,7 @@ type WorkoutRow = {
   type: WorkoutType;
   condition: WorkoutCondition;
   duration_minutes: number;
+  distance_km: number | string | null;
   memo: string | null;
 };
 
@@ -32,7 +33,7 @@ type WeightUpdate = Partial<Omit<WeightInsert, "user_id">>;
 type WorkoutUpdate = Partial<Omit<WorkoutInsert, "user_id">>;
 
 const weightColumns = "id,record_date,weight_kg,measured_fasted,muscle_mass_kg,body_fat_percent,memo";
-const workoutColumns = "id,workout_date,type,condition,duration_minutes,memo";
+const workoutColumns = "id,workout_date,type,condition,duration_minutes,distance_km,memo";
 
 async function getUserId() {
   if (!supabase) return null;
@@ -65,6 +66,7 @@ function mapWorkoutRow(row: WorkoutRow): WorkoutSession {
     type: row.type,
     condition: row.condition,
     durationMinutes: row.duration_minutes,
+    distanceKm: toNumber(row.distance_km),
     memo: row.memo ?? undefined,
   };
 }
@@ -99,6 +101,7 @@ function mapWorkoutInsert(session: WorkoutSession, userId: string): WorkoutInser
     type: session.type,
     condition: session.condition,
     duration_minutes: session.durationMinutes,
+    distance_km: session.distanceKm ?? null,
     memo: session.memo ?? null,
   };
 }
@@ -109,6 +112,7 @@ function mapWorkoutUpdate(session: WorkoutSession): WorkoutUpdate {
     type: session.type,
     condition: session.condition,
     duration_minutes: session.durationMinutes,
+    distance_km: session.distanceKm ?? null,
     memo: session.memo ?? null,
   };
 }

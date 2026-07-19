@@ -3945,6 +3945,105 @@ a:focus-visible {
   padding: 10px 12px;
 }
 
+.life-health-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 0.72fr)) minmax(320px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.life-health-card {
+  align-content: start;
+}
+
+.life-health-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-health-fields label,
+.life-health-weight-field {
+  display: grid;
+  gap: 8px;
+}
+
+.life-health-fields span,
+.life-health-weight-field span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.life-health-message {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.life-health-summary {
+  display: grid;
+  gap: 16px;
+}
+
+.life-health-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.life-health-summary-grid article,
+.life-health-run-list article {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 15px;
+}
+
+.life-health-summary-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.life-health-summary-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.life-health-summary-grid p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.life-health-run-list {
+  display: grid;
+  gap: 8px;
+}
+
+.life-health-run-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.life-health-run-list strong {
+  color: var(--text);
+}
+
+.life-health-run-list span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .life-photo-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -7564,7 +7663,8 @@ a:focus-visible {
 
   .today-summary-grid,
   .today-work-grid,
-  .today-support-grid {
+  .today-support-grid,
+  .life-health-view {
     grid-template-columns: 1fr;
   }
 

@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { CalendarDays, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen } from "lucide-react";
+import { Activity, CalendarDays, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import { CalendarView, ExternalCalendarItem, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
+import { createWeightRecordInDb, createWorkoutSessionInDb, fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb, updateWeightRecordInDb } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
 import { createDailyLogInDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
@@ -20,7 +20,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "places" | "ledger" | "logs" | "photos";
+type LifeCalendarTab = "events" | "places" | "ledger" | "logs" | "photos" | "health";
 
 type PlaceTimelineItem = {
   date: string;
@@ -139,6 +139,13 @@ function LifeCalendarView() {
         >
           사진
         </button>
+        <button
+          className={activeTab === "health" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("health")}
+          type="button"
+        >
+          건강
+        </button>
       </div>
 
       {activeTab === "events" ? (
@@ -159,8 +166,10 @@ function LifeCalendarView() {
         <LedgerView variant="tab" />
       ) : activeTab === "logs" ? (
         <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} />
-      ) : (
+      ) : activeTab === "photos" ? (
         <LifePhotosView onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
+      ) : (
+        <LifeHealthView />
       )}
     </div>
   );
@@ -391,6 +400,166 @@ function getLifePhotoErrorDebugInfo(error: unknown) {
   } catch {
     return Object.prototype.toString.call(error);
   }
+}
+
+function LifeHealthView() {
+  const [date, setDate] = useState(formatDateKey(new Date()));
+  const [distanceKm, setDistanceKm] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [weights, setWeights] = useState<WeightRecord[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
+  const [isSavingRunning, setIsSavingRunning] = useState(false);
+  const [isSavingWeight, setIsSavingWeight] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
+      .then(([nextWeights, nextWorkouts]) => {
+        if (!isMounted) return;
+        setWeights(nextWeights ?? []);
+        setWorkouts(nextWorkouts ?? []);
+      })
+      .catch((error) => console.error("Failed to load life health data from Supabase", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedRuns = workouts.filter((workout) => workout.date === date && workout.type === "running");
+  const selectedWeight = weights.find((weight) => weight.date === date);
+  const totalDistanceKm = selectedRuns.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
+  const totalMinutes = selectedRuns.reduce((sum, workout) => sum + workout.durationMinutes, 0);
+
+  const saveRunning = async () => {
+    const parsedDistance = Number(distanceKm);
+    const parsedDuration = Number(durationMinutes);
+    if (!parsedDistance || !parsedDuration) return;
+
+    setIsSavingRunning(true);
+    try {
+      const savedRun = await createWorkoutSessionInDb({
+        id: `run-${Date.now()}`,
+        date,
+        type: "running",
+        condition: "normal",
+        durationMinutes: parsedDuration,
+        distanceKm: parsedDistance,
+      });
+      if (savedRun) setWorkouts((current) => [savedRun, ...current]);
+      setDistanceKm("");
+      setDurationMinutes("");
+      setMessage("러닝 기록을 저장했어요.");
+    } finally {
+      setIsSavingRunning(false);
+    }
+  };
+
+  const saveMorningWeight = async () => {
+    const parsedWeight = Number(weightKg);
+    if (!parsedWeight) return;
+
+    setIsSavingWeight(true);
+    try {
+      const nextWeight = {
+        id: selectedWeight?.id ?? `weight-${Date.now()}`,
+        date,
+        weightKg: parsedWeight,
+        measuredFasted: true,
+        memo: "아침 몸무게",
+      };
+      const savedWeight = selectedWeight ? await updateWeightRecordInDb(nextWeight) : await createWeightRecordInDb(nextWeight);
+      if (savedWeight) setWeights((current) => [savedWeight, ...current.filter((weight) => weight.id !== savedWeight.id && weight.date !== savedWeight.date)]);
+      setWeightKg("");
+      setMessage("아침 몸무게를 저장했어요.");
+    } finally {
+      setIsSavingWeight(false);
+    }
+  };
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="건강" description="러닝 거리와 시간, 아침 몸무게만 가볍게 쌓아가는 건강 기록입니다." />
+      <div className="life-health-view">
+        <SectionCard className="life-capture-editor life-health-card">
+          <div className="life-capture-card__title">
+            <Activity aria-hidden size={17} />
+            <span>러닝 기록</span>
+          </div>
+          <label className="life-capture-date">
+            <span>기록 날짜</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+          <div className="life-health-fields">
+            <label>
+              <span>거리</span>
+              <input inputMode="decimal" min="0" placeholder="km" type="number" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} />
+            </label>
+            <label>
+              <span>시간</span>
+              <input inputMode="numeric" min="0" placeholder="분" type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} />
+            </label>
+          </div>
+          <button className="life-capture-primary" disabled={!distanceKm || !durationMinutes || isSavingRunning} onClick={saveRunning} type="button">
+            {isSavingRunning ? "저장 중" : "러닝 저장"}
+          </button>
+        </SectionCard>
+
+        <SectionCard className="life-capture-editor life-health-card">
+          <div className="life-capture-card__title">
+            <Scale aria-hidden size={17} />
+            <span>아침 몸무게</span>
+          </div>
+          <label className="life-capture-date">
+            <span>기록 날짜</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+          <label className="life-health-weight-field">
+            <span>몸무게</span>
+            <input inputMode="decimal" min="0" placeholder="kg" type="number" value={weightKg} onChange={(event) => setWeightKg(event.target.value)} />
+          </label>
+          <button className="life-capture-primary" disabled={!weightKg || isSavingWeight} onClick={saveMorningWeight} type="button">
+            {isSavingWeight ? "저장 중" : "몸무게 저장"}
+          </button>
+          {message ? <p className="life-health-message">{message}</p> : null}
+        </SectionCard>
+
+        <SectionCard className="life-capture-list life-health-summary">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">선택한 날짜</p>
+              <h2>{formatFullDate(date)}</h2>
+            </div>
+          </div>
+          <div className="life-health-summary-grid">
+            <article>
+              <span>러닝</span>
+              <strong>{selectedRuns.length > 0 ? `${totalDistanceKm.toFixed(1)}km` : "-"}</strong>
+              <p>{selectedRuns.length > 0 ? `${selectedRuns.length}회 · ${totalMinutes}분` : "러닝 기록이 없습니다."}</p>
+            </article>
+            <article>
+              <span>아침 몸무게</span>
+              <strong>{selectedWeight ? `${selectedWeight.weightKg}kg` : "-"}</strong>
+              <p>{selectedWeight ? "공복 기준으로 저장된 기록입니다." : "아침 몸무게 기록이 없습니다."}</p>
+            </article>
+          </div>
+          {selectedRuns.length > 0 ? (
+            <div className="life-health-run-list">
+              {selectedRuns.map((run) => (
+                <article key={run.id}>
+                  <strong>{run.distanceKm ? `${run.distanceKm}km` : "거리 미기록"}</strong>
+                  <span>{run.durationMinutes}분</span>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </SectionCard>
+      </div>
+    </div>
+  );
 }
 
 async function createLifeMediaPreview(file: File): Promise<LifeMediaPreview> {

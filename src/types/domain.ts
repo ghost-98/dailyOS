@@ -53,6 +53,7 @@ export type WorkoutSession = {
   type: WorkoutType;
   condition: WorkoutCondition;
   durationMinutes: number;
+  distanceKm?: number;
   memo?: string;
 };
 
