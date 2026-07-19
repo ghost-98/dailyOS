@@ -44,6 +44,7 @@ type DayTimelineItem =
   | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "schedule" | "event" }
   | { id: string; sortMinutes: number; task: TaskItem; timeLabel: string; type: "todo" }
   | { external: ExternalCalendarItem; id: string; sortMinutes: number; timeLabel: string; type: ExternalCalendarCategory };
+type DayTimelineFilter = CalendarCategory | "life";
 type DragPlacement = "before" | "after";
 
 type NaverLatLng = unknown;
@@ -151,7 +152,6 @@ export function CalendarView({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
-  const [, setActiveDateCategory] = useState<CalendarCategory>("schedule");
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
@@ -232,7 +232,6 @@ export function CalendarView({
 
   const handleDateClick = (date: string) => {
     setSelectedDate((current) => (keepDateSelected ? date : current === date ? null : date));
-    setActiveDateCategory(categories.includes("schedule") ? "schedule" : categories[0]);
   };
 
   const toggleCalendarCategoryFilter = (type: CalendarCategory) => {
@@ -487,7 +486,6 @@ export function CalendarView({
                   externalCount={selectedExternalItems.length}
                   isLoading={isLoading}
                   items={selectedTimelineItems}
-                  onAddEvent={openCreateEventSheet}
                   onClearDrag={clearDragState}
                   onDeleteEvent={deleteEvent}
                   onDeleteTask={deleteTask}
@@ -562,7 +560,6 @@ function DayTimelineSection({
   externalCount,
   isLoading,
   items,
-  onAddEvent,
   onClearDrag,
   onDeleteEvent,
   onDeleteTask,
@@ -582,7 +579,6 @@ function DayTimelineSection({
   externalCount: number;
   isLoading: boolean;
   items: DayTimelineItem[];
-  onAddEvent: (type: CalendarCategory) => void;
   onClearDrag: () => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
@@ -596,7 +592,18 @@ function DayTimelineSection({
   onToggleDone: (task: TaskItem) => void;
   visibleCategories: CalendarCategory[];
 }) {
+  const [activeFilters, setActiveFilters] = useState<DayTimelineFilter[]>([]);
   const totalCount = visibleCategories.reduce((sum, type) => sum + countsByCategory[type], 0) + externalCount;
+  const filterChips = [
+    ...visibleCategories.map((type) => ({ count: countsByCategory[type], label: categoryLabels[type], type })),
+    ...(externalCount > 0 ? [{ count: externalCount, label: "생활 기록", type: "life" as const }] : []),
+  ];
+  const filteredItems =
+    activeFilters.length === 0 ? items : items.filter((item) => (isExternalTimelineType(item.type) ? activeFilters.includes("life") : activeFilters.includes(item.type)));
+
+  const toggleFilter = (type: DayTimelineFilter) => {
+    setActiveFilters((current) => (current.includes(type) ? current.filter((filter) => filter !== type) : [...current, type]));
+  };
 
   return (
     <section className="day-timeline" aria-label="하루 타임라인">
@@ -605,44 +612,30 @@ function DayTimelineSection({
           <span>하루 타임라인</span>
           <strong>{totalCount}개 기록</strong>
         </div>
-        <div className="day-timeline__actions">
-          {visibleCategories.includes("schedule") ? (
-            <button onClick={() => onAddEvent("schedule")} type="button">
-              일정
-            </button>
-          ) : null}
-          {visibleCategories.includes("todo") ? (
-            <button onClick={() => onAddEvent("todo")} type="button">
-              할 일
-            </button>
-          ) : null}
-          {visibleCategories.includes("event") ? (
-            <button onClick={() => onAddEvent("event")} type="button">
-              사건
-            </button>
-          ) : null}
+        <div className="day-timeline__chips" aria-label="기록 필터">
+          {filterChips.map((filter) => {
+            const isActive = activeFilters.includes(filter.type);
+
+            return (
+              <button
+                aria-pressed={isActive}
+                className={`day-timeline__chip ${isActive ? "day-timeline__chip--active" : ""}`}
+                key={filter.type}
+                onClick={() => toggleFilter(filter.type)}
+                type="button"
+              >
+                {filter.type !== "life" ? <span className={`calendar-dot calendar-dot--${filter.type}`} /> : null}
+                {filter.label}
+                <strong>{filter.count}</strong>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="day-timeline__chips" aria-label="기록 요약">
-        {visibleCategories.map((type) => (
-          <span className="day-timeline__chip" key={type}>
-            <span className={`calendar-dot calendar-dot--${type}`} />
-            {categoryLabels[type]}
-            <strong>{countsByCategory[type]}</strong>
-          </span>
-        ))}
-        {externalCount > 0 ? (
-          <span className="day-timeline__chip">
-            생활 기록
-            <strong>{externalCount}</strong>
-          </span>
-        ) : null}
-      </div>
-
-      {items.length > 0 ? (
+      {filteredItems.length > 0 ? (
         <div className="day-timeline__items">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div className={`day-timeline__row day-timeline__row--${item.type}`} key={item.id}>
               <div className="day-timeline__time">
                 <span>{item.timeLabel}</span>
@@ -684,7 +677,7 @@ function DayTimelineSection({
           ))}
         </div>
       ) : (
-        <EmptyDateState isLoading={isLoading} label="타임라인" onAdd={visibleCategories[0] ? () => onAddEvent(visibleCategories[0]) : undefined} />
+        <EmptyDateState isLoading={isLoading} label="타임라인" />
       )}
     </section>
   );
@@ -1760,6 +1753,10 @@ function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory)
     daily_log: 6,
   };
   return order[type];
+}
+
+function isExternalTimelineType(type: CalendarCategory | ExternalCalendarCategory): type is ExternalCalendarCategory {
+  return type === "expense" || type === "workout" || type === "weight" || type === "daily_log";
 }
 
 function parseOptionalAmount(value: string) {

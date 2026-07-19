@@ -1539,7 +1539,7 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .day-timeline__actions {
+  .day-timeline__chips {
     justify-content: flex-start;
   }
 
@@ -3292,27 +3292,10 @@ a:focus-visible {
   font-weight: 900;
 }
 
-.day-timeline__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 7px;
-}
-
-.day-timeline__actions button {
-  border: 1px solid rgba(201, 184, 255, 0.2);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.1);
-  color: var(--violet);
-  cursor: pointer;
-  font-size: 0.76rem;
-  font-weight: 850;
-  padding: 8px 10px;
-}
-
 .day-timeline__chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -3324,9 +3307,22 @@ a:focus-visible {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.045);
   color: var(--muted);
+  cursor: pointer;
   font-size: 0.76rem;
   font-weight: 850;
   padding: 7px 10px;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.day-timeline__chip:hover,
+.day-timeline__chip--active {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
 }
 
 .day-timeline__chip .calendar-dot {
