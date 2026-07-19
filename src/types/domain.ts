@@ -73,7 +73,6 @@ export type DailyLogRecord = {
   id: string;
   date: string;
   content: string;
-  mood?: string;
   createdAt?: string;
 };
 

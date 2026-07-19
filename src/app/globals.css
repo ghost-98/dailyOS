@@ -321,8 +321,9 @@ button {
   align-self: flex-start;
   background: rgba(255, 255, 255, 0.055);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
+  border-radius: 24px;
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 6px;
 }
@@ -1515,6 +1516,7 @@ button {
   .ledger-summary-grid,
   .ledger-layout,
   .life-axis-view .calendar-layout--detail-open,
+  .life-capture-page,
   .life-places-view,
   .places-layout {
     grid-template-columns: 1fr;
@@ -3501,6 +3503,25 @@ a:focus-visible {
   gap: 12px;
 }
 
+.life-capture-page {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.life-capture-editor,
+.life-capture-list {
+  display: grid;
+  gap: 14px;
+  min-height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 22px;
+}
+
 .life-capture-card {
   display: grid;
   gap: 10px;
@@ -3524,7 +3545,9 @@ a:focus-visible {
 }
 
 .life-capture-card textarea,
-.life-capture-card input {
+.life-capture-card input,
+.life-capture-editor textarea,
+.life-capture-editor input {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
@@ -3539,9 +3562,42 @@ a:focus-visible {
   resize: vertical;
 }
 
-.life-capture-card input {
+.life-capture-editor textarea {
+  min-height: 180px;
+  padding: 14px;
+  resize: vertical;
+}
+
+.life-capture-card input,
+.life-capture-editor input {
   min-height: 40px;
   padding: 0 11px;
+}
+
+.life-capture-date {
+  display: grid;
+  gap: 8px;
+}
+
+.life-capture-date span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.life-capture-primary {
+  min-height: 44px;
+  border: 1px solid rgba(201, 184, 255, 0.25);
+  border-radius: 13px;
+  background: rgba(201, 184, 255, 0.13);
+  color: var(--violet);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.life-capture-primary:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .life-capture-card__footer {
@@ -3617,6 +3673,11 @@ a:focus-visible {
   line-height: 1.5;
 }
 
+.life-log-list {
+  display: grid;
+  gap: 10px;
+}
+
 .life-photo-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3646,6 +3707,47 @@ a:focus-visible {
   font-size: 0.72rem;
   padding: 8px;
   text-align: center;
+}
+
+.life-photo-caption-input {
+  width: 100%;
+}
+
+.life-photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.life-photo-gallery figure {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  margin: 0;
+}
+
+.life-photo-gallery img,
+.life-photo-gallery figure > div {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.life-photo-gallery figure > div {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 12px;
+  text-align: center;
+}
+
+.life-photo-gallery figcaption {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  padding: 9px 10px 11px;
 }
 
 .schedule-date-map {

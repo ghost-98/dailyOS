@@ -1,7 +1,6 @@
 "use client";
 
 import type { DragEvent } from "react";
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -11,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  ImagePlus,
   ListChecks,
   ListFilter,
   MapPin,
@@ -27,7 +25,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { DailyLogRecord, EventType, LifePhotoRecord, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
+import type { EventType, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
@@ -48,13 +46,6 @@ type DayTimelineItem =
   | { external: ExternalCalendarItem; id: string; sortMinutes: number; timeLabel: string; type: ExternalCalendarCategory };
 type DayTimelineFilter = CalendarCategory | "life";
 type DragPlacement = "before" | "after";
-
-type LifeCaptureTools = {
-  logs: DailyLogRecord[];
-  photos: LifePhotoRecord[];
-  onCreateDailyLog: (date: string, content: string, mood?: string) => Promise<void> | void;
-  onUploadPhotos: (date: string, files: File[], caption?: string) => Promise<void> | void;
-};
 
 type NaverLatLng = unknown;
 type NaverLatLngBounds = {
@@ -133,7 +124,6 @@ type CalendarViewProps = {
   externalItems?: ExternalCalendarItem[];
   headerVariant?: "page" | "tab";
   keepDateSelected?: boolean;
-  lifeCaptureTools?: LifeCaptureTools;
   showEventAddButton?: boolean;
   showSelectedDatePlacesMap?: boolean;
   title?: string;
@@ -146,7 +136,6 @@ export function CalendarView({
   externalItems = [],
   headerVariant = "page",
   keepDateSelected = false,
-  lifeCaptureTools,
   showEventAddButton = false,
   showSelectedDatePlacesMap = true,
   title = "일정",
@@ -196,8 +185,6 @@ export function CalendarView({
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
   const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
-  const selectedDailyLogs = useMemo(() => (selectedDate ? lifeCaptureTools?.logs.filter((log) => log.date === selectedDate) ?? [] : []), [lifeCaptureTools?.logs, selectedDate]);
-  const selectedLifePhotos = useMemo(() => (selectedDate ? lifeCaptureTools?.photos.filter((photo) => photo.date === selectedDate) ?? [] : []), [lifeCaptureTools?.photos, selectedDate]);
   const selectedTimelineItems = useMemo(
     () =>
       [
@@ -521,15 +508,6 @@ export function CalendarView({
                 />
               </div>
 
-              {lifeCaptureTools && selectedDate ? (
-                <LifeCapturePanel
-                  date={selectedDate}
-                  logs={selectedDailyLogs}
-                  onCreateDailyLog={lifeCaptureTools.onCreateDailyLog}
-                  onUploadPhotos={lifeCaptureTools.onUploadPhotos}
-                  photos={selectedLifePhotos}
-                />
-              ) : null}
             </SectionCard>
           </aside>
         ) : null}
@@ -716,120 +694,6 @@ function ExternalTimelineItem({ item }: { item: ExternalCalendarItem }) {
         {item.meta ? <p>{item.meta}</p> : null}
       </div>
     </article>
-  );
-}
-
-function LifeCapturePanel({
-  date,
-  logs,
-  onCreateDailyLog,
-  onUploadPhotos,
-  photos,
-}: {
-  date: string;
-  logs: DailyLogRecord[];
-  onCreateDailyLog: (date: string, content: string, mood?: string) => Promise<void> | void;
-  onUploadPhotos: (date: string, files: File[], caption?: string) => Promise<void> | void;
-  photos: LifePhotoRecord[];
-}) {
-  const [content, setContent] = useState("");
-  const [mood, setMood] = useState("");
-  const [caption, setCaption] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [isSavingLog, setIsSavingLog] = useState(false);
-  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
-
-  const saveDailyLog = async () => {
-    const trimmedContent = content.trim();
-    if (!trimmedContent) return;
-
-    setIsSavingLog(true);
-    try {
-      await onCreateDailyLog(date, trimmedContent, mood.trim() || undefined);
-      setContent("");
-      setMood("");
-    } finally {
-      setIsSavingLog(false);
-    }
-  };
-
-  const uploadPhotos = async () => {
-    if (files.length === 0) return;
-
-    setIsUploadingPhotos(true);
-    try {
-      await onUploadPhotos(date, files, caption.trim() || undefined);
-      setFiles([]);
-      setCaption("");
-    } finally {
-      setIsUploadingPhotos(false);
-    }
-  };
-
-  return (
-    <section className="life-capture-panel" aria-label="하루 기록과 사진">
-      <div className="life-capture-panel__header">
-        <div>
-          <span>하루 기록</span>
-          <strong>글과 사진으로 이 날짜를 남기세요</strong>
-        </div>
-      </div>
-
-      <div className="life-capture-grid">
-        <div className="life-capture-card">
-          <div className="life-capture-card__title">
-            <ListChecks aria-hidden size={16} />
-            <span>텍스트 기록</span>
-          </div>
-          <textarea placeholder="오늘의 감정, 생각, 기억할 장면을 짧게 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
-          <div className="life-capture-card__footer">
-            <input placeholder="기분 태그" value={mood} onChange={(event) => setMood(event.target.value)} />
-            <button disabled={!content.trim() || isSavingLog} onClick={saveDailyLog} type="button">
-              {isSavingLog ? "저장 중" : "기록 저장"}
-            </button>
-          </div>
-        </div>
-
-        <div className="life-capture-card">
-          <div className="life-capture-card__title">
-            <ImagePlus aria-hidden size={16} />
-            <span>사진 업로드</span>
-          </div>
-          <label className="life-photo-dropzone">
-            <input accept="image/*,video/*" multiple type="file" onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
-            <ImagePlus aria-hidden size={22} />
-            <strong>{files.length > 0 ? `${files.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
-            <span>날짜 메타데이터는 파일 기록에 함께 남깁니다.</span>
-          </label>
-          <div className="life-capture-card__footer">
-            <input placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
-            <button disabled={files.length === 0 || isUploadingPhotos} onClick={uploadPhotos} type="button">
-              {isUploadingPhotos ? "업로드 중" : "업로드"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {logs.length > 0 || photos.length > 0 ? (
-        <div className="life-capture-history">
-          {logs.slice(0, 2).map((log) => (
-            <article className="life-log-preview" key={log.id}>
-              <span>{log.mood || "기록"}</span>
-              <p>{log.content}</p>
-            </article>
-          ))}
-          {photos.length > 0 ? (
-            <div className="life-photo-strip">
-              {photos.slice(0, 4).map((photo) => (
-                <figure key={photo.id}>
-                  {photo.fileUrl ? <Image alt={photo.caption || photo.fileName} height={120} src={photo.fileUrl} unoptimized width={120} /> : <div>{photo.fileName}</div>}
-                </figure>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import Image from "next/image";
+import { CalendarDays, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
@@ -19,7 +20,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "places" | "ledger";
+type LifeCalendarTab = "events" | "places" | "ledger" | "logs" | "photos";
 
 type PlaceTimelineItem = {
   date: string;
@@ -66,7 +67,7 @@ function LifeCalendarView() {
       ...dailyLogs.map((log) => ({
         date: log.date,
         id: log.id,
-        meta: log.mood || log.content.slice(0, 42),
+        meta: log.content.slice(0, 42),
         title: "하루 기록",
         type: "daily_log" as const,
       })),
@@ -81,8 +82,8 @@ function LifeCalendarView() {
     [dailyLogs, lifePhotos],
   );
 
-  const createDailyLog = async (date: string, content: string, mood?: string) => {
-    const savedLog = await createDailyLogInDb(date, content, mood);
+  const createDailyLog = async (date: string, content: string) => {
+    const savedLog = await createDailyLogInDb(date, content);
     if (savedLog) setDailyLogs((current) => [savedLog, ...current]);
   };
 
@@ -115,6 +116,20 @@ function LifeCalendarView() {
         >
           가계부
         </button>
+        <button
+          className={activeTab === "logs" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("logs")}
+          type="button"
+        >
+          하루기록
+        </button>
+        <button
+          className={activeTab === "photos" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("photos")}
+          type="button"
+        >
+          사진
+        </button>
       </div>
 
       {activeTab === "events" ? (
@@ -125,21 +140,162 @@ function LifeCalendarView() {
           externalItems={externalItems}
           headerVariant="tab"
           keepDateSelected
-          lifeCaptureTools={{
-            logs: dailyLogs,
-            onCreateDailyLog: createDailyLog,
-            onUploadPhotos: uploadLifePhotos,
-            photos: lifePhotos,
-          }}
           showEventAddButton
           showSelectedDatePlacesMap={false}
           title="사건"
         />
       ) : activeTab === "places" ? (
         <LifePlacesView />
-      ) : (
+      ) : activeTab === "ledger" ? (
         <LedgerView variant="tab" />
+      ) : activeTab === "logs" ? (
+        <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} />
+      ) : (
+        <LifePhotosView onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
       )}
+    </div>
+  );
+}
+
+function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateLog: (date: string, content: string) => Promise<void> | void }) {
+  const [date, setDate] = useState(formatDateKey(new Date()));
+  const [content, setContent] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const selectedLogs = logs.filter((log) => log.date === date);
+
+  const saveLog = async () => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
+
+    setIsSaving(true);
+    try {
+      await onCreateLog(date, trimmedContent);
+      setContent("");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="하루기록" description="짧은 텍스트로 하루의 감정, 생각, 장면을 날짜에 남겨두세요." />
+      <div className="life-capture-page">
+        <SectionCard className="life-capture-editor">
+          <div className="life-capture-card__title">
+            <NotebookPen aria-hidden size={17} />
+            <span>짧은 하루 기록</span>
+          </div>
+          <label className="life-capture-date">
+            <span>기록 날짜</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+          <textarea placeholder="오늘 기억하고 싶은 것 한두 문장을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+          <button className="life-capture-primary" disabled={!content.trim() || isSaving} onClick={saveLog} type="button">
+            {isSaving ? "저장 중" : "기록 저장"}
+          </button>
+        </SectionCard>
+
+        <SectionCard className="life-capture-list">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">선택한 날짜</p>
+              <h2>{formatFullDate(date)}</h2>
+            </div>
+            <strong className="life-places-count">{selectedLogs.length}개</strong>
+          </div>
+          {selectedLogs.length > 0 ? (
+            <div className="life-log-list">
+              {selectedLogs.map((log) => (
+                <article className="life-log-preview" key={log.id}>
+                  <span>하루 기록</span>
+                  <p>{log.content}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>이날 남긴 기록이 없습니다.</strong>
+              <p>왼쪽에서 짧은 하루 기록을 추가하면 이곳에 모입니다.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+function LifePhotosView({ onUploadPhotos, photos }: { onUploadPhotos: (date: string, files: File[], caption?: string) => Promise<void> | void; photos: LifePhotoRecord[] }) {
+  const [date, setDate] = useState(formatDateKey(new Date()));
+  const [caption, setCaption] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const selectedPhotos = photos.filter((photo) => photo.date === date);
+
+  const uploadPhotos = async () => {
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      await onUploadPhotos(date, files, caption.trim() || undefined);
+      setFiles([]);
+      setCaption("");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="사진" description="사진과 영상을 날짜에 연결해서 하루의 장면을 모아두세요." />
+      <div className="life-capture-page">
+        <SectionCard className="life-capture-editor">
+          <div className="life-capture-card__title">
+            <ImagePlus aria-hidden size={17} />
+            <span>사진/영상 업로드</span>
+          </div>
+          <label className="life-capture-date">
+            <span>기록 날짜</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+          <label className="life-photo-dropzone">
+            <input accept="image/*,video/*" multiple type="file" onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
+            <ImagePlus aria-hidden size={24} />
+            <strong>{files.length > 0 ? `${files.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
+            <span>선택한 날짜의 사진 기록으로 저장됩니다.</span>
+          </label>
+          <input className="life-photo-caption-input" placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
+          <button className="life-capture-primary" disabled={files.length === 0 || isUploading} onClick={uploadPhotos} type="button">
+            {isUploading ? "업로드 중" : "업로드"}
+          </button>
+        </SectionCard>
+
+        <SectionCard className="life-capture-list">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">선택한 날짜</p>
+              <h2>{formatFullDate(date)}</h2>
+            </div>
+            <strong className="life-places-count">{selectedPhotos.length}개</strong>
+          </div>
+          {selectedPhotos.length > 0 ? (
+            <div className="life-photo-gallery">
+              {selectedPhotos.map((photo) => (
+                <figure key={photo.id}>
+                  {photo.fileUrl ? <Image alt={photo.caption || photo.fileName} height={220} src={photo.fileUrl} unoptimized width={220} /> : <div>{photo.fileName}</div>}
+                  {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <ImagePlus aria-hidden size={28} />
+              <strong>이날 업로드한 사진이 없습니다.</strong>
+              <p>왼쪽에서 사진이나 영상을 선택하면 이곳에서 조회할 수 있습니다.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
     </div>
   );
 }

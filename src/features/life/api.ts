@@ -5,7 +5,6 @@ type DailyLogRow = {
   id: string;
   log_date: string;
   content: string;
-  mood: string | null;
   created_at: string;
 };
 
@@ -19,7 +18,7 @@ type LifePhotoRow = {
   created_at: string;
 };
 
-const dailyLogColumns = "id,log_date,content,mood,created_at";
+const dailyLogColumns = "id,log_date,content,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,caption,taken_at,created_at";
 
 async function getUserId() {
@@ -34,7 +33,6 @@ function mapDailyLogRow(row: DailyLogRow): DailyLogRecord {
     id: row.id,
     date: row.log_date,
     content: row.content,
-    mood: row.mood ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -69,7 +67,7 @@ export async function fetchDailyLogsFromDb() {
   return (data as DailyLogRow[]).map(mapDailyLogRow);
 }
 
-export async function createDailyLogInDb(date: string, content: string, mood?: string) {
+export async function createDailyLogInDb(date: string, content: string) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
@@ -80,7 +78,6 @@ export async function createDailyLogInDb(date: string, content: string, mood?: s
       user_id: userId,
       log_date: date,
       content,
-      mood: mood || null,
     })
     .select(dailyLogColumns)
     .single();
