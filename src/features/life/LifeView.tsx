@@ -12,7 +12,7 @@ import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
 import { createDailyLogInDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { DailyLogRecord, ExpenseRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type LifeViewMode = "calendar" | "map";
 
@@ -29,6 +29,15 @@ type PlaceTimelineItem = {
   meta: string;
   place: PlanPlace;
   title: string;
+};
+
+type LifeMediaPreview = LifeMediaUploadInput & {
+  id: string;
+  name: string;
+  objectUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  lastModified: number;
 };
 
 const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
@@ -87,8 +96,8 @@ function LifeCalendarView() {
     if (savedLog) setDailyLogs((current) => [savedLog, ...current]);
   };
 
-  const uploadLifePhotos = async (date: string, files: File[], caption?: string) => {
-    const savedPhotos = await uploadLifePhotosToDb(date, files, caption);
+  const uploadLifePhotos = async (date: string, uploads: LifeMediaUploadInput[], caption?: string) => {
+    const savedPhotos = await uploadLifePhotosToDb(date, uploads, caption);
     if (savedPhotos?.length) setLifePhotos((current) => [...savedPhotos, ...current]);
   };
 
@@ -225,20 +234,34 @@ function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateL
   );
 }
 
-function LifePhotosView({ onUploadPhotos, photos }: { onUploadPhotos: (date: string, files: File[], caption?: string) => Promise<void> | void; photos: LifePhotoRecord[] }) {
+function LifePhotosView({
+  onUploadPhotos,
+  photos,
+}: {
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string) => Promise<void> | void;
+  photos: LifePhotoRecord[];
+}) {
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [caption, setCaption] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<LifeMediaPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const selectedPhotos = photos.filter((photo) => photo.date === date);
 
+  useEffect(() => () => previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl)), [previews]);
+
+  const selectFiles = async (files: File[]) => {
+    previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
+    setPreviews(await Promise.all(files.map(createLifeMediaPreview)));
+  };
+
   const uploadPhotos = async () => {
-    if (files.length === 0) return;
+    if (previews.length === 0) return;
 
     setIsUploading(true);
     try {
-      await onUploadPhotos(date, files, caption.trim() || undefined);
-      setFiles([]);
+      await onUploadPhotos(date, previews, caption.trim() || undefined);
+      previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
+      setPreviews([]);
       setCaption("");
     } finally {
       setIsUploading(false);
@@ -259,13 +282,30 @@ function LifePhotosView({ onUploadPhotos, photos }: { onUploadPhotos: (date: str
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
           <label className="life-photo-dropzone">
-            <input accept="image/*,video/*" multiple type="file" onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
+            <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
             <ImagePlus aria-hidden size={24} />
-            <strong>{files.length > 0 ? `${files.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
+            <strong>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
             <span>선택한 날짜의 사진 기록으로 저장됩니다.</span>
           </label>
+          {previews.length > 0 ? (
+            <div className="life-media-preview-grid">
+              {previews.map((preview) => (
+                <figure key={preview.id}>
+                  {preview.mimeType.startsWith("video/") ? (
+                    <video muted playsInline src={preview.objectUrl} />
+                  ) : (
+                    <Image alt={preview.name} height={preview.height ?? 180} src={preview.objectUrl} unoptimized width={preview.width ?? 180} />
+                  )}
+                  <figcaption>
+                    <strong>{preview.name}</strong>
+                    <span>{formatMediaMeta(preview)}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
           <input className="life-photo-caption-input" placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
-          <button className="life-capture-primary" disabled={files.length === 0 || isUploading} onClick={uploadPhotos} type="button">
+          <button className="life-capture-primary" disabled={previews.length === 0 || isUploading} onClick={uploadPhotos} type="button">
             {isUploading ? "업로드 중" : "업로드"}
           </button>
         </SectionCard>
@@ -281,9 +321,20 @@ function LifePhotosView({ onUploadPhotos, photos }: { onUploadPhotos: (date: str
           {selectedPhotos.length > 0 ? (
             <div className="life-photo-gallery">
               {selectedPhotos.map((photo) => (
-                <figure key={photo.id}>
-                  {photo.fileUrl ? <Image alt={photo.caption || photo.fileName} height={220} src={photo.fileUrl} unoptimized width={220} /> : <div>{photo.fileName}</div>}
-                  {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
+                <figure key={photo.id} style={getMediaFigureStyle(photo)}>
+                  {photo.fileUrl ? (
+                    photo.mimeType?.startsWith("video/") ? (
+                      <video controls src={photo.fileUrl} />
+                    ) : (
+                      <Image alt={photo.caption || photo.fileName} height={photo.height ?? 220} src={photo.fileUrl} unoptimized width={photo.width ?? 220} />
+                    )
+                  ) : (
+                    <div>{photo.fileName}</div>
+                  )}
+                  <figcaption>
+                    {photo.caption ? <strong>{photo.caption}</strong> : null}
+                    <span>{formatStoredMediaMeta(photo)}</span>
+                  </figcaption>
                 </figure>
               ))}
             </div>
@@ -298,6 +349,95 @@ function LifePhotosView({ onUploadPhotos, photos }: { onUploadPhotos: (date: str
       </div>
     </div>
   );
+}
+
+async function createLifeMediaPreview(file: File): Promise<LifeMediaPreview> {
+  const objectUrl = URL.createObjectURL(file);
+  const basePreview = {
+    file,
+    id: `${file.name}-${file.lastModified}-${file.size}`,
+    name: file.name,
+    objectUrl,
+    mimeType: file.type || "application/octet-stream",
+    sizeBytes: file.size,
+    lastModified: file.lastModified,
+  };
+
+  if (file.type.startsWith("image/")) {
+    const dimensions = await readImageDimensions(objectUrl);
+    return { ...basePreview, ...dimensions };
+  }
+
+  if (file.type.startsWith("video/")) {
+    const metadata = await readVideoMetadata(objectUrl);
+    return { ...basePreview, ...metadata };
+  }
+
+  return basePreview;
+}
+
+function readImageDimensions(objectUrl: string) {
+  return new Promise<{ width?: number; height?: number }>((resolve) => {
+    const image = new window.Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => resolve({});
+    image.src = objectUrl;
+  });
+}
+
+function readVideoMetadata(objectUrl: string) {
+  return new Promise<{ width?: number; height?: number; durationSeconds?: number }>((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () =>
+      resolve({
+        width: video.videoWidth || undefined,
+        height: video.videoHeight || undefined,
+        durationSeconds: Number.isFinite(video.duration) ? video.duration : undefined,
+      });
+    video.onerror = () => resolve({});
+    video.src = objectUrl;
+  });
+}
+
+function getMediaFigureStyle(media: Pick<LifePhotoRecord, "height" | "width">) {
+  return media.width && media.height ? { aspectRatio: `${media.width} / ${media.height}` } : undefined;
+}
+
+function formatMediaMeta(media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "width">) {
+  return [
+    media.width && media.height ? `${media.width}×${media.height}` : null,
+    media.durationSeconds ? formatDuration(media.durationSeconds) : null,
+    media.mimeType,
+    formatFileSize(media.sizeBytes),
+    new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(media.lastModified)),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatStoredMediaMeta(media: LifePhotoRecord) {
+  return [
+    media.width && media.height ? `${media.width}×${media.height}` : null,
+    media.durationSeconds ? formatDuration(media.durationSeconds) : null,
+    media.mimeType,
+    media.sizeBytes ? formatFileSize(media.sizeBytes) : null,
+    media.takenAt ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(media.takenAt)) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / (1024 * 1024)).toFixed(1)}MB`;
+  if (sizeBytes >= 1024) return `${Math.round(sizeBytes / 1024)}KB`;
+  return `${sizeBytes}B`;
+}
+
+function formatDuration(durationSeconds: number) {
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = Math.round(durationSeconds % 60);
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function LifePlacesView() {

@@ -3648,6 +3648,49 @@ a:focus-visible {
   font-size: 0.76rem;
 }
 
+.life-media-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.life-media-preview-grid figure {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  margin: 0;
+}
+
+.life-media-preview-grid img,
+.life-media-preview-grid video {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.life-media-preview-grid figcaption {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px 10px;
+}
+
+.life-media-preview-grid figcaption strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-media-preview-grid figcaption span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
 .life-capture-history {
   display: grid;
   gap: 10px;
@@ -3715,12 +3758,13 @@ a:focus-visible {
 
 .life-photo-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
+  align-items: start;
 }
 
 .life-photo-gallery figure {
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.035);
@@ -3728,10 +3772,14 @@ a:focus-visible {
 }
 
 .life-photo-gallery img,
+.life-photo-gallery video,
 .life-photo-gallery figure > div {
+  display: block;
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .life-photo-gallery figure > div {
@@ -3744,10 +3792,17 @@ a:focus-visible {
 }
 
 .life-photo-gallery figcaption {
+  display: grid;
+  gap: 4px;
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
   padding: 9px 10px 11px;
+}
+
+.life-photo-gallery figcaption strong {
+  color: var(--text);
+  font-size: 0.82rem;
 }
 
 .schedule-date-map {

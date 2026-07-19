@@ -82,9 +82,21 @@ export type LifePhotoRecord = {
   fileName: string;
   filePath: string;
   fileUrl?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
   caption?: string;
   takenAt?: string;
   createdAt?: string;
+};
+
+export type LifeMediaUploadInput = {
+  file: File;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
 };
 
 export type PlaceProvider = "naver" | "manual";

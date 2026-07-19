@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { DailyLogRecord, LifePhotoRecord } from "@/types/domain";
+import type { DailyLogRecord, LifeMediaUploadInput, LifePhotoRecord } from "@/types/domain";
 
 type DailyLogRow = {
   id: string;
@@ -13,13 +13,18 @@ type LifePhotoRow = {
   photo_date: string;
   file_name: string;
   file_path: string;
+  mime_type: string | null;
+  size_bytes: number | string | null;
+  width: number | null;
+  height: number | null;
+  duration_seconds: number | string | null;
   caption: string | null;
   taken_at: string | null;
   created_at: string;
 };
 
 const dailyLogColumns = "id,log_date,content,created_at";
-const lifePhotoColumns = "id,photo_date,file_name,file_path,caption,taken_at,created_at";
+const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,taken_at,created_at";
 
 async function getUserId() {
   if (!supabase) return null;
@@ -46,6 +51,11 @@ async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
     fileName: row.file_name,
     filePath: row.file_path,
     fileUrl: signedUrl ?? undefined,
+    mimeType: row.mime_type ?? undefined,
+    sizeBytes: row.size_bytes === null ? undefined : Number(row.size_bytes),
+    width: row.width ?? undefined,
+    height: row.height ?? undefined,
+    durationSeconds: row.duration_seconds === null ? undefined : Number(row.duration_seconds),
     caption: row.caption ?? undefined,
     takenAt: row.taken_at ?? undefined,
     createdAt: row.created_at,
@@ -101,14 +111,15 @@ export async function fetchLifePhotosFromDb() {
   return Promise.all((data as LifePhotoRow[]).map(mapLifePhotoRow));
 }
 
-export async function uploadLifePhotosToDb(date: string, files: File[], caption?: string) {
+export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploadInput[], caption?: string) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
 
   const uploadedRows: LifePhotoRow[] = [];
 
-  for (const file of files) {
+  for (const upload of uploads) {
+    const { file } = upload;
     const extension = file.name.includes(".") ? file.name.split(".").pop() : "photo";
     const safeExtension = extension?.replace(/[^a-zA-Z0-9]/g, "") || "photo";
     const path = `${userId}/${date}/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
@@ -127,6 +138,11 @@ export async function uploadLifePhotosToDb(date: string, files: File[], caption?
         photo_date: date,
         file_name: file.name,
         file_path: path,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+        width: upload.width ?? null,
+        height: upload.height ?? null,
+        duration_seconds: upload.durationSeconds ?? null,
         caption: caption || null,
         taken_at: file.lastModified ? new Date(file.lastModified).toISOString() : null,
       })
