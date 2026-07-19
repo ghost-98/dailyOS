@@ -4,13 +4,14 @@ import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import { CalendarView, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
+import { CalendarView, ExternalCalendarItem, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
+import { createDailyLogInDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { ExpenseRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type LifeViewMode = "calendar" | "map";
 
@@ -41,6 +42,54 @@ export function LifeView({ mode }: LifeViewProps) {
 
 function LifeCalendarView() {
   const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
+  const [dailyLogs, setDailyLogs] = useState<DailyLogRecord[]>([]);
+  const [lifePhotos, setLifePhotos] = useState<LifePhotoRecord[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchDailyLogsFromDb(), fetchLifePhotosFromDb()])
+      .then(([logs, photos]) => {
+        if (!isMounted) return;
+        setDailyLogs(logs ?? []);
+        setLifePhotos(photos ?? []);
+      })
+      .catch((error) => console.error("Failed to load life capture data from Supabase", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const externalItems = useMemo<ExternalCalendarItem[]>(
+    () => [
+      ...dailyLogs.map((log) => ({
+        date: log.date,
+        id: log.id,
+        meta: log.mood || log.content.slice(0, 42),
+        title: "하루 기록",
+        type: "daily_log" as const,
+      })),
+      ...lifePhotos.map((photo) => ({
+        date: photo.date,
+        id: photo.id,
+        meta: photo.caption || photo.fileName,
+        title: "사진 기록",
+        type: "photo" as const,
+      })),
+    ],
+    [dailyLogs, lifePhotos],
+  );
+
+  const createDailyLog = async (date: string, content: string, mood?: string) => {
+    const savedLog = await createDailyLogInDb(date, content, mood);
+    if (savedLog) setDailyLogs((current) => [savedLog, ...current]);
+  };
+
+  const uploadLifePhotos = async (date: string, files: File[], caption?: string) => {
+    const savedPhotos = await uploadLifePhotosToDb(date, files, caption);
+    if (savedPhotos?.length) setLifePhotos((current) => [...savedPhotos, ...current]);
+  };
 
   return (
     <div className="life-axis-view">
@@ -73,8 +122,15 @@ function LifeCalendarView() {
           allowedTypes={["schedule", "event", "todo"]}
           defaultSelectedDate={formatDateKey(new Date())}
           description="일정과 할 일을 날짜별로 묶고, 필요한 항목을 바로 추가하세요."
+          externalItems={externalItems}
           headerVariant="tab"
           keepDateSelected
+          lifeCaptureTools={{
+            logs: dailyLogs,
+            onCreateDailyLog: createDailyLog,
+            onUploadPhotos: uploadLifePhotos,
+            photos: lifePhotos,
+          }}
           showEventAddButton
           showSelectedDatePlacesMap={false}
           title="사건"

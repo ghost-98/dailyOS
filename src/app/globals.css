@@ -3039,6 +3039,10 @@ a:focus-visible {
   background: #c084fc;
 }
 
+.calendar-dot--photo {
+  background: #f472b6;
+}
+
 .calendar-filter--expense::before,
 .calendar-dot--expense {
   background: var(--green);
@@ -3329,6 +3333,10 @@ a:focus-visible {
   color: var(--text);
 }
 
+.day-timeline__chip--muted {
+  opacity: 0.42;
+}
+
 .day-timeline__chip:hover strong,
 .day-timeline__chip--active strong {
   background: rgba(201, 184, 255, 0.2);
@@ -3465,6 +3473,179 @@ a:focus-visible {
   font-size: 0.78rem;
   line-height: 1.45;
   margin: 0;
+}
+
+.life-capture-panel {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 2px;
+  padding-top: 18px;
+}
+
+.life-capture-panel__header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.life-capture-panel__header strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.life-capture-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.life-capture-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-capture-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.life-capture-card__title svg {
+  color: var(--violet);
+}
+
+.life-capture-card textarea,
+.life-capture-card input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font: inherit;
+}
+
+.life-capture-card textarea {
+  min-height: 92px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.life-capture-card input {
+  min-height: 40px;
+  padding: 0 11px;
+}
+
+.life-capture-card__footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.life-capture-card__footer button {
+  border: 1px solid rgba(201, 184, 255, 0.25);
+  border-radius: 12px;
+  background: rgba(201, 184, 255, 0.13);
+  color: var(--violet);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 13px;
+}
+
+.life-capture-card__footer button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.life-photo-dropzone {
+  display: grid;
+  min-height: 126px;
+  place-items: center;
+  gap: 5px;
+  border: 1px dashed rgba(201, 184, 255, 0.24);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 16px;
+  text-align: center;
+}
+
+.life-photo-dropzone input {
+  display: none;
+}
+
+.life-photo-dropzone svg,
+.life-photo-dropzone strong {
+  color: var(--violet);
+}
+
+.life-photo-dropzone span {
+  font-size: 0.76rem;
+}
+
+.life-capture-history {
+  display: grid;
+  gap: 10px;
+}
+
+.life-log-preview {
+  border-left: 3px solid var(--violet);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 11px 12px;
+}
+
+.life-log-preview span {
+  color: var(--violet);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.life-log-preview p {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.life-photo-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-photo-strip figure {
+  overflow: hidden;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  margin: 0;
+}
+
+.life-photo-strip img,
+.life-photo-strip div {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.life-photo-strip div {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 8px;
+  text-align: center;
 }
 
 .schedule-date-map {

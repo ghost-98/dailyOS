@@ -69,6 +69,25 @@ export type ExpenseRecord = {
   targetId: string;
 };
 
+export type DailyLogRecord = {
+  id: string;
+  date: string;
+  content: string;
+  mood?: string;
+  createdAt?: string;
+};
+
+export type LifePhotoRecord = {
+  id: string;
+  date: string;
+  fileName: string;
+  filePath: string;
+  fileUrl?: string;
+  caption?: string;
+  takenAt?: string;
+  createdAt?: string;
+};
+
 export type PlaceProvider = "naver" | "manual";
 
 export type PlaceFolder = {

@@ -164,6 +164,29 @@ create table if not exists public.workout_sessions (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.daily_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  log_date date not null,
+  content text not null,
+  mood text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.life_photos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  photo_date date not null,
+  file_name text not null,
+  file_path text not null,
+  caption text,
+  taken_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, file_path)
+);
+
 create table if not exists public.expense_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -474,6 +497,8 @@ create index if not exists place_folder_links_user_folder_idx on public.place_fo
 create index if not exists place_folder_links_place_idx on public.place_folder_links(place_id);
 create index if not exists place_links_user_target_idx on public.place_links(user_id, target_type, target_id);
 create index if not exists place_links_place_idx on public.place_links(place_id, target_date);
+create index if not exists daily_logs_user_date_idx on public.daily_logs(user_id, log_date, created_at desc);
+create index if not exists life_photos_user_date_idx on public.life_photos(user_id, photo_date, created_at desc);
 create index if not exists career_records_user_tab_idx on public.career_records(user_id, tab, created_at desc);
 create index if not exists application_events_record_idx on public.application_events(career_record_id, event_date);
 create index if not exists job_applications_user_status_idx on public.job_applications(user_id, status, created_at desc);
@@ -488,10 +513,18 @@ insert into storage.buckets (id, name, public)
 values ('career-files', 'career-files', false)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('life-media', 'life-media', false)
+on conflict (id) do nothing;
+
 drop policy if exists "career_files_select_own" on storage.objects;
 drop policy if exists "career_files_insert_own" on storage.objects;
 drop policy if exists "career_files_update_own" on storage.objects;
 drop policy if exists "career_files_delete_own" on storage.objects;
+drop policy if exists "life_media_select_own" on storage.objects;
+drop policy if exists "life_media_insert_own" on storage.objects;
+drop policy if exists "life_media_update_own" on storage.objects;
+drop policy if exists "life_media_delete_own" on storage.objects;
 
 create policy "career_files_select_own"
 on storage.objects for select
@@ -509,6 +542,23 @@ with check (bucket_id = 'career-files' and (select auth.uid())::text = (storage.
 create policy "career_files_delete_own"
 on storage.objects for delete
 using (bucket_id = 'career-files' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "life_media_select_own"
+on storage.objects for select
+using (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "life_media_insert_own"
+on storage.objects for insert
+with check (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "life_media_update_own"
+on storage.objects for update
+using (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1])
+with check (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create policy "life_media_delete_own"
+on storage.objects for delete
+using (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
 
 drop trigger if exists set_profiles_updated_at on public.profiles;
 create trigger set_profiles_updated_at
@@ -533,6 +583,16 @@ for each row execute function public.set_updated_at();
 drop trigger if exists set_workout_sessions_updated_at on public.workout_sessions;
 create trigger set_workout_sessions_updated_at
 before update on public.workout_sessions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_daily_logs_updated_at on public.daily_logs;
+create trigger set_daily_logs_updated_at
+before update on public.daily_logs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_life_photos_updated_at on public.life_photos;
+create trigger set_life_photos_updated_at
+before update on public.life_photos
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_expense_records_updated_at on public.expense_records;
@@ -661,6 +721,8 @@ alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
 alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
+alter table public.daily_logs enable row level security;
+alter table public.life_photos enable row level security;
 alter table public.expense_records enable row level security;
 alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
@@ -791,6 +853,56 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own workout sessions" on public.workout_sessions;
 create policy "Users can delete own workout sessions"
 on public.workout_sessions for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own daily logs" on public.daily_logs;
+create policy "Users can read own daily logs"
+on public.daily_logs for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own daily logs" on public.daily_logs;
+create policy "Users can insert own daily logs"
+on public.daily_logs for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own daily logs" on public.daily_logs;
+create policy "Users can update own daily logs"
+on public.daily_logs for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own daily logs" on public.daily_logs;
+create policy "Users can delete own daily logs"
+on public.daily_logs for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own life photos" on public.life_photos;
+create policy "Users can read own life photos"
+on public.life_photos for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own life photos" on public.life_photos;
+create policy "Users can insert own life photos"
+on public.life_photos for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own life photos" on public.life_photos;
+create policy "Users can update own life photos"
+on public.life_photos for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own life photos" on public.life_photos;
+create policy "Users can delete own life photos"
+on public.life_photos for delete
 to authenticated
 using (user_id = auth.uid());
 
