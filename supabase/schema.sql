@@ -191,6 +191,15 @@ create table if not exists public.life_photos (
   unique (user_id, file_path)
 );
 
+alter table public.life_photos
+  add column if not exists mime_type text,
+  add column if not exists size_bytes bigint check (size_bytes is null or size_bytes >= 0),
+  add column if not exists width integer check (width is null or width > 0),
+  add column if not exists height integer check (height is null or height > 0),
+  add column if not exists duration_seconds numeric(10, 3) check (duration_seconds is null or duration_seconds >= 0),
+  add column if not exists caption text,
+  add column if not exists taken_at timestamptz;
+
 create table if not exists public.expense_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -1399,3 +1408,5 @@ create policy "Users can delete own ai extraction drafts"
 on public.ai_extraction_drafts for delete
 to authenticated
 using (user_id = auth.uid());
+
+notify pgrst, 'reload schema';
