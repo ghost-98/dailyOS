@@ -40,6 +40,10 @@ export type ExternalCalendarItem = {
   title: string;
   type: ExternalCalendarCategory;
 };
+type DayTimelineItem =
+  | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "schedule" | "event" }
+  | { id: string; sortMinutes: number; task: TaskItem; timeLabel: string; type: "todo" }
+  | { external: ExternalCalendarItem; id: string; sortMinutes: number; timeLabel: string; type: ExternalCalendarCategory };
 type DragPlacement = "before" | "after";
 
 type NaverLatLng = unknown;
@@ -147,7 +151,7 @@ export function CalendarView({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
-  const [activeDateCategory, setActiveDateCategory] = useState<CalendarCategory>("schedule");
+  const [, setActiveDateCategory] = useState<CalendarCategory>("schedule");
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
@@ -181,6 +185,16 @@ export function CalendarView({
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
   const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
+  const selectedTimelineItems = useMemo(
+    () =>
+      [
+        ...selectedSchedules.map((event) => createEventTimelineItem(event)),
+        ...selectedTasks.map((task) => createTaskTimelineItem(task)),
+        ...selectedEvents.map((event) => createEventTimelineItem(event)),
+        ...selectedExternalItems.map((external) => createExternalTimelineItem(external)),
+      ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type)),
+    [selectedEvents, selectedExternalItems, selectedSchedules, selectedTasks],
+  );
   const detailSections = useMemo(
     () =>
       [
@@ -190,7 +204,6 @@ export function CalendarView({
       ].filter((section) => categories.includes(section.type)),
     [categories, selectedEvents, selectedSchedules, selectedTasks],
   );
-  const selectedDetailSection = detailSections.find((section) => section.type === activeDateCategory) ?? detailSections[0];
 
   const countsByCategory = useMemo(() => {
     if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
@@ -467,73 +480,34 @@ export function CalendarView({
               {showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
               <div className="date-event-list">
-                <div className="date-category-tabs" aria-label="날짜별 항목">
-                  {detailSections.map((section) => {
-                    const isActive = section.type === selectedDetailSection?.type;
-
-                    return (
-                      <button
-                        className={`date-category-tab ${isActive ? "date-category-tab--active" : ""}`}
-                        key={section.type}
-                        onClick={() => setActiveDateCategory(section.type)}
-                        type="button"
-                      >
-                        <span className={`calendar-dot calendar-dot--${section.type}`} />
-                        {categoryLabels[section.type]}
-                        <strong>{countsByCategory[section.type]}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedDetailSection ? (
-                  <DateDetailSection
-                    key={selectedDetailSection.type}
-                    countsByCategory={countsByCategory}
-                    draggingItem={draggingItem}
-                    dropTarget={dropTarget}
-                    isLoading={isLoading}
-                    onAdd={() => openCreateEventSheet(selectedDetailSection.type)}
-                    onClearDrag={clearDragState}
-                    onDeleteEvent={deleteEvent}
-                    onDeleteTask={deleteTask}
-                    onDragOverItem={handleDragOverItem}
-                    onEditEvent={(event) => {
-                      setEditingEvent(event);
-                      setSheetDefaultType(event.type as CalendarCategory);
-                      setIsEventSheetOpen(true);
-                    }}
-                    onEditTask={(target) => {
-                      setEditingTask(target);
-                      setIsTaskSheetOpen(true);
-                    }}
-                    onReorderEvent={reorderEvent}
-                    onReorderTask={reorderTask}
-                    onResolveDropPlacement={getDropPlacement}
-                    onSetDragging={setDraggingItem}
-                    onToggleDone={toggleTaskDone}
-                    section={selectedDetailSection}
-                    showHeader={false}
-                  />
-                ) : null}
-
-                {selectedExternalItems.length > 0 ? (
-                  <div className="date-life-section">
-                    <div className="date-life-section__head">
-                      <span>생활 기록</span>
-                      <strong>{selectedExternalItems.length}</strong>
-                    </div>
-                    {selectedExternalItems.map((item) => (
-                      <article className="date-life-item" key={`${item.type}-${item.id}`}>
-                        <span className={`calendar-dot calendar-dot--${item.type}`} />
-                        <div>
-                          <strong>{item.title}</strong>
-                          {item.meta ? <p>{item.meta}</p> : null}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
+                <DayTimelineSection
+                  countsByCategory={countsByCategory}
+                  draggingItem={draggingItem}
+                  dropTarget={dropTarget}
+                  externalCount={selectedExternalItems.length}
+                  isLoading={isLoading}
+                  items={selectedTimelineItems}
+                  onAddEvent={openCreateEventSheet}
+                  onClearDrag={clearDragState}
+                  onDeleteEvent={deleteEvent}
+                  onDeleteTask={deleteTask}
+                  onDragOverItem={handleDragOverItem}
+                  onEditEvent={(event) => {
+                    setEditingEvent(event);
+                    setSheetDefaultType(event.type as CalendarCategory);
+                    setIsEventSheetOpen(true);
+                  }}
+                  onEditTask={(target) => {
+                    setEditingTask(target);
+                    setIsTaskSheetOpen(true);
+                  }}
+                  onReorderEvent={reorderEvent}
+                  onReorderTask={reorderTask}
+                  onResolveDropPlacement={getDropPlacement}
+                  onSetDragging={setDraggingItem}
+                  onToggleDone={toggleTaskDone}
+                  visibleCategories={detailSections.map((section) => section.type)}
+                />
               </div>
             </SectionCard>
           </aside>
@@ -581,12 +555,14 @@ export function CalendarView({
   );
 }
 
-function DateDetailSection({
+function DayTimelineSection({
   countsByCategory,
   draggingItem,
   dropTarget,
+  externalCount,
   isLoading,
-  onAdd,
+  items,
+  onAddEvent,
   onClearDrag,
   onDeleteEvent,
   onDeleteTask,
@@ -598,14 +574,15 @@ function DateDetailSection({
   onResolveDropPlacement,
   onSetDragging,
   onToggleDone,
-  section,
-  showHeader = true,
+  visibleCategories,
 }: {
   countsByCategory: Record<CalendarCategory, number>;
   draggingItem: { id: string; type: CalendarCategory } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
+  externalCount: number;
   isLoading: boolean;
-  onAdd: () => void;
+  items: DayTimelineItem[];
+  onAddEvent: (type: CalendarCategory) => void;
   onClearDrag: () => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
@@ -617,66 +594,111 @@ function DateDetailSection({
   onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
   onSetDragging: (item: { id: string; type: CalendarCategory }) => void;
   onToggleDone: (task: TaskItem) => void;
-  section:
-    | { type: "schedule" | "event"; events: CalendarEvent[]; tasks?: never }
-    | { type: "todo"; tasks: TaskItem[]; events?: never };
-  showHeader?: boolean;
+  visibleCategories: CalendarCategory[];
 }) {
-  const itemCount = countsByCategory[section.type];
-  const isTodoSection = section.type === "todo";
-  const items = isTodoSection ? section.tasks : section.events;
+  const totalCount = visibleCategories.reduce((sum, type) => sum + countsByCategory[type], 0) + externalCount;
 
   return (
-    <section className="date-detail-section">
-      {showHeader ? (
-        <div className="date-detail-section__header">
-          <div>
-            <span className={`calendar-dot calendar-dot--${section.type}`} />
-            <strong>{categoryLabels[section.type]}</strong>
-            <em>{itemCount}</em>
-          </div>
+    <section className="day-timeline" aria-label="하루 타임라인">
+      <div className="day-timeline__summary">
+        <div>
+          <span>하루 타임라인</span>
+          <strong>{totalCount}개 기록</strong>
         </div>
-      ) : null}
-
-      <div className="date-detail-section__items">
-        {items.length > 0 ? (
-          isTodoSection ? (
-            section.tasks.map((task) => (
-              <TaskDateItem
-                dropPlacement={dropTarget?.id === task.id && draggingItem?.id !== task.id ? dropTarget.placement : null}
-                isDragging={draggingItem?.id === task.id}
-                key={task.id}
-                onDelete={onDeleteTask}
-                onDragEnd={onClearDrag}
-                onDragOver={(dragEvent) => onDragOverItem(dragEvent, task.id, "todo")}
-                onDragStart={() => onSetDragging({ id: task.id, type: "todo" })}
-                onDrop={(dragEvent) => onReorderTask(task.id, onResolveDropPlacement(dragEvent))}
-                onEdit={onEditTask}
-                onToggleDone={onToggleDone}
-                task={task}
-              />
-            ))
-          ) : (
-            section.events.map((event) => (
-              <EventDateItem
-                dropPlacement={dropTarget?.id === event.id && draggingItem?.id !== event.id ? dropTarget.placement : null}
-                event={event}
-                isDragging={draggingItem?.id === event.id}
-                key={event.id}
-                onDelete={onDeleteEvent}
-                onDragEnd={onClearDrag}
-                onDragOver={(dragEvent) => onDragOverItem(dragEvent, event.id, event.type as CalendarCategory)}
-                onDragStart={() => onSetDragging({ id: event.id, type: event.type as CalendarCategory })}
-                onDrop={(dragEvent) => onReorderEvent(event.id, onResolveDropPlacement(dragEvent))}
-                onEdit={onEditEvent}
-              />
-            ))
-          )
-        ) : (
-          <EmptyDateState isLoading={isLoading} label={categoryLabels[section.type]} onAdd={onAdd} />
-        )}
+        <div className="day-timeline__actions">
+          {visibleCategories.includes("schedule") ? (
+            <button onClick={() => onAddEvent("schedule")} type="button">
+              일정
+            </button>
+          ) : null}
+          {visibleCategories.includes("todo") ? (
+            <button onClick={() => onAddEvent("todo")} type="button">
+              할 일
+            </button>
+          ) : null}
+          {visibleCategories.includes("event") ? (
+            <button onClick={() => onAddEvent("event")} type="button">
+              사건
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      <div className="day-timeline__chips" aria-label="기록 요약">
+        {visibleCategories.map((type) => (
+          <span className="day-timeline__chip" key={type}>
+            <span className={`calendar-dot calendar-dot--${type}`} />
+            {categoryLabels[type]}
+            <strong>{countsByCategory[type]}</strong>
+          </span>
+        ))}
+        {externalCount > 0 ? (
+          <span className="day-timeline__chip">
+            생활 기록
+            <strong>{externalCount}</strong>
+          </span>
+        ) : null}
+      </div>
+
+      {items.length > 0 ? (
+        <div className="day-timeline__items">
+          {items.map((item) => (
+            <div className={`day-timeline__row day-timeline__row--${item.type}`} key={item.id}>
+              <div className="day-timeline__time">
+                <span>{item.timeLabel}</span>
+              </div>
+              <div className="day-timeline__marker">
+                <span className={`calendar-dot calendar-dot--${item.type}`} />
+              </div>
+              <div className="day-timeline__body">
+                {item.type === "todo" ? (
+                  <TaskDateItem
+                    dropPlacement={dropTarget?.id === item.task.id && draggingItem?.id !== item.task.id ? dropTarget.placement : null}
+                    isDragging={draggingItem?.id === item.task.id}
+                    onDelete={onDeleteTask}
+                    onDragEnd={onClearDrag}
+                    onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.task.id, "todo")}
+                    onDragStart={() => onSetDragging({ id: item.task.id, type: "todo" })}
+                    onDrop={(dragEvent) => onReorderTask(item.task.id, onResolveDropPlacement(dragEvent))}
+                    onEdit={onEditTask}
+                    onToggleDone={onToggleDone}
+                    task={item.task}
+                  />
+                ) : "event" in item ? (
+                  <EventDateItem
+                    dropPlacement={dropTarget?.id === item.event.id && draggingItem?.id !== item.event.id ? dropTarget.placement : null}
+                    event={item.event}
+                    isDragging={draggingItem?.id === item.event.id}
+                    onDelete={onDeleteEvent}
+                    onDragEnd={onClearDrag}
+                    onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.event.id, item.event.type as CalendarCategory)}
+                    onDragStart={() => onSetDragging({ id: item.event.id, type: item.event.type as CalendarCategory })}
+                    onDrop={(dragEvent) => onReorderEvent(item.event.id, onResolveDropPlacement(dragEvent))}
+                    onEdit={onEditEvent}
+                  />
+                ) : (
+                  <ExternalTimelineItem item={item.external} />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyDateState isLoading={isLoading} label="타임라인" onAdd={visibleCategories[0] ? () => onAddEvent(visibleCategories[0]) : undefined} />
+      )}
     </section>
+  );
+}
+
+function ExternalTimelineItem({ item }: { item: ExternalCalendarItem }) {
+  return (
+    <article className="date-life-item day-timeline-external">
+      <span className={`calendar-dot calendar-dot--${item.type}`} />
+      <div>
+        <strong>{item.title}</strong>
+        {item.meta ? <p>{item.meta}</p> : null}
+      </div>
+    </article>
   );
 }
 
@@ -1683,6 +1705,61 @@ function formatPlanDateTime(startDate: string, endDate?: string, startTime?: str
   if (startTime && endTime) return `${dateLabel} · ${startTime}-${endTime}`;
   if (startTime) return `${dateLabel} · ${startTime}`;
   return dateLabel;
+}
+
+function createEventTimelineItem(event: CalendarEvent): DayTimelineItem {
+  return {
+    event,
+    id: `${event.type}-${event.id}`,
+    sortMinutes: getTimelineSortMinutes(event.time, event.isAllDay),
+    timeLabel: getTimelineTimeLabel(event.time, event.isAllDay),
+    type: event.type as "schedule" | "event",
+  };
+}
+
+function createTaskTimelineItem(task: TaskItem): DayTimelineItem {
+  return {
+    id: `todo-${task.id}`,
+    sortMinutes: getTimelineSortMinutes(task.startTime, task.isAllDay),
+    task,
+    timeLabel: getTimelineTimeLabel(task.startTime, task.isAllDay),
+    type: "todo",
+  };
+}
+
+function createExternalTimelineItem(external: ExternalCalendarItem): DayTimelineItem {
+  return {
+    external,
+    id: `${external.type}-${external.id}`,
+    sortMinutes: 24 * 60 + getTimelineTypeOrder(external.type),
+    timeLabel: "기록",
+    type: external.type,
+  };
+}
+
+function getTimelineSortMinutes(time?: string, isAllDay = true) {
+  if (isAllDay || !time) return 24 * 60;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 24 * 60;
+  return hours * 60 + minutes;
+}
+
+function getTimelineTimeLabel(time?: string, isAllDay = true) {
+  if (isAllDay) return "하루종일";
+  return time || "시간 미정";
+}
+
+function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory) {
+  const order: Record<CalendarCategory | ExternalCalendarCategory, number> = {
+    schedule: 0,
+    todo: 1,
+    event: 2,
+    expense: 3,
+    workout: 4,
+    weight: 5,
+    daily_log: 6,
+  };
+  return order[type];
 }
 
 function parseOptionalAmount(value: string) {
