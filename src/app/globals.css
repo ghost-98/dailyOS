@@ -2312,6 +2312,183 @@ button {
   min-height: auto;
 }
 
+.today-dashboard-hero {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at top right, rgba(201, 184, 255, 0.18), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
+  box-shadow: var(--shadow);
+  padding: 30px;
+}
+
+.today-dashboard-hero .header-action {
+  flex-shrink: 0;
+}
+
+.today-signal-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.today-signal-card {
+  min-height: 146px;
+}
+
+.today-signal-card__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.24);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+}
+
+.today-life-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(340px, 0.82fr);
+}
+
+.today-command-card {
+  padding: 20px;
+}
+
+.today-life-timeline,
+.today-log-stack,
+.today-place-list {
+  display: grid;
+  gap: 12px;
+}
+
+.today-life-timeline__item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 16px;
+}
+
+.today-life-timeline__item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.today-life-timeline__dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 9px;
+  border-radius: 999px;
+  background: var(--muted);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.04);
+}
+
+.today-life-timeline__dot--violet {
+  background: var(--violet);
+}
+
+.today-life-timeline__dot--green {
+  background: var(--green);
+}
+
+.today-life-timeline__dot--pink {
+  background: var(--pink);
+}
+
+.today-life-timeline__dot--amber {
+  background: var(--amber);
+}
+
+.today-life-timeline__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.today-life-timeline__item h3 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.today-life-timeline__item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.today-log-snippet,
+.today-place-item {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 15px;
+}
+
+.today-log-snippet p,
+.today-place-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.today-log-snippet p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--text);
+}
+
+.today-log-snippet span {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.today-photo-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.today-photo-thumb {
+  position: relative;
+  display: grid;
+  min-height: 92px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+
+.today-photo-thumb img {
+  object-fit: cover;
+}
+
+.today-support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.today-place-item strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text);
+  font-size: 15px;
+}
+
 .today__header {
   display: flex;
   align-items: flex-end;
@@ -7374,7 +7551,8 @@ a:focus-visible {
   }
 
   .today-summary-grid,
-  .today-work-grid {
+  .today-work-grid,
+  .today-support-grid {
     grid-template-columns: 1fr;
   }
 
