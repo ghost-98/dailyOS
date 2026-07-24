@@ -1322,8 +1322,8 @@ function EventCreateSheet({
             </label>
           </div>
 
-          <FormSectionTitle title="날짜와 시간" description="기본은 하루종일이며, 필요할 때 시간 범위를 지정하세요." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
+          <FormSectionTitle title="날짜" description="기본은 단일 날짜이며, 기간 설정을 켜면 종료 날짜를 함께 기록합니다." />
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-date-grid">
             <div className="schedule-date-row">
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
@@ -1369,6 +1369,10 @@ function EventCreateSheet({
               </label>
             </div>
 
+          </div>
+
+          <FormSectionTitle title="시간" description="기본은 하루종일이며, 체크를 해제하면 시작 시간과 종료 시간을 설정할 수 있습니다." />
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <div className="schedule-time-row">
               <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
                 <div className="event-form-row__label">
@@ -1430,6 +1434,9 @@ function EventCreateSheet({
               </label>
             </div>
 
+          </div>
+
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
                 <Bell aria-hidden size={18} />
@@ -1584,8 +1591,8 @@ function TaskCreateSheet({
             </label>
           </div>
 
-          <FormSectionTitle title="날짜와 시간" description="시작일과 종료일을 기준으로 달력에 표시됩니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
+          <FormSectionTitle title="날짜" description="기본은 단일 날짜이며, 기간 설정을 켜면 종료 날짜를 함께 기록합니다." />
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-date-grid">
             <div className="schedule-date-row">
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
@@ -1631,6 +1638,10 @@ function TaskCreateSheet({
               </label>
             </div>
 
+          </div>
+
+          <FormSectionTitle title="시간" description="기본은 하루종일이며, 체크를 해제하면 시작 시간과 종료 시간을 설정할 수 있습니다." />
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <div className="schedule-time-row">
               <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
                 <div className="event-form-row__label">

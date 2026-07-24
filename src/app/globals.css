@@ -4994,14 +4994,6 @@ a:focus-visible {
   padding-top: 2px;
 }
 
-.schedule-date-row > .schedule-toggle-row {
-  grid-column: 3;
-}
-
-.schedule-time-row > .schedule-toggle-row:last-child {
-  grid-column: 4;
-}
-
 .schedule-time-grid .event-form-row {
   min-height: 82px;
 }
@@ -8192,11 +8184,6 @@ a:focus-visible {
   .schedule-date-row,
   .schedule-time-row {
     grid-template-columns: 1fr;
-  }
-
-  .schedule-date-row > .schedule-toggle-row,
-  .schedule-time-row > .schedule-toggle-row:last-child {
-    grid-column: auto;
   }
 
 .progress-meter {
