@@ -2,15 +2,25 @@
 
 import Image from "next/image";
 import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import { CalendarView, ExternalCalendarItem, MonthPickerSheet, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { createWeightRecordInDb, createWorkoutSessionInDb, fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb, updateWeightRecordInDb } from "@/features/health/api";
+import {
+  createWeightRecordInDb,
+  createWorkoutSessionInDb,
+  deleteWeightRecordFromDb,
+  deleteWorkoutSessionFromDb,
+  fetchWeightRecordsFromDb,
+  fetchWorkoutSessionsFromDb,
+  updateWeightRecordInDb,
+  updateWorkoutSessionInDb,
+} from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
-import { createDailyLogInDb, deleteLifePhotoFromDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
+import { createDailyLogInDb, deleteDailyLogFromDb, deleteLifePhotoFromDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, updateDailyLogInDb, uploadLifePhotosToDb } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
@@ -54,15 +64,19 @@ function LifeCalendarView() {
   const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
   const [dailyLogs, setDailyLogs] = useState<DailyLogRecord[]>([]);
   const [lifePhotos, setLifePhotos] = useState<LifePhotoRecord[]>([]);
+  const [weights, setWeights] = useState<WeightRecord[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
 
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([fetchDailyLogsFromDb(), fetchLifePhotosFromDb()])
-      .then(([logs, photos]) => {
+    Promise.all([fetchDailyLogsFromDb(), fetchLifePhotosFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
+      .then(([logs, photos, nextWeights, nextWorkouts]) => {
         if (!isMounted) return;
         setDailyLogs(logs ?? []);
         setLifePhotos(photos ?? []);
+        setWeights(nextWeights ?? []);
+        setWorkouts(nextWorkouts ?? []);
       })
       .catch((error) => console.error("Failed to load life capture data from Supabase", error));
 
@@ -87,13 +101,37 @@ function LifeCalendarView() {
         title: "사진 기록",
         type: "photo" as const,
       })),
+      ...workouts.map((workout) => ({
+        date: workout.date,
+        id: workout.id,
+        meta: workout.type === "running" ? [workout.distanceKm ? `${workout.distanceKm}km` : null, formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60)].filter(Boolean).join(" · ") : workout.memo,
+        title: workout.type === "running" ? "러닝 기록" : "운동 기록",
+        type: "workout" as const,
+      })),
+      ...weights.map((weight) => ({
+        date: weight.date,
+        id: weight.id,
+        meta: `${weight.weightKg}kg`,
+        title: "아침 몸무게",
+        type: "weight" as const,
+      })),
     ],
-    [dailyLogs, lifePhotos],
+    [dailyLogs, lifePhotos, weights, workouts],
   );
 
-  const createDailyLog = async (date: string, content: string) => {
-    const savedLog = await createDailyLogInDb(date, content);
+  const createDailyLog = async (date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => {
+    const savedLog = await createDailyLogInDb(date, content, linkedTarget);
     if (savedLog) setDailyLogs((current) => [savedLog, ...current]);
+  };
+
+  const updateDailyLog = async (log: DailyLogRecord) => {
+    const savedLog = await updateDailyLogInDb(log);
+    if (savedLog) setDailyLogs((current) => current.map((item) => (item.id === savedLog.id ? savedLog : item)));
+  };
+
+  const deleteDailyLog = async (id: string) => {
+    await deleteDailyLogFromDb(id);
+    setDailyLogs((current) => current.filter((item) => item.id !== id));
   };
 
   const uploadLifePhotos = async (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => {
@@ -170,21 +208,54 @@ function LifeCalendarView() {
       ) : activeTab === "ledger" ? (
         <LedgerView variant="tab" />
       ) : activeTab === "logs" ? (
-        <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} />
+        <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onUpdateLog={updateDailyLog} />
       ) : activeTab === "photos" ? (
         <LifePhotosView onDeletePhoto={deleteLifePhoto} onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
       ) : (
-        <LifeHealthView />
+        <LifeHealthView setWeights={setWeights} setWorkouts={setWorkouts} weights={weights} workouts={workouts} />
       )}
     </div>
   );
 }
 
-function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateLog: (date: string, content: string) => Promise<void> | void }) {
+function LifeLogsView({
+  logs,
+  onCreateLog,
+  onDeleteLog,
+  onUpdateLog,
+}: {
+  logs: DailyLogRecord[];
+  onCreateLog: (date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
+  onDeleteLog: (id: string) => Promise<void> | void;
+  onUpdateLog: (log: DailyLogRecord) => Promise<void> | void;
+}) {
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [content, setContent] = useState("");
+  const [linkedTargetKey, setLinkedTargetKey] = useState("");
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const selectedLogs = logs.filter((log) => log.date === date);
+  const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks), [date, events, tasks]);
+  const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
+      .then(([nextEvents, nextTasks]) => {
+        if (!isMounted) return;
+        setEvents(nextEvents ?? []);
+        setTasks(nextTasks ?? []);
+      })
+      .catch((error) => console.error("Failed to load daily log link targets from Supabase", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const saveLog = async () => {
     const trimmedContent = content.trim();
@@ -192,16 +263,51 @@ function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateL
 
     setIsSaving(true);
     try {
-      await onCreateLog(date, trimmedContent);
+      const linkedTargetPayload = linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined;
+      if (editingLogId) {
+        await onUpdateLog({
+          id: editingLogId,
+          date,
+          content: trimmedContent,
+          linkedTargetId: linkedTargetPayload?.id,
+          linkedTargetTitle: linkedTargetPayload?.title,
+          linkedTargetType: linkedTargetPayload?.type,
+        });
+      } else {
+        await onCreateLog(date, trimmedContent, linkedTargetPayload);
+      }
       setContent("");
+      setLinkedTargetKey("");
+      setEditingLogId(null);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const editLog = (log: DailyLogRecord) => {
+    setDate(log.date);
+    setContent(log.content);
+    setEditingLogId(log.id);
+    setLinkedTargetKey(log.linkedTargetType && log.linkedTargetId ? `${log.linkedTargetType}:${log.linkedTargetId}` : "");
+  };
+
+  const deleteLog = async (id: string) => {
+    setDeletingLogId(id);
+    try {
+      await onDeleteLog(id);
+      if (editingLogId === id) {
+        setEditingLogId(null);
+        setContent("");
+        setLinkedTargetKey("");
+      }
+    } finally {
+      setDeletingLogId(null);
+    }
+  };
+
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="하루기록" description="짧은 텍스트로 하루의 감정, 생각, 장면을 날짜에 남겨두세요." />
+      <LifeTabHeading title="하루기록" description="날짜나 사건에 연결해두면 이 탭과 사건 탭의 해당 날짜 타임라인에서 함께 조회됩니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
@@ -212,9 +318,33 @@ function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateL
             <span>기록 날짜</span>
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
+          <label className="life-photo-link-field">
+            <span>연결할 사건</span>
+            <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
+              <option value="">날짜에만 연결</option>
+              {linkedTargetOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <textarea placeholder="오늘 기억하고 싶은 것 한두 문장을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+          {editingLogId ? (
+            <button
+              className="life-capture-secondary"
+              onClick={() => {
+                setEditingLogId(null);
+                setContent("");
+                setLinkedTargetKey("");
+              }}
+              type="button"
+            >
+              수정 취소
+            </button>
+          ) : null}
           <button className="life-capture-primary" disabled={!content.trim() || isSaving} onClick={saveLog} type="button">
-            {isSaving ? "저장 중" : "기록 저장"}
+            {isSaving ? "저장 중" : editingLogId ? "기록 수정" : "기록 저장"}
           </button>
         </SectionCard>
 
@@ -230,8 +360,17 @@ function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateL
             <div className="life-log-list">
               {selectedLogs.map((log) => (
                 <article className="life-log-preview" key={log.id}>
+                  {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
                   <span>하루 기록</span>
                   <p>{log.content}</p>
+                  <div className="life-record-actions">
+                    <button onClick={() => editLog(log)} type="button">
+                      수정
+                    </button>
+                    <button disabled={deletingLogId === log.id} onClick={() => void deleteLog(log.id)} type="button">
+                      {deletingLogId === log.id ? "삭제 중" : "삭제"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -330,7 +469,7 @@ function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="사진" description="사진과 영상을 날짜에 연결해서 하루의 장면을 모아두세요." />
+      <LifeTabHeading title="사진" description="사진과 영상을 날짜나 사건에 연결하고, 사진 탭과 사건 탭 타임라인에서 함께 조회합니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
@@ -489,33 +628,28 @@ function getLifePhotoErrorDebugInfo(error: unknown) {
   }
 }
 
-function LifeHealthView() {
+function LifeHealthView({
+  setWeights,
+  setWorkouts,
+  weights,
+  workouts,
+}: {
+  setWeights: Dispatch<SetStateAction<WeightRecord[]>>;
+  setWorkouts: Dispatch<SetStateAction<WorkoutSession[]>>;
+  weights: WeightRecord[];
+  workouts: WorkoutSession[];
+}) {
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [distanceKm, setDistanceKm] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("");
   const [durationSeconds, setDurationSeconds] = useState("");
   const [weightKg, setWeightKg] = useState("");
-  const [weights, setWeights] = useState<WeightRecord[]>([]);
-  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
+  const [editingRunId, setEditingRunId] = useState<string | null>(null);
+  const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+  const [deletingWeightId, setDeletingWeightId] = useState<string | null>(null);
   const [isSavingRunning, setIsSavingRunning] = useState(false);
   const [isSavingWeight, setIsSavingWeight] = useState(false);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
-      .then(([nextWeights, nextWorkouts]) => {
-        if (!isMounted) return;
-        setWeights(nextWeights ?? []);
-        setWorkouts(nextWorkouts ?? []);
-      })
-      .catch((error) => console.error("Failed to load life health data from Supabase", error));
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const selectedRuns = workouts.filter((workout) => workout.date === date && workout.type === "running");
   const selectedWeight = weights.find((weight) => weight.date === date);
@@ -531,22 +665,50 @@ function LifeHealthView() {
 
     setIsSavingRunning(true);
     try {
-      const savedRun = await createWorkoutSessionInDb({
-        id: `run-${Date.now()}`,
+      const nextRun = {
+        id: editingRunId ?? `run-${Date.now()}`,
         date,
         type: "running",
         condition: "normal",
         durationMinutes: Math.max(1, Math.ceil(parsedTotalSeconds / 60)),
         durationSeconds: parsedTotalSeconds,
         distanceKm: parsedDistance,
-      });
-      if (savedRun) setWorkouts((current) => [savedRun, ...current]);
+      } satisfies WorkoutSession;
+      const savedRun = editingRunId ? await updateWorkoutSessionInDb(nextRun) : await createWorkoutSessionInDb(nextRun);
+      if (savedRun) setWorkouts((current) => [savedRun, ...current.filter((workout) => workout.id !== savedRun.id)]);
       setDistanceKm("");
       setDurationMinutes("");
       setDurationSeconds("");
-      setMessage("러닝 기록을 저장했어요.");
+      setEditingRunId(null);
+      setMessage(editingRunId ? "러닝 기록을 수정했어요." : "러닝 기록을 저장했어요.");
     } finally {
       setIsSavingRunning(false);
+    }
+  };
+
+  const editRunning = (run: WorkoutSession) => {
+    const totalDurationSeconds = run.durationSeconds ?? run.durationMinutes * 60;
+    setDate(run.date);
+    setDistanceKm(run.distanceKm ? String(run.distanceKm) : "");
+    setDurationMinutes(String(Math.floor(totalDurationSeconds / 60)));
+    setDurationSeconds(String(totalDurationSeconds % 60));
+    setEditingRunId(run.id);
+  };
+
+  const deleteRunning = async (id: string) => {
+    setDeletingRunId(id);
+    try {
+      await deleteWorkoutSessionFromDb(id);
+      setWorkouts((current) => current.filter((workout) => workout.id !== id));
+      if (editingRunId === id) {
+        setEditingRunId(null);
+        setDistanceKm("");
+        setDurationMinutes("");
+        setDurationSeconds("");
+      }
+      setMessage("러닝 기록을 삭제했어요.");
+    } finally {
+      setDeletingRunId(null);
     }
   };
 
@@ -572,9 +734,28 @@ function LifeHealthView() {
     }
   };
 
+  const editMorningWeight = () => {
+    if (!selectedWeight) return;
+    setWeightKg(String(selectedWeight.weightKg));
+  };
+
+  const deleteMorningWeight = async () => {
+    if (!selectedWeight) return;
+
+    setDeletingWeightId(selectedWeight.id);
+    try {
+      await deleteWeightRecordFromDb(selectedWeight.id);
+      setWeights((current) => current.filter((weight) => weight.id !== selectedWeight.id));
+      setWeightKg("");
+      setMessage("아침 몸무게 기록을 삭제했어요.");
+    } finally {
+      setDeletingWeightId(null);
+    }
+  };
+
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="건강" description="러닝 거리와 시간, 아침 몸무게만 가볍게 쌓아가는 건강 기록입니다." />
+      <LifeTabHeading title="건강" description="러닝과 아침 몸무게를 저장하면 건강 탭과 사건 탭의 해당 날짜 타임라인에 함께 표시됩니다." />
       <div className="life-health-view">
         <SectionCard className="life-capture-editor life-health-card">
           <div className="life-capture-card__title">
@@ -599,8 +780,22 @@ function LifeHealthView() {
               <input inputMode="numeric" max="59" min="0" placeholder="초" type="number" value={durationSeconds} onChange={(event) => setDurationSeconds(event.target.value)} />
             </label>
           </div>
+          {editingRunId ? (
+            <button
+              className="life-capture-secondary"
+              onClick={() => {
+                setEditingRunId(null);
+                setDistanceKm("");
+                setDurationMinutes("");
+                setDurationSeconds("");
+              }}
+              type="button"
+            >
+              수정 취소
+            </button>
+          ) : null}
           <button className="life-capture-primary" disabled={!distanceKm || (!durationMinutes && !durationSeconds) || isSavingRunning} onClick={saveRunning} type="button">
-            {isSavingRunning ? "저장 중" : "러닝 저장"}
+            {isSavingRunning ? "저장 중" : editingRunId ? "러닝 수정" : "러닝 저장"}
           </button>
         </SectionCard>
 
@@ -620,6 +815,16 @@ function LifeHealthView() {
           <button className="life-capture-primary" disabled={!weightKg || isSavingWeight} onClick={saveMorningWeight} type="button">
             {isSavingWeight ? "저장 중" : "몸무게 저장"}
           </button>
+          {selectedWeight ? (
+            <div className="life-record-actions life-record-actions--inline">
+              <button onClick={editMorningWeight} type="button">
+                기존 값 불러오기
+              </button>
+              <button disabled={deletingWeightId === selectedWeight.id} onClick={() => void deleteMorningWeight()} type="button">
+                {deletingWeightId === selectedWeight.id ? "삭제 중" : "삭제"}
+              </button>
+            </div>
+          ) : null}
           {message ? <p className="life-health-message">{message}</p> : null}
         </SectionCard>
 
@@ -646,8 +851,18 @@ function LifeHealthView() {
             <div className="life-health-run-list">
               {selectedRuns.map((run) => (
                 <article key={run.id}>
-                  <strong>{run.distanceKm ? `${run.distanceKm}km` : "거리 미기록"}</strong>
-                  <span>{formatRunDuration(run.durationSeconds ?? run.durationMinutes * 60)}</span>
+                  <div>
+                    <strong>{run.distanceKm ? `${run.distanceKm}km` : "거리 미기록"}</strong>
+                    <span>{formatRunDuration(run.durationSeconds ?? run.durationMinutes * 60)}</span>
+                  </div>
+                  <div className="life-record-actions">
+                    <button onClick={() => editRunning(run)} type="button">
+                      수정
+                    </button>
+                    <button disabled={deletingRunId === run.id} onClick={() => void deleteRunning(run.id)} type="button">
+                      {deletingRunId === run.id ? "삭제 중" : "삭제"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

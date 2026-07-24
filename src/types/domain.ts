@@ -75,6 +75,9 @@ export type DailyLogRecord = {
   id: string;
   date: string;
   content: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event";
   createdAt?: string;
 };
 

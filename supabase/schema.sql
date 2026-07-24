@@ -175,9 +175,17 @@ create table if not exists public.daily_logs (
   user_id uuid not null references auth.users(id) on delete cascade,
   log_date date not null,
   content text not null,
+  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  linked_target_id uuid,
+  linked_target_title text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.daily_logs
+  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  add column if not exists linked_target_id uuid,
+  add column if not exists linked_target_title text;
 
 create table if not exists public.life_photos (
   id uuid primary key default gen_random_uuid(),

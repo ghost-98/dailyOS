@@ -5,6 +5,9 @@ type DailyLogRow = {
   id: string;
   log_date: string;
   content: string;
+  linked_target_id: string | null;
+  linked_target_title: string | null;
+  linked_target_type: "schedule" | "todo" | "event" | null;
   created_at: string;
 };
 
@@ -26,7 +29,7 @@ type LifePhotoRow = {
   created_at: string;
 };
 
-const dailyLogColumns = "id,log_date,content,created_at";
+const dailyLogColumns = "id,log_date,content,linked_target_id,linked_target_title,linked_target_type,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,created_at";
 
 type SupabaseErrorLike = {
@@ -88,6 +91,9 @@ function mapDailyLogRow(row: DailyLogRow): DailyLogRecord {
     id: row.id,
     date: row.log_date,
     content: row.content,
+    linkedTargetId: row.linked_target_id ?? undefined,
+    linkedTargetTitle: row.linked_target_title ?? undefined,
+    linkedTargetType: row.linked_target_type ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -130,7 +136,7 @@ export async function fetchDailyLogsFromDb() {
   return (data as DailyLogRow[]).map(mapDailyLogRow);
 }
 
-export async function createDailyLogInDb(date: string, content: string) {
+export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
@@ -141,12 +147,42 @@ export async function createDailyLogInDb(date: string, content: string) {
       user_id: userId,
       log_date: date,
       content,
+      linked_target_id: linkedTarget?.id ?? null,
+      linked_target_title: linkedTarget?.title ?? null,
+      linked_target_type: linkedTarget?.type ?? null,
     })
     .select(dailyLogColumns)
     .single();
 
   if (error) throw error;
   return mapDailyLogRow(data as DailyLogRow);
+}
+
+export async function updateDailyLogInDb(log: DailyLogRecord) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("daily_logs")
+    .update({
+      log_date: log.date,
+      content: log.content,
+      linked_target_id: log.linkedTargetId ?? null,
+      linked_target_title: log.linkedTargetTitle ?? null,
+      linked_target_type: log.linkedTargetType ?? null,
+    })
+    .eq("id", log.id)
+    .select(dailyLogColumns)
+    .single();
+
+  if (error) throw error;
+  return mapDailyLogRow(data as DailyLogRow);
+}
+
+export async function deleteDailyLogFromDb(id: string) {
+  if (!supabase) return false;
+  const { error } = await supabase.from("daily_logs").delete().eq("id", id);
+  if (error) throw error;
+  return true;
 }
 
 export async function fetchLifePhotosFromDb() {
