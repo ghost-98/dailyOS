@@ -4976,6 +4976,32 @@ a:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
 }
 
+.schedule-date-row,
+.schedule-time-row {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+}
+
+.schedule-date-row {
+  align-items: stretch;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(180px, 0.86fr);
+}
+
+.schedule-time-row {
+  align-items: stretch;
+  grid-template-columns: minmax(160px, 0.82fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(180px, 0.9fr);
+  padding-top: 2px;
+}
+
+.schedule-date-row > .schedule-toggle-row {
+  grid-column: 3;
+}
+
+.schedule-time-row > .schedule-toggle-row:last-child {
+  grid-column: 4;
+}
+
 .schedule-time-grid .event-form-row {
   min-height: 82px;
 }
@@ -5059,6 +5085,11 @@ a:focus-visible {
   max-width: none;
   min-height: 34px;
   text-align: left;
+}
+
+.schedule-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .schedule-field select {
@@ -8156,6 +8187,16 @@ a:focus-visible {
   .event-form-row--select select {
     max-width: none;
     text-align: left;
+  }
+
+  .schedule-date-row,
+  .schedule-time-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-date-row > .schedule-toggle-row,
+  .schedule-time-row > .schedule-toggle-row:last-child {
+    grid-column: auto;
   }
 
 .progress-meter {

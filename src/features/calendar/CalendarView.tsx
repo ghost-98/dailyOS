@@ -1245,6 +1245,7 @@ function EventCreateSheet({
   const [time, setTime] = useState(event?.time ?? "");
   const [endTime, setEndTime] = useState(event?.endTime ?? "");
   const [isDateRange, setIsDateRange] = useState(Boolean(event?.endDate && event.endDate !== event.date));
+  const [isAllDay, setIsAllDay] = useState(event ? event.isAllDay ?? !event.time : true);
   const [hasEndTime, setHasEndTime] = useState(Boolean(event?.endTime));
   const [type, setType] = useState<CalendarCategory>(event?.type === "event" ? "event" : defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
@@ -1262,9 +1263,9 @@ function EventCreateSheet({
       endDate: isDateRange && endDate && endDate !== date ? endDate : undefined,
       type,
       title: trimmedTitle,
-      time: time || undefined,
-      endTime: hasEndTime ? endTime || undefined : undefined,
-      isAllDay: !time && !(hasEndTime && endTime),
+      time: isAllDay ? undefined : time || undefined,
+      endTime: !isAllDay && hasEndTime ? endTime || undefined : undefined,
+      isAllDay,
       meta: meta.trim() || "메모 없음",
       expenseAmount: parseOptionalAmount(expenseAmount),
       companions: companions.trim() || undefined,
@@ -1323,96 +1324,111 @@ function EventCreateSheet({
 
           <FormSectionTitle title="날짜와 시간" description="기본은 하루종일이며, 필요할 때 시간 범위를 지정하세요." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-            <label className="event-form-row event-form-row--field schedule-field">
-              <div className="event-form-row__label">
-                <CalendarDays aria-hidden size={18} />
-                <span>시작 날짜</span>
-              </div>
-              <input
-                type="date"
-                value={date}
-                onChange={(changeEvent) => {
-                  setDate(changeEvent.target.value);
-                  if (!isDateRange) setEndDate(changeEvent.target.value);
-                }}
-              />
-            </label>
-
-            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field schedule-toggle-row">
-              <div className="event-form-row__label">
-                <CalendarDays aria-hidden size={18} />
-                <span>날짜 형태</span>
-              </div>
-              <div className="schedule-option-toggle-group">
-                <label className="schedule-option-toggle">
-                  <input
-                    checked={!isDateRange}
-                    type="checkbox"
-                    onChange={() => {
-                      setIsDateRange(false);
-                      setEndDate(date);
-                    }}
-                  />
-                  <span>단일 날짜</span>
-                </label>
-                <label className="schedule-option-toggle">
-                  <input checked={isDateRange} type="checkbox" onChange={(changeEvent) => setIsDateRange(changeEvent.target.checked)} />
-                  <span>기간 설정</span>
-                </label>
-              </div>
-            </label>
-
-            {isDateRange ? (
+            <div className="schedule-date-row">
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
-                  <span>종료 날짜</span>
+                  <span>날짜</span>
                 </div>
-                <input type="date" value={endDate} onChange={(changeEvent) => setEndDate(changeEvent.target.value)} />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(changeEvent) => {
+                    setDate(changeEvent.target.value);
+                    if (!isDateRange) setEndDate(changeEvent.target.value);
+                  }}
+                />
               </label>
-            ) : null}
 
-            <label className="event-form-row event-form-row--field schedule-field">
-              <div className="event-form-row__label">
-                <Clock3 aria-hidden size={18} />
-                <span>시작 시간</span>
-              </div>
-              <input type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
-            </label>
+              {isDateRange ? (
+                <label className="event-form-row event-form-row--field schedule-field">
+                  <div className="event-form-row__label">
+                    <CalendarDays aria-hidden size={18} />
+                    <span>종료 날짜</span>
+                  </div>
+                  <input type="date" value={endDate} onChange={(changeEvent) => setEndDate(changeEvent.target.value)} />
+                </label>
+              ) : null}
 
-            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field schedule-toggle-row">
-              <div className="event-form-row__label">
-                <Clock3 aria-hidden size={18} />
-                <span>시간 형태</span>
-              </div>
-              <div className="schedule-option-toggle-group">
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <CalendarDays aria-hidden size={18} />
+                  <span>기간</span>
+                </div>
                 <label className="schedule-option-toggle">
                   <input
-                    checked={!hasEndTime}
+                    checked={isDateRange}
                     type="checkbox"
-                    onChange={() => {
-                      setHasEndTime(false);
-                      setEndTime("");
+                    onChange={(changeEvent) => {
+                      setIsDateRange(changeEvent.target.checked);
+                      if (!changeEvent.target.checked) setEndDate(date);
                     }}
                   />
-                  <span>시작 시간만</span>
+                  <span>기간 설정</span>
                 </label>
-                <label className="schedule-option-toggle">
-                  <input checked={hasEndTime} type="checkbox" onChange={(changeEvent) => setHasEndTime(changeEvent.target.checked)} />
-                  <span>종료 시간 설정</span>
-                </label>
-              </div>
-            </label>
+              </label>
+            </div>
 
-            {hasEndTime ? (
+            <div className="schedule-time-row">
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <Clock3 aria-hidden size={18} />
+                  <span>시간</span>
+                </div>
+                <label className="schedule-option-toggle">
+                  <input
+                    checked={isAllDay}
+                    type="checkbox"
+                    onChange={(changeEvent) => {
+                      setIsAllDay(changeEvent.target.checked);
+                      if (changeEvent.target.checked) {
+                        setTime("");
+                        setEndTime("");
+                        setHasEndTime(false);
+                      }
+                    }}
+                  />
+                  <span>하루종일</span>
+                </label>
+              </label>
+
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
-                  <span>종료 시간</span>
+                  <span>시작 시간</span>
                 </div>
-                <input type="time" value={endTime} onChange={(changeEvent) => setEndTime(changeEvent.target.value)} />
+                <input disabled={isAllDay} type="time" value={time} onChange={(changeEvent) => setTime(changeEvent.target.value)} />
               </label>
-            ) : null}
+
+              {!isAllDay && hasEndTime ? (
+                <label className="event-form-row event-form-row--field schedule-field">
+                  <div className="event-form-row__label">
+                    <Clock3 aria-hidden size={18} />
+                    <span>종료 시간</span>
+                  </div>
+                  <input type="time" value={endTime} onChange={(changeEvent) => setEndTime(changeEvent.target.value)} />
+                </label>
+              ) : null}
+
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <Clock3 aria-hidden size={18} />
+                  <span>종료</span>
+                </div>
+                <label className="schedule-option-toggle">
+                  <input
+                    checked={!isAllDay && hasEndTime}
+                    disabled={isAllDay}
+                    type="checkbox"
+                    onChange={(changeEvent) => {
+                      setHasEndTime(changeEvent.target.checked);
+                      if (!changeEvent.target.checked) setEndTime("");
+                    }}
+                  />
+                  <span>종료시간 설정</span>
+                </label>
+              </label>
+            </div>
 
             <label className="event-form-row event-form-row--select schedule-field">
               <div className="event-form-row__label">
@@ -1463,6 +1479,7 @@ function TaskCreateSheet({
   const [startTime, setStartTime] = useState(task?.startTime ?? "");
   const [endTime, setEndTime] = useState(task?.endTime ?? "");
   const [isDateRange, setIsDateRange] = useState(Boolean(task?.dueDate && task.dueDate !== task.scheduledDate));
+  const [isAllDay, setIsAllDay] = useState(task ? task.isAllDay ?? !task.startTime : true);
   const [hasEndTime, setHasEndTime] = useState(Boolean(task?.endTime));
   const [expenseAmount, setExpenseAmount] = useState(task?.expenseAmount !== undefined ? String(task.expenseAmount) : "");
   const [companions, setCompanions] = useState(task?.companions ?? "");
@@ -1479,9 +1496,9 @@ function TaskCreateSheet({
       priority,
       scheduledDate,
       dueDate: isDateRange && dueDate && dueDate !== scheduledDate ? dueDate : undefined,
-      startTime: startTime || undefined,
-      endTime: hasEndTime ? endTime || undefined : undefined,
-      isAllDay: !startTime && !(hasEndTime && endTime),
+      startTime: isAllDay ? undefined : startTime || undefined,
+      endTime: !isAllDay && hasEndTime ? endTime || undefined : undefined,
+      isAllDay,
       completedAt: status === "done" ? task?.completedAt ?? new Date().toISOString() : undefined,
       deferredCount: task?.deferredCount ?? 0,
       memo: memo.trim() || undefined,
@@ -1569,96 +1586,111 @@ function TaskCreateSheet({
 
           <FormSectionTitle title="날짜와 시간" description="시작일과 종료일을 기준으로 달력에 표시됩니다." />
           <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-            <label className="event-form-row event-form-row--field schedule-field">
-              <div className="event-form-row__label">
-                <CalendarDays aria-hidden size={18} />
-                <span>시작 날짜</span>
-              </div>
-              <input
-                type="date"
-                value={scheduledDate}
-                onChange={(event) => {
-                  setScheduledDate(event.target.value);
-                  if (!isDateRange) setDueDate(event.target.value);
-                }}
-              />
-            </label>
-
-            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field schedule-toggle-row">
-              <div className="event-form-row__label">
-                <CalendarDays aria-hidden size={18} />
-                <span>날짜 형태</span>
-              </div>
-              <div className="schedule-option-toggle-group">
-                <label className="schedule-option-toggle">
-                  <input
-                    checked={!isDateRange}
-                    type="checkbox"
-                    onChange={() => {
-                      setIsDateRange(false);
-                      setDueDate(scheduledDate);
-                    }}
-                  />
-                  <span>단일 날짜</span>
-                </label>
-                <label className="schedule-option-toggle">
-                  <input checked={isDateRange} type="checkbox" onChange={(event) => setIsDateRange(event.target.checked)} />
-                  <span>기간 설정</span>
-                </label>
-              </div>
-            </label>
-
-            {isDateRange ? (
+            <div className="schedule-date-row">
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
-                  <span>종료 날짜</span>
+                  <span>날짜</span>
                 </div>
-                <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(event) => {
+                    setScheduledDate(event.target.value);
+                    if (!isDateRange) setDueDate(event.target.value);
+                  }}
+                />
               </label>
-            ) : null}
 
-            <label className="event-form-row event-form-row--field schedule-field">
-              <div className="event-form-row__label">
-                <Clock3 aria-hidden size={18} />
-                <span>시작 시간</span>
-              </div>
-              <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-            </label>
+              {isDateRange ? (
+                <label className="event-form-row event-form-row--field schedule-field">
+                  <div className="event-form-row__label">
+                    <CalendarDays aria-hidden size={18} />
+                    <span>종료 날짜</span>
+                  </div>
+                  <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                </label>
+              ) : null}
 
-            <label className="event-form-row event-form-row--select event-form-row--time-options schedule-field schedule-toggle-row">
-              <div className="event-form-row__label">
-                <Clock3 aria-hidden size={18} />
-                <span>시간 형태</span>
-              </div>
-              <div className="schedule-option-toggle-group">
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <CalendarDays aria-hidden size={18} />
+                  <span>기간</span>
+                </div>
                 <label className="schedule-option-toggle">
                   <input
-                    checked={!hasEndTime}
+                    checked={isDateRange}
                     type="checkbox"
-                    onChange={() => {
-                      setHasEndTime(false);
-                      setEndTime("");
+                    onChange={(event) => {
+                      setIsDateRange(event.target.checked);
+                      if (!event.target.checked) setDueDate(scheduledDate);
                     }}
                   />
-                  <span>시작 시간만</span>
+                  <span>기간 설정</span>
                 </label>
-                <label className="schedule-option-toggle">
-                  <input checked={hasEndTime} type="checkbox" onChange={(event) => setHasEndTime(event.target.checked)} />
-                  <span>종료 시간 설정</span>
-                </label>
-              </div>
-            </label>
+              </label>
+            </div>
 
-            {hasEndTime ? (
+            <div className="schedule-time-row">
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <Clock3 aria-hidden size={18} />
+                  <span>시간</span>
+                </div>
+                <label className="schedule-option-toggle">
+                  <input
+                    checked={isAllDay}
+                    type="checkbox"
+                    onChange={(event) => {
+                      setIsAllDay(event.target.checked);
+                      if (event.target.checked) {
+                        setStartTime("");
+                        setEndTime("");
+                        setHasEndTime(false);
+                      }
+                    }}
+                  />
+                  <span>하루종일</span>
+                </label>
+              </label>
+
               <label className="event-form-row event-form-row--field schedule-field">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
-                  <span>종료 시간</span>
+                  <span>시작 시간</span>
                 </div>
-                <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+                <input disabled={isAllDay} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
               </label>
-            ) : null}
+
+              {!isAllDay && hasEndTime ? (
+                <label className="event-form-row event-form-row--field schedule-field">
+                  <div className="event-form-row__label">
+                    <Clock3 aria-hidden size={18} />
+                    <span>종료 시간</span>
+                  </div>
+                  <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+                </label>
+              ) : null}
+
+              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+                <div className="event-form-row__label">
+                  <Clock3 aria-hidden size={18} />
+                  <span>종료</span>
+                </div>
+                <label className="schedule-option-toggle">
+                  <input
+                    checked={!isAllDay && hasEndTime}
+                    disabled={isAllDay}
+                    type="checkbox"
+                    onChange={(event) => {
+                      setHasEndTime(event.target.checked);
+                      if (!event.target.checked) setEndTime("");
+                    }}
+                  />
+                  <span>종료시간 설정</span>
+                </label>
+              </label>
+            </div>
           </div>
         </div>
 
