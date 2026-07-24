@@ -1517,6 +1517,7 @@ button {
   .ledger-layout,
   .life-axis-view .calendar-layout--detail-open,
   .life-capture-page,
+  .life-health-sections,
   .life-places-view,
   .places-layout {
     grid-template-columns: 1fr;
@@ -4005,13 +4006,95 @@ a:focus-visible {
 
 .life-health-view {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 0.72fr)) minmax(320px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
-.life-health-card {
+.life-health-date-control {
+  display: grid;
+  min-width: 190px;
+  gap: 7px;
+}
+
+.life-health-date-control span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.life-health-date-control input {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 0 11px;
+}
+
+.life-health-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.life-health-section {
+  display: grid;
   align-content: start;
+  gap: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 15px;
+}
+
+.life-health-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-health-section__head > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.life-section-edit,
+.life-section-save {
+  min-height: 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 0 13px;
+}
+
+.life-section-edit {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+}
+
+.life-section-save {
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.13);
+  color: var(--violet);
+}
+
+.life-section-edit:disabled,
+.life-section-save:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.life-health-editor {
+  display: grid;
+  gap: 10px;
 }
 
 .life-health-fields {
@@ -4049,6 +4132,10 @@ a:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.life-health-summary-grid--single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .life-health-summary-grid article,
