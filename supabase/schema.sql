@@ -159,6 +159,7 @@ create table if not exists public.workout_sessions (
   type text not null check (type in ('running', 'stretching', 'bodyweight', 'weight', 'etc')),
   condition text not null default 'normal' check (condition in ('good', 'normal', 'low')),
   duration_minutes integer not null check (duration_minutes > 0),
+  duration_seconds integer check (duration_seconds is null or duration_seconds > 0),
   distance_km numeric(7, 2) check (distance_km is null or distance_km > 0),
   memo text,
   created_at timestamptz not null default now(),
@@ -166,7 +167,8 @@ create table if not exists public.workout_sessions (
 );
 
 alter table public.workout_sessions
-  add column if not exists distance_km numeric(7, 2) check (distance_km is null or distance_km > 0);
+  add column if not exists distance_km numeric(7, 2) check (distance_km is null or distance_km > 0),
+  add column if not exists duration_seconds integer check (duration_seconds is null or duration_seconds > 0);
 
 create table if not exists public.daily_logs (
   id uuid primary key default gen_random_uuid(),
@@ -189,6 +191,9 @@ create table if not exists public.life_photos (
   height integer check (height is null or height > 0),
   duration_seconds numeric(10, 3) check (duration_seconds is null or duration_seconds >= 0),
   caption text,
+  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  linked_target_id uuid,
+  linked_target_title text,
   taken_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -202,6 +207,9 @@ alter table public.life_photos
   add column if not exists height integer check (height is null or height > 0),
   add column if not exists duration_seconds numeric(10, 3) check (duration_seconds is null or duration_seconds >= 0),
   add column if not exists caption text,
+  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  add column if not exists linked_target_id uuid,
+  add column if not exists linked_target_title text,
   add column if not exists taken_at timestamptz;
 
 create table if not exists public.expense_records (

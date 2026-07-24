@@ -1718,7 +1718,7 @@ function TaskCreateSheet({
   );
 }
 
-function MonthPickerSheet({
+export function MonthPickerSheet({
   currentMonth,
   onClose,
   onSelect,

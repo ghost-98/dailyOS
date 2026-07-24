@@ -19,12 +19,15 @@ type LifePhotoRow = {
   height: number | null;
   duration_seconds: number | string | null;
   caption: string | null;
+  linked_target_id: string | null;
+  linked_target_title: string | null;
+  linked_target_type: "schedule" | "todo" | "event" | null;
   taken_at: string | null;
   created_at: string;
 };
 
 const dailyLogColumns = "id,log_date,content,created_at";
-const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,taken_at,created_at";
+const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,created_at";
 
 type SupabaseErrorLike = {
   code?: unknown;
@@ -104,6 +107,9 @@ async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
     height: row.height ?? undefined,
     durationSeconds: row.duration_seconds === null ? undefined : Number(row.duration_seconds),
     caption: row.caption ?? undefined,
+    linkedTargetId: row.linked_target_id ?? undefined,
+    linkedTargetTitle: row.linked_target_title ?? undefined,
+    linkedTargetType: row.linked_target_type ?? undefined,
     takenAt: row.taken_at ?? undefined,
     createdAt: row.created_at,
   };
@@ -158,7 +164,12 @@ export async function fetchLifePhotosFromDb() {
   return Promise.all((data as LifePhotoRow[]).map(mapLifePhotoRow));
 }
 
-export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploadInput[], caption?: string) {
+export async function uploadLifePhotosToDb(
+  date: string,
+  uploads: LifeMediaUploadInput[],
+  caption?: string,
+  linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" },
+) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
@@ -191,6 +202,9 @@ export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploa
         height: upload.height ?? null,
         duration_seconds: upload.durationSeconds ?? null,
         caption: caption || null,
+        linked_target_id: linkedTarget?.id ?? null,
+        linked_target_title: linkedTarget?.title ?? null,
+        linked_target_type: linkedTarget?.type ?? null,
         taken_at: file.lastModified ? new Date(file.lastModified).toISOString() : null,
       })
       .select(lifePhotoColumns)
@@ -201,6 +215,18 @@ export async function uploadLifePhotosToDb(date: string, uploads: LifeMediaUploa
   }
 
   return Promise.all(uploadedRows.map(mapLifePhotoRow));
+}
+
+export async function deleteLifePhotoFromDb(photo: Pick<LifePhotoRecord, "filePath" | "id">) {
+  if (!supabase) return false;
+
+  const { error: deleteError } = await supabase.from("life_photos").delete().eq("id", photo.id);
+  if (deleteError) throw createLifePhotoDbError("life_photos metadata delete failed", deleteError);
+
+  const { error: storageError } = await supabase.storage.from("life-media").remove([photo.filePath]);
+  if (storageError) throw createLifePhotoDbError("life-media storage delete failed", storageError);
+
+  return true;
 }
 
 async function getLifePhotoSignedUrl(path: string) {

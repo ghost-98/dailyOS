@@ -3933,6 +3933,27 @@ a:focus-visible {
   width: 100%;
 }
 
+.life-photo-link-field {
+  display: grid;
+  gap: 8px;
+}
+
+.life-photo-link-field span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.life-photo-link-field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  min-height: 42px;
+  padding: 0 12px;
+}
+
 .life-photo-upload-error {
   margin: -4px 0 2px;
   border: 1px solid rgba(255, 107, 149, 0.28);
@@ -3958,7 +3979,7 @@ a:focus-visible {
 
 .life-health-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -4077,6 +4098,28 @@ a:focus-visible {
   font-size: 0.75rem;
   padding: 12px;
   text-align: center;
+}
+
+.life-photo-link-badge {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+}
+
+.life-photo-gallery figcaption button {
+  width: fit-content;
+  border: 1px solid rgba(255, 107, 149, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 107, 149, 0.08);
+  color: var(--pink);
+  font-size: 0.76rem;
+  font-weight: 850;
+  padding: 6px 10px;
 }
 
 .life-photo-gallery figcaption {

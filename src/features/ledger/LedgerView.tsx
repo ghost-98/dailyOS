@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { MonthPickerSheet } from "@/features/calendar/CalendarView";
 import type { ExpenseCategory, ExpenseRecord } from "@/types/domain";
 import { fetchExpenseRecordsFromDb } from "./api";
 
@@ -47,6 +48,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const [isLoading, setIsLoading] = useState(true);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,10 +120,10 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
             </button>
-            <div className="calendar-month-trigger ledger-month-label">
+            <button className="calendar-month-trigger ledger-month-label" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
-            </div>
+            </button>
             <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
               <ChevronRight aria-hidden size={20} />
             </button>
@@ -217,6 +219,17 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
           </SectionCard>
         </aside>
       </div>
+      {isMonthPickerOpen ? (
+        <MonthPickerSheet
+          currentMonth={currentMonth}
+          onClose={() => setIsMonthPickerOpen(false)}
+          onSelect={(nextMonth) => {
+            setCurrentMonth(nextMonth);
+            setSelectedDate(formatDateKey(nextMonth));
+            setIsMonthPickerOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

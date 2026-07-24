@@ -1,16 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { Activity, CalendarDays, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale } from "lucide-react";
+import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import { CalendarView, ExternalCalendarItem, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
+import { CalendarView, ExternalCalendarItem, MonthPickerSheet, SelectedDatePlacesMap } from "@/features/calendar/CalendarView";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { createWeightRecordInDb, createWorkoutSessionInDb, fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb, updateWeightRecordInDb } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { LedgerView } from "@/features/ledger/LedgerView";
-import { createDailyLogInDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
+import { createDailyLogInDb, deleteLifePhotoFromDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, uploadLifePhotosToDb } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
@@ -96,9 +96,14 @@ function LifeCalendarView() {
     if (savedLog) setDailyLogs((current) => [savedLog, ...current]);
   };
 
-  const uploadLifePhotos = async (date: string, uploads: LifeMediaUploadInput[], caption?: string) => {
-    const savedPhotos = await uploadLifePhotosToDb(date, uploads, caption);
+  const uploadLifePhotos = async (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => {
+    const savedPhotos = await uploadLifePhotosToDb(date, uploads, caption, linkedTarget);
     if (savedPhotos?.length) setLifePhotos((current) => [...savedPhotos, ...current]);
+  };
+
+  const deleteLifePhoto = async (photo: LifePhotoRecord) => {
+    await deleteLifePhotoFromDb(photo);
+    setLifePhotos((current) => current.filter((item) => item.id !== photo.id));
   };
 
   return (
@@ -167,7 +172,7 @@ function LifeCalendarView() {
       ) : activeTab === "logs" ? (
         <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} />
       ) : activeTab === "photos" ? (
-        <LifePhotosView onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
+        <LifePhotosView onDeletePhoto={deleteLifePhoto} onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
       ) : (
         <LifeHealthView />
       )}
@@ -244,20 +249,44 @@ function LifeLogsView({ logs, onCreateLog }: { logs: DailyLogRecord[]; onCreateL
 }
 
 function LifePhotosView({
+  onDeletePhoto,
   onUploadPhotos,
   photos,
 }: {
-  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string) => Promise<void> | void;
+  onDeletePhoto: (photo: LifePhotoRecord) => Promise<void> | void;
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
   photos: LifePhotoRecord[];
 }) {
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [caption, setCaption] = useState("");
+  const [linkedTargetKey, setLinkedTargetKey] = useState("");
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [previews, setPreviews] = useState<LifeMediaPreview[]>([]);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const selectedPhotos = photos.filter((photo) => photo.date === date);
+  const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks), [date, events, tasks]);
+  const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
 
   useEffect(() => () => previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl)), [previews]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
+      .then(([nextEvents, nextTasks]) => {
+        if (!isMounted) return;
+        setEvents(nextEvents ?? []);
+        setTasks(nextTasks ?? []);
+      })
+      .catch((error) => console.error("Failed to load photo link targets from Supabase", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectFiles = async (files: File[]) => {
     setUploadError(null);
@@ -276,16 +305,26 @@ function LifePhotosView({
 
     setIsUploading(true);
     try {
-      await onUploadPhotos(date, previews, caption.trim() || undefined);
+      await onUploadPhotos(date, previews, caption.trim() || undefined, linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined);
       previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
       setPreviews([]);
       setCaption("");
+      setLinkedTargetKey("");
       setUploadError(null);
     } catch (error) {
       console.error("Failed to upload life photos", getLifePhotoErrorDebugInfo(error));
       setUploadError(getLifePhotoUploadErrorMessage(error));
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const deletePhoto = async (photo: LifePhotoRecord) => {
+    setDeletingPhotoId(photo.id);
+    try {
+      await onDeletePhoto(photo);
+    } finally {
+      setDeletingPhotoId(null);
     }
   };
 
@@ -301,6 +340,17 @@ function LifePhotosView({
           <label className="life-capture-date">
             <span>기록 날짜</span>
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+          <label className="life-photo-link-field">
+            <span>연결할 사건</span>
+            <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
+              <option value="">날짜에만 연결</option>
+              {linkedTargetOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="life-photo-dropzone">
             <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
@@ -354,8 +404,12 @@ function LifePhotosView({
                     <div>{photo.fileName}</div>
                   )}
                   <figcaption>
+                    {photo.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(photo.linkedTargetType)} · {photo.linkedTargetTitle}</b> : null}
                     {photo.caption ? <strong>{photo.caption}</strong> : null}
                     <span>{formatStoredMediaMeta(photo)}</span>
+                    <button disabled={deletingPhotoId === photo.id} onClick={() => void deletePhoto(photo)} type="button">
+                      {deletingPhotoId === photo.id ? "삭제 중" : "삭제"}
+                    </button>
                   </figcaption>
                 </figure>
               ))}
@@ -384,6 +438,39 @@ function getLifePhotoUploadErrorMessage(error: unknown) {
   return message || "사진 업로드 중 알 수 없는 오류가 발생했습니다.";
 }
 
+function getPhotoLinkedTargetOptions(date: string, events: CalendarEvent[], tasks: TaskItem[]): Array<{ id: string; key: string; label: string; title: string; type: "schedule" | "todo" | "event" }> {
+  return [
+    ...events
+      .filter((event) => isDateInRange(date, event.date, event.endDate) && (event.type === "schedule" || event.type === "event"))
+      .map((event) => {
+        const targetType = event.type === "schedule" ? ("schedule" as const) : ("event" as const);
+        return {
+          id: event.id,
+          key: `${targetType}:${event.id}`,
+          label: `${getPhotoTargetTypeLabel(targetType)} · ${event.title}`,
+          title: event.title,
+          type: targetType,
+        };
+      }),
+    ...tasks
+      .filter((task) => isDateInRange(date, task.scheduledDate, task.dueDate))
+      .map((task) => ({
+        id: task.id,
+        key: `todo:${task.id}`,
+        label: `${getPhotoTargetTypeLabel("todo")} · ${task.title}`,
+        title: task.title,
+        type: "todo" as const,
+      })),
+  ];
+}
+
+function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
+  if (type === "schedule") return "일정";
+  if (type === "todo") return "할일";
+  if (type === "event") return "이벤트";
+  return "사건";
+}
+
 function getLifePhotoErrorDebugInfo(error: unknown) {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
@@ -406,6 +493,7 @@ function LifeHealthView() {
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [distanceKm, setDistanceKm] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("");
+  const [durationSeconds, setDurationSeconds] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
@@ -432,12 +520,14 @@ function LifeHealthView() {
   const selectedRuns = workouts.filter((workout) => workout.date === date && workout.type === "running");
   const selectedWeight = weights.find((weight) => weight.date === date);
   const totalDistanceKm = selectedRuns.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
-  const totalMinutes = selectedRuns.reduce((sum, workout) => sum + workout.durationMinutes, 0);
+  const totalSeconds = selectedRuns.reduce((sum, workout) => sum + (workout.durationSeconds ?? workout.durationMinutes * 60), 0);
 
   const saveRunning = async () => {
     const parsedDistance = Number(distanceKm);
-    const parsedDuration = Number(durationMinutes);
-    if (!parsedDistance || !parsedDuration) return;
+    const parsedMinutes = Number(durationMinutes) || 0;
+    const parsedSeconds = Number(durationSeconds) || 0;
+    const parsedTotalSeconds = parsedMinutes * 60 + parsedSeconds;
+    if (!parsedDistance || parsedTotalSeconds <= 0) return;
 
     setIsSavingRunning(true);
     try {
@@ -446,12 +536,14 @@ function LifeHealthView() {
         date,
         type: "running",
         condition: "normal",
-        durationMinutes: parsedDuration,
+        durationMinutes: Math.max(1, Math.ceil(parsedTotalSeconds / 60)),
+        durationSeconds: parsedTotalSeconds,
         distanceKm: parsedDistance,
       });
       if (savedRun) setWorkouts((current) => [savedRun, ...current]);
       setDistanceKm("");
       setDurationMinutes("");
+      setDurationSeconds("");
       setMessage("러닝 기록을 저장했어요.");
     } finally {
       setIsSavingRunning(false);
@@ -502,8 +594,12 @@ function LifeHealthView() {
               <span>시간</span>
               <input inputMode="numeric" min="0" placeholder="분" type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} />
             </label>
+            <label>
+              <span>초</span>
+              <input inputMode="numeric" max="59" min="0" placeholder="초" type="number" value={durationSeconds} onChange={(event) => setDurationSeconds(event.target.value)} />
+            </label>
           </div>
-          <button className="life-capture-primary" disabled={!distanceKm || !durationMinutes || isSavingRunning} onClick={saveRunning} type="button">
+          <button className="life-capture-primary" disabled={!distanceKm || (!durationMinutes && !durationSeconds) || isSavingRunning} onClick={saveRunning} type="button">
             {isSavingRunning ? "저장 중" : "러닝 저장"}
           </button>
         </SectionCard>
@@ -538,7 +634,7 @@ function LifeHealthView() {
             <article>
               <span>러닝</span>
               <strong>{selectedRuns.length > 0 ? `${totalDistanceKm.toFixed(1)}km` : "-"}</strong>
-              <p>{selectedRuns.length > 0 ? `${selectedRuns.length}회 · ${totalMinutes}분` : "러닝 기록이 없습니다."}</p>
+              <p>{selectedRuns.length > 0 ? `${selectedRuns.length}회 · ${formatRunDuration(totalSeconds)}` : "러닝 기록이 없습니다."}</p>
             </article>
             <article>
               <span>아침 몸무게</span>
@@ -551,7 +647,7 @@ function LifeHealthView() {
               {selectedRuns.map((run) => (
                 <article key={run.id}>
                   <strong>{run.distanceKm ? `${run.distanceKm}km` : "거리 미기록"}</strong>
-                  <span>{run.durationMinutes}분</span>
+                  <span>{formatRunDuration(run.durationSeconds ?? run.durationMinutes * 60)}</span>
                 </article>
               ))}
             </div>
@@ -651,12 +747,19 @@ function formatDuration(durationSeconds: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatRunDuration(durationSeconds: number) {
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = Math.round(durationSeconds % 60);
+  return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
+}
+
 function LifePlacesView() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const [isLoading, setIsLoading] = useState(true);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -712,11 +815,10 @@ function LifePlacesView() {
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
             </button>
-            <div className="calendar-month-trigger">
-              <CalendarDays aria-hidden size={18} />
+            <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
-            </div>
+            </button>
             <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
               <ChevronRight aria-hidden size={20} />
             </button>
@@ -789,6 +891,17 @@ function LifePlacesView() {
           )}
         </SectionCard>
       </div>
+      {isMonthPickerOpen ? (
+        <MonthPickerSheet
+          currentMonth={currentMonth}
+          onClose={() => setIsMonthPickerOpen(false)}
+          onSelect={(nextMonth) => {
+            setCurrentMonth(nextMonth);
+            setSelectedDate(formatDateKey(nextMonth));
+            setIsMonthPickerOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -977,6 +1090,11 @@ function formatDateKey(date: Date) {
 
 function formatFullDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { day: "numeric", month: "long", weekday: "long" }).format(new Date(`${value}T00:00:00`));
+}
+
+function isDateInRange(date: string, startDate: string, endDate?: string) {
+  const normalizedEndDate = endDate || startDate;
+  return startDate <= date && date <= normalizedEndDate;
 }
 
 function expandDateRange(startDate: string, endDate?: string) {

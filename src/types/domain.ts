@@ -53,6 +53,7 @@ export type WorkoutSession = {
   type: WorkoutType;
   condition: WorkoutCondition;
   durationMinutes: number;
+  durationSeconds?: number;
   distanceKm?: number;
   memo?: string;
 };
@@ -89,6 +90,9 @@ export type LifePhotoRecord = {
   height?: number;
   durationSeconds?: number;
   caption?: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event";
   takenAt?: string;
   createdAt?: string;
 };
