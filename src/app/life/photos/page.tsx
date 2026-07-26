@@ -3,7 +3,7 @@ import { LifeView } from "@/features/life/LifeView";
 
 export default function LifePhotosPage() {
   return (
-    <AppShell activeKey="life">
+    <AppShell activeKey="capture">
       <LifeView mode="photos" />
     </AppShell>
   );

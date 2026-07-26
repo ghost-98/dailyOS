@@ -3,7 +3,7 @@ import { LifeView } from "@/features/life/LifeView";
 
 export default function LifePlacesFlowPage() {
   return (
-    <AppShell activeKey="life">
+    <AppShell activeKey="places">
       <LifeView mode="places" />
     </AppShell>
   );

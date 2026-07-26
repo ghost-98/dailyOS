@@ -1543,6 +1543,9 @@ button {
   .life-capture-page,
   .life-health-sections,
   .life-date-only-grid,
+  .life-db-card-grid,
+  .life-db-card-grid--compact,
+  .life-db-flow,
   .life-detail-summary,
   .life-insight-grid,
   .life-report-metrics,
@@ -4388,6 +4391,123 @@ a:focus-visible {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.life-db-hero {
+  display: grid;
+  gap: 14px;
+  max-width: 920px;
+}
+
+.life-db-hero h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: -0.07em;
+  line-height: 1.02;
+}
+
+.life-db-hero p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.7;
+}
+
+.life-db-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.life-db-flow .section-card {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    radial-gradient(circle at top left, rgba(201, 184, 255, 0.12), transparent 32%),
+    var(--surface);
+  padding: 22px;
+}
+
+.life-db-flow h2,
+.life-db-card strong {
+  margin: 0;
+  color: var(--text);
+}
+
+.life-db-flow p,
+.life-db-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.life-db-section {
+  display: grid;
+  gap: 16px;
+}
+
+.life-db-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.life-db-card-grid--compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.life-db-card {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.035);
+  color: inherit;
+  padding: 22px;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.life-db-card:hover {
+  border-color: rgba(201, 184, 255, 0.32);
+  background: rgba(201, 184, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.life-db-card span {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.11);
+  color: var(--violet);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  padding: 6px 9px;
+}
+
+.life-db-card strong {
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.life-db-card--accent {
+  border-color: rgba(178, 216, 216, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(178, 216, 216, 0.16), transparent 35%),
+    rgba(255, 255, 255, 0.035);
 }
 
 .life-capture-card__footer {

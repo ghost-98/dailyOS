@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  BookOpenCheck,
   BriefcaseBusiness,
   CalendarDays,
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   ImagePlus,
   Layers3,
   LogOut,
+  Map,
   MapPinned,
   NotebookPen,
   ReceiptText,
@@ -27,10 +29,17 @@ const lifeChildren = [
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
   { label: "사람", href: "/life/people", key: "life-people" },
-  { label: "장소 흐름", href: "/life/places-flow", key: "life-places-flow" },
+];
+
+const captureChildren = [
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "사진", href: "/life/photos", key: "life-photos" },
   { label: "건강", href: "/life/health", key: "life-health" },
+];
+
+const placeChildren = [
+  { label: "장소 보관함", href: "/places", key: "places-vault" },
+  { label: "장소 흐름", href: "/life/places-flow", key: "life-places-flow" },
   { label: "장소 지도", href: "/life/map", key: "life-map" },
 ];
 
@@ -42,20 +51,22 @@ const careerChildren = [
 
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프 DB", href: "/life/calendar", key: "life", icon: Layers3, children: lifeChildren },
+  { label: "라이프 DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
+  { label: "기록 입력", href: "/life/logs", key: "capture", icon: NotebookPen, children: captureChildren },
   { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
-  { label: "장소 보관함", href: "/places", key: "places", icon: MapPinned },
+  { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "캘린더", href: "/life/calendar", key: "life", icon: CalendarDays },
-  { label: "기록", href: "/life/logs", key: "life-logs", icon: NotebookPen },
+  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
+  { label: "캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
+  { label: "기록", href: "/life/logs", key: "life-logs", icon: BookOpenCheck },
   { label: "사진", href: "/life/photos", key: "life-photos", icon: ImagePlus },
   { label: "검색", href: "/life/search", key: "life-search", icon: Search },
-  { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
+  { label: "장소", href: "/places", key: "places", icon: Map },
 ];
 
 type AppShellProps = {
@@ -73,10 +84,18 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 
 function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
-  const [isLifeOpen, setIsLifeOpen] = useState(activeKey === "life");
-  const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    capture: activeKey === "capture",
+    career: activeKey === "career",
+    life: activeKey === "life",
+    places: activeKey === "places",
+  });
   const { displayName, user } = useDailyOSUser();
   const avatarInitial = displayName.trim().slice(0, 1).toUpperCase() || "D";
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   return (
     <div className="app-shell">
@@ -95,32 +114,17 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
               const Icon = item.icon;
               const isActive = item.key === activeKey;
 
-              if (item.key === "life") {
+              if (item.children) {
                 return (
                   <NavGroup
                     icon={<Icon aria-hidden size={22} />}
                     isActive={isActive}
-                    isOpen={isLifeOpen}
-                    items={lifeChildren}
+                    isOpen={Boolean(openGroups[item.key])}
+                    items={item.children}
                     key={item.key}
                     label={item.label}
                     pathname={pathname}
-                    setIsOpen={setIsLifeOpen}
-                  />
-                );
-              }
-
-              if (item.key === "career") {
-                return (
-                  <NavGroup
-                    icon={<Icon aria-hidden size={22} />}
-                    isActive={isActive}
-                    isOpen={isCareerOpen}
-                    items={careerChildren}
-                    key={item.key}
-                    label={item.label}
-                    pathname={pathname}
-                    setIsOpen={setIsCareerOpen}
+                    setIsOpen={() => toggleGroup(item.key)}
                   />
                 );
               }
@@ -157,7 +161,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive = item.key.startsWith("life-") ? pathname === item.href : item.key === "life" ? activeKey === "life" && pathname === "/life/calendar" : item.key === activeKey;
+          const isActive = item.key === "life" ? pathname === "/life" : item.key.startsWith("life-") ? pathname === item.href : item.key === activeKey;
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />
@@ -185,14 +189,14 @@ function NavGroup({
   items: Array<{ href: string; key: string; label: string }>;
   label: string;
   pathname: string;
-  setIsOpen: (updater: (current: boolean) => boolean) => void;
+  setIsOpen: () => void;
 }) {
   return (
     <div className={`nav-group ${isOpen ? "nav-group--open" : ""}`}>
       <button
         aria-expanded={isOpen}
         className={`nav-item nav-item--button ${isActive ? "nav-item--active nav-item--group-active" : ""}`}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={setIsOpen}
         type="button"
       >
         {icon}

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale, Search, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -24,14 +25,14 @@ import { createDailyLogInDb, deleteDailyLogFromDb, deleteLifePhotoFromDb, fetchD
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
-export type LifeViewMode = "calendar" | "report" | "monthly" | "search" | "places" | "people" | "logs" | "photos" | "health" | "map";
+export type LifeViewMode = "home" | "calendar" | "report" | "monthly" | "search" | "places" | "people" | "logs" | "photos" | "health" | "map";
 
 type LifeViewProps = {
   initialDate?: string;
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = Exclude<LifeViewMode, "map">;
+type LifeCalendarTab = Exclude<LifeViewMode, "home" | "map">;
 
 type PlaceTimelineItem = {
   date: string;
@@ -92,7 +93,98 @@ type PersonSummary = {
 };
 
 export function LifeView({ initialDate, mode }: LifeViewProps) {
-  return <div className="life-page">{mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
+  return <div className="life-page">{mode === "home" ? <LifeHomeView /> : mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
+}
+
+const lifeDatabaseModel = [
+  {
+    description: "일정·할일·이벤트가 시간축의 중심이 되고, 여기에 사람·장소·소비·기록·사진·건강이 붙습니다.",
+    href: "/life/calendar",
+    label: "시간축",
+    title: "언제 무엇을 했는가",
+  },
+  {
+    description: "함께한 사람과 장소 흐름을 따로 보며, 단순 목록이 아니라 관계와 동선의 패턴으로 읽습니다.",
+    href: "/life/people",
+    label: "관계·장소축",
+    title: "누구와 어디에 있었는가",
+  },
+  {
+    description: "하루 리포트, 월간 회고, 전체 검색은 쌓인 데이터를 다시 꺼내 쓰는 조회 계층입니다.",
+    href: "/life/report",
+    label: "해석",
+    title: "기록을 의미로 바꾸기",
+  },
+];
+
+const lifeEntryModel = [
+  { description: "날짜와 사건에 연결되는 짧은 텍스트 기록", href: "/life/logs", title: "하루기록" },
+  { description: "사진·영상과 메타데이터를 날짜/사건에 연결", href: "/life/photos", title: "사진" },
+  { description: "러닝 거리·시간, 아침 몸무게를 날짜에 누적", href: "/life/health", title: "건강" },
+  { description: "소비는 독립 입력이 아니라 일정·할일에서 발생", href: "/ledger", title: "가계부" },
+];
+
+function LifeHomeView() {
+  return (
+    <div className="life-axis-view">
+      <header className="life-db-hero">
+        <p className="eyebrow">Life Database</p>
+        <h1>인생 기록을 모으고, 연결하고, 다시 질문하는 공간</h1>
+        <p>
+          dailyOS의 라이프 DB는 많은 탭을 쌓는 곳이 아니라, 매일의 시간·장소·사람·소비·사진·건강 기록을 하나의 맥락으로 묶어 나중에 검색하고
+          회고하고 자연어로 물어볼 수 있게 만드는 개인 데이터베이스입니다.
+        </p>
+      </header>
+
+      <div className="life-db-flow">
+        <SectionCard>
+          <p className="eyebrow">01 입력</p>
+          <h2>매일 남기는 원본 데이터</h2>
+          <p>일정과 할 일이 중심이고, 하루기록·사진·건강은 날짜나 사건에 연결되는 증거 자료입니다.</p>
+        </SectionCard>
+        <SectionCard>
+          <p className="eyebrow">02 연결</p>
+          <h2>사람·장소·소비로 묶기</h2>
+          <p>누구와 있었는지, 어디에 갔는지, 얼마를 썼는지가 같은 날짜와 같은 사건 아래에서 이어집니다.</p>
+        </SectionCard>
+        <SectionCard>
+          <p className="eyebrow">03 활용</p>
+          <h2>검색·회고·질문으로 꺼내기</h2>
+          <p>하루 리포트와 월간 회고를 통해 생활 패턴을 보고, 이후 자연어 질문의 근거 데이터가 됩니다.</p>
+        </SectionCard>
+      </div>
+
+      <section className="life-db-section">
+        <LifeTabHeading title="라이프 DB에서 보는 것" description="입력 기능은 밖으로 빼고, 이곳은 쌓인 삶을 조회하고 해석하는 화면으로 정리했습니다." />
+        <div className="life-db-card-grid">
+          {lifeDatabaseModel.map((item) => (
+            <Link className="life-db-card" href={item.href} key={item.title}>
+              <span>{item.label}</span>
+              <strong>{item.title}</strong>
+              <p>{item.description}</p>
+            </Link>
+          ))}
+          <Link className="life-db-card life-db-card--accent" href="/life/search">
+            <span>미래 AI 질의</span>
+            <strong>나중에 자연어로 묻는 곳</strong>
+            <p>“작년 여름에 누구랑 가장 많이 만났지?”, “운동한 달엔 소비가 어땠지?” 같은 질문의 기반이 전체 검색입니다.</p>
+          </Link>
+        </div>
+      </section>
+
+      <section className="life-db-section">
+        <LifeTabHeading title="기록을 넣는 곳" description="하루기록, 사진, 건강은 라이프 DB 안에 묻히지 않고 ‘기록 입력’ 메뉴에서 빠르게 접근합니다." />
+        <div className="life-db-card-grid life-db-card-grid--compact">
+          {lifeEntryModel.map((item) => (
+            <Link className="life-db-card" href={item.href} key={item.title}>
+              <strong>{item.title}</strong>
+              <p>{item.description}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeCalendarTab; initialDate?: string }) {
