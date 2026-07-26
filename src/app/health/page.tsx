@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function HealthPage() {
-  redirect("/life/calendar");
+  redirect("/life/health");
 }

@@ -1,6 +1,19 @@
 "use client";
 
-import { Activity, BriefcaseBusiness, CalendarDays, ChevronDown, Grid2X2, Layers3, LogOut, Map, MapPinned, Settings } from "lucide-react";
+import {
+  Activity,
+  BriefcaseBusiness,
+  CalendarDays,
+  ChevronDown,
+  Grid2X2,
+  ImagePlus,
+  Layers3,
+  LogOut,
+  MapPinned,
+  ReceiptText,
+  Search,
+  Settings,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -8,7 +21,15 @@ import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 
 const lifeChildren = [
-  { label: "라이프 허브", href: "/life/calendar", key: "life-calendar" },
+  { label: "캘린더", href: "/life/calendar", key: "life-calendar" },
+  { label: "하루 리포트", href: "/life/report", key: "life-report" },
+  { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
+  { label: "전체 검색", href: "/life/search", key: "life-search" },
+  { label: "사람", href: "/life/people", key: "life-people" },
+  { label: "장소 흐름", href: "/life/places-flow", key: "life-places-flow" },
+  { label: "하루기록", href: "/life/logs", key: "life-logs" },
+  { label: "사진", href: "/life/photos", key: "life-photos" },
+  { label: "건강", href: "/life/health", key: "life-health" },
   { label: "장소 지도", href: "/life/map", key: "life-map" },
 ];
 
@@ -21,6 +42,7 @@ const careerChildren = [
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "라이프 DB", href: "/life/calendar", key: "life", icon: Layers3, children: lifeChildren },
+  { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
   { label: "장소 보관함", href: "/places", key: "places", icon: MapPinned },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
@@ -28,10 +50,10 @@ const primaryNav = [
 
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프", href: "/life/calendar", key: "life", icon: CalendarDays },
-  { label: "지도", href: "/life/map", key: "life-map", icon: Map },
-  { label: "장소", href: "/places", key: "places", icon: MapPinned },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
+  { label: "캘린더", href: "/life/calendar", key: "life", icon: CalendarDays },
+  { label: "검색", href: "/life/search", key: "life-search", icon: Search },
+  { label: "사진", href: "/life/photos", key: "life-photos", icon: ImagePlus },
+  { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
 ];
 
 type AppShellProps = {
@@ -133,7 +155,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive = item.key === "life-map" ? pathname === "/life/map" : item.key === "life" ? activeKey === "life" && pathname !== "/life/map" : item.key === activeKey;
+          const isActive = item.key.startsWith("life-") ? pathname === item.href : item.key === "life" ? activeKey === "life" && pathname === "/life/calendar" : item.key === activeKey;
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />

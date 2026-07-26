@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -19,18 +20,18 @@ import {
   updateWorkoutSessionInDb,
 } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
-import { LedgerView } from "@/features/ledger/LedgerView";
 import { createDailyLogInDb, deleteDailyLogFromDb, deleteLifePhotoFromDb, fetchDailyLogsFromDb, fetchLifePhotosFromDb, updateDailyLogInDb, uploadLifePhotosToDb } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
-export type LifeViewMode = "calendar" | "map";
+export type LifeViewMode = "calendar" | "report" | "monthly" | "search" | "places" | "people" | "logs" | "photos" | "health" | "map";
 
 type LifeViewProps = {
+  initialDate?: string;
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "report" | "monthly" | "search" | "places" | "people" | "ledger" | "logs" | "photos" | "health";
+type LifeCalendarTab = Exclude<LifeViewMode, "map">;
 
 type PlaceTimelineItem = {
   date: string;
@@ -90,26 +91,13 @@ type PersonSummary = {
   places: string[];
 };
 
-export function LifeView({ mode }: LifeViewProps) {
-  return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
+export function LifeView({ initialDate, mode }: LifeViewProps) {
+  return <div className="life-page">{mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
 }
 
-const lifeTabs: Array<{ group: "view" | "data" | "capture"; key: LifeCalendarTab; label: string }> = [
-  { group: "view", key: "events", label: "캘린더" },
-  { group: "view", key: "report", label: "하루 리포트" },
-  { group: "view", key: "monthly", label: "월간 회고" },
-  { group: "view", key: "search", label: "전체 검색" },
-  { group: "data", key: "places", label: "장소 흐름" },
-  { group: "data", key: "people", label: "사람" },
-  { group: "data", key: "ledger", label: "가계부" },
-  { group: "capture", key: "logs", label: "하루기록" },
-  { group: "capture", key: "photos", label: "사진" },
-  { group: "capture", key: "health", label: "건강" },
-];
-
-function LifeCalendarView() {
-  const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
-  const [reportDate, setReportDate] = useState(formatDateKey(new Date()));
+function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeCalendarTab; initialDate?: string }) {
+  const router = useRouter();
+  const [reportDate, setReportDate] = useState(initialDate ?? formatDateKey(new Date()));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
@@ -142,6 +130,10 @@ function LifeCalendarView() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (initialDate) setReportDate(initialDate);
+  }, [initialDate]);
 
   const externalItems = useMemo<ExternalCalendarItem[]>(
     () => [
@@ -211,23 +203,7 @@ function LifeCalendarView() {
 
   return (
     <div className="life-axis-view">
-      <div className="life-calendar-switch" aria-label="라이프 캘린더 보기 전환">
-        <span className="life-calendar-switch__group">보기</span>
-        {lifeTabs.map((tab, index) => (
-          <span className={index > 0 && lifeTabs[index - 1].group !== tab.group ? "life-calendar-switch__break" : undefined} key={tab.key}>
-            {index > 0 && lifeTabs[index - 1].group !== tab.group ? <span className="life-calendar-switch__group">{tab.group === "data" ? "데이터" : "기록"}</span> : null}
-            <button
-              className={activeTab === tab.key ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-              onClick={() => setActiveTab(tab.key)}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          </span>
-        ))}
-      </div>
-
-      {activeTab === "events" ? (
+      {activeTab === "calendar" ? (
         <CalendarView
           allowedTypes={["schedule", "event", "todo"]}
           defaultSelectedDate={formatDateKey(new Date())}
@@ -262,8 +238,7 @@ function LifeCalendarView() {
           events={events}
           expenses={expenses}
           onOpenDate={(date) => {
-            setReportDate(date);
-            setActiveTab("report");
+            router.push(`/life/report?date=${date}`);
           }}
           photos={lifePhotos}
           tasks={tasks}
@@ -274,8 +249,6 @@ function LifeCalendarView() {
         <LifePlacesView />
       ) : activeTab === "people" ? (
         <LifePeopleView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} />
-      ) : activeTab === "ledger" ? (
-        <LedgerView variant="tab" />
       ) : activeTab === "logs" ? (
         <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onUpdateLog={updateDailyLog} />
       ) : activeTab === "photos" ? (
