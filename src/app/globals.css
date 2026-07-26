@@ -1893,11 +1893,23 @@ button {
   top: 0;
   display: flex;
   height: 100vh;
+  min-height: 0;
   flex-direction: column;
   justify-content: space-between;
   border-right: 1px solid var(--line);
   background: rgba(14, 15, 18, 0.97);
   padding: 26px 22px;
+}
+
+.sidebar > div:first-child {
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 18px;
+  scrollbar-width: none;
+}
+
+.sidebar > div:first-child::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar::after {
@@ -2022,7 +2034,7 @@ button {
 }
 
 .nav-group--open .nav-submenu {
-  max-height: 190px;
+  max-height: 440px;
   opacity: 1;
   transform: translateY(0);
 }

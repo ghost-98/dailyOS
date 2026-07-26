@@ -10,6 +10,7 @@ import {
   Layers3,
   LogOut,
   MapPinned,
+  NotebookPen,
   ReceiptText,
   Search,
   Settings,
@@ -51,8 +52,9 @@ const primaryNav = [
 const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "캘린더", href: "/life/calendar", key: "life", icon: CalendarDays },
-  { label: "검색", href: "/life/search", key: "life-search", icon: Search },
+  { label: "기록", href: "/life/logs", key: "life-logs", icon: NotebookPen },
   { label: "사진", href: "/life/photos", key: "life-photos", icon: ImagePlus },
+  { label: "검색", href: "/life/search", key: "life-search", icon: Search },
   { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
 ];
 
