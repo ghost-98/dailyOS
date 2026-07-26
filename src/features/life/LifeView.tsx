@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale } from "lucide-react";
+import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale, Search, X } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -30,7 +30,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "report" | "places" | "ledger" | "logs" | "photos" | "health";
+type LifeCalendarTab = "events" | "report" | "monthly" | "search" | "places" | "ledger" | "logs" | "photos" | "health";
 
 type PlaceTimelineItem = {
   date: string;
@@ -67,9 +67,31 @@ type LifeContextBundle = {
   title: string;
 };
 
+type LifeSearchItem = {
+  date: string;
+  description: string;
+  id: string;
+  label: string;
+  tags: string[];
+  title: string;
+  type: "schedule" | "todo" | "event" | "expense" | "daily_log" | "photo" | "workout" | "weight";
+};
+
 export function LifeView({ mode }: LifeViewProps) {
   return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
 }
+
+const lifeTabs: Array<{ key: LifeCalendarTab; label: string }> = [
+  { key: "events", label: "캘린더" },
+  { key: "report", label: "하루 리포트" },
+  { key: "monthly", label: "월간 회고" },
+  { key: "search", label: "전체 검색" },
+  { key: "places", label: "장소" },
+  { key: "ledger", label: "가계부" },
+  { key: "logs", label: "하루기록" },
+  { key: "photos", label: "사진" },
+  { key: "health", label: "건강" },
+];
 
 function LifeCalendarView() {
   const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
@@ -175,55 +197,16 @@ function LifeCalendarView() {
   return (
     <div className="life-axis-view">
       <div className="life-calendar-switch" aria-label="라이프 캘린더 보기 전환">
-        <button
-          className={activeTab === "events" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("events")}
-          type="button"
-        >
-          사건
-        </button>
-        <button
-          className={activeTab === "report" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("report")}
-          type="button"
-        >
-          리포트
-        </button>
-        <button
-          className={activeTab === "places" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("places")}
-          type="button"
-        >
-          장소
-        </button>
-        <button
-          className={activeTab === "ledger" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("ledger")}
-          type="button"
-        >
-          가계부
-        </button>
-        <button
-          className={activeTab === "logs" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("logs")}
-          type="button"
-        >
-          하루기록
-        </button>
-        <button
-          className={activeTab === "photos" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("photos")}
-          type="button"
-        >
-          사진
-        </button>
-        <button
-          className={activeTab === "health" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-          onClick={() => setActiveTab("health")}
-          type="button"
-        >
-          건강
-        </button>
+        {lifeTabs.map((tab) => (
+          <button
+            className={activeTab === tab.key ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {activeTab === "events" ? (
@@ -236,10 +219,14 @@ function LifeCalendarView() {
           keepDateSelected
           showEventAddButton
           showSelectedDatePlacesMap={false}
-          title="사건"
+          title="라이프 캘린더"
         />
       ) : activeTab === "report" ? (
         <LifeReportView dailyLogs={dailyLogs} events={events} expenses={expenses} isLoading={isLifeDataLoading} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
+      ) : activeTab === "monthly" ? (
+        <LifeMonthlyReviewView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
+      ) : activeTab === "search" ? (
+        <LifeSearchView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "places" ? (
         <LifePlacesView />
       ) : activeTab === "ledger" ? (
@@ -275,6 +262,7 @@ function LifeReportView({
   workouts: WorkoutSession[];
 }) {
   const [date, setDate] = useState(formatDateKey(new Date()));
+  const [selectedBundle, setSelectedBundle] = useState<LifeContextBundle | null>(null);
   const monthKey = date.slice(0, 7);
   const dayEvents = events.filter((event) => isDateInRange(date, event.date, event.endDate));
   const dayTasks = tasks.filter((task) => isDateInRange(date, task.scheduledDate, task.dueDate));
@@ -342,7 +330,7 @@ function LifeReportView({
             {contextBundles.length > 0 ? (
               <div className="life-context-list">
                 {contextBundles.map((bundle) => (
-                  <article className="life-context-card" key={bundle.key}>
+                  <button className="life-context-card life-context-card--button" key={bundle.key} onClick={() => setSelectedBundle(bundle)} type="button">
                     <div className="life-context-card__head">
                       <span>{bundle.label}</span>
                       <strong>{bundle.title}</strong>
@@ -358,7 +346,7 @@ function LifeReportView({
                     {bundle.expenses.length > 0 ? <p>지출 · {formatWon(bundle.expenses.reduce((sum, expense) => sum + expense.amount, 0))}</p> : null}
                     {bundle.logs[0] ? <blockquote>{bundle.logs[0].content}</blockquote> : null}
                     {bundle.photos.length > 0 ? <span className="life-context-card__media">사진/영상 {bundle.photos.length}개 연결됨</span> : null}
-                  </article>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -379,6 +367,230 @@ function LifeReportView({
               <ReportList title="건강" empty="건강 기록 없음" items={[...dayWorkouts.map((workout) => `${workout.type === "running" ? "러닝" : "운동"} · ${formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60)}`), ...dayWeights.map((weight) => `아침 몸무게 · ${weight.weightKg}kg`)]} />
             </div>
           </section>
+        </div>
+      </SectionCard>
+      {selectedBundle ? <LifeContextDetailDrawer bundle={selectedBundle} onClose={() => setSelectedBundle(null)} /> : null}
+    </div>
+  );
+}
+
+function LifeContextDetailDrawer({ bundle, onClose }: { bundle: LifeContextBundle; onClose: () => void }) {
+  const totalExpense = bundle.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  return (
+    <div className="life-detail-overlay" role="presentation" onMouseDown={onClose}>
+      <aside className="life-detail-drawer" aria-label="사건 상세" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="life-detail-drawer__head">
+          <div>
+            <span>{bundle.label}</span>
+            <h2>{bundle.title}</h2>
+            {bundle.meta ? <p>{bundle.meta}</p> : null}
+          </div>
+          <button aria-label="닫기" onClick={onClose} type="button">
+            <X aria-hidden size={18} />
+          </button>
+        </div>
+
+        <div className="life-detail-summary">
+          <ReportMetric label="지출" value={totalExpense > 0 ? formatWon(totalExpense) : "-"} hint={`${bundle.expenses.length}건`} />
+          <ReportMetric label="기록" value={`${bundle.logs.length}개`} hint="하루기록 연결" />
+          <ReportMetric label="미디어" value={`${bundle.photos.length}개`} hint="사진/영상 연결" />
+        </div>
+
+        {bundle.place ? (
+          <section className="life-detail-section">
+            <h3>장소</h3>
+            <p>{bundle.place.name}</p>
+            <span>{bundle.place.address || bundle.place.category || "주소 정보 없음"}</span>
+          </section>
+        ) : null}
+
+        <section className="life-detail-section">
+          <h3>지출</h3>
+          {bundle.expenses.length > 0 ? bundle.expenses.map((expense) => <p key={expense.id}>{expense.title} · {formatWon(expense.amount)}</p>) : <span>연결된 지출 없음</span>}
+        </section>
+
+        <section className="life-detail-section">
+          <h3>하루기록</h3>
+          {bundle.logs.length > 0 ? bundle.logs.map((log) => <blockquote key={log.id}>{log.content}</blockquote>) : <span>연결된 하루기록 없음</span>}
+        </section>
+
+        <section className="life-detail-section">
+          <h3>사진/영상</h3>
+          {bundle.photos.length > 0 ? (
+            <div className="life-detail-media">
+              {bundle.photos.slice(0, 8).map((photo) => (
+                <figure key={photo.id}>
+                  {photo.fileUrl && !photo.mimeType?.startsWith("video/") ? <Image alt={photo.caption || photo.fileName} height={120} src={photo.fileUrl} unoptimized width={120} /> : <div>{photo.fileName}</div>}
+                  <figcaption>{photo.caption || photo.fileName}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <span>연결된 사진 없음</span>
+          )}
+        </section>
+      </aside>
+    </div>
+  );
+}
+
+function LifeMonthlyReviewView({
+  dailyLogs,
+  events,
+  expenses,
+  photos,
+  tasks,
+  weights,
+  workouts,
+}: {
+  dailyLogs: DailyLogRecord[];
+  events: CalendarEvent[];
+  expenses: ExpenseRecord[];
+  photos: LifePhotoRecord[];
+  tasks: TaskItem[];
+  weights: WeightRecord[];
+  workouts: WorkoutSession[];
+}) {
+  const [month, setMonth] = useState(formatDateKey(new Date()).slice(0, 7));
+  const monthEvents = events.filter((event) => event.date.startsWith(month) || event.endDate?.startsWith(month));
+  const monthTasks = tasks.filter((task) => task.scheduledDate.startsWith(month) || task.dueDate?.startsWith(month));
+  const monthExpenses = expenses.filter((expense) => expense.date.startsWith(month));
+  const monthLogs = dailyLogs.filter((log) => log.date.startsWith(month));
+  const monthPhotos = photos.filter((photo) => photo.date.startsWith(month));
+  const monthWorkouts = workouts.filter((workout) => workout.date.startsWith(month));
+  const monthWeights = weights.filter((weight) => weight.date.startsWith(month));
+  const monthPlaces = uniquePlanPlaces([...monthEvents.flatMap((event) => (event.place ? [event.place] : [])), ...monthTasks.flatMap((task) => (task.place ? [task.place] : []))]);
+  const totalExpense = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const runningDistance = monthWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
+  const completedTasks = monthTasks.filter((task) => task.status === "done").length;
+  const topExpense = [...monthExpenses].sort((a, b) => b.amount - a.amount)[0];
+  const latestWeight = [...monthWeights].sort((a, b) => b.date.localeCompare(a.date))[0];
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="월간 회고" description="한 달 동안의 행동, 소비, 장소, 기록 밀도를 요약해서 다음 달 선택에 쓰는 화면입니다." />
+      <SectionCard className="life-report-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">회고 월</p>
+            <h2>{month.replace("-", "년 ")}월</h2>
+          </div>
+          <label className="life-health-date-control">
+            <span>월 선택</span>
+            <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+          </label>
+        </div>
+
+        <div className="life-report-metrics">
+          <ReportMetric label="기록 밀도" value={`${monthEvents.length + monthTasks.length + monthLogs.length + monthPhotos.length}건`} hint={`기록 ${monthLogs.length} · 사진 ${monthPhotos.length}`} />
+          <ReportMetric label="총 지출" value={totalExpense > 0 ? formatWon(totalExpense) : "-"} hint={topExpense ? `최대 ${topExpense.title}` : "지출 없음"} />
+          <ReportMetric label="방문 장소" value={`${monthPlaces.length}곳`} hint={monthPlaces[0]?.name ?? "장소 연결 없음"} />
+          <ReportMetric label="러닝" value={runningDistance > 0 ? `${runningDistance.toFixed(1)}km` : "-"} hint={`${monthWorkouts.length}회 기록`} />
+        </div>
+
+        <div className="life-review-grid">
+          <article>
+            <span>할 일 완료</span>
+            <strong>{monthTasks.length > 0 ? `${completedTasks}/${monthTasks.length}` : "-"}</strong>
+            <p>{monthTasks.length > 0 ? `${Math.round((completedTasks / monthTasks.length) * 100)}% 완료` : "이번 달 할 일 없음"}</p>
+          </article>
+          <article>
+            <span>최근 몸무게</span>
+            <strong>{latestWeight ? `${latestWeight.weightKg}kg` : "-"}</strong>
+            <p>{latestWeight ? `${latestWeight.date} 기준` : "몸무게 기록 없음"}</p>
+          </article>
+          <article>
+            <span>가장 큰 지출</span>
+            <strong>{topExpense ? formatWon(topExpense.amount) : "-"}</strong>
+            <p>{topExpense?.title ?? "지출 기록 없음"}</p>
+          </article>
+        </div>
+
+        <section className="life-report-sections">
+          <h3>이번 달 주요 기록</h3>
+          <div className="life-date-only-grid">
+            <ReportList title="일정/이벤트" empty="일정 없음" items={monthEvents.slice(0, 5).map((event) => `${event.date} · ${event.title}`)} />
+            <ReportList title="하루기록" empty="기록 없음" items={monthLogs.slice(0, 5).map((log) => `${log.date} · ${log.content}`)} />
+            <ReportList title="장소" empty="장소 없음" items={monthPlaces.slice(0, 5).map((place) => place.name)} />
+            <ReportList title="사진/영상" empty="사진 없음" items={monthPhotos.slice(0, 5).map((photo) => `${photo.date} · ${photo.caption || photo.fileName}`)} />
+          </div>
+        </section>
+      </SectionCard>
+    </div>
+  );
+}
+
+function LifeSearchView({
+  dailyLogs,
+  events,
+  expenses,
+  photos,
+  tasks,
+  weights,
+  workouts,
+}: {
+  dailyLogs: DailyLogRecord[];
+  events: CalendarEvent[];
+  expenses: ExpenseRecord[];
+  photos: LifePhotoRecord[];
+  tasks: TaskItem[];
+  weights: WeightRecord[];
+  workouts: WorkoutSession[];
+}) {
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | LifeSearchItem["type"]>("all");
+  const items = useMemo(() => buildLifeSearchItems(events, tasks, expenses, dailyLogs, photos, weights, workouts), [dailyLogs, events, expenses, photos, tasks, weights, workouts]);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredItems = items.filter((item) => {
+    const matchesType = typeFilter === "all" || item.type === typeFilter;
+    const matchesQuery = !normalizedQuery || [item.title, item.description, item.date, item.tags.join(" ")].join(" ").toLowerCase().includes(normalizedQuery);
+    return matchesType && matchesQuery;
+  });
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="전체 검색" description="사람, 장소, 금액, 메모, 사진명, 날짜를 한 번에 찾아 전체 인생 DB를 탐색합니다." />
+      <SectionCard className="life-report-panel">
+        <div className="life-search-controls">
+          <label>
+            <Search aria-hidden size={18} />
+            <input placeholder="예: 강남, 민수, 러닝, 50000, 면접" value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
+          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | LifeSearchItem["type"])}>
+            <option value="all">전체</option>
+            <option value="schedule">일정</option>
+            <option value="todo">할일</option>
+            <option value="event">이벤트</option>
+            <option value="expense">지출</option>
+            <option value="daily_log">하루기록</option>
+            <option value="photo">사진</option>
+            <option value="workout">운동</option>
+            <option value="weight">몸무게</option>
+          </select>
+        </div>
+
+        <div className="life-search-result-head">
+          <strong>{filteredItems.length}개 결과</strong>
+          <span>전체 {items.length}개 기록 중 검색</span>
+        </div>
+
+        <div className="life-search-results">
+          {filteredItems.slice(0, 80).map((item) => (
+            <article key={item.id}>
+              <span>{item.date} · {item.label}</span>
+              <strong>{item.title}</strong>
+              {item.description ? <p>{item.description}</p> : null}
+              {item.tags.length > 0 ? <em>{item.tags.join(" · ")}</em> : null}
+            </article>
+          ))}
+          {filteredItems.length === 0 ? (
+            <div className="life-map-empty life-map-empty--compact">
+              <Search aria-hidden size={28} />
+              <strong>검색 결과가 없습니다.</strong>
+              <p>장소, 사람, 메모, 금액, 사진 이름 같은 단어로 다시 검색해보세요.</p>
+            </div>
+          ) : null}
         </div>
       </SectionCard>
     </div>
@@ -458,6 +670,84 @@ function formatContextMeta(date: string, startDate: string, endDate?: string, st
   const range = endDate && endDate !== startDate ? `${startDate}~${endDate}` : date;
   const time = isAllDay ? "하루종일" : endTime ? `${startTime ?? "시간 미정"}-${endTime}` : startTime ?? "시간 미정";
   return [range, time, companions ? `함께한 사람 · ${companions}` : null].filter(Boolean).join(" · ");
+}
+
+function buildLifeSearchItems(
+  events: CalendarEvent[],
+  tasks: TaskItem[],
+  expenses: ExpenseRecord[],
+  logs: DailyLogRecord[],
+  photos: LifePhotoRecord[],
+  weights: WeightRecord[],
+  workouts: WorkoutSession[],
+): LifeSearchItem[] {
+  return [
+    ...events
+      .filter((event) => event.type === "schedule" || event.type === "event")
+      .map((event) => ({
+        date: event.date,
+        description: formatContextMeta(event.date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
+        id: `${event.type}-${event.id}`,
+        label: event.type === "event" ? "이벤트" : "일정",
+        tags: [event.meta, event.place?.name, event.place?.address, event.companions, event.expenseAmount ? formatWon(event.expenseAmount) : ""].filter(Boolean) as string[],
+        title: event.title,
+        type: event.type === "event" ? ("event" as const) : ("schedule" as const),
+      })),
+    ...tasks.map((task) => ({
+      date: task.scheduledDate,
+      description: formatContextMeta(task.scheduledDate, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions),
+      id: `todo-${task.id}`,
+      label: "할일",
+      tags: [task.status, task.priority, task.memo, task.place?.name, task.place?.address, task.companions, task.expenseAmount ? formatWon(task.expenseAmount) : ""].filter(Boolean) as string[],
+      title: task.title,
+      type: "todo" as const,
+    })),
+    ...expenses.map((expense) => ({
+      date: expense.date,
+      description: [expense.category, formatWon(expense.amount), expense.memo].filter(Boolean).join(" · "),
+      id: `expense-${expense.id}`,
+      label: "지출",
+      tags: [expense.category, expense.memo, expense.targetType, expense.targetId].filter(Boolean) as string[],
+      title: expense.title,
+      type: "expense" as const,
+    })),
+    ...logs.map((log) => ({
+      date: log.date,
+      description: log.content,
+      id: `daily-log-${log.id}`,
+      label: "하루기록",
+      tags: [log.linkedTargetTitle, log.linkedTargetType].filter(Boolean) as string[],
+      title: log.linkedTargetTitle ? `하루기록 · ${log.linkedTargetTitle}` : "하루기록",
+      type: "daily_log" as const,
+    })),
+    ...photos.map((photo) => ({
+      date: photo.date,
+      description: [photo.caption, photo.fileName, photo.mimeType].filter(Boolean).join(" · "),
+      id: `photo-${photo.id}`,
+      label: "사진",
+      tags: [photo.linkedTargetTitle, photo.linkedTargetType, photo.fileName, photo.mimeType].filter(Boolean) as string[],
+      title: photo.caption || photo.fileName,
+      type: "photo" as const,
+    })),
+    ...workouts.map((workout) => ({
+      date: workout.date,
+      description: [workout.distanceKm ? `${workout.distanceKm}km` : null, formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60), workout.memo].filter(Boolean).join(" · "),
+      id: `workout-${workout.id}`,
+      label: workout.type === "running" ? "러닝" : "운동",
+      tags: [workout.type, workout.condition, workout.memo].filter(Boolean) as string[],
+      title: workout.type === "running" ? "러닝 기록" : "운동 기록",
+      type: "workout" as const,
+    })),
+    ...weights.map((weight) => ({
+      date: weight.date,
+      description: [weight.measuredFasted ? "공복" : null, weight.memo].filter(Boolean).join(" · "),
+      id: `weight-${weight.id}`,
+      label: "몸무게",
+      tags: [String(weight.weightKg), weight.memo].filter(Boolean) as string[],
+      title: `${weight.weightKg}kg`,
+      type: "weight" as const,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function LifeLogsView({

@@ -3,7 +3,7 @@ import { PlacesView } from "@/features/places/PlacesView";
 
 export default function PlacesPage() {
   return (
-    <AppShell activeKey="places">
+    <AppShell activeKey="life">
       <PlacesView />
     </AppShell>
   );
