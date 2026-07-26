@@ -1540,6 +1540,7 @@ button {
   .ledger-summary-grid,
   .ledger-layout,
   .life-axis-view .calendar-layout--detail-open,
+  .life-ask-layout,
   .life-capture-page,
   .life-health-sections,
   .life-date-only-grid,
@@ -4508,6 +4509,79 @@ a:focus-visible {
   background:
     radial-gradient(circle at top right, rgba(178, 216, 216, 0.16), transparent 35%),
     rgba(255, 255, 255, 0.035);
+}
+
+.life-ask-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.life-ask-card,
+.life-ask-answer {
+  display: grid;
+  gap: 16px;
+  min-height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 22px;
+}
+
+.life-ask-card textarea {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.life-ask-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-ask-examples button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 8px 11px;
+}
+
+.life-ask-submit {
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 13px 16px;
+}
+
+.life-ask-submit:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.life-ask-error {
+  margin: 0;
+  color: var(--pink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.life-ask-answer__body {
+  white-space: pre-wrap;
+  color: var(--text);
+  font-size: 0.96rem;
+  font-weight: 650;
+  line-height: 1.75;
 }
 
 .life-capture-card__footer {

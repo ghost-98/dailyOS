@@ -25,7 +25,7 @@ import { createDailyLogInDb, deleteDailyLogFromDb, deleteLifePhotoFromDb, fetchD
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
-export type LifeViewMode = "home" | "calendar" | "report" | "monthly" | "search" | "places" | "people" | "logs" | "photos" | "health" | "map";
+export type LifeViewMode = "home" | "calendar" | "report" | "monthly" | "search" | "people" | "ask" | "places" | "logs" | "photos" | "health" | "map";
 
 type LifeViewProps = {
   initialDate?: string;
@@ -110,10 +110,10 @@ const lifeDatabaseModel = [
     title: "누구와 어디에 있었는가",
   },
   {
-    description: "하루 리포트, 월간 회고, 전체 검색은 쌓인 데이터를 다시 꺼내 쓰는 조회 계층입니다.",
-    href: "/life/report",
+    description: "하루 리포트, 월간 회고, 전체 검색, AI 질문은 쌓인 데이터를 다시 꺼내 쓰는 조회 계층입니다.",
+    href: "/life/ask",
     label: "해석",
-    title: "기록을 의미로 바꾸기",
+    title: "기록을 의미와 답으로 바꾸기",
   },
 ];
 
@@ -168,6 +168,11 @@ function LifeHomeView() {
             <span>미래 AI 질의</span>
             <strong>나중에 자연어로 묻는 곳</strong>
             <p>“작년 여름에 누구랑 가장 많이 만났지?”, “운동한 달엔 소비가 어땠지?” 같은 질문의 기반이 전체 검색입니다.</p>
+          </Link>
+          <Link className="life-db-card life-db-card--accent" href="/life/ask">
+            <span>AI 질문</span>
+            <strong>기록을 읽고 답하게 하기</strong>
+            <p>“3월달에 그때 어땠어?”처럼 흐릿한 기억을 날짜·사람·장소·소비·건강 기록으로 다시 찾아봅니다.</p>
           </Link>
         </div>
       </section>
@@ -341,6 +346,8 @@ function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeCalendarT
         <LifePlacesView />
       ) : activeTab === "people" ? (
         <LifePeopleView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} />
+      ) : activeTab === "ask" ? (
+        <LifeAskView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "logs" ? (
         <LifeLogsView logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onUpdateLog={updateDailyLog} />
       ) : activeTab === "photos" ? (
@@ -940,6 +947,108 @@ function LifePeopleView({
               <NotebookPen aria-hidden size={28} />
               <strong>사람을 선택해 주세요.</strong>
               <p>함께한 사람 기록이 쌓이면 관계별 타임라인을 볼 수 있습니다.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+function LifeAskView({
+  dailyLogs,
+  events,
+  expenses,
+  photos,
+  tasks,
+  weights,
+  workouts,
+}: {
+  dailyLogs: DailyLogRecord[];
+  events: CalendarEvent[];
+  expenses: ExpenseRecord[];
+  photos: LifePhotoRecord[];
+  tasks: TaskItem[];
+  weights: WeightRecord[];
+  workouts: WorkoutSession[];
+}) {
+  const [answer, setAnswer] = useState("");
+  const [error, setError] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
+  const [question, setQuestion] = useState("나 3월달에 자주 했던 일과 그때의 소비, 사람, 건강 흐름이 어땠어?");
+  const records = useMemo(() => buildLifeSearchItems(events, tasks, expenses, dailyLogs, photos, weights, workouts), [dailyLogs, events, expenses, photos, tasks, weights, workouts]);
+  const latestRecords = useMemo(() => records.slice(0, 160), [records]);
+
+  const askLifeDb = async () => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) return;
+
+    try {
+      setIsAsking(true);
+      setError("");
+      setAnswer("");
+      const response = await fetch("/api/life/ask", {
+        body: JSON.stringify({
+          question: trimmedQuestion,
+          records: latestRecords.map((record) => ({
+            date: record.date,
+            description: record.description,
+            label: record.label,
+            tags: record.tags,
+            title: record.title,
+            type: record.type,
+          })),
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = (await response.json()) as { answer?: string; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "AI 질문 처리에 실패했습니다.");
+      setAnswer(data.answer ?? "");
+    } catch (askError) {
+      setError(askError instanceof Error ? askError.message : "AI 질문 처리 중 오류가 발생했습니다.");
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
+  const examples = ["지난달에 누구를 가장 자주 만났고 돈은 어디에 많이 썼어?", "3월에 운동한 날과 소비가 어떤 관계가 있었어?", "최근에 자주 간 장소와 그때 했던 일을 요약해줘"];
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="AI 질문" description="쌓인 일정, 할 일, 하루기록, 사진, 장소, 지출, 건강 기록을 근거로 자연어 질문에 답합니다." />
+      <div className="life-ask-layout">
+        <SectionCard className="life-ask-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Life DB Copilot</p>
+              <h2>내 기록에 질문하기</h2>
+            </div>
+            <strong className="life-places-count">{records.length}건</strong>
+          </div>
+          <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 나 3월달에 부산 갔던 것 같은데 그때 어땠어?" />
+          <div className="life-ask-examples">
+            {examples.map((example) => (
+              <button key={example} onClick={() => setQuestion(example)} type="button">
+                {example}
+              </button>
+            ))}
+          </div>
+          <button className="life-ask-submit" disabled={isAsking || !question.trim()} onClick={() => void askLifeDb()} type="button">
+            {isAsking ? "기록 읽는 중..." : "AI에게 물어보기"}
+          </button>
+          {error ? <p className="life-ask-error">{error}</p> : null}
+        </SectionCard>
+
+        <SectionCard className="life-ask-answer">
+          <p className="eyebrow">Answer</p>
+          {answer ? (
+            <div className="life-ask-answer__body">{answer}</div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <Search aria-hidden size={28} />
+              <strong>아직 질문하지 않았습니다.</strong>
+              <p>AI 답변은 현재 불러온 라이프 DB 기록만 근거로 생성됩니다. 더 정교하게 하려면 다음 단계에서 월별 인덱스와 임베딩 검색을 붙이면 됩니다.</p>
             </div>
           )}
         </SectionCard>

@@ -7,15 +7,14 @@ import {
   CalendarDays,
   ChevronDown,
   Grid2X2,
-  ImagePlus,
   Layers3,
   LogOut,
   Map,
   MapPinned,
   NotebookPen,
   ReceiptText,
-  Search,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,9 +28,11 @@ const lifeChildren = [
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
   { label: "사람", href: "/life/people", key: "life-people" },
+  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
 ];
 
 const captureChildren = [
+  { label: "일정·할일", href: "/life/calendar", key: "life-capture-calendar" },
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "사진", href: "/life/photos", key: "life-photos" },
   { label: "건강", href: "/life/health", key: "life-health" },
@@ -64,8 +65,7 @@ const mobileNav = [
   { label: "라이프", href: "/life", key: "life", icon: Layers3 },
   { label: "캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
   { label: "기록", href: "/life/logs", key: "life-logs", icon: BookOpenCheck },
-  { label: "사진", href: "/life/photos", key: "life-photos", icon: ImagePlus },
-  { label: "검색", href: "/life/search", key: "life-search", icon: Search },
+  { label: "질문", href: "/life/ask", key: "life-ask", icon: Sparkles },
   { label: "장소", href: "/places", key: "places", icon: Map },
 ];
 
