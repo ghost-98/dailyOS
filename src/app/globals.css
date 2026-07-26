@@ -328,6 +328,26 @@ button {
   padding: 6px;
 }
 
+.life-calendar-switch > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-calendar-switch__break {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 6px;
+}
+
+.life-calendar-switch__group {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 0 5px;
+}
+
 .life-calendar-switch__item {
   background: transparent;
   border: 0;
@@ -1520,6 +1540,7 @@ button {
   .life-health-sections,
   .life-date-only-grid,
   .life-detail-summary,
+  .life-insight-grid,
   .life-report-metrics,
   .life-report-month,
   .life-review-grid,
@@ -3836,6 +3857,7 @@ a:focus-visible {
 }
 
 .life-report-metrics,
+.life-insight-grid,
 .life-report-month,
 .life-date-only-grid {
   display: grid;
@@ -3848,6 +3870,7 @@ a:focus-visible {
 }
 
 .life-report-metrics article,
+.life-insight-card,
 .life-report-month article,
 .life-report-list-card {
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -3857,6 +3880,7 @@ a:focus-visible {
 }
 
 .life-report-metrics span,
+.life-insight-card > span,
 .life-report-month span,
 .life-report-list-card > span {
   color: var(--muted);
@@ -3874,11 +3898,25 @@ a:focus-visible {
 }
 
 .life-report-metrics p,
+.life-insight-card p,
 .life-report-month p,
 .life-report-list-card p {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.life-insight-card ol {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.life-insight-card li {
+  color: var(--text);
+  font-size: 0.84rem;
   line-height: 1.45;
 }
 
@@ -4104,6 +4142,56 @@ a:focus-visible {
   padding-left: 10px;
 }
 
+.life-detail-capture {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px;
+}
+
+.life-detail-capture textarea,
+.life-detail-capture input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font: inherit;
+  padding: 11px;
+}
+
+.life-detail-capture textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+.life-detail-capture button,
+.life-detail-file-picker {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(201, 184, 255, 0.25);
+  border-radius: 12px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.life-detail-capture button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.life-detail-file-picker input {
+  display: none;
+}
+
 .life-detail-media {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4193,13 +4281,23 @@ a:focus-visible {
   gap: 9px;
 }
 
-.life-search-results article {
+.life-search-results button {
   display: grid;
+  width: 100%;
   gap: 5px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
   padding: 13px;
+  text-align: left;
+}
+
+.life-search-results button:hover {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.055);
 }
 
 .life-search-results span,

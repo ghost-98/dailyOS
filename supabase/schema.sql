@@ -299,6 +299,30 @@ create table if not exists public.place_links (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.people (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, name)
+);
+
+create table if not exists public.people_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  person_id uuid references public.people(id) on delete cascade,
+  person_name text not null,
+  target_type text not null check (target_type in ('schedule', 'todo', 'event', 'daily_log', 'photo', 'expense', 'workout')),
+  target_id uuid not null,
+  target_date date,
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, person_name, target_type, target_id)
+);
+
 create table if not exists public.career_records (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -479,7 +503,60 @@ create index if not exists calendar_events_user_type_date_idx on public.calendar
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
+create index if not exists people_user_name_idx on public.people(user_id, name);
+create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
+
+create or replace view public.life_people_index
+with (security_invoker = true)
+as
+select
+  user_id,
+  trim(person_name) as person_name,
+  'schedule' as source_type,
+  id as source_id,
+  event_date as source_date,
+  title,
+  place_name
+from public.calendar_events
+cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
+where type = 'schedule'
+  and trim(person_name) <> ''
+union all
+select
+  user_id,
+  trim(person_name) as person_name,
+  'event' as source_type,
+  id as source_id,
+  event_date as source_date,
+  title,
+  place_name
+from public.calendar_events
+cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
+where type = 'event'
+  and trim(person_name) <> ''
+union all
+select
+  user_id,
+  trim(person_name) as person_name,
+  'todo' as source_type,
+  id as source_id,
+  scheduled_date as source_date,
+  title,
+  place_name
+from public.tasks
+cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
+where trim(person_name) <> ''
+union all
+select
+  user_id,
+  person_name,
+  target_type as source_type,
+  target_id as source_id,
+  target_date as source_date,
+  coalesce(memo, person_name) as title,
+  null as place_name
+from public.people_links;
 
 create or replace view public.life_record_index
 with (security_invoker = true)

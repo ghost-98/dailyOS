@@ -57,6 +57,7 @@ const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
 };
 
 type LifeContextBundle = {
+  date: string;
   expenses: ExpenseRecord[];
   key: string;
   label: string;
@@ -64,6 +65,8 @@ type LifeContextBundle = {
   meta?: string;
   photos: LifePhotoRecord[];
   place?: PlanPlace;
+  targetId: string;
+  targetType: "schedule" | "todo" | "event";
   title: string;
 };
 
@@ -81,20 +84,21 @@ export function LifeView({ mode }: LifeViewProps) {
   return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
 }
 
-const lifeTabs: Array<{ key: LifeCalendarTab; label: string }> = [
-  { key: "events", label: "캘린더" },
-  { key: "report", label: "하루 리포트" },
-  { key: "monthly", label: "월간 회고" },
-  { key: "search", label: "전체 검색" },
-  { key: "places", label: "장소" },
-  { key: "ledger", label: "가계부" },
-  { key: "logs", label: "하루기록" },
-  { key: "photos", label: "사진" },
-  { key: "health", label: "건강" },
+const lifeTabs: Array<{ group: "view" | "data" | "capture"; key: LifeCalendarTab; label: string }> = [
+  { group: "view", key: "events", label: "캘린더" },
+  { group: "view", key: "report", label: "하루 리포트" },
+  { group: "view", key: "monthly", label: "월간 회고" },
+  { group: "view", key: "search", label: "전체 검색" },
+  { group: "data", key: "places", label: "장소" },
+  { group: "data", key: "ledger", label: "가계부" },
+  { group: "capture", key: "logs", label: "하루기록" },
+  { group: "capture", key: "photos", label: "사진" },
+  { group: "capture", key: "health", label: "건강" },
 ];
 
 function LifeCalendarView() {
   const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
+  const [reportDate, setReportDate] = useState(formatDateKey(new Date()));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
@@ -197,15 +201,18 @@ function LifeCalendarView() {
   return (
     <div className="life-axis-view">
       <div className="life-calendar-switch" aria-label="라이프 캘린더 보기 전환">
-        {lifeTabs.map((tab) => (
-          <button
-            className={activeTab === tab.key ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            type="button"
-          >
-            {tab.label}
-          </button>
+        <span className="life-calendar-switch__group">보기</span>
+        {lifeTabs.map((tab, index) => (
+          <span className={index > 0 && lifeTabs[index - 1].group !== tab.group ? "life-calendar-switch__break" : undefined} key={tab.key}>
+            {index > 0 && lifeTabs[index - 1].group !== tab.group ? <span className="life-calendar-switch__group">{tab.group === "data" ? "데이터" : "기록"}</span> : null}
+            <button
+              className={activeTab === tab.key ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+              onClick={() => setActiveTab(tab.key)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          </span>
         ))}
       </div>
 
@@ -222,11 +229,36 @@ function LifeCalendarView() {
           title="라이프 캘린더"
         />
       ) : activeTab === "report" ? (
-        <LifeReportView dailyLogs={dailyLogs} events={events} expenses={expenses} isLoading={isLifeDataLoading} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
+        <LifeReportView
+          dailyLogs={dailyLogs}
+          date={reportDate}
+          events={events}
+          expenses={expenses}
+          isLoading={isLifeDataLoading}
+          onCreateLog={createDailyLog}
+          onDateChange={setReportDate}
+          onUploadPhotos={uploadLifePhotos}
+          photos={lifePhotos}
+          tasks={tasks}
+          weights={weights}
+          workouts={workouts}
+        />
       ) : activeTab === "monthly" ? (
         <LifeMonthlyReviewView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "search" ? (
-        <LifeSearchView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
+        <LifeSearchView
+          dailyLogs={dailyLogs}
+          events={events}
+          expenses={expenses}
+          onOpenDate={(date) => {
+            setReportDate(date);
+            setActiveTab("report");
+          }}
+          photos={lifePhotos}
+          tasks={tasks}
+          weights={weights}
+          workouts={workouts}
+        />
       ) : activeTab === "places" ? (
         <LifePlacesView />
       ) : activeTab === "ledger" ? (
@@ -244,25 +276,32 @@ function LifeCalendarView() {
 
 function LifeReportView({
   dailyLogs,
+  date,
   events,
   expenses,
   isLoading,
+  onCreateLog,
+  onDateChange,
+  onUploadPhotos,
   photos,
   tasks,
   weights,
   workouts,
 }: {
   dailyLogs: DailyLogRecord[];
+  date: string;
   events: CalendarEvent[];
   expenses: ExpenseRecord[];
   isLoading: boolean;
+  onCreateLog: (date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
+  onDateChange: (date: string) => void;
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
   photos: LifePhotoRecord[];
   tasks: TaskItem[];
   weights: WeightRecord[];
   workouts: WorkoutSession[];
 }) {
-  const [date, setDate] = useState(formatDateKey(new Date()));
-  const [selectedBundle, setSelectedBundle] = useState<LifeContextBundle | null>(null);
+  const [selectedBundleKey, setSelectedBundleKey] = useState<string | null>(null);
   const monthKey = date.slice(0, 7);
   const dayEvents = events.filter((event) => isDateInRange(date, event.date, event.endDate));
   const dayTasks = tasks.filter((task) => isDateInRange(date, task.scheduledDate, task.dueDate));
@@ -280,6 +319,7 @@ function LifeReportView({
   const monthRunningKm = monthWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
   const places = uniquePlanPlaces([...dayEvents.flatMap((event) => (event.place ? [event.place] : [])), ...dayTasks.flatMap((task) => (task.place ? [task.place] : []))]);
   const contextBundles = buildLifeContextBundles(date, dayEvents, dayTasks, dayExpenses, dayLogs, dayPhotos);
+  const selectedBundle = contextBundles.find((bundle) => bundle.key === selectedBundleKey) ?? null;
   const dateOnlyLogs = dayLogs.filter((log) => !log.linkedTargetId);
   const dateOnlyPhotos = dayPhotos.filter((photo) => !photo.linkedTargetId);
   const dateOnlyExpenses = dayExpenses.filter((expense) => !contextBundles.some((bundle) => bundle.expenses.some((item) => item.id === expense.id)));
@@ -295,7 +335,7 @@ function LifeReportView({
           </div>
           <label className="life-health-date-control">
             <span>리포트 날짜</span>
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
           </label>
         </div>
 
@@ -330,7 +370,7 @@ function LifeReportView({
             {contextBundles.length > 0 ? (
               <div className="life-context-list">
                 {contextBundles.map((bundle) => (
-                  <button className="life-context-card life-context-card--button" key={bundle.key} onClick={() => setSelectedBundle(bundle)} type="button">
+                  <button className="life-context-card life-context-card--button" key={bundle.key} onClick={() => setSelectedBundleKey(bundle.key)} type="button">
                     <div className="life-context-card__head">
                       <span>{bundle.label}</span>
                       <strong>{bundle.title}</strong>
@@ -369,13 +409,73 @@ function LifeReportView({
           </section>
         </div>
       </SectionCard>
-      {selectedBundle ? <LifeContextDetailDrawer bundle={selectedBundle} onClose={() => setSelectedBundle(null)} /> : null}
+      {selectedBundle ? <LifeContextDetailDrawer bundle={selectedBundle} onClose={() => setSelectedBundleKey(null)} onCreateLog={onCreateLog} onUploadPhotos={onUploadPhotos} /> : null}
     </div>
   );
 }
 
-function LifeContextDetailDrawer({ bundle, onClose }: { bundle: LifeContextBundle; onClose: () => void }) {
+function LifeContextDetailDrawer({
+  bundle,
+  onClose,
+  onCreateLog,
+  onUploadPhotos,
+}: {
+  bundle: LifeContextBundle;
+  onClose: () => void;
+  onCreateLog: (date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => Promise<void> | void;
+}) {
   const totalExpense = bundle.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const [quickLog, setQuickLog] = useState("");
+  const [caption, setCaption] = useState("");
+  const [previews, setPreviews] = useState<LifeMediaPreview[]>([]);
+  const [isSavingLog, setIsSavingLog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const linkedTarget = { id: bundle.targetId, title: bundle.title, type: bundle.targetType };
+
+  useEffect(() => () => previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl)), [previews]);
+
+  const saveQuickLog = async () => {
+    const content = quickLog.trim();
+    if (!content) return;
+    setIsSavingLog(true);
+    try {
+      await onCreateLog(bundle.date, content, linkedTarget);
+      setQuickLog("");
+    } finally {
+      setIsSavingLog(false);
+    }
+  };
+
+  const selectFiles = async (files: File[]) => {
+    setUploadError(null);
+    previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
+    try {
+      setPreviews(await Promise.all(files.map(createLifeMediaPreview)));
+    } catch (error) {
+      console.error("Failed to prepare context media previews", getLifePhotoErrorDebugInfo(error));
+      setPreviews([]);
+      setUploadError(getLifePhotoUploadErrorMessage(error));
+    }
+  };
+
+  const uploadPhotos = async () => {
+    if (previews.length === 0) return;
+    setIsUploading(true);
+    try {
+      await onUploadPhotos(bundle.date, previews, caption.trim() || undefined, linkedTarget);
+      previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
+      setPreviews([]);
+      setCaption("");
+      setUploadError(null);
+    } catch (error) {
+      console.error("Failed to upload context photos", getLifePhotoErrorDebugInfo(error));
+      setUploadError(getLifePhotoUploadErrorMessage(error));
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="life-detail-overlay" role="presentation" onMouseDown={onClose}>
@@ -413,6 +513,12 @@ function LifeContextDetailDrawer({ bundle, onClose }: { bundle: LifeContextBundl
         <section className="life-detail-section">
           <h3>하루기록</h3>
           {bundle.logs.length > 0 ? bundle.logs.map((log) => <blockquote key={log.id}>{log.content}</blockquote>) : <span>연결된 하루기록 없음</span>}
+          <div className="life-detail-capture">
+            <textarea placeholder="이 사건에 하루기록 추가" value={quickLog} onChange={(event) => setQuickLog(event.target.value)} />
+            <button disabled={!quickLog.trim() || isSavingLog} onClick={() => void saveQuickLog()} type="button">
+              {isSavingLog ? "저장 중" : "기록 추가"}
+            </button>
+          </div>
         </section>
 
         <section className="life-detail-section">
@@ -429,6 +535,28 @@ function LifeContextDetailDrawer({ bundle, onClose }: { bundle: LifeContextBundl
           ) : (
             <span>연결된 사진 없음</span>
           )}
+          <div className="life-detail-capture">
+            <label className="life-detail-file-picker">
+              <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
+              <ImagePlus aria-hidden size={18} />
+              <span>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진/영상 선택"}</span>
+            </label>
+            {previews.length > 0 ? (
+              <div className="life-detail-media">
+                {previews.map((preview) => (
+                  <figure key={preview.id}>
+                    {preview.mimeType.startsWith("video/") ? <div>{preview.name}</div> : <Image alt={preview.name} height={120} src={preview.objectUrl} unoptimized width={120} />}
+                    <figcaption>{formatMediaMeta(preview)}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            ) : null}
+            <input placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
+            {uploadError ? <p className="life-photo-upload-error">{uploadError}</p> : null}
+            <button disabled={previews.length === 0 || isUploading} onClick={() => void uploadPhotos()} type="button">
+              {isUploading ? "업로드 중" : "사진 연결"}
+            </button>
+          </div>
         </section>
       </aside>
     </div>
@@ -466,6 +594,9 @@ function LifeMonthlyReviewView({
   const completedTasks = monthTasks.filter((task) => task.status === "done").length;
   const topExpense = [...monthExpenses].sort((a, b) => b.amount - a.amount)[0];
   const latestWeight = [...monthWeights].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const peopleStats = getTopCounts([...monthEvents.map((event) => event.companions), ...monthTasks.map((task) => task.companions)].flatMap(parseCompanions));
+  const placeStats = getTopCounts(monthPlaces.map((place) => place.name));
+  const expenseCategoryStats = getTopExpenseCategories(monthExpenses);
 
   return (
     <div className="life-tab-panel">
@@ -507,6 +638,12 @@ function LifeMonthlyReviewView({
           </article>
         </div>
 
+        <div className="life-insight-grid">
+          <InsightCard title="자주 함께한 사람" empty="함께한 사람 기록 없음" items={peopleStats.map((item) => `${item.name} · ${item.count}회`)} />
+          <InsightCard title="자주 간 장소" empty="장소 기록 없음" items={placeStats.map((item) => `${item.name} · ${item.count}회`)} />
+          <InsightCard title="소비 카테고리" empty="지출 기록 없음" items={expenseCategoryStats.map((item) => `${item.name} · ${formatWon(item.amount)}`)} />
+        </div>
+
         <section className="life-report-sections">
           <h3>이번 달 주요 기록</h3>
           <div className="life-date-only-grid">
@@ -521,10 +658,28 @@ function LifeMonthlyReviewView({
   );
 }
 
+function InsightCard({ empty, items, title }: { empty: string; items: string[]; title: string }) {
+  return (
+    <article className="life-insight-card">
+      <span>{title}</span>
+      {items.length > 0 ? (
+        <ol>
+          {items.slice(0, 5).map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ol>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </article>
+  );
+}
+
 function LifeSearchView({
   dailyLogs,
   events,
   expenses,
+  onOpenDate,
   photos,
   tasks,
   weights,
@@ -533,6 +688,7 @@ function LifeSearchView({
   dailyLogs: DailyLogRecord[];
   events: CalendarEvent[];
   expenses: ExpenseRecord[];
+  onOpenDate: (date: string) => void;
   photos: LifePhotoRecord[];
   tasks: TaskItem[];
   weights: WeightRecord[];
@@ -577,12 +733,12 @@ function LifeSearchView({
 
         <div className="life-search-results">
           {filteredItems.slice(0, 80).map((item) => (
-            <article key={item.id}>
+            <button key={item.id} onClick={() => onOpenDate(item.date)} type="button">
               <span>{item.date} · {item.label}</span>
               <strong>{item.title}</strong>
               {item.description ? <p>{item.description}</p> : null}
               {item.tags.length > 0 ? <em>{item.tags.join(" · ")}</em> : null}
-            </article>
+            </button>
           ))}
           {filteredItems.length === 0 ? (
             <div className="life-map-empty life-map-empty--compact">
@@ -638,17 +794,21 @@ function buildLifeContextBundles(
       const targetType = event.type === "event" ? "event" : "schedule";
       return {
         expenses: expenses.filter((expense) => expense.targetType === targetType && expense.targetId === event.id),
+        date,
         key: `${targetType}:${event.id}`,
         label: getPhotoTargetTypeLabel(targetType),
         logs: logs.filter((log) => log.linkedTargetType === targetType && log.linkedTargetId === event.id),
         meta: formatContextMeta(date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
         photos: photos.filter((photo) => photo.linkedTargetType === targetType && photo.linkedTargetId === event.id),
         place: event.place,
+        targetId: event.id,
+        targetType,
         title: event.title,
       } satisfies LifeContextBundle;
     });
 
   const taskBundles = tasks.map((task) => ({
+    date,
     expenses: expenses.filter((expense) => expense.targetType === "todo" && expense.targetId === task.id),
     key: `todo:${task.id}`,
     label: "할일",
@@ -656,6 +816,8 @@ function buildLifeContextBundles(
     meta: formatContextMeta(date, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions),
     photos: photos.filter((photo) => photo.linkedTargetType === "todo" && photo.linkedTargetId === task.id),
     place: task.place,
+    targetId: task.id,
+    targetType: "todo" as const,
     title: task.title,
   }));
 
@@ -670,6 +832,39 @@ function formatContextMeta(date: string, startDate: string, endDate?: string, st
   const range = endDate && endDate !== startDate ? `${startDate}~${endDate}` : date;
   const time = isAllDay ? "하루종일" : endTime ? `${startTime ?? "시간 미정"}-${endTime}` : startTime ?? "시간 미정";
   return [range, time, companions ? `함께한 사람 · ${companions}` : null].filter(Boolean).join(" · ");
+}
+
+function parseCompanions(value?: string) {
+  return (value ?? "")
+    .split(/[,，、·]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getTopCounts(values: string[]) {
+  const counts = new Map<string, number>();
+  values.forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
+  return [...counts.entries()]
+    .map(([name, count]) => ({ count, name }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+function getTopExpenseCategories(expenses: ExpenseRecord[]) {
+  const labels: Record<ExpenseRecord["category"], string> = {
+    culture: "문화",
+    education: "교육",
+    etc: "기타",
+    food: "식비",
+    health: "건강",
+    housing: "주거",
+    shopping: "쇼핑",
+    transport: "교통",
+  };
+  const totals = new Map<ExpenseRecord["category"], number>();
+  expenses.forEach((expense) => totals.set(expense.category, (totals.get(expense.category) ?? 0) + expense.amount));
+  return [...totals.entries()]
+    .map(([category, amount]) => ({ amount, name: labels[category] }))
+    .sort((a, b) => b.amount - a.amount);
 }
 
 function buildLifeSearchItems(
