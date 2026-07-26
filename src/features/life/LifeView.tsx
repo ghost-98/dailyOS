@@ -30,7 +30,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "report" | "monthly" | "search" | "places" | "ledger" | "logs" | "photos" | "health";
+type LifeCalendarTab = "events" | "report" | "monthly" | "search" | "places" | "people" | "ledger" | "logs" | "photos" | "health";
 
 type PlaceTimelineItem = {
   date: string;
@@ -80,6 +80,16 @@ type LifeSearchItem = {
   type: "schedule" | "todo" | "event" | "expense" | "daily_log" | "photo" | "workout" | "weight";
 };
 
+type PersonSummary = {
+  expenseTotal: number;
+  expenses: ExpenseRecord[];
+  items: LifeSearchItem[];
+  logs: DailyLogRecord[];
+  name: string;
+  photos: LifePhotoRecord[];
+  places: string[];
+};
+
 export function LifeView({ mode }: LifeViewProps) {
   return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
 }
@@ -89,7 +99,8 @@ const lifeTabs: Array<{ group: "view" | "data" | "capture"; key: LifeCalendarTab
   { group: "view", key: "report", label: "하루 리포트" },
   { group: "view", key: "monthly", label: "월간 회고" },
   { group: "view", key: "search", label: "전체 검색" },
-  { group: "data", key: "places", label: "장소" },
+  { group: "data", key: "places", label: "장소 흐름" },
+  { group: "data", key: "people", label: "사람" },
   { group: "data", key: "ledger", label: "가계부" },
   { group: "capture", key: "logs", label: "하루기록" },
   { group: "capture", key: "photos", label: "사진" },
@@ -261,6 +272,8 @@ function LifeCalendarView() {
         />
       ) : activeTab === "places" ? (
         <LifePlacesView />
+      ) : activeTab === "people" ? (
+        <LifePeopleView dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} />
       ) : activeTab === "ledger" ? (
         <LedgerView variant="tab" />
       ) : activeTab === "logs" ? (
@@ -780,6 +793,96 @@ function ReportList({ empty, items, title }: { empty: string; items: string[]; t
   );
 }
 
+function LifePeopleView({
+  dailyLogs,
+  events,
+  expenses,
+  photos,
+  tasks,
+}: {
+  dailyLogs: DailyLogRecord[];
+  events: CalendarEvent[];
+  expenses: ExpenseRecord[];
+  photos: LifePhotoRecord[];
+  tasks: TaskItem[];
+}) {
+  const people = useMemo(() => buildPeopleSummaries(events, tasks, expenses, dailyLogs, photos), [dailyLogs, events, expenses, photos, tasks]);
+  const [selectedName, setSelectedName] = useState("");
+  const selectedPerson = people.find((person) => person.name === selectedName) ?? people[0];
+
+  useEffect(() => {
+    if (!selectedName && people[0]) setSelectedName(people[0].name);
+    if (selectedName && !people.some((person) => person.name === selectedName)) setSelectedName(people[0]?.name ?? "");
+  }, [people, selectedName]);
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="사람" description="일정과 할 일의 함께한 사람을 기준으로, 누구와 어디서 무엇을 했는지 다시 보는 관계 축입니다." />
+      <div className="life-people-view">
+        <SectionCard className="life-people-list">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">관계 인덱스</p>
+              <h2>{people.length}명</h2>
+            </div>
+          </div>
+          {people.length > 0 ? (
+            <div className="life-person-buttons">
+              {people.map((person) => (
+                <button className={selectedPerson?.name === person.name ? "life-person-button life-person-button--active" : "life-person-button"} key={person.name} onClick={() => setSelectedName(person.name)} type="button">
+                  <strong>{person.name}</strong>
+                  <span>{person.items.length}회 · {person.places.length}곳 · {formatWon(person.expenseTotal)}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>아직 함께한 사람 기록이 없습니다.</strong>
+              <p>캘린더에서 일정이나 할 일에 함께한 사람을 입력하면 이곳에 자동으로 모입니다.</p>
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard className="life-people-detail">
+          {selectedPerson ? (
+            <>
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">사람 상세</p>
+                  <h2>{selectedPerson.name}</h2>
+                </div>
+                <strong className="life-places-count">{selectedPerson.items.length}회</strong>
+              </div>
+              <div className="life-report-metrics">
+                <ReportMetric label="함께한 횟수" value={`${selectedPerson.items.length}회`} hint="일정·할일 기준" />
+                <ReportMetric label="함께 간 장소" value={`${selectedPerson.places.length}곳`} hint={selectedPerson.places[0] ?? "장소 없음"} />
+                <ReportMetric label="연결 지출" value={selectedPerson.expenseTotal > 0 ? formatWon(selectedPerson.expenseTotal) : "-"} hint={`${selectedPerson.expenses.length}건`} />
+                <ReportMetric label="사진/기록" value={`${selectedPerson.photos.length + selectedPerson.logs.length}개`} hint={`사진 ${selectedPerson.photos.length} · 기록 ${selectedPerson.logs.length}`} />
+              </div>
+              <div className="life-search-results">
+                {selectedPerson.items.map((item) => (
+                  <button key={item.id} type="button">
+                    <span>{item.date} · {item.label}</span>
+                    <strong>{item.title}</strong>
+                    {item.description ? <p>{item.description}</p> : null}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>사람을 선택해 주세요.</strong>
+              <p>함께한 사람 기록이 쌓이면 관계별 타임라인을 볼 수 있습니다.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
 function buildLifeContextBundles(
   date: string,
   events: CalendarEvent[],
@@ -865,6 +968,72 @@ function getTopExpenseCategories(expenses: ExpenseRecord[]) {
   return [...totals.entries()]
     .map(([category, amount]) => ({ amount, name: labels[category] }))
     .sort((a, b) => b.amount - a.amount);
+}
+
+function buildPeopleSummaries(events: CalendarEvent[], tasks: TaskItem[], expenses: ExpenseRecord[], logs: DailyLogRecord[], photos: LifePhotoRecord[]) {
+  const people = new Map<string, PersonSummary>();
+
+  const ensurePerson = (name: string) => {
+    const current = people.get(name);
+    if (current) return current;
+    const nextPerson: PersonSummary = { expenseTotal: 0, expenses: [], items: [], logs: [], name, photos: [], places: [] };
+    people.set(name, nextPerson);
+    return nextPerson;
+  };
+
+  for (const event of events.filter((item) => item.type === "schedule" || item.type === "event")) {
+    const targetType = event.type === "event" ? "event" : "schedule";
+    for (const name of parseCompanions(event.companions)) {
+      const person = ensurePerson(name);
+      const linkedExpenses = expenses.filter((expense) => expense.targetType === targetType && expense.targetId === event.id);
+      const linkedLogs = logs.filter((log) => log.linkedTargetType === targetType && log.linkedTargetId === event.id);
+      const linkedPhotos = photos.filter((photo) => photo.linkedTargetType === targetType && photo.linkedTargetId === event.id);
+      person.items.push({
+        date: event.date,
+        description: formatContextMeta(event.date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
+        id: `${name}-${targetType}-${event.id}`,
+        label: targetType === "event" ? "이벤트" : "일정",
+        tags: [event.place?.name, event.meta].filter(Boolean) as string[],
+        title: event.title,
+        type: targetType,
+      });
+      person.expenses.push(...linkedExpenses);
+      person.logs.push(...linkedLogs);
+      person.photos.push(...linkedPhotos);
+      if (event.place?.name) person.places.push(event.place.name);
+    }
+  }
+
+  for (const task of tasks) {
+    for (const name of parseCompanions(task.companions)) {
+      const person = ensurePerson(name);
+      const linkedExpenses = expenses.filter((expense) => expense.targetType === "todo" && expense.targetId === task.id);
+      const linkedLogs = logs.filter((log) => log.linkedTargetType === "todo" && log.linkedTargetId === task.id);
+      const linkedPhotos = photos.filter((photo) => photo.linkedTargetType === "todo" && photo.linkedTargetId === task.id);
+      person.items.push({
+        date: task.scheduledDate,
+        description: formatContextMeta(task.scheduledDate, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions),
+        id: `${name}-todo-${task.id}`,
+        label: "할일",
+        tags: [task.place?.name, task.memo].filter(Boolean) as string[],
+        title: task.title,
+        type: "todo",
+      });
+      person.expenses.push(...linkedExpenses);
+      person.logs.push(...linkedLogs);
+      person.photos.push(...linkedPhotos);
+      if (task.place?.name) person.places.push(task.place.name);
+    }
+  }
+
+  return [...people.values()]
+    .map((person) => ({
+      ...person,
+      expenseTotal: person.expenses.reduce((sum, expense) => sum + expense.amount, 0),
+      items: person.items.sort((a, b) => b.date.localeCompare(a.date)),
+      places: [...new Set(person.places)],
+    }))
+    .sort((a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name));
 }
 
 function buildLifeSearchItems(

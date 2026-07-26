@@ -348,6 +348,10 @@ button {
   padding: 0 5px;
 }
 
+.life-calendar-switch__break .life-calendar-switch__group {
+  margin-left: 2px;
+}
+
 .life-calendar-switch__item {
   background: transparent;
   border: 0;
@@ -1546,6 +1550,7 @@ button {
   .life-review-grid,
   .life-search-controls,
   .life-places-view,
+  .life-people-view,
   .places-layout {
     grid-template-columns: 1fr;
   }
@@ -4317,6 +4322,60 @@ a:focus-visible {
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.life-people-view {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.25fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.life-people-list,
+.life-people-detail {
+  display: grid;
+  gap: 14px;
+  min-height: 560px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 22px;
+}
+
+.life-person-buttons {
+  display: grid;
+  gap: 9px;
+}
+
+.life-person-button {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 13px;
+  text-align: left;
+}
+
+.life-person-button--active,
+.life-person-button:hover {
+  border-color: rgba(201, 184, 255, 0.3);
+  background: rgba(201, 184, 255, 0.08);
+}
+
+.life-person-button strong {
+  color: var(--text);
+}
+
+.life-person-button span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .life-capture-card__footer {

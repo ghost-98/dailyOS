@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Activity,
-  BriefcaseBusiness,
-  CalendarDays,
-  ChevronDown,
-  Grid2X2,
-  Layers3,
-  LogOut,
-  Map,
-  Settings,
-} from "lucide-react";
+import { Activity, BriefcaseBusiness, CalendarDays, ChevronDown, Grid2X2, Layers3, LogOut, Map, MapPinned, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -20,7 +10,6 @@ import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/Auth
 const lifeChildren = [
   { label: "라이프 허브", href: "/life/calendar", key: "life-calendar" },
   { label: "장소 지도", href: "/life/map", key: "life-map" },
-  { label: "장소 보관함", href: "/places", key: "places" },
 ];
 
 const careerChildren = [
@@ -32,6 +21,7 @@ const careerChildren = [
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "라이프 DB", href: "/life/calendar", key: "life", icon: Layers3, children: lifeChildren },
+  { label: "장소 보관함", href: "/places", key: "places", icon: MapPinned },
   { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
@@ -40,7 +30,7 @@ const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "라이프", href: "/life/calendar", key: "life", icon: CalendarDays },
   { label: "지도", href: "/life/map", key: "life-map", icon: Map },
-  { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
+  { label: "장소", href: "/places", key: "places", icon: MapPinned },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
@@ -143,8 +133,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            item.key === "life-map" ? pathname === "/life/map" : item.key === "life" ? activeKey === "life" && pathname !== "/life/map" && pathname !== "/places" : item.key === activeKey;
+          const isActive = item.key === "life-map" ? pathname === "/life/map" : item.key === "life" ? activeKey === "life" && pathname !== "/life/map" : item.key === activeKey;
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />
