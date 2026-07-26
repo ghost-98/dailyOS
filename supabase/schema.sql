@@ -480,6 +480,109 @@ create index if not exists weight_records_user_date_idx on public.weight_records
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
+
+create or replace view public.life_record_index
+with (security_invoker = true)
+as
+select
+  user_id,
+  event_date as record_date,
+  type::text as source_type,
+  id as source_id,
+  case when type = 'event' then 'event' else 'schedule' end as target_type,
+  id as target_id,
+  title,
+  nullif(meta, '') as summary,
+  expense_amount as amount,
+  place_name,
+  created_at
+from public.calendar_events
+where type in ('schedule', 'event')
+union all
+select
+  user_id,
+  scheduled_date as record_date,
+  'todo' as source_type,
+  id as source_id,
+  'todo' as target_type,
+  id as target_id,
+  title,
+  memo as summary,
+  expense_amount as amount,
+  place_name,
+  created_at
+from public.tasks
+union all
+select
+  user_id,
+  expense_date as record_date,
+  'expense' as source_type,
+  id as source_id,
+  target_type,
+  target_id,
+  title,
+  memo as summary,
+  amount,
+  null as place_name,
+  created_at
+from public.expense_records
+union all
+select
+  user_id,
+  log_date as record_date,
+  'daily_log' as source_type,
+  id as source_id,
+  linked_target_type as target_type,
+  linked_target_id as target_id,
+  '하루 기록' as title,
+  content as summary,
+  null as amount,
+  null as place_name,
+  created_at
+from public.daily_logs
+union all
+select
+  user_id,
+  photo_date as record_date,
+  'photo' as source_type,
+  id as source_id,
+  linked_target_type as target_type,
+  linked_target_id as target_id,
+  coalesce(caption, file_name) as title,
+  file_name as summary,
+  null as amount,
+  null as place_name,
+  created_at
+from public.life_photos
+union all
+select
+  user_id,
+  workout_date as record_date,
+  'workout' as source_type,
+  id as source_id,
+  null as target_type,
+  null as target_id,
+  case when type = 'running' then '러닝 기록' else '운동 기록' end as title,
+  concat_ws(' · ', case when distance_km is not null then distance_km::text || 'km' end, coalesce(duration_seconds, duration_minutes * 60)::text || '초') as summary,
+  null as amount,
+  null as place_name,
+  created_at
+from public.workout_sessions
+union all
+select
+  user_id,
+  record_date,
+  'weight' as source_type,
+  id as source_id,
+  null as target_type,
+  null as target_id,
+  '아침 몸무게' as title,
+  weight_kg::text || 'kg' as summary,
+  null as amount,
+  null as place_name,
+  created_at
+from public.weight_records;
+
 insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)
 select
   user_id,

@@ -1518,6 +1518,9 @@ button {
   .life-axis-view .calendar-layout--detail-open,
   .life-capture-page,
   .life-health-sections,
+  .life-date-only-grid,
+  .life-report-metrics,
+  .life-report-month,
   .life-places-view,
   .places-layout {
     grid-template-columns: 1fr;
@@ -3813,6 +3816,147 @@ a:focus-visible {
 .life-record-actions button:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.life-report-panel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 22px;
+}
+
+.life-report-metrics,
+.life-report-month,
+.life-date-only-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.life-report-month {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-report-metrics article,
+.life-report-month article,
+.life-report-list-card {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 15px;
+}
+
+.life-report-metrics span,
+.life-report-month span,
+.life-report-list-card > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.life-report-metrics strong,
+.life-report-month strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--text);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.life-report-metrics p,
+.life-report-month p,
+.life-report-list-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.life-report-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.life-report-sections h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.life-context-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.life-context-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(201, 184, 255, 0.16);
+  border-radius: 17px;
+  background: rgba(201, 184, 255, 0.055);
+  padding: 15px;
+}
+
+.life-context-card__head {
+  display: grid;
+  gap: 4px;
+}
+
+.life-context-card__head span,
+.life-context-card__media {
+  color: var(--violet);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.life-context-card__head strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.life-context-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-context-card__chips b {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 5px 8px;
+}
+
+.life-context-card p,
+.life-context-card blockquote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.life-context-card blockquote {
+  border-left: 3px solid rgba(201, 184, 255, 0.38);
+  padding-left: 10px;
+}
+
+.life-report-list-card ul {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.life-report-list-card li {
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .life-capture-card__footer {
@@ -7750,6 +7894,13 @@ a:focus-visible {
   font-size: 13px;
 }
 
+.settings-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;
@@ -7772,6 +7923,11 @@ a:focus-visible {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   font-weight: 800;
+}
+
+.settings-command:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .settings-command--danger {

@@ -30,7 +30,7 @@ type LifeViewProps = {
   mode: LifeViewMode;
 };
 
-type LifeCalendarTab = "events" | "places" | "ledger" | "logs" | "photos" | "health";
+type LifeCalendarTab = "events" | "report" | "places" | "ledger" | "logs" | "photos" | "health";
 
 type PlaceTimelineItem = {
   date: string;
@@ -56,29 +56,50 @@ const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
   event: "이벤트",
 };
 
+type LifeContextBundle = {
+  expenses: ExpenseRecord[];
+  key: string;
+  label: string;
+  logs: DailyLogRecord[];
+  meta?: string;
+  photos: LifePhotoRecord[];
+  place?: PlanPlace;
+  title: string;
+};
+
 export function LifeView({ mode }: LifeViewProps) {
   return <div className="life-page">{mode === "calendar" ? <LifeCalendarView /> : <LifeMapView />}</div>;
 }
 
 function LifeCalendarView() {
   const [activeTab, setActiveTab] = useState<LifeCalendarTab>("events");
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLogRecord[]>([]);
   const [lifePhotos, setLifePhotos] = useState<LifePhotoRecord[]>([]);
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
+  const [isLifeDataLoading, setIsLifeDataLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([fetchDailyLogsFromDb(), fetchLifePhotosFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
-      .then(([logs, photos, nextWeights, nextWorkouts]) => {
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb(), fetchExpenseRecordsFromDb(), fetchDailyLogsFromDb(), fetchLifePhotosFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
+      .then(([nextEvents, nextTasks, nextExpenses, logs, photos, nextWeights, nextWorkouts]) => {
         if (!isMounted) return;
+        setEvents(nextEvents ?? []);
+        setTasks(nextTasks ?? []);
+        setExpenses(nextExpenses ?? []);
         setDailyLogs(logs ?? []);
         setLifePhotos(photos ?? []);
         setWeights(nextWeights ?? []);
         setWorkouts(nextWorkouts ?? []);
       })
-      .catch((error) => console.error("Failed to load life capture data from Supabase", error));
+      .catch((error) => console.error("Failed to load life capture data from Supabase", error))
+      .finally(() => {
+        if (isMounted) setIsLifeDataLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -101,6 +122,13 @@ function LifeCalendarView() {
         title: "사진 기록",
         type: "photo" as const,
       })),
+      ...expenses.map((expense) => ({
+        date: expense.date,
+        id: expense.id,
+        meta: `${formatWon(expense.amount)} · ${expense.title}`,
+        title: "지출 기록",
+        type: "expense" as const,
+      })),
       ...workouts.map((workout) => ({
         date: workout.date,
         id: workout.id,
@@ -116,7 +144,7 @@ function LifeCalendarView() {
         type: "weight" as const,
       })),
     ],
-    [dailyLogs, lifePhotos, weights, workouts],
+    [dailyLogs, expenses, lifePhotos, weights, workouts],
   );
 
   const createDailyLog = async (date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) => {
@@ -153,6 +181,13 @@ function LifeCalendarView() {
           type="button"
         >
           사건
+        </button>
+        <button
+          className={activeTab === "report" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
+          onClick={() => setActiveTab("report")}
+          type="button"
+        >
+          리포트
         </button>
         <button
           className={activeTab === "places" ? "life-calendar-switch__item life-calendar-switch__item--active" : "life-calendar-switch__item"}
@@ -203,6 +238,8 @@ function LifeCalendarView() {
           showSelectedDatePlacesMap={false}
           title="사건"
         />
+      ) : activeTab === "report" ? (
+        <LifeReportView dailyLogs={dailyLogs} events={events} expenses={expenses} isLoading={isLifeDataLoading} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "places" ? (
         <LifePlacesView />
       ) : activeTab === "ledger" ? (
@@ -216,6 +253,211 @@ function LifeCalendarView() {
       )}
     </div>
   );
+}
+
+function LifeReportView({
+  dailyLogs,
+  events,
+  expenses,
+  isLoading,
+  photos,
+  tasks,
+  weights,
+  workouts,
+}: {
+  dailyLogs: DailyLogRecord[];
+  events: CalendarEvent[];
+  expenses: ExpenseRecord[];
+  isLoading: boolean;
+  photos: LifePhotoRecord[];
+  tasks: TaskItem[];
+  weights: WeightRecord[];
+  workouts: WorkoutSession[];
+}) {
+  const [date, setDate] = useState(formatDateKey(new Date()));
+  const monthKey = date.slice(0, 7);
+  const dayEvents = events.filter((event) => isDateInRange(date, event.date, event.endDate));
+  const dayTasks = tasks.filter((task) => isDateInRange(date, task.scheduledDate, task.dueDate));
+  const dayExpenses = expenses.filter((expense) => expense.date === date);
+  const dayLogs = dailyLogs.filter((log) => log.date === date);
+  const dayPhotos = photos.filter((photo) => photo.date === date);
+  const dayWeights = weights.filter((weight) => weight.date === date);
+  const dayWorkouts = workouts.filter((workout) => workout.date === date);
+  const monthExpenses = expenses.filter((expense) => expense.date.startsWith(monthKey));
+  const monthLogs = dailyLogs.filter((log) => log.date.startsWith(monthKey));
+  const monthPhotos = photos.filter((photo) => photo.date.startsWith(monthKey));
+  const monthWorkouts = workouts.filter((workout) => workout.date.startsWith(monthKey));
+  const totalExpense = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const monthExpenseTotal = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const monthRunningKm = monthWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
+  const places = uniquePlanPlaces([...dayEvents.flatMap((event) => (event.place ? [event.place] : [])), ...dayTasks.flatMap((task) => (task.place ? [task.place] : []))]);
+  const contextBundles = buildLifeContextBundles(date, dayEvents, dayTasks, dayExpenses, dayLogs, dayPhotos);
+  const dateOnlyLogs = dayLogs.filter((log) => !log.linkedTargetId);
+  const dateOnlyPhotos = dayPhotos.filter((photo) => !photo.linkedTargetId);
+  const dateOnlyExpenses = dayExpenses.filter((expense) => !contextBundles.some((bundle) => bundle.expenses.some((item) => item.id === expense.id)));
+
+  return (
+    <div className="life-tab-panel">
+      <LifeTabHeading title="하루 리포트" description="날짜 하나를 기준으로 사건, 장소, 지출, 사진, 기록, 건강을 한 장의 개인 DB 뷰로 묶어봅니다." />
+      <SectionCard className="life-report-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">선택한 날짜</p>
+            <h2>{formatFullDate(date)}</h2>
+          </div>
+          <label className="life-health-date-control">
+            <span>리포트 날짜</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          </label>
+        </div>
+
+        <div className="life-report-metrics">
+          <ReportMetric label="하루 밀도" value={`${dayEvents.length + dayTasks.length + dayLogs.length + dayPhotos.length + dayWorkouts.length + dayWeights.length}건`} hint="계획·기록·건강" />
+          <ReportMetric label="지출" value={totalExpense > 0 ? formatWon(totalExpense) : "-"} hint={`${dayExpenses.length}건 연결`} />
+          <ReportMetric label="장소" value={`${places.length}곳`} hint={places[0]?.name ?? "장소 연결 없음"} />
+          <ReportMetric label="미디어/기록" value={`${dayPhotos.length + dayLogs.length}개`} hint={`사진 ${dayPhotos.length} · 기록 ${dayLogs.length}`} />
+        </div>
+
+        <div className="life-report-month">
+          <article>
+            <span>이번 달 기록</span>
+            <strong>{monthLogs.length + monthPhotos.length}개</strong>
+            <p>하루기록 {monthLogs.length} · 사진 {monthPhotos.length}</p>
+          </article>
+          <article>
+            <span>이번 달 지출</span>
+            <strong>{monthExpenseTotal > 0 ? formatWon(monthExpenseTotal) : "-"}</strong>
+            <p>사건/할일에서 발생한 지출 합계</p>
+          </article>
+          <article>
+            <span>이번 달 러닝</span>
+            <strong>{monthRunningKm > 0 ? `${monthRunningKm.toFixed(1)}km` : "-"}</strong>
+            <p>{monthWorkouts.length}회 운동 기록</p>
+          </article>
+        </div>
+
+        <div className="life-report-sections">
+          <section>
+            <h3>사건별 연결 맥락</h3>
+            {contextBundles.length > 0 ? (
+              <div className="life-context-list">
+                {contextBundles.map((bundle) => (
+                  <article className="life-context-card" key={bundle.key}>
+                    <div className="life-context-card__head">
+                      <span>{bundle.label}</span>
+                      <strong>{bundle.title}</strong>
+                    </div>
+                    <div className="life-context-card__chips">
+                      <b>지출 {bundle.expenses.length}</b>
+                      <b>장소 {bundle.place ? 1 : 0}</b>
+                      <b>기록 {bundle.logs.length}</b>
+                      <b>사진 {bundle.photos.length}</b>
+                    </div>
+                    {bundle.meta ? <p>{bundle.meta}</p> : null}
+                    {bundle.place ? <p>장소 · {bundle.place.name}</p> : null}
+                    {bundle.expenses.length > 0 ? <p>지출 · {formatWon(bundle.expenses.reduce((sum, expense) => sum + expense.amount, 0))}</p> : null}
+                    {bundle.logs[0] ? <blockquote>{bundle.logs[0].content}</blockquote> : null}
+                    {bundle.photos.length > 0 ? <span className="life-context-card__media">사진/영상 {bundle.photos.length}개 연결됨</span> : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="life-map-empty life-map-empty--compact">
+                <NotebookPen aria-hidden size={28} />
+                <strong>{isLoading ? "리포트를 불러오는 중입니다." : "이날 연결된 사건 맥락이 없습니다."}</strong>
+                <p>일정/할일에 장소·지출을 넣고, 사진과 하루기록을 사건에 연결하면 이곳이 채워집니다.</p>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3>날짜 단독 기록</h3>
+            <div className="life-date-only-grid">
+              <ReportList title="하루기록" empty="날짜에만 붙은 하루기록 없음" items={dateOnlyLogs.map((log) => log.content)} />
+              <ReportList title="사진/영상" empty="날짜에만 붙은 사진 없음" items={dateOnlyPhotos.map((photo) => photo.caption || photo.fileName)} />
+              <ReportList title="지출" empty="사건 밖 지출 없음" items={dateOnlyExpenses.map((expense) => `${expense.title} · ${formatWon(expense.amount)}`)} />
+              <ReportList title="건강" empty="건강 기록 없음" items={[...dayWorkouts.map((workout) => `${workout.type === "running" ? "러닝" : "운동"} · ${formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60)}`), ...dayWeights.map((weight) => `아침 몸무게 · ${weight.weightKg}kg`)]} />
+            </div>
+          </section>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+function ReportMetric({ hint, label, value }: { hint: string; label: string; value: string }) {
+  return (
+    <article>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <p>{hint}</p>
+    </article>
+  );
+}
+
+function ReportList({ empty, items, title }: { empty: string; items: string[]; title: string }) {
+  return (
+    <article className="life-report-list-card">
+      <span>{title}</span>
+      {items.length > 0 ? (
+        <ul>
+          {items.slice(0, 5).map((item, index) => (
+            <li key={`${title}-${index}`}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </article>
+  );
+}
+
+function buildLifeContextBundles(
+  date: string,
+  events: CalendarEvent[],
+  tasks: TaskItem[],
+  expenses: ExpenseRecord[],
+  logs: DailyLogRecord[],
+  photos: LifePhotoRecord[],
+): LifeContextBundle[] {
+  const eventBundles = events
+    .filter((event) => event.type === "schedule" || event.type === "event")
+    .map((event) => {
+      const targetType = event.type === "event" ? "event" : "schedule";
+      return {
+        expenses: expenses.filter((expense) => expense.targetType === targetType && expense.targetId === event.id),
+        key: `${targetType}:${event.id}`,
+        label: getPhotoTargetTypeLabel(targetType),
+        logs: logs.filter((log) => log.linkedTargetType === targetType && log.linkedTargetId === event.id),
+        meta: formatContextMeta(date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
+        photos: photos.filter((photo) => photo.linkedTargetType === targetType && photo.linkedTargetId === event.id),
+        place: event.place,
+        title: event.title,
+      } satisfies LifeContextBundle;
+    });
+
+  const taskBundles = tasks.map((task) => ({
+    expenses: expenses.filter((expense) => expense.targetType === "todo" && expense.targetId === task.id),
+    key: `todo:${task.id}`,
+    label: "할일",
+    logs: logs.filter((log) => log.linkedTargetType === "todo" && log.linkedTargetId === task.id),
+    meta: formatContextMeta(date, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions),
+    photos: photos.filter((photo) => photo.linkedTargetType === "todo" && photo.linkedTargetId === task.id),
+    place: task.place,
+    title: task.title,
+  }));
+
+  return [...eventBundles, ...taskBundles].sort((a, b) => getContextScore(b) - getContextScore(a));
+}
+
+function getContextScore(bundle: LifeContextBundle) {
+  return bundle.expenses.length + bundle.logs.length + bundle.photos.length + (bundle.place ? 1 : 0);
+}
+
+function formatContextMeta(date: string, startDate: string, endDate?: string, startTime?: string, endTime?: string, isAllDay = true, companions?: string) {
+  const range = endDate && endDate !== startDate ? `${startDate}~${endDate}` : date;
+  const time = isAllDay ? "하루종일" : endTime ? `${startTime ?? "시간 미정"}-${endTime}` : startTime ?? "시간 미정";
+  return [range, time, companions ? `함께한 사람 · ${companions}` : null].filter(Boolean).join(" · ");
 }
 
 function LifeLogsView({
@@ -1297,6 +1539,10 @@ function formatEventTimeRange(startTime?: string, endTime?: string, isAllDay = t
 
 function formatTimelineMeta(timeLabel?: string, companions?: string, expenseAmount?: number, memo?: string) {
   return [timeLabel, companions, expenseAmount !== undefined ? `${new Intl.NumberFormat("ko-KR").format(expenseAmount)}원` : undefined, memo].filter(Boolean).join(" · ");
+}
+
+function formatWon(amount: number) {
+  return `${new Intl.NumberFormat("ko-KR").format(amount)}원`;
 }
 
 function groupTimelineByPlace(items: PlaceTimelineItem[]) {
