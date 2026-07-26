@@ -1,5 +1,23 @@
 import { supabase } from "@/lib/supabase";
-import type { DailyLogRecord, LifeMediaUploadInput, LifePhotoRecord } from "@/types/domain";
+import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
+import type { DailyLogRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord } from "@/types/domain";
+
+type LifeActivityRow = {
+  id: string;
+  activity_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean | null;
+  title: string;
+  memo: string | null;
+  category: string | null;
+  food: string | null;
+  expense_amount: number | string | null;
+  companions: string | null;
+  place_name: string | null;
+  place_address: string | null;
+  created_at: string;
+};
 
 type DailyLogRow = {
   id: string;
@@ -7,7 +25,7 @@ type DailyLogRow = {
   content: string;
   linked_target_id: string | null;
   linked_target_title: string | null;
-  linked_target_type: "schedule" | "todo" | "event" | null;
+  linked_target_type: "schedule" | "todo" | "event" | "activity" | null;
   created_at: string;
 };
 
@@ -24,11 +42,12 @@ type LifePhotoRow = {
   caption: string | null;
   linked_target_id: string | null;
   linked_target_title: string | null;
-  linked_target_type: "schedule" | "todo" | "event" | null;
+  linked_target_type: "schedule" | "todo" | "event" | "activity" | null;
   taken_at: string | null;
   created_at: string;
 };
 
+const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,created_at";
 const dailyLogColumns = "id,log_date,content,linked_target_id,linked_target_title,linked_target_type,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,created_at";
 
@@ -98,6 +117,42 @@ function mapDailyLogRow(row: DailyLogRow): DailyLogRecord {
   };
 }
 
+function mapLifeActivityRow(row: LifeActivityRow): LifeActivityRecord {
+  return {
+    id: row.id,
+    date: row.activity_date,
+    startTime: row.start_time?.slice(0, 5) || undefined,
+    endTime: row.end_time?.slice(0, 5) || undefined,
+    isAllDay: row.is_all_day ?? false,
+    title: row.title,
+    memo: row.memo ?? undefined,
+    category: row.category ?? undefined,
+    food: row.food ?? undefined,
+    expenseAmount: row.expense_amount === null ? undefined : Number(row.expense_amount),
+    companions: row.companions ?? undefined,
+    placeName: row.place_name ?? undefined,
+    placeAddress: row.place_address ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function mapLifeActivityToPayload(activity: LifeActivityRecord) {
+  return {
+    activity_date: activity.date,
+    start_time: activity.isAllDay ? null : activity.startTime ?? null,
+    end_time: activity.isAllDay ? null : activity.endTime ?? null,
+    is_all_day: activity.isAllDay ?? false,
+    title: activity.title.trim(),
+    memo: activity.memo?.trim() || null,
+    category: activity.category?.trim() || null,
+    food: activity.food?.trim() || null,
+    expense_amount: activity.expenseAmount ?? null,
+    companions: activity.companions?.trim() || null,
+    place_name: activity.placeName?.trim() || null,
+    place_address: activity.placeAddress?.trim() || null,
+  };
+}
+
 async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
   const signedUrl = await getLifePhotoSignedUrl(row.file_path);
 
@@ -121,6 +176,71 @@ async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
   };
 }
 
+export async function fetchLifeActivitiesFromDb() {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .select(lifeActivityColumns)
+    .order("activity_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data as LifeActivityRow[]).map(mapLifeActivityRow);
+}
+
+export async function createLifeActivityInDb(activity: LifeActivityRecord) {
+  if (!supabase) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .insert({ ...mapLifeActivityToPayload(activity), user_id: userId })
+    .select(lifeActivityColumns)
+    .single();
+
+  if (error) throw error;
+  const savedActivity = mapLifeActivityRow(data as LifeActivityRow);
+  await syncLinkedExpenseRecordInDb({
+    amount: savedActivity.expenseAmount,
+    date: savedActivity.date,
+    memo: savedActivity.memo,
+    targetId: savedActivity.id,
+    targetType: "activity",
+    title: savedActivity.title,
+  });
+  return savedActivity;
+}
+
+export async function updateLifeActivityInDb(activity: LifeActivityRecord) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.from("life_activities").update(mapLifeActivityToPayload(activity)).eq("id", activity.id).select(lifeActivityColumns).single();
+  if (error) throw error;
+  const savedActivity = mapLifeActivityRow(data as LifeActivityRow);
+  await syncLinkedExpenseRecordInDb({
+    amount: savedActivity.expenseAmount,
+    date: savedActivity.date,
+    memo: savedActivity.memo,
+    targetId: savedActivity.id,
+    targetType: "activity",
+    title: savedActivity.title,
+  });
+  return savedActivity;
+}
+
+export async function deleteLifeActivityFromDb(id: string) {
+  if (!supabase) return false;
+  await deleteLinkedExpenseRecordInDb("activity", id);
+  const { error } = await supabase.from("life_activities").delete().eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
 export async function fetchDailyLogsFromDb() {
   if (!supabase) return null;
   const userId = await getUserId();
@@ -136,7 +256,7 @@ export async function fetchDailyLogsFromDb() {
   return (data as DailyLogRow[]).map(mapDailyLogRow);
 }
 
-export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" }) {
+export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" }) {
   if (!supabase) return null;
   const userId = await getUserId();
   if (!userId) return null;
@@ -204,7 +324,7 @@ export async function uploadLifePhotosToDb(
   date: string,
   uploads: LifeMediaUploadInput[],
   caption?: string,
-  linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" },
+  linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" },
 ) {
   if (!supabase) return null;
   const userId = await getUserId();

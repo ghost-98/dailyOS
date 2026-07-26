@@ -32,11 +32,14 @@ import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEvents
 import type { CalendarEvent } from "./data";
 
 type CalendarCategory = "schedule" | "event" | "todo";
-type ExternalCalendarCategory = "expense" | "workout" | "weight" | "daily_log" | "photo";
+type ExternalCalendarCategory = "activity" | "expense" | "workout" | "weight" | "daily_log" | "photo";
 export type ExternalCalendarItem = {
   date: string;
+  endTime?: string;
   id: string;
+  isAllDay?: boolean;
   meta?: string;
+  startTime?: string;
   title: string;
   type: ExternalCalendarCategory;
 };
@@ -1849,8 +1852,8 @@ function createExternalTimelineItem(external: ExternalCalendarItem): DayTimeline
   return {
     external,
     id: `${external.type}-${external.id}`,
-    sortMinutes: 24 * 60 + getTimelineTypeOrder(external.type),
-    timeLabel: "기록",
+    sortMinutes: external.startTime ? getTimelineSortMinutes(external.startTime, external.isAllDay) : 24 * 60 + getTimelineTypeOrder(external.type),
+    timeLabel: external.startTime && !external.isAllDay ? getTimelineTimeLabel(external.startTime, external.isAllDay) : "기록",
     type: external.type,
   };
 }
@@ -1872,6 +1875,7 @@ function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory)
     schedule: 0,
     todo: 1,
     event: 2,
+    activity: 3,
     expense: 3,
     workout: 4,
     weight: 5,
@@ -1882,7 +1886,7 @@ function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory)
 }
 
 function isExternalTimelineType(type: CalendarCategory | ExternalCalendarCategory): type is ExternalCalendarCategory {
-  return type === "expense" || type === "workout" || type === "weight" || type === "daily_log" || type === "photo";
+  return type === "activity" || type === "expense" || type === "workout" || type === "weight" || type === "daily_log" || type === "photo";
 }
 
 function parseOptionalAmount(value: string) {
@@ -1915,6 +1919,7 @@ function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: Ca
 }
 
 function getCalendarSummaryLabel(type: CalendarCategory | ExternalCalendarCategory) {
+  if (type === "activity") return "활동";
   if (type === "expense") return "가계부";
   if (type === "workout") return "운동";
   if (type === "weight") return "몸무게";

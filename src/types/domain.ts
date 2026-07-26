@@ -67,8 +67,25 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
-  targetType: "schedule" | "todo" | "event";
+  targetType: "schedule" | "todo" | "event" | "activity";
   targetId: string;
+};
+
+export type LifeActivityRecord = {
+  id: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
+  title: string;
+  memo?: string;
+  category?: string;
+  food?: string;
+  expenseAmount?: number;
+  companions?: string;
+  placeName?: string;
+  placeAddress?: string;
+  createdAt?: string;
 };
 
 export type DailyLogRecord = {
@@ -77,7 +94,7 @@ export type DailyLogRecord = {
   content: string;
   linkedTargetId?: string;
   linkedTargetTitle?: string;
-  linkedTargetType?: "schedule" | "todo" | "event";
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
   createdAt?: string;
 };
 
@@ -95,7 +112,7 @@ export type LifePhotoRecord = {
   caption?: string;
   linkedTargetId?: string;
   linkedTargetTitle?: string;
-  linkedTargetType?: "schedule" | "todo" | "event";
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
   takenAt?: string;
   createdAt?: string;
 };

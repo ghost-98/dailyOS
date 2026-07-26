@@ -175,15 +175,46 @@ create table if not exists public.daily_logs (
   user_id uuid not null references auth.users(id) on delete cascade,
   log_date date not null,
   content text not null,
-  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
   linked_target_id uuid,
   linked_target_title text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.life_activities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  activity_date date not null,
+  start_time time,
+  end_time time,
+  is_all_day boolean not null default false,
+  title text not null,
+  memo text,
+  category text,
+  food text,
+  expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
+  companions text,
+  place_name text,
+  place_address text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.life_activities
+  add column if not exists start_time time,
+  add column if not exists end_time time,
+  add column if not exists is_all_day boolean not null default false,
+  add column if not exists memo text,
+  add column if not exists category text,
+  add column if not exists food text,
+  add column if not exists expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
+  add column if not exists companions text,
+  add column if not exists place_name text,
+  add column if not exists place_address text;
+
 alter table public.daily_logs
-  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
   add column if not exists linked_target_id uuid,
   add column if not exists linked_target_title text;
 
@@ -199,7 +230,7 @@ create table if not exists public.life_photos (
   height integer check (height is null or height > 0),
   duration_seconds numeric(10, 3) check (duration_seconds is null or duration_seconds >= 0),
   caption text,
-  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
   linked_target_id uuid,
   linked_target_title text,
   taken_at timestamptz,
@@ -215,7 +246,7 @@ alter table public.life_photos
   add column if not exists height integer check (height is null or height > 0),
   add column if not exists duration_seconds numeric(10, 3) check (duration_seconds is null or duration_seconds >= 0),
   add column if not exists caption text,
-  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event')),
+  add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
   add column if not exists linked_target_id uuid,
   add column if not exists linked_target_title text,
   add column if not exists taken_at timestamptz;
@@ -228,15 +259,27 @@ create table if not exists public.expense_records (
   amount numeric(12, 0) not null check (amount > 0),
   category text not null default 'etc' check (category in ('food', 'transport', 'shopping', 'housing', 'health', 'culture', 'education', 'etc')),
   memo text,
-  target_type text not null check (target_type in ('schedule', 'todo', 'event')),
+  target_type text not null check (target_type in ('schedule', 'todo', 'event', 'activity')),
   target_id uuid not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.expense_records
-  add column if not exists target_type text check (target_type in ('schedule', 'todo', 'event')),
+  add column if not exists target_type text check (target_type in ('schedule', 'todo', 'event', 'activity')),
   add column if not exists target_id uuid;
+
+alter table public.daily_logs drop constraint if exists daily_logs_linked_target_type_check;
+alter table public.daily_logs
+  add constraint daily_logs_linked_target_type_check check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity'));
+
+alter table public.life_photos drop constraint if exists life_photos_linked_target_type_check;
+alter table public.life_photos
+  add constraint life_photos_linked_target_type_check check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity'));
+
+alter table public.expense_records drop constraint if exists expense_records_target_type_check;
+alter table public.expense_records
+  add constraint expense_records_target_type_check check (target_type in ('schedule', 'todo', 'event', 'activity'));
 
 delete from public.expense_records
 where target_type is null
@@ -500,6 +543,7 @@ create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, sch
 create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date);
 create index if not exists calendar_events_user_date_idx on public.calendar_events(user_id, event_date);
 create index if not exists calendar_events_user_type_date_idx on public.calendar_events(user_id, type, event_date);
+create index if not exists life_activities_user_date_idx on public.life_activities(user_id, activity_date, start_time, created_at desc);
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
@@ -550,6 +594,18 @@ where trim(person_name) <> ''
 union all
 select
   user_id,
+  trim(person_name) as person_name,
+  'activity' as source_type,
+  id as source_id,
+  activity_date as source_date,
+  title,
+  place_name
+from public.life_activities
+cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,???]\s*') as person_name
+where trim(person_name) <> ''
+union all
+select
+  user_id,
   person_name,
   target_type as source_type,
   target_id as source_id,
@@ -589,6 +645,20 @@ select
   place_name,
   created_at
 from public.tasks
+union all
+select
+  user_id,
+  activity_date as record_date,
+  'activity' as source_type,
+  id as source_id,
+  'activity' as target_type,
+  id as target_id,
+  title,
+  concat_ws(' ? ', nullif(category, ''), nullif(food, ''), nullif(memo, '')) as summary,
+  expense_amount as amount,
+  place_name,
+  created_at
+from public.life_activities
 union all
 select
   user_id,
@@ -788,6 +858,11 @@ create trigger set_calendar_events_updated_at
 before update on public.calendar_events
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_life_activities_updated_at on public.life_activities;
+create trigger set_life_activities_updated_at
+before update on public.life_activities
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_weight_records_updated_at on public.weight_records;
 create trigger set_weight_records_updated_at
 before update on public.weight_records
@@ -932,6 +1007,7 @@ grant execute on function public.delete_own_job_application(uuid) to authenticat
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
+alter table public.life_activities enable row level security;
 alter table public.weight_records enable row level security;
 alter table public.workout_sessions enable row level security;
 alter table public.daily_logs enable row level security;
@@ -1016,6 +1092,31 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own calendar events" on public.calendar_events;
 create policy "Users can delete own calendar events"
 on public.calendar_events for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own life activities" on public.life_activities;
+create policy "Users can read own life activities"
+on public.life_activities for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own life activities" on public.life_activities;
+create policy "Users can insert own life activities"
+on public.life_activities for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own life activities" on public.life_activities;
+create policy "Users can update own life activities"
+on public.life_activities for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own life activities" on public.life_activities;
+create policy "Users can delete own life activities"
+on public.life_activities for delete
 to authenticated
 using (user_id = auth.uid());
 

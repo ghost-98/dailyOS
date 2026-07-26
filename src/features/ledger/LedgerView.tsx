@@ -23,6 +23,7 @@ const categoryLabels: Record<ExpenseCategory, string> = {
 };
 
 const targetTypeLabels: Record<NonNullable<ExpenseRecord["targetType"]>, string> = {
+  activity: "활동",
   event: "이벤트",
   schedule: "일정",
   todo: "할 일",

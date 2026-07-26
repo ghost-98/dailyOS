@@ -33,6 +33,7 @@ const lifeChildren = [
 
 const captureChildren = [
   { label: "일정·할일", href: "/life/calendar", key: "life-capture-calendar" },
+  { label: "활동 기록", href: "/life/activities", key: "life-activities" },
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "사진", href: "/life/photos", key: "life-photos" },
   { label: "건강", href: "/life/health", key: "life-health" },

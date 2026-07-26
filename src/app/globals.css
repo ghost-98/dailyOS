@@ -1540,6 +1540,7 @@ button {
   .ledger-summary-grid,
   .ledger-layout,
   .life-axis-view .calendar-layout--detail-open,
+  .life-activity-layout,
   .life-ask-layout,
   .life-capture-page,
   .life-health-sections,
@@ -4582,6 +4583,85 @@ a:focus-visible {
   font-size: 0.96rem;
   font-weight: 650;
   line-height: 1.75;
+}
+
+.life-activity-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.life-activity-form,
+.life-activity-list {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 22px;
+}
+
+.life-activity-form .section-heading button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 8px 12px;
+}
+
+.life-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.life-activity-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.life-activity-grid__wide {
+  grid-column: 1 / -1;
+}
+
+.life-activity-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.life-activity-item span {
+  color: var(--violet);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.life-activity-item strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+}
+
+.life-activity-item p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .life-capture-card__footer {
