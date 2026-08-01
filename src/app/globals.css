@@ -2381,7 +2381,7 @@ button {
 }
 
 .today-signal-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .today-signal-card {
@@ -2397,6 +2397,61 @@ button {
   border-radius: 14px;
   background: rgba(201, 184, 255, 0.1);
   color: var(--violet);
+}
+
+.today-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.today-quick-action {
+  display: grid;
+  gap: 8px;
+  min-height: 118px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.035);
+  color: inherit;
+  padding: 16px;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.today-quick-action:hover {
+  border-color: rgba(201, 184, 255, 0.3);
+  background: rgba(201, 184, 255, 0.075);
+  transform: translateY(-2px);
+}
+
+.today-quick-action span {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.11);
+  color: var(--violet);
+  padding: 7px 9px;
+}
+
+.today-quick-action strong {
+  color: var(--text);
+  font-size: 0.96rem;
+  font-weight: 900;
+}
+
+.today-quick-action p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .today-life-grid {
@@ -8715,6 +8770,7 @@ a:focus-visible {
   .today-summary-grid,
   .today-work-grid,
   .today-support-grid,
+  .today-quick-actions,
   .life-health-view {
     grid-template-columns: 1fr;
   }

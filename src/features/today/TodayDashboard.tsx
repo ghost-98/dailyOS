@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Camera, CheckCircle2, Clock3, Dumbbell, MapPin, NotebookPen, Sparkles, WalletCards } from "lucide-react";
+import { Activity, CalendarDays, Camera, CheckCircle2, Clock3, Dumbbell, MapPin, NotebookPen, Plus, Sparkles, WalletCards } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -11,12 +11,12 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
-import { fetchDailyLogsFromDb, fetchLifePhotosFromDb } from "@/features/life/api";
+import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/life/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { DailyLogRecord, ExpenseRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
-type TimelineKind = "schedule" | "task" | "event" | "log" | "photo" | "expense" | "workout" | "weight";
+type TimelineKind = "schedule" | "task" | "event" | "activity" | "log" | "photo" | "expense" | "workout" | "weight";
 
 type TimelineItem = {
   id: string;
@@ -78,6 +78,7 @@ const kindLabel: Record<TimelineKind, string> = {
   schedule: "\uC77C\uC815",
   task: "\uD560 \uC77C",
   event: "\uC774\uBCA4\uD2B8",
+  activity: "활동",
   log: "\uAE30\uB85D",
   photo: "\uC0AC\uC9C4",
   expense: "\uC9C0\uCD9C",
@@ -132,6 +133,12 @@ function formatTaskTime(task: TaskItem) {
   return task.startTime ?? text.unknownTime;
 }
 
+function formatActivityTime(activity: LifeActivityRecord) {
+  if (activity.isAllDay || !activity.startTime) return text.unknownTime;
+  if (activity.startTime && activity.endTime) return `${activity.startTime}-${activity.endTime}`;
+  return activity.startTime;
+}
+
 function formatFileSize(sizeBytes?: number) {
   if (!sizeBytes) return text.unknownSize;
   if (sizeBytes < 1024 * 1024) return `${Math.round(sizeBytes / 1024)}KB`;
@@ -164,6 +171,7 @@ export function TodayDashboard() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
+  const [activities, setActivities] = useState<LifeActivityRecord[]>([]);
   const [weights, setWeights] = useState<WeightRecord[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLogRecord[]>([]);
@@ -177,15 +185,17 @@ export function TodayDashboard() {
       safeLoad(fetchCalendarEventsFromDb, [] as CalendarEvent[]),
       safeLoad(fetchTasksFromDb, [] as TaskItem[]),
       safeLoad(fetchExpenseRecordsFromDb, [] as ExpenseRecord[]),
+      safeLoad(fetchLifeActivitiesFromDb, [] as LifeActivityRecord[]),
       safeLoad(fetchWeightRecordsFromDb, [] as WeightRecord[]),
       safeLoad(fetchWorkoutSessionsFromDb, [] as WorkoutSession[]),
       safeLoad(fetchDailyLogsFromDb, [] as DailyLogRecord[]),
       safeLoad(fetchLifePhotosFromDb, [] as LifePhotoRecord[]),
-    ]).then(([nextEvents, nextTasks, nextExpenses, nextWeights, nextWorkouts, nextDailyLogs, nextLifePhotos]) => {
+    ]).then(([nextEvents, nextTasks, nextExpenses, nextActivities, nextWeights, nextWorkouts, nextDailyLogs, nextLifePhotos]) => {
       if (!isMounted) return;
       setEvents(nextEvents);
       setTasks(nextTasks);
       setExpenses(nextExpenses);
+      setActivities(nextActivities);
       setWeights(nextWeights);
       setWorkouts(nextWorkouts);
       setDailyLogs(nextDailyLogs);
@@ -201,6 +211,7 @@ export function TodayDashboard() {
   const todaySchedules = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "schedule");
   const todayEvents = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "event");
   const todayTasks = tasks.filter((task) => isDateInRange(todayKey, task.scheduledDate, task.dueDate));
+  const todayActivities = activities.filter((activity) => activity.date === todayKey);
   const openTasks = todayTasks.filter((task) => task.status !== "done");
   const completedCount = todayTasks.filter((task) => task.status === "done").length;
   const completionRate = todayTasks.length > 0 ? Math.round((completedCount / todayTasks.length) * 100) : 0;
@@ -219,6 +230,19 @@ export function TodayDashboard() {
     ...todaySchedules.flatMap((event) => (event.place ? [event.place] : [])),
     ...todayEvents.flatMap((event) => (event.place ? [event.place] : [])),
     ...todayTasks.flatMap((task) => (task.place ? [task.place] : [])),
+    ...todayActivities.flatMap((activity) =>
+      activity.placeName
+        ? [
+            {
+              address: activity.placeAddress ?? "",
+              category: undefined,
+              latitude: 0,
+              longitude: 0,
+              name: activity.placeName,
+            } satisfies PlanPlace,
+          ]
+        : [],
+    ),
   ].filter((place, index, list) => list.findIndex((candidate) => getPlaceKey(candidate) === getPlaceKey(place)) === index);
 
   const timelineItems = [
@@ -245,6 +269,14 @@ export function TodayDashboard() {
       timeLabel: formatEventTime(event),
       tone: "pink",
       kind: "event",
+    })),
+    ...todayActivities.map<TimelineItem>((activity) => ({
+      id: `activity-${activity.id}`,
+      title: activity.title,
+      description: [activity.placeName, activity.food ? `음식 · ${activity.food}` : null, activity.companions ? `함께 · ${activity.companions}` : null, activity.expenseAmount ? formatCurrency(activity.expenseAmount) : null].filter(Boolean).join(" · ") || activity.memo || "실제 활동",
+      timeLabel: formatActivityTime(activity),
+      tone: "amber",
+      kind: "activity",
     })),
     ...todayLogs.map<TimelineItem>((log) => ({
       id: `log-${log.id}`,
@@ -292,7 +324,16 @@ export function TodayDashboard() {
       : []),
   ];
 
-  const lifeScore = todaySchedules.length + todayEvents.length + todayTasks.length + todayLogs.length + todayPhotos.length + todayExpenses.length + todayWorkouts.length;
+  const lifeScore = todaySchedules.length + todayEvents.length + todayTasks.length + todayActivities.length + todayLogs.length + todayPhotos.length + todayExpenses.length + todayWorkouts.length;
+  const plannedBlocks = todaySchedules.length + todayEvents.length + todayTasks.length;
+  const evidenceBlocks = todayActivities.length + todayLogs.length + todayPhotos.length + todayWorkouts.length;
+  const coverageLabel = plannedBlocks === 0 ? "계획 없음" : `${Math.min(100, Math.round((evidenceBlocks / Math.max(plannedBlocks, 1)) * 100))}%`;
+  const missingSignals = [
+    todayActivities.length === 0 ? "실제 활동" : null,
+    todayLogs.length === 0 ? "하루기록" : null,
+    todayPhotos.length === 0 ? "사진" : null,
+    todayWorkouts.length === 0 ? "건강" : null,
+  ].filter(Boolean);
 
   return (
     <div className="today today--compact">
@@ -314,15 +355,24 @@ export function TodayDashboard() {
       </header>
 
       <div className="today-summary-grid today-signal-grid">
-        <SignalCard icon={<Sparkles aria-hidden size={20} />} label={text.todayDensity} value={isLoading ? text.loading : `${lifeScore}${text.count}`} note={`${todayLogs.length}${text.count} ${text.logs} · ${todayPhotos.length}${text.count} ${text.media}`} />
+        <SignalCard icon={<Sparkles aria-hidden size={20} />} label={text.todayDensity} value={isLoading ? text.loading : `${lifeScore}${text.count}`} note={`활동 ${todayActivities.length}${text.count} · ${todayLogs.length}${text.count} ${text.logs} · ${todayPhotos.length}${text.count} ${text.media}`} />
         <SignalCard icon={<CheckCircle2 aria-hidden size={20} />} label={text.todoProgress} value={`${completionRate}%`} note={`${completedCount}${text.count} ${text.done} · ${openTasks.length}${text.count} ${text.left}`} />
+        <SignalCard icon={<Activity aria-hidden size={20} />} label="오늘 복원도" value={coverageLabel} note={missingSignals.length > 0 ? `빠진 기록 · ${missingSignals.join(", ")}` : "오늘의 근거 기록이 균형 있게 쌓였어요"} />
         <SignalCard icon={<WalletCards aria-hidden size={20} />} label={text.todayExpense} value={todayExpenseTotal > 0 ? formatCurrency(todayExpenseTotal) : formatCurrency(0)} note={`${text.thisMonth} ${formatCurrency(monthExpenseTotal)}`} />
         <SignalCard icon={<MapPin aria-hidden size={20} />} label={text.todayPlace} value={`${places.length}${text.places}`} note={places[0]?.name ?? text.connectPlace} />
       </div>
 
+      <section className="today-quick-actions" aria-label="오늘 빠른 입력">
+        <QuickAction href="/life/calendar" icon={<CalendarDays aria-hidden size={18} />} label="계획 입력" note="일정·할일·이벤트" />
+        <QuickAction href="/life/activities" icon={<Activity aria-hidden size={18} />} label="실제 활동" note="몇 시부터 어디서 뭘 했는지" />
+        <QuickAction href="/life/logs" icon={<NotebookPen aria-hidden size={18} />} label="하루기록" note="짧은 감상과 맥락" />
+        <QuickAction href="/life/photos" icon={<Camera aria-hidden size={18} />} label="사진 추가" note="사건/활동의 증거" />
+        <QuickAction href="/life/health" icon={<Dumbbell aria-hidden size={18} />} label="건강 기록" note="러닝·몸무게" />
+      </section>
+
       <div className="today-work-grid today-life-grid">
         <SectionCard className="schedule-card today-command-card today-timeline-card">
-          <DashboardHeader href="/life/calendar" icon={<Clock3 aria-hidden size={20} />} title={text.todayTimeline} trailing={`${timelineItems.length}${text.count}`} />
+          <DashboardHeader href="/life/activities" icon={<Clock3 aria-hidden size={20} />} title={text.todayTimeline} trailing={`${timelineItems.length}${text.count}`} />
           <div className="today-life-timeline">
             {timelineItems.length > 0 ? (
               timelineItems.slice(0, 9).map((item) => (
@@ -339,7 +389,7 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/calendar" text={text.noTimeline} />
+              <EmptyBlock href="/life/activities" text="오늘을 복원하려면 실제 활동부터 하나 남겨보세요." />
             )}
           </div>
         </SectionCard>
@@ -452,6 +502,19 @@ function SignalCard({ icon, label, note, value }: { icon: ReactNode; label: stri
       <strong>{value}</strong>
       <p>{note}</p>
     </SectionCard>
+  );
+}
+
+function QuickAction({ href, icon, label, note }: { href: string; icon: ReactNode; label: string; note: string }) {
+  return (
+    <Link className="today-quick-action" href={href}>
+      <span>
+        {icon}
+        <Plus aria-hidden size={14} />
+      </span>
+      <strong>{label}</strong>
+      <p>{note}</p>
+    </Link>
   );
 }
 
