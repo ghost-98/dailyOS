@@ -3984,6 +3984,134 @@ a:focus-visible {
   line-height: 1.45;
 }
 
+.life-day-reconstruction {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(201, 184, 255, 0.13);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(201, 184, 255, 0.12), transparent 36%),
+    rgba(255, 255, 255, 0.035);
+  padding: 18px;
+}
+
+.life-day-reconstruction .section-heading > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.life-day-timeline {
+  display: grid;
+  gap: 10px;
+  position: relative;
+}
+
+.life-day-timeline::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 86px;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(201, 184, 255, 0.35), transparent);
+  content: "";
+}
+
+.life-day-timeline__item {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 18px;
+  position: relative;
+}
+
+.life-day-timeline__item > span {
+  align-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 900;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.life-day-timeline__item > div {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 14px;
+}
+
+.life-day-timeline__item b {
+  color: var(--violet);
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.life-day-timeline__item strong {
+  color: var(--text);
+  display: block;
+  font-size: 0.96rem;
+}
+
+.life-day-timeline__item p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+.life-day-timeline__item--activity > div {
+  border-color: rgba(132, 231, 174, 0.18);
+  background: rgba(132, 231, 174, 0.055);
+}
+
+.life-day-timeline__item--record > div {
+  border-color: rgba(201, 184, 255, 0.18);
+}
+
+.life-day-timeline__item--health > div {
+  border-color: rgba(94, 211, 255, 0.18);
+  background: rgba(94, 211, 255, 0.045);
+}
+
+.life-day-timeline__item--gap > div {
+  border-style: dashed;
+  border-color: rgba(255, 204, 102, 0.22);
+  background: rgba(255, 204, 102, 0.045);
+}
+
+.life-day-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.life-day-insights article {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.life-day-insights span {
+  color: var(--violet);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.life-day-insights p {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 7px 0 0;
+}
+
 .life-insight-card ol {
   display: grid;
   gap: 7px;
@@ -4642,7 +4770,7 @@ a:focus-visible {
 
 .life-activity-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(420px, 1.1fr) minmax(320px, 0.9fr);
   gap: 18px;
   align-items: start;
 }
@@ -4670,6 +4798,43 @@ a:focus-visible {
   padding: 8px 12px;
 }
 
+.life-activity-form .event-form-card--title input {
+  font-size: clamp(1.28rem, 2.2vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.life-activity-template-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-activity-template {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+  padding: 9px 12px;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.life-activity-template:hover,
+.life-activity-template--active {
+  border-color: rgba(201, 184, 255, 0.34);
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
 .life-activity-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4686,6 +4851,32 @@ a:focus-visible {
 
 .life-activity-grid__wide {
   grid-column: 1 / -1;
+}
+
+.life-activity-day-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-activity-day-summary article {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 13px;
+}
+
+.life-activity-day-summary span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.life-activity-day-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 1.1rem;
 }
 
 .life-activity-item {

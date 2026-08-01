@@ -96,6 +96,19 @@ type LifeSearchItem = {
 
 type LifeLinkedTarget = { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" };
 
+type LifeDayReconstructionItem = {
+  description: string;
+  endMinutes?: number;
+  id: string;
+  label: string;
+  startMinutes?: number;
+  timeLabel: string;
+  title: string;
+  tone: "plan" | "activity" | "record" | "health" | "gap";
+};
+
+const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
+
 type PersonSummary = {
   expenseTotal: number;
   expenses: ExpenseRecord[];
@@ -457,6 +470,14 @@ function LifeReportView({
   const dateOnlyLogs = dayLogs.filter((log) => !log.linkedTargetId);
   const dateOnlyPhotos = dayPhotos.filter((photo) => !photo.linkedTargetId);
   const dateOnlyExpenses = dayExpenses.filter((expense) => !contextBundles.some((bundle) => bundle.expenses.some((item) => item.id === expense.id)));
+  const reconstructionItems = buildDayReconstructionItems(date, dayEvents, dayTasks, dayActivities, dayLogs, dayPhotos, dayWorkouts, dayWeights);
+  const gapItems = buildDayGapItems(reconstructionItems);
+  const missingSignals = [
+    dayActivities.length === 0 ? "실제 활동 기록이 비어 있어 하루의 공백을 복원하기 어렵습니다." : null,
+    dayLogs.length === 0 ? "짧은 하루기록이 없어 그날의 감정·맥락이 약합니다." : null,
+    dayPhotos.some((photo) => !photo.linkedTargetId) ? "연결되지 않은 사진이 있어 사건/활동에 붙이면 검색 가치가 올라갑니다." : null,
+    gapItems.length > 0 ? `${gapItems.length}개의 긴 빈 시간이 보입니다. 활동 기록을 추가하면 하루가 더 촘촘해집니다.` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="life-tab-panel">
@@ -496,6 +517,45 @@ function LifeReportView({
             <strong>{monthRunningKm > 0 ? `${monthRunningKm.toFixed(1)}km` : "-"}</strong>
             <p>{monthWorkouts.length}회 운동 기록</p>
           </article>
+        </div>
+
+        <section className="life-day-reconstruction">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Day Reconstruction</p>
+              <h2>하루 복원 타임라인</h2>
+            </div>
+            <span>{reconstructionItems.length}개 기록 · 빈 시간 {gapItems.length}개</span>
+          </div>
+          {reconstructionItems.length > 0 ? (
+            <div className="life-day-timeline">
+              {[...reconstructionItems, ...gapItems].sort(sortReconstructionItems).map((item) => (
+                <article className={`life-day-timeline__item life-day-timeline__item--${item.tone}`} key={item.id}>
+                  <span>{item.timeLabel}</span>
+                  <div>
+                    <b>{item.label}</b>
+                    <strong>{item.title}</strong>
+                    {item.description ? <p>{item.description}</p> : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>이 날짜를 복원할 기록이 없습니다.</strong>
+              <p>일정·할일·활동·하루기록·사진·건강 중 하나라도 남기면 하루 리포트가 살아납니다.</p>
+            </div>
+          )}
+        </section>
+
+        <div className="life-day-insights">
+          {(missingSignals.length > 0 ? missingSignals : ["이 날짜는 기본 기록이 잘 연결되어 있습니다. 사진/메모를 활동에 더 붙이면 AI 질문 답변력이 더 좋아집니다."]).map((signal) => (
+            <article key={signal}>
+              <span>보강 신호</span>
+              <p>{signal}</p>
+            </article>
+          ))}
         </div>
 
         <div className="life-report-sections">
@@ -859,6 +919,7 @@ function LifeSearchView({
             <option value="schedule">일정</option>
             <option value="todo">할일</option>
             <option value="event">이벤트</option>
+            <option value="activity">활동</option>
             <option value="expense">지출</option>
             <option value="daily_log">하루기록</option>
             <option value="photo">사진</option>
@@ -1024,22 +1085,32 @@ function LifeActivitiesView({
 }) {
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [date, setDate] = useState(formatDateKey(new Date()));
-  const [startTime, setStartTime] = useState("");
+  const [category, setCategory] = useState("기타");
+  const [hasTime, setHasTime] = useState(true);
+  const [hasEndTime, setHasEndTime] = useState(false);
+  const [startTime, setStartTime] = useState(getDefaultActivityTime());
   const [endTime, setEndTime] = useState("");
   const [title, setTitle] = useState("");
   const [placeName, setPlaceName] = useState("");
+  const [placeAddress, setPlaceAddress] = useState("");
   const [companions, setCompanions] = useState("");
   const [food, setFood] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [memo, setMemo] = useState("");
   const selectedActivities = activities.filter((activity) => activity.date === date).sort((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"));
+  const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
+  const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
 
   const resetForm = () => {
     setEditing(null);
-    setStartTime("");
+    setCategory("기타");
+    setHasTime(true);
+    setHasEndTime(false);
+    setStartTime(getDefaultActivityTime());
     setEndTime("");
     setTitle("");
     setPlaceName("");
+    setPlaceAddress("");
     setCompanions("");
     setFood("");
     setExpenseAmount("");
@@ -1049,10 +1120,14 @@ function LifeActivitiesView({
   const editActivity = (activity: LifeActivityRecord) => {
     setEditing(activity);
     setDate(activity.date);
-    setStartTime(activity.startTime ?? "");
+    setCategory(activity.category ?? "기타");
+    setHasTime(Boolean(activity.startTime));
+    setHasEndTime(Boolean(activity.endTime));
+    setStartTime(activity.startTime ?? getDefaultActivityTime());
     setEndTime(activity.endTime ?? "");
     setTitle(activity.title);
     setPlaceName(activity.placeName ?? "");
+    setPlaceAddress(activity.placeAddress ?? "");
     setCompanions(activity.companions ?? "");
     setFood(activity.food ?? "");
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
@@ -1064,11 +1139,13 @@ function LifeActivitiesView({
     await onSaveActivity({
       id: editing?.id ?? `activity-${Date.now()}`,
       date,
-      startTime: startTime || undefined,
-      endTime: endTime || undefined,
-      isAllDay: !startTime,
+      startTime: hasTime ? startTime || undefined : undefined,
+      endTime: hasTime && hasEndTime ? endTime || undefined : undefined,
+      isAllDay: !hasTime,
       title: title.trim(),
+      category,
       placeName: placeName.trim() || undefined,
+      placeAddress: placeAddress.trim() || undefined,
       companions: companions.trim() || undefined,
       food: food.trim() || undefined,
       expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
@@ -1089,17 +1166,107 @@ function LifeActivitiesView({
             </div>
             {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}
           </div>
-          <div className="life-activity-grid">
-            <label><span>날짜</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-            <label><span>시작</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
-            <label><span>종료</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label>
-            <label className="life-activity-grid__wide"><span>무엇을 했나</span><input placeholder="예: 점심 먹고 산책" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-            <label><span>장소</span><input placeholder="예: 성수동" value={placeName} onChange={(event) => setPlaceName(event.target.value)} /></label>
-            <label><span>함께한 사람</span><input placeholder="쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} /></label>
-            <label><span>먹은 것</span><input placeholder="예: 라멘, 커피" value={food} onChange={(event) => setFood(event.target.value)} /></label>
-            <label><span>지출</span><input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} /></label>
-            <label className="life-activity-grid__wide"><span>메모</span><textarea placeholder="짧은 맥락이나 감정" value={memo} onChange={(event) => setMemo(event.target.value)} /></label>
+
+          <div className="event-form-card event-form-card--title">
+            <label>
+              <span>무엇을 했나</span>
+              <input placeholder="예: 점심 먹고 성수동 산책" value={title} onChange={(event) => setTitle(event.target.value)} />
+            </label>
           </div>
+
+          <div className="schedule-form-section-title">
+            <strong>활동 유형</strong>
+            <span>나중에 AI가 하루 패턴을 읽는 태그입니다.</span>
+          </div>
+          <div className="life-activity-template-grid">
+            {ACTIVITY_CATEGORIES.map((item) => (
+              <button className={category === item ? "life-activity-template life-activity-template--active" : "life-activity-template"} key={item} onClick={() => setCategory(item)} type="button">
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div className="schedule-form-section-title">
+            <strong>날짜와 시간</strong>
+            <span>공백 없는 하루 복원의 핵심입니다.</span>
+          </div>
+          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>기록 날짜</span>
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            </label>
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>시작 시간</span>
+              <input disabled={!hasTime} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+            </label>
+            {hasEndTime ? (
+              <label className="event-form-row event-form-row--field schedule-field">
+                <span>종료 시간</span>
+                <input disabled={!hasTime} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+              </label>
+            ) : null}
+            <div className="event-form-row event-form-row--field schedule-field schedule-toggle-row">
+              <span>시간 옵션</span>
+              <div className="schedule-option-toggle-group">
+                <label className="schedule-option-toggle">
+                  <input checked={!hasTime} onChange={(event) => {
+                    setHasTime(!event.target.checked);
+                    if (event.target.checked) {
+                      setHasEndTime(false);
+                      setEndTime("");
+                    }
+                  }} type="checkbox" />
+                  시간 미정
+                </label>
+                <label className="schedule-option-toggle">
+                  <input checked={hasEndTime} disabled={!hasTime} onChange={(event) => {
+                    setHasEndTime(event.target.checked);
+                    if (!event.target.checked) setEndTime("");
+                  }} type="checkbox" />
+                  종료시간 설정
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="schedule-form-section-title">
+            <strong>장소와 사람</strong>
+            <span>어디서 누구와 있었는지 남깁니다.</span>
+          </div>
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>장소명</span>
+              <input placeholder="예: 성수동 카페" value={placeName} onChange={(event) => setPlaceName(event.target.value)} />
+            </label>
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>주소/동선 메모</span>
+              <input placeholder="예: 서울숲 근처" value={placeAddress} onChange={(event) => setPlaceAddress(event.target.value)} />
+            </label>
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>함께한 사람</span>
+              <input placeholder="쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} />
+            </label>
+          </div>
+
+          <div className="schedule-form-section-title">
+            <strong>먹은 것과 지출</strong>
+            <span>활동에서 발생한 소비도 가계부로 이어집니다.</span>
+          </div>
+          <div className="event-form-card schedule-form-card schedule-form-card--grid">
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>먹은 것</span>
+              <input placeholder="예: 라멘, 커피" value={food} onChange={(event) => setFood(event.target.value)} />
+            </label>
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>지출</span>
+              <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
+            </label>
+            <label className="event-form-row event-form-row--field schedule-field">
+              <span>메모</span>
+              <textarea placeholder="짧은 맥락이나 감정" value={memo} onChange={(event) => setMemo(event.target.value)} />
+            </label>
+          </div>
+
           <button className="life-ask-submit" disabled={!title.trim()} onClick={() => void saveActivity()} type="button">
             {editing ? "활동 저장" : "활동 추가"}
           </button>
@@ -1112,10 +1279,24 @@ function LifeActivitiesView({
               <h2>{date} 활동 {selectedActivities.length}개</h2>
             </div>
           </div>
+          <div className="life-activity-day-summary">
+            <article>
+              <span>기록 시간</span>
+              <strong>{selectedCoveredMinutes > 0 ? `${Math.round(selectedCoveredMinutes / 60 * 10) / 10}시간` : "-"}</strong>
+            </article>
+            <article>
+              <span>활동 지출</span>
+              <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
+            </article>
+            <article>
+              <span>연결 밀도</span>
+              <strong>{selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo).length}/{selectedActivities.length}</strong>
+            </article>
+          </div>
           {selectedActivities.length > 0 ? selectedActivities.map((activity) => (
             <article className="life-activity-item" key={activity.id}>
               <div>
-                <span>{formatActivityTime(activity)}</span>
+                <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
                 <strong>{activity.title}</strong>
                 <p>{[activity.placeName, activity.companions ? `함께 · ${activity.companions}` : null, activity.food ? `음식 · ${activity.food}` : null, activity.expenseAmount ? formatWon(activity.expenseAmount) : null].filter(Boolean).join(" · ")}</p>
               </div>
@@ -2302,6 +2483,151 @@ function formatRunDuration(durationSeconds: number) {
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = Math.round(durationSeconds % 60);
   return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
+}
+
+function buildDayReconstructionItems(
+  date: string,
+  events: CalendarEvent[],
+  tasks: TaskItem[],
+  activities: LifeActivityRecord[],
+  logs: DailyLogRecord[],
+  photos: LifePhotoRecord[],
+  workouts: WorkoutSession[],
+  weights: WeightRecord[],
+): LifeDayReconstructionItem[] {
+  return [
+    ...events.map((event) => ({
+      description: [event.meta, event.place?.name, event.companions ? `함께 · ${event.companions}` : null, event.expenseAmount ? formatWon(event.expenseAmount) : null].filter(Boolean).join(" · "),
+      endMinutes: parseTimeToMinutes(event.endTime),
+      id: `event-${event.id}`,
+      label: event.type === "event" ? "이벤트" : "일정",
+      startMinutes: parseTimeToMinutes(event.time),
+      timeLabel: formatContextMeta(date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions) || "시간 미정",
+      title: event.title,
+      tone: "plan" as const,
+    })),
+    ...tasks.map((task) => ({
+      description: [task.memo, task.place?.name, task.companions ? `함께 · ${task.companions}` : null, task.expenseAmount ? formatWon(task.expenseAmount) : null].filter(Boolean).join(" · "),
+      endMinutes: parseTimeToMinutes(task.endTime),
+      id: `task-${task.id}`,
+      label: "할일",
+      startMinutes: parseTimeToMinutes(task.startTime),
+      timeLabel: formatContextMeta(date, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions) || "시간 미정",
+      title: task.title,
+      tone: "plan" as const,
+    })),
+    ...activities.map((activity) => ({
+      description: [activity.placeName, activity.companions ? `함께 · ${activity.companions}` : null, activity.food ? `음식 · ${activity.food}` : null, activity.expenseAmount ? formatWon(activity.expenseAmount) : null, activity.memo].filter(Boolean).join(" · "),
+      endMinutes: parseTimeToMinutes(activity.endTime),
+      id: `activity-${activity.id}`,
+      label: activity.category ?? "활동",
+      startMinutes: parseTimeToMinutes(activity.startTime),
+      timeLabel: formatActivityTime(activity),
+      title: activity.title,
+      tone: "activity" as const,
+    })),
+    ...logs.map((log) => ({
+      description: log.linkedTargetTitle ? `연결 · ${log.linkedTargetTitle}` : log.content,
+      id: `log-${log.id}`,
+      label: "하루기록",
+      timeLabel: "날짜 기록",
+      title: log.linkedTargetTitle ? "연결 메모" : "하루 메모",
+      tone: "record" as const,
+    })),
+    ...photos.map((photo) => ({
+      description: [photo.linkedTargetTitle ? `연결 · ${photo.linkedTargetTitle}` : null, photo.fileName].filter(Boolean).join(" · "),
+      id: `photo-${photo.id}`,
+      label: photo.mimeType?.startsWith("video/") ? "영상" : "사진",
+      timeLabel: "미디어",
+      title: photo.caption || photo.fileName,
+      tone: "record" as const,
+    })),
+    ...workouts.map((workout) => ({
+      description: [workout.distanceKm ? `${workout.distanceKm}km` : null, formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60), workout.memo].filter(Boolean).join(" · "),
+      id: `workout-${workout.id}`,
+      label: workout.type === "running" ? "러닝" : "운동",
+      timeLabel: "건강",
+      title: workout.type === "running" ? "러닝 기록" : "운동 기록",
+      tone: "health" as const,
+    })),
+    ...weights.map((weight) => ({
+      description: [weight.measuredFasted ? "공복 측정" : null, weight.memo].filter(Boolean).join(" · "),
+      id: `weight-${weight.id}`,
+      label: "몸무게",
+      timeLabel: "아침",
+      title: `${weight.weightKg}kg`,
+      tone: "health" as const,
+    })),
+  ].sort(sortReconstructionItems);
+}
+
+function getDefaultActivityTime() {
+  const now = new Date();
+  now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
+  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+}
+
+function getActivityDurationMinutes(activity: Pick<LifeActivityRecord, "endTime" | "startTime">) {
+  const startMinutes = parseTimeToMinutes(activity.startTime);
+  const endMinutes = parseTimeToMinutes(activity.endTime);
+  if (typeof startMinutes !== "number") return 0;
+  if (typeof endMinutes !== "number") return 30;
+  return Math.max(0, endMinutes - startMinutes);
+}
+
+function buildDayGapItems(items: LifeDayReconstructionItem[]): LifeDayReconstructionItem[] {
+  const timedItems = items
+    .filter((item) => typeof item.startMinutes === "number")
+    .map((item) => ({ ...item, endMinutes: typeof item.endMinutes === "number" ? item.endMinutes : item.startMinutes! + 30 }))
+    .sort((a, b) => a.startMinutes! - b.startMinutes!);
+  const gaps: LifeDayReconstructionItem[] = [];
+
+  for (let index = 1; index < timedItems.length; index += 1) {
+    const previousEnd = timedItems[index - 1].endMinutes!;
+    const nextStart = timedItems[index].startMinutes!;
+    if (nextStart - previousEnd >= 90) {
+      gaps.push({
+        description: "이 구간에 무엇을 했는지 활동기록으로 보강하면 하루 DB가 촘촘해집니다.",
+        endMinutes: nextStart,
+        id: `gap-${previousEnd}-${nextStart}`,
+        label: "빈 시간",
+        startMinutes: previousEnd,
+        timeLabel: `${formatMinutesLabel(previousEnd)}-${formatMinutesLabel(nextStart)}`,
+        title: `${Math.round((nextStart - previousEnd) / 60)}시간 공백`,
+        tone: "gap",
+      });
+    }
+  }
+
+  return gaps;
+}
+
+function sortReconstructionItems(a: LifeDayReconstructionItem, b: LifeDayReconstructionItem) {
+  const left = typeof a.startMinutes === "number" ? a.startMinutes : 24 * 60 + toneOrder(a.tone);
+  const right = typeof b.startMinutes === "number" ? b.startMinutes : 24 * 60 + toneOrder(b.tone);
+  return left - right || a.title.localeCompare(b.title);
+}
+
+function toneOrder(tone: LifeDayReconstructionItem["tone"]) {
+  if (tone === "record") return 1;
+  if (tone === "health") return 2;
+  if (tone === "gap") return 3;
+  return 0;
+}
+
+function parseTimeToMinutes(time?: string) {
+  if (!time) return undefined;
+  const [hourText, minuteText] = time.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return undefined;
+  return hour * 60 + minute;
+}
+
+function formatMinutesLabel(minutes: number) {
+  const hour = Math.floor(minutes / 60).toString().padStart(2, "0");
+  const minute = (minutes % 60).toString().padStart(2, "0");
+  return `${hour}:${minute}`;
 }
 
 function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAllDay" | "startTime">) {
