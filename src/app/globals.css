@@ -438,13 +438,6 @@ button {
   margin: 0;
 }
 
-.life-daily-log-panel {
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 20px;
-  padding: 22px;
-}
-
 .life-map-hero {
   background: linear-gradient(135deg, rgba(207, 185, 255, 0.13), rgba(255, 255, 255, 0.045));
   border: 1px solid rgba(207, 185, 255, 0.22);

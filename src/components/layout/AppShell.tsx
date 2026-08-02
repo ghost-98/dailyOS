@@ -54,10 +54,10 @@ const careerChildren = [
 const primaryNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "라이프 DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "기록 입력", href: "/life/logs", key: "capture", icon: NotebookPen, children: captureChildren },
+  { label: "기록 입력", href: "/life/activities", key: "capture", icon: NotebookPen, children: captureChildren },
   { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
-  { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
+  { label: "커리어", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
@@ -65,7 +65,7 @@ const mobileNav = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "라이프", href: "/life", key: "life", icon: Layers3 },
   { label: "캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
-  { label: "기록", href: "/life/logs", key: "life-logs", icon: BookOpenCheck },
+  { label: "기록", href: "/life/activities", key: "life-activities", icon: BookOpenCheck },
   { label: "질문", href: "/life/ask", key: "life-ask", icon: Sparkles },
   { label: "장소", href: "/places", key: "places", icon: Map },
 ];
@@ -106,7 +106,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
             <span className="brand__mark">d</span>
             <div>
               <span className="brand__name">dailyOS</span>
-              <span className="brand__subtitle">개인 관리</span>
+              <span className="brand__subtitle">Life Database OS</span>
             </div>
           </Link>
 

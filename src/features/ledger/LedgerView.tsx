@@ -213,7 +213,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                 <div className="health-empty health-empty--compact">
                   <ReceiptText aria-hidden size={30} />
                   <strong>{isLoading ? "지출을 불러오는 중입니다." : "연결된 지출이 없습니다."}</strong>
-                  <p>사건 탭에서 일정이나 할 일에 지출 금액을 입력하면 이곳에 자동으로 표시됩니다.</p>
+                  <p>캘린더나 활동 기록에서 지출 금액을 입력하면 이곳에 자동으로 표시됩니다.</p>
                 </div>
               )}
             </div>
