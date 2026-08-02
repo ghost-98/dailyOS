@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { NotebookPen } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, NotebookPen } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
-import { formatDateKey, formatMinutesLabel, parseTimeToMinutes } from "@/features/life/dateTime";
+import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
@@ -33,6 +33,7 @@ const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
   { category: "휴식", title: "휴식" },
 ];
 const DEFAULT_CATEGORY = "기타";
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 export function LifeActivitiesView({
   activities,
@@ -47,6 +48,7 @@ export function LifeActivitiesView({
 }) {
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [date, setDate] = useState(initialDraft?.date ?? formatDateKey(new Date()));
+  const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(initialDraft?.date ?? formatDateKey(new Date())));
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [hasTime, setHasTime] = useState(true);
   const [hasEndTime, setHasEndTime] = useState(Boolean(initialDraft?.endTime));
@@ -62,26 +64,39 @@ export function LifeActivitiesView({
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const saveLockRef = useRef(false);
 
   useEffect(() => {
     if (!initialDraft) return;
+    const draftDate = initialDraft.date ?? formatDateKey(new Date());
     setEditing(null);
-    setDate(initialDraft.date ?? formatDateKey(new Date()));
+    setDate(draftDate);
+    setMonthCursor(createMonthCursor(draftDate));
     setHasTime(Boolean(initialDraft.startTime || initialDraft.endTime));
     setHasEndTime(Boolean(initialDraft.endTime));
     setStartTime(initialDraft.startTime ?? getDefaultActivityTime());
     setEndTime(initialDraft.endTime ?? "");
     setTitle(initialDraft.title ?? "");
     setFormError("");
+    setMessage("");
   }, [initialDraft]);
 
   const selectedActivities = useMemo(
     () => activities.filter((activity) => activity.date === date).sort((left, right) => (left.startTime ?? "99:99").localeCompare(right.startTime ?? "99:99")),
     [activities, date],
   );
+  const activityCountsByDate = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const activity of activities) {
+      counts.set(activity.date, (counts.get(activity.date) ?? 0) + 1);
+    }
+    return counts;
+  }, [activities]);
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
   const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
   const connectedCount = selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length;
+  const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
+  const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
 
   const resetForm = () => {
     setEditing(null);
@@ -99,9 +114,14 @@ export function LifeActivitiesView({
     setFormError("");
   };
 
+  const selectDate = (nextDate: string) => {
+    setDate(nextDate);
+    setMonthCursor(createMonthCursor(nextDate));
+  };
+
   const editActivity = (activity: LifeActivityRecord) => {
     setEditing(activity);
-    setDate(activity.date);
+    selectDate(activity.date);
     setCategory(activity.category ?? DEFAULT_CATEGORY);
     setHasTime(Boolean(activity.startTime));
     setHasEndTime(Boolean(activity.endTime));
@@ -114,6 +134,7 @@ export function LifeActivitiesView({
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
     setFormError("");
+    setMessage("수정할 기록을 불러왔어요.");
   };
 
   const applyTemplate = (template: ActivityTemplate) => {
@@ -122,7 +143,8 @@ export function LifeActivitiesView({
   };
 
   const startNow = () => {
-    setDate(formatDateKey(new Date()));
+    const today = formatDateKey(new Date());
+    selectDate(today);
     setHasTime(true);
     setHasEndTime(false);
     setStartTime(getDefaultActivityTime());
@@ -132,7 +154,8 @@ export function LifeActivitiesView({
 
   const finishRecent = () => {
     const endMinutes = parseTimeToMinutes(getDefaultActivityTime()) ?? 0;
-    setDate(formatDateKey(new Date()));
+    const today = formatDateKey(new Date());
+    selectDate(today);
     setHasTime(true);
     setHasEndTime(true);
     setStartTime(formatMinutesLabel(Math.max(0, endMinutes - 60)));
@@ -141,12 +164,14 @@ export function LifeActivitiesView({
   };
 
   const saveActivity = async () => {
+    if (saveLockRef.current || isSaving) return;
     if (!title.trim()) return;
     if (hasTime && hasEndTime && startTime && endTime && endTime < startTime) {
       setFormError("종료 시간은 시작 시간보다 늦어야 합니다.");
       return;
     }
 
+    saveLockRef.current = true;
     setIsSaving(true);
     setFormError("");
     setMessage("");
@@ -175,11 +200,16 @@ export function LifeActivitiesView({
       console.error("Failed to save life activity", error);
       setFormError(getLifeActionErrorMessage(error, "활동 기록을 저장하지 못했습니다."));
     } finally {
+      saveLockRef.current = false;
       setIsSaving(false);
     }
   };
 
   const deleteActivity = async (activity: LifeActivityRecord) => {
+    if (deletingActivityId) return;
+    const confirmed = window.confirm(`"${activity.title}" 활동 기록을 삭제할까요? 연결된 지출도 함께 정리됩니다.`);
+    if (!confirmed) return;
+
     setDeletingActivityId(activity.id);
     setFormError("");
     setMessage("");
@@ -195,9 +225,13 @@ export function LifeActivitiesView({
     }
   };
 
+  const moveMonth = (amount: number) => {
+    setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
+  };
+
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="dailyOS의 핵심 입력입니다. 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남깁니다." />
+      <LifeTabHeading title="활동 기록" description="몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남기는 dailyOS의 핵심 입력입니다." />
       <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
           <div className="section-heading">
@@ -206,9 +240,9 @@ export function LifeActivitiesView({
               <h2>{editing ? "활동 수정" : "활동 추가"}</h2>
             </div>
             <div className="life-record-actions">
-              <button onClick={startNow} type="button">지금 시작</button>
-              <button onClick={finishRecent} type="button">방금 끝남</button>
-              {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}
+              <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
+              <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
+              {editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
           </div>
 
@@ -241,12 +275,12 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>날짜와 시간</strong>
-            <span>공백 없는 하루 복원을 위해 시작 시간만이라도 남겨두는 것을 추천합니다.</span>
+            <span>날짜는 오른쪽 캘린더와 같이 움직이고, 시간은 시작 시간만으로도 저장됩니다.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <span>기록 날짜</span>
-              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+              <input type="date" value={date} onChange={(event) => selectDate(event.target.value)} />
             </label>
             <label className="event-form-row event-form-row--field schedule-field">
               <span>시작 시간</span>
@@ -285,7 +319,7 @@ export function LifeActivitiesView({
                       if (!event.target.checked) setEndTime("");
                     }}
                   />
-                  종료시간 설정
+                  종료 시간 설정
                 </label>
               </div>
             </div>
@@ -293,7 +327,7 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>장소와 사람</strong>
-              <span>일정/할 일과 같은 방식으로 장소를 검색해서 연결합니다.</span>
+            <span>일정/할 일과 같은 방식으로 장소를 검색해 연결합니다.</span>
           </div>
           <div className="life-activity-place-stack">
             <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
@@ -325,7 +359,7 @@ export function LifeActivitiesView({
           {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
           {message ? <p className="life-health-message">{message}</p> : null}
           <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
-            {isSaving ? "저장 중" : editing ? "활동 저장" : "활동 추가"}
+            {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
           </button>
         </SectionCard>
 
@@ -333,9 +367,43 @@ export function LifeActivitiesView({
           <div className="section-heading">
             <div>
               <p className="eyebrow">Selected Day</p>
-              <h2>{date} 활동 {selectedActivities.length}개</h2>
+              <h2>{formatFullDate(date)} 활동 {selectedActivities.length}개</h2>
             </div>
           </div>
+
+          <div className="life-activity-calendar">
+            <div className="life-activity-calendar__header">
+              <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+                <ChevronLeft aria-hidden size={16} />
+              </button>
+              <strong>{monthLabel}</strong>
+              <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+                <ChevronRight aria-hidden size={16} />
+              </button>
+            </div>
+            <div className="life-activity-calendar__weekdays">
+              {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
+            </div>
+            <div className="life-activity-calendar__grid">
+              {calendarDays.map((day) => {
+                const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+                return (
+                  <button
+                    aria-pressed={day.date === date}
+                    className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
+                    disabled={!day.date}
+                    key={day.key}
+                    onClick={() => day.date && selectDate(day.date)}
+                    type="button"
+                  >
+                    <span>{day.day}</span>
+                    {count > 0 ? <em>{count}</em> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="life-activity-day-summary">
             <article>
               <span>기록 시간</span>
@@ -346,7 +414,7 @@ export function LifeActivitiesView({
               <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
             </article>
             <article>
-              <span>연결 밀도</span>
+              <span>연결 정보</span>
               <strong>{connectedCount}/{selectedActivities.length}</strong>
             </article>
           </div>
@@ -363,13 +431,13 @@ export function LifeActivitiesView({
                       activity.companions ? `함께 · ${activity.companions}` : null,
                       activity.food ? `식사 · ${activity.food}` : null,
                       activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
-                    ].filter(Boolean).join(" · ")}
+                    ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음"}
                   </p>
                 </div>
                 <div className="life-record-actions">
-                  <button onClick={() => editActivity(activity)} type="button">수정</button>
-                  <button disabled={deletingActivityId === activity.id} onClick={() => void deleteActivity(activity)} type="button">
-                    {deletingActivityId === activity.id ? "삭제 중" : "삭제"}
+                  <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
+                  <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
+                    {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
                   </button>
                 </div>
               </article>
@@ -378,7 +446,7 @@ export function LifeActivitiesView({
             <div className="life-map-empty life-map-empty--compact">
               <NotebookPen aria-hidden size={28} />
               <strong>이 날짜의 활동 기록이 없습니다.</strong>
-              <p>공백 없는 하루를 만들려면 작은 행동도 활동으로 남겨보세요.</p>
+              <p>오른쪽 캘린더에서 날짜를 고르고, 왼쪽에서 활동을 추가해 하루 DB를 촘촘하게 채워보세요.</p>
             </div>
           )}
         </SectionCard>
@@ -391,6 +459,12 @@ function getDefaultActivityTime() {
   const now = new Date();
   now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
   return formatMinutesLabel(now.getHours() * 60 + now.getMinutes());
+}
+
+function createMonthCursor(date: string) {
+  const parsedDate = new Date(`${date}T00:00:00`);
+  if (!Number.isFinite(parsedDate.getTime())) return new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
 }
 
 function createActivityPlace(activity: LifeActivityRecord): PlanPlace | undefined {

@@ -1692,6 +1692,114 @@
   gap: 10px;
 }
 
+.life-activity-calendar {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(201, 184, 255, 0.1), transparent 34%),
+    rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-activity-calendar__header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.life-activity-calendar__header strong {
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.life-activity-calendar__header button,
+.life-activity-calendar__day {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.life-activity-calendar__header button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.life-activity-calendar__header button:hover,
+.life-activity-calendar__day:not(:disabled):hover {
+  border-color: rgba(201, 184, 255, 0.34);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.life-activity-calendar__weekdays,
+.life-activity-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.life-activity-calendar__weekdays span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.life-activity-calendar__day {
+  position: relative;
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.life-activity-calendar__day:disabled {
+  cursor: default;
+  opacity: 0;
+}
+
+.life-activity-calendar__day--selected {
+  border-color: rgba(139, 92, 246, 0.66);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(99, 102, 241, 0.17));
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.18);
+}
+
+.life-activity-calendar__day em {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.22);
+  color: rgb(110, 231, 183);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 15px;
+  text-align: center;
+}
+
 .life-activity-day-summary article {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 15px;
@@ -1721,6 +1829,12 @@
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   padding: 14px;
+}
+
+.life-activity-item .life-record-actions button:disabled,
+.life-activity-form .section-heading button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .life-activity-item span {
