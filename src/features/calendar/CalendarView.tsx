@@ -17,6 +17,7 @@ import {
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
+import { createLifeActivityInDb } from "@/features/life/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { FormSectionTitle } from "@/features/calendar/components";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
@@ -71,6 +72,8 @@ export function CalendarView({
   const [isLoading, setIsLoading] = useState(true);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
+  const [activityConversionMessage, setActivityConversionMessage] = useState("");
+  const [convertingToActivity, setConvertingToActivity] = useState<{ id: string; type: "event" | "task" } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -228,6 +231,83 @@ export function CalendarView({
     };
     const savedTask = await updateTaskInDb(nextTask);
     setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
+  };
+
+  const createActivityFromEvent = async (event: CalendarEvent) => {
+    const conversionDate = selectedDate && isDateInRange(selectedDate, event.date, event.endDate) ? selectedDate : event.date;
+    const targetType = event.type === "event" ? "event" : "schedule";
+    setConvertingToActivity({ id: event.id, type: "event" });
+    setActivityConversionMessage("");
+
+    try {
+      const activity = await createLifeActivityInDb({
+        id: `activity-${Date.now()}`,
+        date: conversionDate,
+        startTime: event.isAllDay ? undefined : event.time,
+        endTime: event.isAllDay ? undefined : event.endTime,
+        isAllDay: event.isAllDay,
+        title: event.title,
+        category: event.type === "event" ? "기타" : "작업",
+        companions: event.companions,
+        expenseAmount: event.expenseAmount,
+        memo: event.meta ? `${event.meta} · ${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록` : `${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록`,
+        placeAddress: event.place?.address,
+        placeName: event.place?.name,
+      });
+
+      if (event.expenseAmount) {
+        const nextEvent = { ...event, expenseAmount: undefined } satisfies CalendarEvent;
+        const savedEvent = await updateCalendarEventInDb(nextEvent);
+        await deleteLinkedExpenseRecordInDb(targetType, event.id);
+        setEvents((current) => current.map((item) => (item.id === event.id ? savedEvent ?? nextEvent : item)));
+      }
+
+      setActivityConversionMessage(`${activity?.title ?? event.title}을 활동 기록으로 저장했어요.`);
+    } catch (error) {
+      console.error("Failed to create activity from calendar event", error);
+      setActivityConversionMessage("활동 기록으로 저장하지 못했습니다.");
+    } finally {
+      setConvertingToActivity(null);
+    }
+  };
+
+  const createActivityFromTask = async (task: TaskItem) => {
+    const conversionDate = selectedDate && isDateInRange(selectedDate, task.scheduledDate, task.dueDate) ? selectedDate : task.scheduledDate;
+    setConvertingToActivity({ id: task.id, type: "task" });
+    setActivityConversionMessage("");
+
+    try {
+      const activity = await createLifeActivityInDb({
+        id: `activity-${Date.now()}`,
+        date: conversionDate,
+        startTime: task.isAllDay ? undefined : task.startTime,
+        endTime: task.isAllDay ? undefined : task.endTime,
+        isAllDay: task.isAllDay,
+        title: task.title,
+        category: "작업",
+        companions: task.companions,
+        expenseAmount: task.expenseAmount,
+        memo: task.memo ? `${task.memo} · 할 일에서 활동으로 기록` : "할 일에서 활동으로 기록",
+        placeAddress: task.place?.address,
+        placeName: task.place?.name,
+      });
+
+      const nextTask = {
+        ...task,
+        completedAt: task.completedAt ?? new Date().toISOString(),
+        expenseAmount: undefined,
+        status: "done" as const,
+      };
+      const savedTask = await updateTaskInDb(nextTask);
+      await deleteLinkedExpenseRecordInDb("todo", task.id);
+      setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
+      setActivityConversionMessage(`${activity?.title ?? task.title}을 활동 기록으로 저장했어요.`);
+    } catch (error) {
+      console.error("Failed to create activity from task", error);
+      setActivityConversionMessage("활동 기록으로 저장하지 못했습니다.");
+    } finally {
+      setConvertingToActivity(null);
+    }
   };
 
   const handleDragOverItem = (dragEvent: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => {
@@ -399,9 +479,12 @@ export function CalendarView({
                   draggingItem={draggingItem}
                   dropTarget={dropTarget}
                   externalCount={selectedExternalItems.length}
+                  isConvertingToActivity={convertingToActivity}
                   isLoading={isLoading}
                   items={selectedTimelineItems}
                   onClearDrag={clearDragState}
+                  onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
+                  onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
                   onDeleteEvent={deleteEvent}
                   onDeleteTask={deleteTask}
                   onDragOverItem={handleDragOverItem}
@@ -421,6 +504,7 @@ export function CalendarView({
                   onToggleDone={toggleTaskDone}
                   visibleCategories={detailSections.map((section) => section.type)}
                 />
+                {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
               </div>
 
             </SectionCard>

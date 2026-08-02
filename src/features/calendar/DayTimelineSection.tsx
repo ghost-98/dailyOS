@@ -2,7 +2,7 @@
 
 import type { DragEvent } from "react";
 import { useState } from "react";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Activity, Check, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
 import { categoryLabels, eventTone, formatPlanDateTime, isExternalTimelineType, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
@@ -10,14 +10,19 @@ import type { CalendarCategory, DayTimelineFilter, DayTimelineItem, DragPlacemen
 import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
 
+type ActivityConversionState = { id: string; type: "event" | "task" } | null;
+
 export function DayTimelineSection({
   countsByCategory,
   draggingItem,
   dropTarget,
   externalCount,
+  isConvertingToActivity,
   isLoading,
   items,
   onClearDrag,
+  onCreateActivityFromEvent,
+  onCreateActivityFromTask,
   onDeleteEvent,
   onDeleteTask,
   onDragOverItem,
@@ -34,9 +39,12 @@ export function DayTimelineSection({
   draggingItem: { id: string; type: CalendarCategory } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
   externalCount: number;
+  isConvertingToActivity?: ActivityConversionState;
   isLoading: boolean;
   items: DayTimelineItem[];
   onClearDrag: () => void;
+  onCreateActivityFromEvent: (event: CalendarEvent) => void;
+  onCreateActivityFromTask: (task: TaskItem) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
   onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => void;
@@ -105,7 +113,9 @@ export function DayTimelineSection({
                 {item.type === "todo" ? (
                   <TaskDateItem
                     dropPlacement={dropTarget?.id === item.task.id && draggingItem?.id !== item.task.id ? dropTarget.placement : null}
+                    isConverting={isConvertingToActivity?.type === "task" && isConvertingToActivity.id === item.task.id}
                     isDragging={draggingItem?.id === item.task.id}
+                    onCreateActivity={onCreateActivityFromTask}
                     onDelete={onDeleteTask}
                     onDragEnd={onClearDrag}
                     onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.task.id, "todo")}
@@ -119,7 +129,9 @@ export function DayTimelineSection({
                   <EventDateItem
                     dropPlacement={dropTarget?.id === item.event.id && draggingItem?.id !== item.event.id ? dropTarget.placement : null}
                     event={item.event}
+                    isConverting={isConvertingToActivity?.type === "event" && isConvertingToActivity.id === item.event.id}
                     isDragging={draggingItem?.id === item.event.id}
+                    onCreateActivity={onCreateActivityFromEvent}
                     onDelete={onDeleteEvent}
                     onDragEnd={onClearDrag}
                     onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.event.id, item.event.type as CalendarCategory)}
@@ -156,7 +168,9 @@ function ExternalTimelineItem({ item }: { item: ExternalCalendarItem }) {
 function EventDateItem({
   dropPlacement,
   event,
+  isConverting,
   isDragging,
+  onCreateActivity,
   onDelete,
   onDragEnd,
   onDragOver,
@@ -166,7 +180,9 @@ function EventDateItem({
 }: {
   dropPlacement: DragPlacement | null;
   event: CalendarEvent;
+  isConverting: boolean;
   isDragging: boolean;
+  onCreateActivity: (event: CalendarEvent) => void;
   onDelete: (id: string) => void;
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
@@ -200,6 +216,9 @@ function EventDateItem({
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
       <div className="date-event__actions">
+        <button aria-label="활동으로 기록" disabled={isConverting} onClick={() => onCreateActivity(event)} title="이 계획을 실제 활동으로 기록" type="button">
+          <Activity aria-hidden size={15} />
+        </button>
         <button aria-label="수정" onClick={() => onEdit(event)} type="button">
           <Pencil aria-hidden size={15} />
         </button>
@@ -213,7 +232,9 @@ function EventDateItem({
 
 function TaskDateItem({
   dropPlacement,
+  isConverting,
   isDragging,
+  onCreateActivity,
   onDelete,
   onDragEnd,
   onDragOver,
@@ -224,7 +245,9 @@ function TaskDateItem({
   task,
 }: {
   dropPlacement: DragPlacement | null;
+  isConverting: boolean;
   isDragging: boolean;
+  onCreateActivity: (task: TaskItem) => void;
   onDelete: (id: string) => void;
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
@@ -266,6 +289,9 @@ function TaskDateItem({
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
       <div className="date-event__actions">
+        <button aria-label="활동으로 기록" disabled={isConverting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
+          <Activity aria-hidden size={15} />
+        </button>
         <button aria-label="수정" onClick={() => onEdit(task)} type="button">
           <Pencil aria-hidden size={15} />
         </button>

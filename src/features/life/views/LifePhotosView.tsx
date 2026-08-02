@@ -110,7 +110,7 @@ export function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="사진" description="사진과 영상을 날짜나 일정·할일·활동에 연결하고, 사진 탭과 하루 리포트에서 함께 조회합니다." />
+      <LifeTabHeading title="사진" description="사진과 영상은 활동에 먼저 연결하고, 필요하면 일정·할일·이벤트나 날짜에만 연결합니다. 사진 탭과 하루 리포트에서 함께 조회됩니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
@@ -122,7 +122,7 @@ export function LifePhotosView({
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
           <label className="life-photo-link-field">
-            <span>연결할 사건</span>
+            <span>연결할 활동/계획</span>
             <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
               <option value="">날짜에만 연결</option>
               {linkedTargetOptions.map((option) => (
