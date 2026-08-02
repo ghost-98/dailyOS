@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career" | "expense";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 

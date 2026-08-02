@@ -1,17 +1,4 @@
-import {
-  Activity,
-  BookOpenCheck,
-  BriefcaseBusiness,
-  CalendarDays,
-  Grid2X2,
-  Layers3,
-  Map,
-  MapPinned,
-  ReceiptText,
-  Search,
-  Settings,
-  Sparkles,
-} from "lucide-react";
+import { Activity, BookOpenCheck, CalendarDays, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
 
 export type NavItem = {
   children?: Array<Omit<NavItem, "children" | "icon">>;
@@ -32,8 +19,9 @@ const lifeChildren = [
   { label: "하루 리포트", href: "/life/report", key: "life-report" },
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
-  { label: "사람", href: "/life/people", key: "life-people" },
   { label: "AI 질문", href: "/life/ask", key: "life-ask" },
+  { label: "사람", href: "/life/people", key: "life-people" },
+  { label: "가계부", href: "/ledger", key: "ledger" },
 ];
 
 const placeChildren = [
@@ -42,29 +30,20 @@ const placeChildren = [
   { label: "장소 지도", href: "/life/map", key: "life-map" },
 ];
 
-const careerChildren = [
-  { label: "지원한 기업", href: "/career/applied", key: "applied" },
-  { label: "지원 예정", href: "/career/planned", key: "planned" },
-  { label: "자격증", href: "/career/certificates", key: "certificates" },
-];
-
 export const primaryNav: NavItem[] = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "기록 입력", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
-  { label: "계획 캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
-  { label: "라이프 DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
+  { label: "기록", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
+  { label: "계획", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
+  { label: "DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
-  { label: "커리어", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
 export const mobileNav: NavItem[] = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "활동", href: "/life/activities", key: "life-activities", icon: Activity },
+  { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
   { label: "계획", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
-  { label: "검색", href: "/life/search", key: "life-search", icon: Search },
-  { label: "AI", href: "/life/ask", key: "life-ask", icon: Sparkles },
-  { label: "장소", href: "/places", key: "places", icon: Map },
   { label: "DB", href: "/life", key: "life", icon: BookOpenCheck },
+  { label: "장소", href: "/places", key: "places", icon: Map },
+  { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];

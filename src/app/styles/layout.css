@@ -536,7 +536,6 @@
 
 .schedule-card,
 .todo-card,
-.career-card,
 .system-log {
   padding: 24px;
 }
@@ -557,15 +556,13 @@
 }
 
 .schedule-list,
-.todo-list,
-.career-list {
+.todo-list {
   display: grid;
   gap: 14px;
 }
 
 .schedule-item,
-.todo-item,
-.career-item {
+.todo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -579,8 +576,7 @@
   border-left: 4px solid var(--violet-deep);
 }
 
-.schedule-item span,
-.career-item span {
+.schedule-item span {
   color: var(--violet);
   font-family: "Courier New", monospace;
   font-size: 12px;
@@ -589,16 +585,14 @@
 }
 
 .schedule-item h3,
-.todo-item h3,
-.career-item h3 {
+.todo-item h3 {
   margin: 6px 0 4px;
   font-size: 21px;
   line-height: 1.25;
 }
 
 .schedule-item p,
-.todo-item p,
-.career-item p {
+.todo-item p {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -690,31 +684,6 @@
 }
 
 .badge--muted {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--muted);
-}
-
-.career-card {
-  background: var(--panel);
-}
-
-.career-item {
-  border-left: 4px solid var(--amber);
-}
-
-.career-item strong {
-  border-radius: 999px;
-  background: rgba(246, 173, 69, 0.18);
-  color: #ffd99f;
-  padding: 7px 13px;
-  white-space: nowrap;
-}
-
-.career-item--muted {
-  border-left-color: var(--muted-dark);
-}
-
-.career-item--muted strong {
   background: rgba(255, 255, 255, 0.1);
   color: var(--muted);
 }

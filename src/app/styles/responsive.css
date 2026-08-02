@@ -173,7 +173,6 @@
 
   .schedule-card,
   .todo-card,
-  .career-card,
   .system-log,
   .vitals-card,
   .calendar-board,
@@ -190,109 +189,6 @@
 
   .health-daily-grid {
     grid-template-columns: 1fr;
-  }
-
-  .certificate-browser {
-    grid-template-columns: 1fr;
-  }
-
-  .certificate-index-panel {
-    position: static;
-    max-height: none;
-  }
-
-  .career-ai-uploader,
-  .company-process-rail {
-    grid-template-columns: 1fr;
-  }
-
-  .job-command-panel,
-  .job-command-panel__actions {
-    grid-template-columns: 1fr;
-  }
-
-  .career-ai-uploader__actions {
-    grid-template-columns: 1fr;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .career-ai-uploader__fields {
-    grid-template-columns: 1fr;
-  }
-
-  .job-posting-sheet .career-sheet__body {
-    max-height: calc(100vh - 138px);
-    padding: 16px;
-  }
-
-  .ai-draft-review__header {
-    grid-template-columns: 1fr;
-  }
-
-  .job-detail-panel {
-    inset: auto 0 0;
-    width: 100%;
-    max-height: 88vh;
-    border-radius: 22px 22px 0 0;
-  }
-
-  .job-detail-meta-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ai-draft-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ai-draft-basic-grid,
-  .job-template-row,
-  .job-template-row--step,
-  .job-template-row--requirement,
-  .job-template-row--check {
-    grid-template-columns: 1fr;
-  }
-
-  .job-template-section__header {
-    display: grid;
-  }
-
-  .job-template-section__header button,
-  .job-template-row > button {
-    width: 100%;
-  }
-
-  .career-ai-file-button,
-  .career-ai-uploader__actions button {
-    width: 100%;
-  }
-
-  .certificate-index-list {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(150px, 1fr);
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
-  .certificate-index-list > span,
-  .certificate-index-list p {
-    grid-column: 1 / -1;
-  }
-
-  .career-record-card {
-    flex-direction: column;
-  }
-
-  .certificate-detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .application-event-row {
-    grid-template-columns: 1fr;
-  }
-
-  .application-event-row button {
-    width: 100%;
   }
 
   .settings-grid {
@@ -340,8 +236,7 @@
   }
 
   .todo-item,
-  .schedule-item,
-  .career-item {
+  .schedule-item {
     align-items: flex-start;
     flex-direction: column;
   }

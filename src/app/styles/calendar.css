@@ -175,11 +175,6 @@
   background: var(--blue);
 }
 
-.calendar-filter--career::before,
-.calendar-dot--career {
-  background: var(--amber);
-}
-
 .calendar-dot--expense {
   background: #f2b84b;
 }
@@ -1135,10 +1130,6 @@
 
 .date-event--weight {
   border-left-color: var(--blue);
-}
-
-.date-event--career {
-  border-left-color: var(--amber);
 }
 
 .date-event h3 {

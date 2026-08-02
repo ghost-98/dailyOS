@@ -25,8 +25,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     capture: activeKey === "capture" || activeKey === "life-activities",
-    career: activeKey === "career",
-    life: activeKey === "life" || activeKey === "life-ask",
+    life: activeKey === "life" || activeKey === "life-ask" || activeKey === "ledger",
     places: activeKey === "places",
   });
   const { displayName, user } = useDailyOSUser();
@@ -115,7 +114,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
 
 function isPrimaryNavActive(key: string, href: string, pathname: string, activeKey?: string) {
   if (key === "capture") return ["/life/activities", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
-  if (key === "life") return pathname === "/life" || ["/life/report", "/life/monthly", "/life/search", "/life/people", "/life/ask"].includes(pathname);
+  if (key === "life") return pathname === "/life" || ["/life/report", "/life/monthly", "/life/search", "/life/people", "/life/ask", "/ledger"].includes(pathname);
   if (key === "places") return pathname === "/places" || pathname.startsWith("/life/places") || pathname === "/life/map";
   if (key.startsWith("life-")) return pathname === href;
   return key === activeKey || pathname === href;

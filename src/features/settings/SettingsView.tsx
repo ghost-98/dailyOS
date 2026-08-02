@@ -18,7 +18,6 @@ export function SettingsView() {
   const [isManagingData, setIsManagingData] = useState(false);
   const [scheduleAlarm, setScheduleAlarm] = useState(true);
   const [taskAlarm, setTaskAlarm] = useState(true);
-  const [careerAlarm, setCareerAlarm] = useState(true);
 
   useEffect(() => {
     if (!supabase) return;
@@ -162,7 +161,6 @@ export function SettingsView() {
           </div>
           <SettingToggle checked={scheduleAlarm} label="일정 알림" onChange={setScheduleAlarm} />
           <SettingToggle checked={taskAlarm} label="할 일 마감 알림" onChange={setTaskAlarm} />
-          <SettingToggle checked={careerAlarm} label="취업 일정 알림" onChange={setCareerAlarm} />
           <p className="settings-hint">현재는 화면 설정만 저장합니다. 라즈베리파이 상시 실행 이후 푸시 알림과 연결하면 완성도가 올라갑니다.</p>
         </SectionCard>
 
