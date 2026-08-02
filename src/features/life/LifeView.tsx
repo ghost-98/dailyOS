@@ -88,9 +88,9 @@ type LifeContextBundle = {
   logs: DailyLogRecord[];
   meta?: string;
   photos: LifePhotoRecord[];
-  place?: PlanPlace;
+  place?: LifePlaceRef;
   targetId: string;
-  targetType: "schedule" | "todo" | "event";
+  targetType: "schedule" | "todo" | "event" | "activity";
   title: string;
 };
 
@@ -474,8 +474,15 @@ function LifeReportView({
   const totalExpense = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const monthExpenseTotal = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const monthRunningKm = monthWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
-  const places = uniquePlanPlaces([...dayEvents.flatMap((event) => (event.place ? [event.place] : [])), ...dayTasks.flatMap((task) => (task.place ? [task.place] : []))]);
-  const contextBundles = buildLifeContextBundles(date, dayEvents, dayTasks, dayExpenses, dayLogs, dayPhotos);
+  const places = uniqueLifePlaceRefs([
+    ...dayEvents.flatMap((event) => (event.place ? [event.place] : [])),
+    ...dayTasks.flatMap((task) => (task.place ? [task.place] : [])),
+    ...dayActivities.flatMap((activity) => {
+      const place = getActivityPlaceRef(activity);
+      return place ? [place] : [];
+    }),
+  ]);
+  const contextBundles = buildLifeContextBundles(date, dayEvents, dayTasks, dayActivities, dayExpenses, dayLogs, dayPhotos);
   const selectedBundle = contextBundles.find((bundle) => bundle.key === selectedBundleKey) ?? null;
   const dateOnlyLogs = dayLogs.filter((log) => !log.linkedTargetId);
   const dateOnlyPhotos = dayPhotos.filter((photo) => !photo.linkedTargetId);
@@ -570,7 +577,7 @@ function LifeReportView({
 
         <div className="life-report-sections">
           <section>
-            <h3>사건별 연결 맥락</h3>
+            <h3>맥락별 연결 묶음</h3>
             {contextBundles.length > 0 ? (
               <div className="life-context-list">
                 {contextBundles.map((bundle) => (
@@ -596,8 +603,8 @@ function LifeReportView({
             ) : (
               <div className="life-map-empty life-map-empty--compact">
                 <NotebookPen aria-hidden size={28} />
-                <strong>{isLoading ? "리포트를 불러오는 중입니다." : "이날 연결된 사건 맥락이 없습니다."}</strong>
-                <p>일정/할일에 장소·지출을 넣고, 사진과 하루기록을 사건에 연결하면 이곳이 채워집니다.</p>
+                <strong>{isLoading ? "리포트를 불러오는 중입니다." : "이날 연결된 맥락이 없습니다."}</strong>
+                <p>일정, 할 일, 활동에 장소·지출을 넣고 사진과 하루기록을 연결하면 이곳이 채워집니다.</p>
               </div>
             )}
           </section>
@@ -608,7 +615,7 @@ function LifeReportView({
               <ReportList title="활동" empty="활동 기록 없음" items={dayActivities.map((activity) => `${formatActivityTime(activity)} · ${activity.title}`)} />
               <ReportList title="하루기록" empty="날짜에만 붙은 하루기록 없음" items={dateOnlyLogs.map((log) => log.content)} />
               <ReportList title="사진/영상" empty="날짜에만 붙은 사진 없음" items={dateOnlyPhotos.map((photo) => photo.caption || photo.fileName)} />
-              <ReportList title="지출" empty="사건 밖 지출 없음" items={dateOnlyExpenses.map((expense) => `${expense.title} · ${formatWon(expense.amount)}`)} />
+              <ReportList title="지출" empty="맥락 밖 지출 없음" items={dateOnlyExpenses.map((expense) => `${expense.title} · ${formatWon(expense.amount)}`)} />
               <ReportList title="건강" empty="건강 기록 없음" items={[...dayWorkouts.map((workout) => `${workout.type === "running" ? "러닝" : "운동"} · ${formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60)}`), ...dayWeights.map((weight) => `아침 몸무게 · ${weight.weightKg}kg`)]} />
             </div>
           </section>
@@ -684,7 +691,7 @@ function LifeContextDetailDrawer({
 
   return (
     <div className="life-detail-overlay" role="presentation" onMouseDown={onClose}>
-      <aside className="life-detail-drawer" aria-label="사건 상세" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <aside className="life-detail-drawer" aria-label="맥락 상세" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <div className="life-detail-drawer__head">
           <div>
             <span>{bundle.label}</span>
@@ -1436,6 +1443,7 @@ function buildLifeContextBundles(
   date: string,
   events: CalendarEvent[],
   tasks: TaskItem[],
+  activities: LifeActivityRecord[],
   expenses: ExpenseRecord[],
   logs: DailyLogRecord[],
   photos: LifePhotoRecord[],
@@ -1473,7 +1481,21 @@ function buildLifeContextBundles(
     title: task.title,
   }));
 
-  return [...eventBundles, ...taskBundles].sort((a, b) => getContextScore(b) - getContextScore(a));
+  const activityBundles = activities.map((activity) => ({
+    date,
+    expenses: expenses.filter((expense) => expense.targetType === "activity" && expense.targetId === activity.id),
+    key: `activity:${activity.id}`,
+    label: "활동",
+    logs: logs.filter((log) => log.linkedTargetType === "activity" && log.linkedTargetId === activity.id),
+    meta: [formatActivityTime(activity), activity.category, activity.companions ? `함께한 사람 · ${activity.companions}` : null, activity.food ? `음식 · ${activity.food}` : null].filter(Boolean).join(" · "),
+    photos: photos.filter((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id),
+    place: getActivityPlaceRef(activity) ?? undefined,
+    targetId: activity.id,
+    targetType: "activity" as const,
+    title: activity.title,
+  }));
+
+  return [...eventBundles, ...taskBundles, ...activityBundles].sort((a, b) => getContextScore(b) - getContextScore(a));
 }
 
 function getContextScore(bundle: LifeContextBundle) {
@@ -2097,6 +2119,7 @@ function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
   if (type === "schedule") return "일정";
   if (type === "todo") return "할일";
   if (type === "event") return "이벤트";
+  if (type === "activity") return "활동";
   return "사건";
 }
 
