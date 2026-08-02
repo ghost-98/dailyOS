@@ -224,12 +224,21 @@
 
 .today-dashboard-hero {
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 20px;
   background:
     radial-gradient(circle at top right, rgba(201, 184, 255, 0.18), transparent 34%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
   box-shadow: var(--shadow);
-  padding: 30px;
+  padding: 18px 20px;
+}
+
+.today-dashboard-hero h1 {
+  font-size: clamp(1.55rem, 2.5vw, 2.25rem);
+  letter-spacing: -0.05em;
+}
+
+.today-dashboard-hero .today__date {
+  margin-top: 8px;
 }
 
 .today-dashboard-hero .header-action {
@@ -263,15 +272,17 @@
 
 .today-quick-action {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
-  min-height: 118px;
+  min-height: 76px;
+  align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  border-radius: 16px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
     rgba(255, 255, 255, 0.035);
   color: inherit;
-  padding: 16px;
+  padding: 12px 14px;
   text-decoration: none;
   transition:
     border-color 160ms ease,
@@ -303,6 +314,7 @@
 }
 
 .today-quick-action p {
+  grid-column: 2;
   margin: 0;
   color: var(--muted);
   font-size: 0.8rem;

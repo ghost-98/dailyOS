@@ -18,9 +18,12 @@
   .today-summary-grid,
   .today-work-grid,
   .today-support-grid,
-  .today-quick-actions,
   .life-health-view {
     grid-template-columns: 1fr;
+  }
+
+  .today-quick-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .calendar-layout {
@@ -122,6 +125,10 @@
   .today-mode-tabs__item {
     flex: 1;
     justify-content: center;
+  }
+
+  .today-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .page-header {

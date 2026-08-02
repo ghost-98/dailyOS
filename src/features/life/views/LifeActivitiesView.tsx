@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { NotebookPen } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { formatDateKey, formatMinutesLabel, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
-import type { LifeActivityRecord } from "@/types/domain";
+import type { LifeActivityRecord, PlanPlace } from "@/types/domain";
 
 export type LifeActivityDraft = {
   date?: string;
@@ -52,8 +53,7 @@ export function LifeActivitiesView({
   const [startTime, setStartTime] = useState(initialDraft?.startTime ?? getDefaultActivityTime());
   const [endTime, setEndTime] = useState(initialDraft?.endTime ?? "");
   const [title, setTitle] = useState(initialDraft?.title ?? "");
-  const [placeName, setPlaceName] = useState("");
-  const [placeAddress, setPlaceAddress] = useState("");
+  const [place, setPlace] = useState<PlanPlace | undefined>();
   const [companions, setCompanions] = useState("");
   const [food, setFood] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -91,8 +91,7 @@ export function LifeActivitiesView({
     setStartTime(getDefaultActivityTime());
     setEndTime("");
     setTitle("");
-    setPlaceName("");
-    setPlaceAddress("");
+    setPlace(undefined);
     setCompanions("");
     setFood("");
     setExpenseAmount("");
@@ -109,8 +108,7 @@ export function LifeActivitiesView({
     setStartTime(activity.startTime ?? getDefaultActivityTime());
     setEndTime(activity.endTime ?? "");
     setTitle(activity.title);
-    setPlaceName(activity.placeName ?? "");
-    setPlaceAddress(activity.placeAddress ?? "");
+    setPlace(createActivityPlace(activity));
     setCompanions(activity.companions ?? "");
     setFood(activity.food ?? "");
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
@@ -161,8 +159,8 @@ export function LifeActivitiesView({
         isAllDay: !hasTime,
         title: title.trim(),
         category,
-        placeName: placeName.trim() || undefined,
-        placeAddress: placeAddress.trim() || undefined,
+        placeName: place?.name,
+        placeAddress: place?.address,
         companions: companions.trim() || undefined,
         food: food.trim() || undefined,
         expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
@@ -295,17 +293,10 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>장소와 사람</strong>
-            <span>어디서 누구와 있었는지를 함께 저장합니다.</span>
+              <span>일정/할 일과 같은 방식으로 장소를 검색해서 연결합니다.</span>
           </div>
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
-            <label className="event-form-row event-form-row--field schedule-field">
-              <span>장소명</span>
-              <input placeholder="예: 성수동 카페" value={placeName} onChange={(event) => setPlaceName(event.target.value)} />
-            </label>
-            <label className="event-form-row event-form-row--field schedule-field">
-              <span>주소/동선 메모</span>
-              <input placeholder="예: 서울숲 근처" value={placeAddress} onChange={(event) => setPlaceAddress(event.target.value)} />
-            </label>
+          <div className="life-activity-place-stack">
+            <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
             <label className="event-form-row event-form-row--field schedule-field">
               <span>함께한 사람</span>
               <input placeholder="쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} />
@@ -400,6 +391,16 @@ function getDefaultActivityTime() {
   const now = new Date();
   now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
   return formatMinutesLabel(now.getHours() * 60 + now.getMinutes());
+}
+
+function createActivityPlace(activity: LifeActivityRecord): PlanPlace | undefined {
+  if (!activity.placeName) return undefined;
+  return {
+    address: activity.placeAddress ?? "",
+    latitude: 0,
+    longitude: 0,
+    name: activity.placeName,
+  };
 }
 
 function getLifeActionErrorMessage(error: unknown, fallback: string) {

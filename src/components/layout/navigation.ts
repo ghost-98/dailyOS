@@ -21,7 +21,7 @@ export type NavItem = {
   label: string;
 };
 
-const activityChildren = [
+const captureChildren = [
   { label: "활동 기록", href: "/life/activities", key: "life-activities" },
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "사진·영상", href: "/life/photos", key: "life-photos" },
@@ -33,6 +33,7 @@ const lifeChildren = [
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
   { label: "사람", href: "/life/people", key: "life-people" },
+  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
 ];
 
 const placeChildren = [
@@ -49,10 +50,9 @@ const careerChildren = [
 
 export const primaryNav: NavItem[] = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "활동 기록", href: "/life/activities", key: "capture", icon: Activity, children: activityChildren },
+  { label: "기록 입력", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
   { label: "계획 캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
   { label: "라이프 DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "AI 질문", href: "/life/ask", key: "life-ask", icon: Sparkles },
   { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
   { label: "커리어", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },

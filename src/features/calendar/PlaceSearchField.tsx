@@ -45,6 +45,13 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     setMessage("");
   };
 
+  const clearPlace = () => {
+    onSelect(undefined);
+    setQuery("");
+    setResults([]);
+    setMessage("");
+  };
+
   return (
     <div className="event-form-card schedule-place-card">
       <div className="schedule-place-card__header">
@@ -53,7 +60,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
           <strong>{selectedPlace ? selectedPlace.name : "장소 검색"}</strong>
         </div>
         {selectedPlace ? (
-          <button onClick={() => onSelect(undefined)} type="button">
+          <button onClick={clearPlace} type="button">
             선택 해제
           </button>
         ) : null}
