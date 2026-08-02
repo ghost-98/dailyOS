@@ -28,6 +28,7 @@ import {
   deleteLifePhotoFromDb,
   fetchDailyLogsFromDb,
   fetchLifeActivitiesFromDb,
+  fetchLifePhotoMetadataFromDb,
   fetchLifePhotosFromDb,
   updateDailyLogInDb,
   updateLifeActivityInDb,
@@ -116,20 +117,21 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
       fetchExpenseRecordsFromDb(),
       fetchLifeActivitiesFromDb(),
       fetchDailyLogsFromDb(),
-      fetchLifePhotosFromDb(),
+      fetchLifePhotoMetadataFromDb(),
       fetchWeightRecordsFromDb(),
       fetchWorkoutSessionsFromDb(),
     ]);
     return { activities: activities ?? [], dailyLogs: dailyLogs ?? [], expenses: expenses ?? [], lifePhotos: lifePhotos ?? [], weights: weights ?? [], workouts: workouts ?? [] };
   }
 
+  const photoLoader = mode === "report" ? fetchLifePhotosFromDb : fetchLifePhotoMetadataFromDb;
   const [events, tasks, expenses, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
     fetchCalendarEventsFromDb(),
     fetchTasksFromDb(),
     fetchExpenseRecordsFromDb(),
     fetchLifeActivitiesFromDb(),
     fetchDailyLogsFromDb(),
-    fetchLifePhotosFromDb(),
+    photoLoader(),
     fetchWeightRecordsFromDb(),
     fetchWorkoutSessionsFromDb(),
   ]);

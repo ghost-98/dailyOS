@@ -151,11 +151,17 @@ async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
   const signedUrl = await getLifePhotoSignedUrl(row.file_path);
 
   return {
+    ...mapLifePhotoMetadataRow(row),
+    fileUrl: signedUrl ?? undefined,
+  };
+}
+
+function mapLifePhotoMetadataRow(row: LifePhotoRow): LifePhotoRecord {
+  return {
     id: row.id,
     date: row.photo_date,
     fileName: row.file_name,
     filePath: row.file_path,
-    fileUrl: signedUrl ?? undefined,
     mimeType: row.mime_type ?? undefined,
     sizeBytes: row.size_bytes === null ? undefined : Number(row.size_bytes),
     width: row.width ?? undefined,
@@ -299,19 +305,36 @@ export async function deleteDailyLogFromDb(id: string) {
   return true;
 }
 
-export async function fetchLifePhotosFromDb() {
+export async function fetchLifePhotosFromDb(date?: string) {
   if (!supabase) return null;
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
-  const { data, error } = await supabase
+  const query = supabase
     .from("life_photos")
     .select(lifePhotoColumns)
     .order("photo_date", { ascending: true })
     .order("created_at", { ascending: false });
+  const { data, error } = date ? await query.eq("photo_date", date) : await query;
 
   if (error) throw error;
   return Promise.all((data as LifePhotoRow[]).map(mapLifePhotoRow));
+}
+
+export async function fetchLifePhotoMetadataFromDb(date?: string) {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const query = supabase
+    .from("life_photos")
+    .select(lifePhotoColumns)
+    .order("photo_date", { ascending: true })
+    .order("created_at", { ascending: false });
+  const { data, error } = date ? await query.eq("photo_date", date) : await query;
+
+  if (error) throw error;
+  return (data as LifePhotoRow[]).map(mapLifePhotoMetadataRow);
 }
 
 export async function uploadLifePhotosToDb(

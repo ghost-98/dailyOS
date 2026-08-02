@@ -189,7 +189,7 @@ export function TodayDashboard() {
       safeLoad(fetchWeightRecordsFromDb, [] as WeightRecord[]),
       safeLoad(fetchWorkoutSessionsFromDb, [] as WorkoutSession[]),
       safeLoad(fetchDailyLogsFromDb, [] as DailyLogRecord[]),
-      safeLoad(fetchLifePhotosFromDb, [] as LifePhotoRecord[]),
+      safeLoad(() => fetchLifePhotosFromDb(todayKey), [] as LifePhotoRecord[]),
     ]).then(([nextEvents, nextTasks, nextExpenses, nextActivities, nextWeights, nextWorkouts, nextDailyLogs, nextLifePhotos]) => {
       if (!isMounted) return;
       setEvents(nextEvents);
@@ -206,7 +206,7 @@ export function TodayDashboard() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [todayKey]);
 
   const todaySchedules = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "schedule");
   const todayEvents = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "event");
