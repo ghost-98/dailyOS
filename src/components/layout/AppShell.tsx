@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Activity,
-  ChevronDown,
-  LogOut,
-} from "lucide-react";
+import { Activity, ChevronDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -28,7 +24,7 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    capture: activeKey === "capture",
+    capture: activeKey === "capture" || activeKey === "life-activities",
     career: activeKey === "career",
     life: activeKey === "life",
     places: activeKey === "places",
@@ -55,7 +51,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
           <nav className="sidebar__nav">
             {primaryNav.map((item) => {
               const Icon = item.icon;
-              const isActive = item.key === activeKey;
+              const isActive = isPrimaryNavActive(item.key, item.href, pathname, activeKey);
 
               if (item.children) {
                 return (
@@ -117,11 +113,20 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   );
 }
 
+function isPrimaryNavActive(key: string, href: string, pathname: string, activeKey?: string) {
+  if (key === "capture") return ["/life/activities", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
+  if (key === "life") return pathname === "/life" || ["/life/report", "/life/monthly", "/life/search", "/life/people"].includes(pathname);
+  if (key === "places") return pathname === "/places" || pathname.startsWith("/life/places") || pathname === "/life/map";
+  if (key.startsWith("life-")) return pathname === href;
+  return key === activeKey || pathname === href;
+}
+
 function isMobileNavActive(key: string, href: string, pathname: string, activeKey?: string) {
   if (key === "life") return pathname === "/life";
   if (key === "life-activities") return ["/life/activities", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
+  if (key === "places") return pathname === "/places" || pathname.startsWith("/life/places") || pathname === "/life/map";
   if (key.startsWith("life-")) return pathname === href;
-  return key === activeKey;
+  return key === activeKey || pathname === href;
 }
 
 function NavGroup({

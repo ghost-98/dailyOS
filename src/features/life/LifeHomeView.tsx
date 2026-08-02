@@ -1,96 +1,110 @@
 import Link from "next/link";
+import { Activity, CalendarDays, Camera, HeartPulse, MapPin, Search, Sparkles, UserRound } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 
-const lifeDatabaseModel = [
+const primaryFlow = [
   {
-    description: "일정·할일·활동을 하루의 시간축에 올리고 사진, 기록, 지출, 건강을 같은 날짜에 겹쳐 봅니다.",
+    description: "몇 시부터 몇 시까지 어디서 무엇을 했는지 남기는 실제 삶의 기본 단위입니다.",
+    href: "/life/activities",
+    label: "Core",
+    title: "활동 기록",
+  },
+  {
+    description: "일정·할 일·이벤트는 미래 계획과 중요한 마커로 두고, 실제 결과는 활동으로 회수합니다.",
     href: "/life/calendar",
-    label: "시간축",
-    title: "언제 무엇을 했는가",
+    label: "Plan",
+    title: "계획 캘린더",
   },
   {
-    description: "하루 리포트는 날짜 하나를 기준으로 계획, 실제 활동, 사진, 하루기록, 건강, 소비를 한 장으로 복원합니다.",
+    description: "사진, 하루기록, 건강 데이터는 활동과 날짜에 붙는 증거와 해석입니다.",
     href: "/life/report",
-    label: "하루",
-    title: "그날이 어떤 하루였는가",
-  },
-  {
-    description: "월간 회고와 전체 검색, AI 질문은 쌓인 기록을 다시 꺼내 의미와 답으로 바꾸는 해석 계층입니다.",
-    href: "/life/ask",
-    label: "해석",
-    title: "기록을 다시 쓰는 지식으로 바꾸기",
+    label: "Context",
+    title: "하루 리포트",
   },
 ];
 
-const lifeEntryModel = [
-  { description: "몇 시부터 어디서 무엇을 했는지 남기는 실제 행동 기록", href: "/life/activities", title: "활동 기록" },
-  { description: "날짜나 일정·할일·활동에 연결되는 짧은 텍스트 기록", href: "/life/logs", title: "하루기록" },
-  { description: "사진·영상과 메타데이터를 날짜나 맥락에 연결", href: "/life/photos", title: "사진" },
-  { description: "러닝 거리·시간, 아침 몸무게를 날짜에 누적", href: "/life/health", title: "건강" },
+const captureModel = [
+  { description: "시간·장소·사람·음식·지출을 한 번에 남기는 메인 입력", href: "/life/activities", icon: Activity, title: "활동 기록" },
+  { description: "오늘의 감상과 의미를 날짜나 활동에 연결", href: "/life/logs", icon: Sparkles, title: "하루기록" },
+  { description: "사진/영상과 메타데이터를 날짜·활동·이벤트에 연결", href: "/life/photos", icon: Camera, title: "사진·영상" },
+  { description: "러닝 시간/거리와 아침 몸무게를 하루 상태로 저장", href: "/life/health", icon: HeartPulse, title: "건강" },
+];
+
+const retrievalModel = [
+  { description: "하루를 실제 타임라인으로 복원", href: "/life/report", icon: CalendarDays, title: "하루 리포트" },
+  { description: "한 달의 소비, 사람, 장소, 활동 패턴 확인", href: "/life/monthly", icon: Search, title: "월간 회고" },
+  { description: "기억나는 단서로 전체 인생 기록 검색", href: "/life/search", icon: Search, title: "전체 검색" },
+  { description: "사람별 만남, 지출, 장소 맥락 보기", href: "/life/people", icon: UserRound, title: "사람" },
+  { description: "장소별로 묶인 활동과 이동 흐름 보기", href: "/life/places-flow", icon: MapPin, title: "장소 흐름" },
+  { description: "기록을 바탕으로 자연어 질문하기", href: "/life/ask", icon: Sparkles, title: "AI 질문" },
 ];
 
 export function LifeHomeView() {
   return (
     <div className="life-axis-view">
       <header className="life-db-hero">
-        <p className="eyebrow">Life Database OS</p>
-        <h1>내 삶의 원본 기록을 모으고, 연결하고, 다시 질문하는 시스템</h1>
+        <p className="eyebrow">Activity-first Life Database</p>
+        <h1>활동을 중심으로 삶을 기록하고, 나중에 다시 꺼내 쓰는 개인 OS</h1>
         <p>
-          dailyOS의 라이프 DB는 캘린더, 일기, 사진첩, 가계부를 따로 흩어두지 않습니다. 하루의 시간축 위에 실제 활동, 장소, 사람,
-          소비, 사진, 건강 기록을 연결해 나중에 검색·회고·AI 질문의 근거로 쓰는 개인 데이터베이스입니다.
+          dailyOS의 중심 단위는 이제 활동입니다. 일정과 할 일은 계획, 하루기록과 사진과 건강은 맥락, 장소·사람·지출은 활동에서 파생되는 축으로 정리합니다.
+          이렇게 쌓인 기록은 하루 리포트, 월간 회고, 검색, AI 질문의 근거가 됩니다.
         </p>
       </header>
 
       <div className="life-db-flow">
-        <SectionCard>
-          <p className="eyebrow">01 Capture</p>
-          <h2>하루의 원본을 남긴다</h2>
-          <p>일정·할일은 계획이고, 활동 기록은 실제 행동입니다. 하루기록·사진·건강은 그날을 설명하는 증거 자료로 붙습니다.</p>
-        </SectionCard>
-        <SectionCard>
-          <p className="eyebrow">02 Connect</p>
-          <h2>맥락으로 묶는다</h2>
-          <p>날짜, 시간, 장소, 함께한 사람, 지출, 사진, 메모가 같은 일정·할일·활동 아래에서 연결됩니다.</p>
-        </SectionCard>
-        <SectionCard>
-          <p className="eyebrow">03 Retrieve</p>
-          <h2>필요할 때 다시 꺼낸다</h2>
-          <p>하루 리포트, 월간 회고, 전체 검색, AI 질문을 통해 내 생활 패턴과 기억을 다시 사용할 수 있습니다.</p>
-        </SectionCard>
+        {primaryFlow.map((item) => (
+          <SectionCard key={item.title}>
+            <p className="eyebrow">{item.label}</p>
+            <h2>{item.title}</h2>
+            <p>{item.description}</p>
+            <Link className="empty-dashboard-link" href={item.href}>
+              열기
+            </Link>
+          </SectionCard>
+        ))}
       </div>
 
       <section className="life-db-section">
-        <LifeHomeSectionHeading title="조회와 해석" description="라이프 DB는 입력한 기록을 다시 읽고, 비교하고, 질문하기 위한 최종 조회 공간입니다." />
-        <div className="life-db-card-grid">
-          {lifeDatabaseModel.map((item) => (
-            <Link className="life-db-card" href={item.href} key={item.title}>
-              <span>{item.label}</span>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
-            </Link>
-          ))}
-          <Link className="life-db-card life-db-card--accent" href="/life/search">
-            <span>검색</span>
-            <strong>흐릿한 기억을 찾아내기</strong>
-            <p>사람, 장소, 날짜, 금액, 사진명, 메모를 한 번에 찾아서 원하는 하루나 맥락으로 바로 돌아갑니다.</p>
-          </Link>
-          <Link className="life-db-card life-db-card--accent" href="/life/ask">
-            <span>AI 질문</span>
-            <strong>기록을 읽고 답하게 하기</strong>
-            <p>“3월에 자주 만난 사람과 그때의 소비·건강 흐름이 어땠어?” 같은 질문을 내 기록 기반으로 묻습니다.</p>
-          </Link>
+        <LifeHomeSectionHeading
+          title="입력 구조"
+          description="실제 삶은 활동으로 저장하고, 다른 데이터는 활동이나 날짜에 연결합니다. 그래서 입력도 활동을 가장 먼저 두었습니다."
+        />
+        <div className="life-db-card-grid life-db-card-grid--compact">
+          {captureModel.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link className="life-db-card" href={item.href} key={item.title}>
+                <span>
+                  <Icon aria-hidden size={16} />
+                  입력
+                </span>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
       <section className="life-db-section">
-        <LifeHomeSectionHeading title="입력과 축적" description="매일 쓰는 입력은 빠르게, 나중에 보는 조회는 강하게 분리했습니다." />
-        <div className="life-db-card-grid life-db-card-grid--compact">
-          {lifeEntryModel.map((item) => (
-            <Link className="life-db-card" href={item.href} key={item.title}>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
-            </Link>
-          ))}
+        <LifeHomeSectionHeading
+          title="조회와 활용"
+          description="기록을 많이 쌓는 것보다 더 중요한 건 다시 읽히는 구조입니다. 날짜, 사람, 장소, 질문으로 되찾을 수 있게 분리했습니다."
+        />
+        <div className="life-db-card-grid">
+          {retrievalModel.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link className="life-db-card" href={item.href} key={item.title}>
+                <span>
+                  <Icon aria-hidden size={16} />
+                  활용
+                </span>
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

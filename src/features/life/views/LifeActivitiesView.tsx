@@ -130,12 +130,12 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="공백 없는 하루를 만들기 위한 실제 행동 단위입니다. 몇 시부터 어디서 무엇을 했고, 누구와 있었고, 뭘 먹고 얼마를 썼는지 남깁니다." />
+      <LifeTabHeading title="활동 기록" description="dailyOS의 메인 입력입니다. 실제로 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 뭘 먹고 얼마를 썼는지 남깁니다." />
       <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Actual Day Block</p>
+              <p className="eyebrow">Core Life Block</p>
               <h2>{editing ? "활동 수정" : "활동 추가"}</h2>
             </div>
             {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}

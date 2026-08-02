@@ -3,7 +3,7 @@ import { LifeView } from "@/features/life/LifeView";
 
 export default function LifeCalendarPage() {
   return (
-    <AppShell activeKey="life">
+    <AppShell activeKey="life-calendar">
       <LifeView mode="calendar" />
     </AppShell>
   );

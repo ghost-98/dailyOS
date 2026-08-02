@@ -28,13 +28,13 @@ type TimelineItem = {
 };
 
 const text = {
-  commandCenter: "Life OS Command Center",
-  heroSuffix: "\uB2D8\uC758 \uC624\uB298\uC744 \uD55C \uC7A5\uC73C\uB85C",
-  openCalendar: "\uB77C\uC774\uD504 \uCEA8\uB9B0\uB354 \uC5F4\uAE30",
+  commandCenter: "Activity-first Life OS",
+  heroSuffix: "님의 오늘 활동을 기록하는 곳",
+  openCalendar: "활동 기록하기",
   loading: "\uB85C\uB529",
   count: "\uAC1C",
   won: "\uC6D0",
-  todayDensity: "\uC624\uB298 \uAE30\uB85D \uBC00\uB3C4",
+  todayDensity: "오늘 활동 밀도",
   todoProgress: "\uD560 \uC77C \uC9C4\uD589\uB960",
   todayExpense: "\uC624\uB298 \uC9C0\uCD9C",
   todayPlace: "\uC624\uB298 \uC7A5\uC18C",
@@ -44,9 +44,9 @@ const text = {
   left: "\uB0A8\uC74C",
   thisMonth: "\uC774\uBC88 \uB2EC",
   places: "\uACF3",
-  connectPlace: "\uC77C\uC815/\uD560 \uC77C\uC5D0 \uC7A5\uC18C\uB97C \uC5F0\uACB0\uD574\uBCF4\uC138\uC694",
-  todayTimeline: "\uC624\uB298 \uD0C0\uC784\uB77C\uC778",
-  noTimeline: "\uC624\uB298 \uC544\uC9C1 \uC5F0\uACB0\uB41C \uC77C\uC815, \uAE30\uB85D, \uC0AC\uC9C4\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+  connectPlace: "활동이나 계획에 장소를 연결해보세요",
+  todayTimeline: "오늘 활동 타임라인",
+  noTimeline: "오늘 아직 연결된 활동, 계획, 기록, 사진이 없습니다.",
   dailyLog: "\uD558\uB8E8 \uAE30\uB85D",
   noDailyLog: "\uC9E7\uC740 \uD558\uB8E8 \uAE30\uB85D\uC744 \uB0A8\uAE30\uBA74 \uC774\uACF3\uC5D0 \uBC14\uB85C \uC313\uC785\uB2C8\uB2E4.",
   photoVideo: "\uC0AC\uC9C4\u00B7\uC601\uC0C1",
@@ -55,7 +55,7 @@ const text = {
   noPlaces: "\uC77C\uC815\uC774\uB098 \uD560 \uC77C\uC5D0 \uC7A5\uC18C\uB97C \uC5F0\uACB0\uD558\uBA74 \uC790\uB3D9\uC73C\uB85C \uBAA8\uC785\uB2C8\uB2E4.",
   ledger: "\uAC00\uACC4\uBD80",
   todayUsed: "\uC624\uB298 \uC0AC\uC6A9",
-  noLedger: "\uC77C\uC815/\uD560 \uC77C\uC758 \uC9C0\uCD9C\uC774 \uC0DD\uAE30\uBA74 \uC790\uB3D9\uC73C\uB85C \uC9D1\uACC4\uB429\uB2C8\uB2E4.",
+  noLedger: "활동이나 계획에서 지출이 생기면 자동으로 집계됩니다.",
   health: "\uC6B4\uB3D9\u00B7\uBAB8 \uC0C1\uD0DC",
   todayWorkout: "\uC624\uB298 \uC6B4\uB3D9",
   noWorkout: "\uAE30\uB85D \uC5C6\uC74C",
@@ -137,6 +137,23 @@ function formatActivityTime(activity: LifeActivityRecord) {
   if (activity.isAllDay || !activity.startTime) return text.unknownTime;
   if (activity.startTime && activity.endTime) return `${activity.startTime}-${activity.endTime}`;
   return activity.startTime;
+}
+
+function getTimelineSortMinutes(timeLabel: string, kind: TimelineKind) {
+  const [hours, minutes] = timeLabel.slice(0, 5).split(":").map(Number);
+  if (Number.isFinite(hours) && Number.isFinite(minutes)) return hours * 60 + minutes;
+  const fallbackOrder: Record<TimelineKind, number> = {
+    schedule: 0,
+    task: 1,
+    event: 2,
+    activity: 3,
+    log: 4,
+    photo: 5,
+    expense: 6,
+    workout: 7,
+    weight: 8,
+  };
+  return 24 * 60 + fallbackOrder[kind];
 }
 
 function formatFileSize(sizeBytes?: number) {
@@ -322,7 +339,7 @@ export function TodayDashboard() {
           } satisfies TimelineItem,
         ]
       : []),
-  ];
+  ].sort((left, right) => getTimelineSortMinutes(left.timeLabel, left.kind) - getTimelineSortMinutes(right.timeLabel, right.kind));
 
   const lifeScore = todaySchedules.length + todayEvents.length + todayTasks.length + todayActivities.length + todayLogs.length + todayPhotos.length + todayExpenses.length + todayWorkouts.length;
   const plannedBlocks = todaySchedules.length + todayEvents.length + todayTasks.length;
@@ -349,22 +366,22 @@ export function TodayDashboard() {
             <span>{todayLabel}</span>
           </div>
         </div>
-        <Link className="header-action" href="/life/calendar">
+        <Link className="header-action" href="/life/activities">
           {text.openCalendar}
         </Link>
       </header>
 
       <div className="today-summary-grid today-signal-grid">
+        <SignalCard icon={<Activity aria-hidden size={20} />} label="오늘 복원도" value={coverageLabel} note={missingSignals.length > 0 ? `빠진 기록 · ${missingSignals.join(", ")}` : "오늘의 근거 기록이 균형 있게 쌓였어요"} />
         <SignalCard icon={<Sparkles aria-hidden size={20} />} label={text.todayDensity} value={isLoading ? text.loading : `${lifeScore}${text.count}`} note={`활동 ${todayActivities.length}${text.count} · ${todayLogs.length}${text.count} ${text.logs} · ${todayPhotos.length}${text.count} ${text.media}`} />
         <SignalCard icon={<CheckCircle2 aria-hidden size={20} />} label={text.todoProgress} value={`${completionRate}%`} note={`${completedCount}${text.count} ${text.done} · ${openTasks.length}${text.count} ${text.left}`} />
-        <SignalCard icon={<Activity aria-hidden size={20} />} label="오늘 복원도" value={coverageLabel} note={missingSignals.length > 0 ? `빠진 기록 · ${missingSignals.join(", ")}` : "오늘의 근거 기록이 균형 있게 쌓였어요"} />
         <SignalCard icon={<WalletCards aria-hidden size={20} />} label={text.todayExpense} value={todayExpenseTotal > 0 ? formatCurrency(todayExpenseTotal) : formatCurrency(0)} note={`${text.thisMonth} ${formatCurrency(monthExpenseTotal)}`} />
         <SignalCard icon={<MapPin aria-hidden size={20} />} label={text.todayPlace} value={`${places.length}${text.places}`} note={places[0]?.name ?? text.connectPlace} />
       </div>
 
       <section className="today-quick-actions" aria-label="오늘 빠른 입력">
+        <QuickAction href="/life/activities" icon={<Activity aria-hidden size={18} />} label="활동 기록" note="몇 시부터 어디서 뭘 했는지" />
         <QuickAction href="/life/calendar" icon={<CalendarDays aria-hidden size={18} />} label="계획 입력" note="일정·할일·이벤트" />
-        <QuickAction href="/life/activities" icon={<Activity aria-hidden size={18} />} label="실제 활동" note="몇 시부터 어디서 뭘 했는지" />
         <QuickAction href="/life/logs" icon={<NotebookPen aria-hidden size={18} />} label="하루기록" note="짧은 감상과 맥락" />
         <QuickAction href="/life/photos" icon={<Camera aria-hidden size={18} />} label="사진 추가" note="사건/활동의 증거" />
         <QuickAction href="/life/health" icon={<Dumbbell aria-hidden size={18} />} label="건강 기록" note="러닝·몸무게" />
