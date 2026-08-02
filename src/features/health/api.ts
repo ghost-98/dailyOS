@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { WeightRecord, WorkoutCondition, WorkoutSession, WorkoutType } from "@/types/domain";
 
@@ -17,6 +18,8 @@ type WorkoutRow = {
   type: WorkoutType;
   condition: WorkoutCondition;
   duration_minutes: number;
+  duration_seconds: number | null;
+  distance_km: number | string | null;
   memo: string | null;
 };
 
@@ -32,14 +35,7 @@ type WeightUpdate = Partial<Omit<WeightInsert, "user_id">>;
 type WorkoutUpdate = Partial<Omit<WorkoutInsert, "user_id">>;
 
 const weightColumns = "id,record_date,weight_kg,measured_fasted,muscle_mass_kg,body_fat_percent,memo";
-const workoutColumns = "id,workout_date,type,condition,duration_minutes,memo";
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
+const workoutColumns = "id,workout_date,type,condition,duration_minutes,duration_seconds,distance_km,memo";
 
 function toNumber(value: number | string | null) {
   if (value === null) return undefined;
@@ -65,6 +61,8 @@ function mapWorkoutRow(row: WorkoutRow): WorkoutSession {
     type: row.type,
     condition: row.condition,
     durationMinutes: row.duration_minutes,
+    durationSeconds: row.duration_seconds ?? undefined,
+    distanceKm: toNumber(row.distance_km),
     memo: row.memo ?? undefined,
   };
 }
@@ -99,6 +97,8 @@ function mapWorkoutInsert(session: WorkoutSession, userId: string): WorkoutInser
     type: session.type,
     condition: session.condition,
     duration_minutes: session.durationMinutes,
+    duration_seconds: session.durationSeconds ?? session.durationMinutes * 60,
+    distance_km: session.distanceKm ?? null,
     memo: session.memo ?? null,
   };
 }
@@ -109,13 +109,15 @@ function mapWorkoutUpdate(session: WorkoutSession): WorkoutUpdate {
     type: session.type,
     condition: session.condition,
     duration_minutes: session.durationMinutes,
+    duration_seconds: session.durationSeconds ?? session.durationMinutes * 60,
+    distance_km: session.distanceKm ?? null,
     memo: session.memo ?? null,
   };
 }
 
 export async function fetchWeightRecordsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -129,7 +131,7 @@ export async function fetchWeightRecordsFromDb() {
 
 export async function createWeightRecordInDb(record: WeightRecord) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -165,7 +167,7 @@ export async function deleteWeightRecordFromDb(id: string) {
 
 export async function fetchWorkoutSessionsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -180,7 +182,7 @@ export async function fetchWorkoutSessionsFromDb() {
 
 export async function createWorkoutSessionInDb(session: WorkoutSession) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase

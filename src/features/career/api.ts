@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { ApplicationEvent, ApplicationEventStage, CareerRecord, CareerTab } from "./data";
 import type {
@@ -105,13 +106,6 @@ const recordColumns = `
 const jobApplicationColumns = `
   id,company_name,posting_title,job_role,status,posting_url,source_file_path,source_file_name,memo
 `;
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 function emptyToNull(value?: string) {
   return value?.trim() ? value.trim() : null;
@@ -555,7 +549,7 @@ async function replaceApplicationEvents(record: CareerRecord, recordId: string, 
 
 export async function fetchCareerRecordsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -569,7 +563,7 @@ export async function fetchCareerRecordsFromDb() {
 
 export async function createCareerRecordInDb(record: CareerRecord) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -586,7 +580,7 @@ export async function createCareerRecordInDb(record: CareerRecord) {
 
 export async function updateCareerRecordInDb(record: CareerRecord) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -611,7 +605,7 @@ export async function deleteCareerRecordFromDb(id: string) {
 
 export async function fetchJobApplicationsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -663,7 +657,7 @@ export async function createJobApplicationFromExtraction({
   sourceFilePath?: string;
 }) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -731,7 +725,7 @@ export async function createManualJobApplicationInDb({
   memo,
 }: JobApplicationTemplatePayload) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -857,7 +851,7 @@ export async function deleteJobApplicationFromDb(applicationId: string) {
 
 export async function markJobApplicationAsApplied(application: JobApplicationBundle) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { error } = await supabase
@@ -900,7 +894,7 @@ export async function createJobApplicationStepInDb(
   },
 ) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const applications = await fetchJobApplicationsFromDb();
@@ -987,7 +981,7 @@ export async function createJobApplicationRequirementInDb(
   },
 ) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { error } = await supabase.from("job_application_requirements").insert({
@@ -1045,7 +1039,7 @@ export async function createJobApplicationCheckItemInDb(
   item: { category: JobApplicationCheckItem["category"]; title: string; dueAt?: string; memo?: string },
 ) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { error } = await supabase.from("job_application_check_items").insert({
@@ -1095,7 +1089,7 @@ export async function deleteJobApplicationCheckItemFromDb(applicationId: string,
 
 export async function uploadCertificateFileToDb(file: File, recordId: string, existingPath?: string) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "file";
@@ -1135,7 +1129,7 @@ export async function getJobPostingFileDownloadUrl(path: string) {
 
 export async function uploadJobPostingFileToDb(file: File) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "pdf";
@@ -1181,7 +1175,7 @@ export async function createAiExtractionDraftInDb({
   sourceFilePath?: string;
 }) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -1208,7 +1202,7 @@ export async function createAiExtractionDraftInDb({
 
 export async function applyLatestAiDraftToJobApplication(application: JobApplicationBundle) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId || !application.sourceFilePath) return null;
 
   const { data, error } = await supabase

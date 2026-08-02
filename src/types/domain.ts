@@ -22,9 +22,14 @@ export type TaskItem = {
   priority: TaskPriority;
   scheduledDate: string;
   dueDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
   completedAt?: string;
   deferredCount: number;
   memo?: string;
+  expenseAmount?: number;
+  companions?: string;
   place?: PlanPlace;
 };
 
@@ -48,6 +53,8 @@ export type WorkoutSession = {
   type: WorkoutType;
   condition: WorkoutCondition;
   durationMinutes: number;
+  durationSeconds?: number;
+  distanceKm?: number;
   memo?: string;
 };
 
@@ -60,6 +67,64 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
+  targetType: "schedule" | "todo" | "event" | "activity";
+  targetId: string;
+};
+
+export type LifeActivityRecord = {
+  id: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
+  title: string;
+  memo?: string;
+  category?: string;
+  food?: string;
+  expenseAmount?: number;
+  companions?: string;
+  placeName?: string;
+  placeAddress?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  sourceType?: "schedule" | "todo" | "event";
+  createdAt?: string;
+};
+
+export type DailyLogRecord = {
+  id: string;
+  date: string;
+  content: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  createdAt?: string;
+};
+
+export type LifePhotoRecord = {
+  id: string;
+  date: string;
+  fileName: string;
+  filePath: string;
+  fileUrl?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  caption?: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  takenAt?: string;
+  createdAt?: string;
+};
+
+export type LifeMediaUploadInput = {
+  file: File;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
 };
 
 export type PlaceProvider = "naver" | "manual";

@@ -22,6 +22,27 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { priorityLabels, requirementCategoryLabels, requirementCategoryOptions, statusOptions, tabDescriptions, tabLabels, tabRoutes } from "@/features/career/config";
+import {
+  compareCertificatesByAcquiredDate,
+  formatCertificateValue,
+  formatDisplayDate,
+  formatDraftRange,
+  formatJobStepRange,
+  getBadgeTone,
+  getCertificateExpiry,
+  getCompanyProcessStages,
+  getDefaultStatus,
+  getDefaultSubtitle,
+  getNextCareerStep,
+  getStatusOptions,
+  getSubtitleLabel,
+  getSubtitlePlaceholder,
+  getTitleLabel,
+  getTitlePlaceholder,
+  toDatetimeLocalValue,
+  toIsoFromDatetimeLocal,
+} from "@/features/career/utils";
 import {
   applyLatestAiDraftToJobApplication,
   createCareerRecordInDb,
@@ -70,66 +91,10 @@ import {
   type JobProcessStepType,
 } from "./job-model";
 
-const tabLabels: Record<CareerTab, string> = {
-  applied: "지원한 기업",
-  planned: "지원 예정",
-  certificates: "자격증",
-};
-
-const tabDescriptions: Record<CareerTab, string> = {
-  applied: "지원 이후의 전형 단계, 일정, 준비 항목을 관리합니다.",
-  planned: "관심 있는 공고를 보관하고 지원 여부를 결정합니다.",
-  certificates: "취득한 자격증, 등록번호, 발급기관, 증빙 파일을 관리합니다.",
-};
-
 const tabIcons = {
   applied: BriefcaseBusiness,
   planned: Target,
   certificates: FileBadge,
-};
-
-const priorityLabels = {
-  high: "높음",
-  normal: "보통",
-  low: "낮음",
-};
-
-const requirementCategoryLabels: Record<JobApplicationRequirement["category"], string> = {
-  eligibility: "지원자격",
-  document_evaluation: "서류평가",
-  language_score: "어학",
-  certificate_bonus: "자격증/가점",
-  preferred: "우대사항",
-  attachment_required: "필요 붙임",
-  document: "서류",
-  exam: "필기",
-  interview: "면접",
-  note: "메모",
-};
-
-const requirementCategoryOptions: Array<{ label: string; value: JobApplicationRequirement["category"] }> = [
-  { label: "지원자격", value: "eligibility" },
-  { label: "서류평가", value: "document_evaluation" },
-  { label: "어학", value: "language_score" },
-  { label: "자격증/가점", value: "certificate_bonus" },
-  { label: "우대사항", value: "preferred" },
-  { label: "필요 붙임", value: "attachment_required" },
-  { label: "서류", value: "document" },
-  { label: "필기", value: "exam" },
-  { label: "면접", value: "interview" },
-  { label: "메모", value: "note" },
-];
-
-const statusOptions: Record<CareerTab, string[]> = {
-  applied: ["지원중", "서류 대기", "필기 대기", "면접 대기", "결과 대기", "합격", "불합격", "마감"],
-  planned: ["지원 예정", "관심", "보류", "마감"],
-  certificates: ["취득", "응시예정", "만료"],
-};
-
-const tabRoutes: Record<CareerTab, string> = {
-  applied: "/career/applied",
-  planned: "/career/planned",
-  certificates: "/career/certificates",
 };
 
 type CareerSheetMode = "certificate" | "manual-job" | "posting-upload";
@@ -1946,66 +1911,6 @@ function renderTabIcon(tab: CareerTab) {
   return <Icon aria-hidden size={20} />;
 }
 
-function getBadgeTone(record: CareerRecord) {
-  if (record.tab === "certificates") return record.status === "만료" ? "muted" : record.status === "응시 예정" ? "amber" : "green";
-  if (record.status.includes("마감") || record.status.includes("준비")) return "amber";
-  return "muted";
-}
-
-function getDefaultSubtitle(tab: CareerTab) {
-  if (tab === "applied" || tab === "planned") return "직무 미정";
-  return "시행기관 미정";
-}
-
-function getDefaultStatus(tab: CareerTab) {
-  if (tab === "applied") return "지원 완료";
-  if (tab === "planned") return "준비 중";
-  return "취득";
-}
-
-function getStatusOptions(tab: CareerTab, currentStatus?: string) {
-  const options = statusOptions[tab];
-  if (!currentStatus || options.includes(currentStatus)) return options;
-  return [currentStatus, ...options];
-}
-
-function compareCertificatesByAcquiredDate(a: CareerRecord, b: CareerRecord) {
-  const dateDiff = getSortableDateValue(b.primaryDate) - getSortableDateValue(a.primaryDate);
-  if (dateDiff !== 0) return dateDiff;
-  return a.title.localeCompare(b.title, "ko");
-}
-
-function getSortableDateValue(value?: string) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return 0;
-  const time = new Date(`${value}T00:00:00`).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-function getCertificateExpiry(record: CareerRecord) {
-  if (record.expiresNever) return "평생";
-  return record.deadlineDate;
-}
-
-function getTitleLabel(tab: CareerTab) {
-  if (tab === "certificates") return "자격증명";
-  return "기업명";
-}
-
-function getTitlePlaceholder(tab: CareerTab) {
-  if (tab === "certificates") return "TOEIC 875점, OPIc IH, 정보처리기사 필기 합격";
-  return "한국전력공사";
-}
-
-function getSubtitleLabel(tab: CareerTab) {
-  if (tab === "certificates") return "시행기관";
-  return "직무 / 공고명";
-}
-
-function getSubtitlePlaceholder(tab: CareerTab) {
-  if (tab === "certificates") return "한국산업인력공단";
-  return "ICT / 신입 채용";
-}
-
 async function downloadCertificateFile(path?: string) {
   if (!path) return;
   const url = await getCertificateFileDownloadUrl(path);
@@ -2018,158 +1923,4 @@ async function openJobPostingFile(path?: string) {
   const url = await getJobPostingFileDownloadUrl(path);
   if (!url) return;
   window.open(url, "_blank", "noopener,noreferrer");
-}
-
-function formatDisplayDate(value?: string) {
-  if (!value) return "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const date = new Date(`${value}T00:00:00`);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function formatCertificateValue(label: string, value: string) {
-  if ((label.includes("취득일") || label.includes("유효기간")) && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return formatFullDate(value);
-  }
-
-  return value;
-}
-
-function formatFullDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
-}
-
-function getNextCareerStep(record: CareerRecord) {
-  const candidates: { label: string; date?: string }[] = [];
-
-  if (record.tab === "applied") {
-    candidates.push(
-      { label: "마감", date: record.deadlineDate },
-      { label: "시험", date: record.examDate },
-      { label: "면접", date: record.interviewDate },
-      { label: "결과", date: record.resultDate },
-      ...(record.applicationEvents ?? []).map((event) => ({
-        label: applicationEventStageLabels[event.stage],
-        date: event.date,
-      })),
-    );
-  }
-
-  if (record.tab === "planned") {
-    candidates.push({ label: "예상 채용", date: record.primaryDate });
-  }
-
-  if (record.tab === "certificates") {
-    candidates.push(...(record.expiresNever ? [] : [{ label: "만료", date: record.deadlineDate }]), { label: "취득", date: record.primaryDate });
-  }
-
-  const datedCandidates = candidates.filter((candidate): candidate is { label: string; date: string } => Boolean(candidate.date));
-  if (datedCandidates.length === 0) return null;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return (
-    datedCandidates
-      .map((candidate) => ({
-        ...candidate,
-        time: new Date(`${candidate.date}T00:00:00`).getTime(),
-      }))
-      .filter((candidate) => Number.isFinite(candidate.time) && candidate.time >= today.getTime())
-      .sort((a, b) => a.time - b.time)[0] ?? datedCandidates.sort((a, b) => b.date.localeCompare(a.date))[0]
-  );
-}
-
-function toDatetimeLocalValue(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-function toIsoFromDatetimeLocal(value?: string) {
-  if (!value) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toISOString();
-}
-
-function formatDraftRange(startAt?: string, endAt?: string) {
-  const start = formatDraftDateTime(startAt);
-  const end = formatDraftDateTime(endAt);
-  if (start && end && start !== end) return `${start} ~ ${end}`;
-  return start || end;
-}
-
-function formatDraftDateTime(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-    hour: value.includes("T") ? "2-digit" : undefined,
-    minute: value.includes("T") ? "2-digit" : undefined,
-  }).format(date);
-}
-
-function formatJobStepRange(step: JobApplicationStep) {
-  const start = formatDraftDateTime(step.startAt);
-  const end = formatDraftDateTime(step.endAt);
-  if (start && end && start !== end) return `${start} ~ ${end}`;
-  return start || end || "날짜 미정";
-}
-
-function getCompanyProcessStages(record: CareerRecord) {
-  const eventByStage = new Map<ApplicationEventStage, ApplicationEvent>();
-
-  for (const event of record.applicationEvents ?? []) {
-    if (!eventByStage.has(event.stage)) eventByStage.set(event.stage, event);
-  }
-
-  const stages = [
-    {
-      key: "application",
-      label: jobProcessStepLabels.application,
-      date: record.deadlineDate,
-      memo: undefined,
-    },
-    {
-      key: "document",
-      label: jobProcessStepLabels.document,
-      date: eventByStage.get("document")?.date ?? record.deadlineDate,
-      memo: eventByStage.get("document")?.memo,
-    },
-    {
-      key: "written",
-      label: jobProcessStepLabels.written,
-      date: eventByStage.get("written")?.date ?? record.examDate,
-      memo: eventByStage.get("written")?.memo,
-    },
-    {
-      key: "interview",
-      label: jobProcessStepLabels.interview,
-      date: eventByStage.get("interview")?.date ?? record.interviewDate,
-      memo: eventByStage.get("interview")?.memo,
-    },
-    {
-      key: "result",
-      label: jobProcessStepLabels.result,
-      date: record.resultDate,
-      memo: undefined,
-    },
-  ] satisfies { key: JobProcessStepType; label: string; date?: string; memo?: string }[];
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const nextDatedStage = stages
-    .filter((stage): stage is typeof stage & { date: string } => Boolean(stage.date))
-    .map((stage) => ({ ...stage, time: new Date(`${stage.date}T00:00:00`).getTime() }))
-    .filter((stage) => Number.isFinite(stage.time) && stage.time >= today.getTime())
-    .sort((a, b) => a.time - b.time)[0];
-
-  return stages.map((stage) => ({ ...stage, active: nextDatedStage ? stage.key === nextDatedStage.key : false }));
 }
