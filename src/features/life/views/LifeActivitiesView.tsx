@@ -1,33 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NotebookPen } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { formatDateKey } from "@/features/life/dateTime";
+import { formatDateKey, formatMinutesLabel, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import type { LifeActivityRecord } from "@/types/domain";
 
+export type LifeActivityDraft = {
+  date?: string;
+  endTime?: string;
+  title?: string;
+  startTime?: string;
+};
+
 const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
+const DEFAULT_CATEGORY = "기타";
 
 export function LifeActivitiesView({
   activities,
+  initialDraft,
   onDeleteActivity,
   onSaveActivity,
 }: {
   activities: LifeActivityRecord[];
+  initialDraft?: LifeActivityDraft;
   onDeleteActivity: (id: string) => Promise<void> | void;
   onSaveActivity: (activity: LifeActivityRecord) => Promise<void> | void;
 }) {
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
-  const [date, setDate] = useState(formatDateKey(new Date()));
-  const [category, setCategory] = useState("기타");
+  const [date, setDate] = useState(initialDraft?.date ?? formatDateKey(new Date()));
+  const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [hasTime, setHasTime] = useState(true);
-  const [hasEndTime, setHasEndTime] = useState(false);
-  const [startTime, setStartTime] = useState(getDefaultActivityTime());
-  const [endTime, setEndTime] = useState("");
-  const [title, setTitle] = useState("");
+  const [hasEndTime, setHasEndTime] = useState(Boolean(initialDraft?.endTime));
+  const [startTime, setStartTime] = useState(initialDraft?.startTime ?? getDefaultActivityTime());
+  const [endTime, setEndTime] = useState(initialDraft?.endTime ?? "");
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [placeName, setPlaceName] = useState("");
   const [placeAddress, setPlaceAddress] = useState("");
   const [companions, setCompanions] = useState("");
@@ -38,13 +48,29 @@ export function LifeActivitiesView({
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const selectedActivities = activities.filter((activity) => activity.date === date).sort((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"));
+
+  useEffect(() => {
+    if (!initialDraft) return;
+    setEditing(null);
+    setDate(initialDraft.date ?? formatDateKey(new Date()));
+    setHasTime(Boolean(initialDraft.startTime || initialDraft.endTime));
+    setHasEndTime(Boolean(initialDraft.endTime));
+    setStartTime(initialDraft.startTime ?? getDefaultActivityTime());
+    setEndTime(initialDraft.endTime ?? "");
+    setTitle(initialDraft.title ?? "");
+    setFormError("");
+  }, [initialDraft]);
+
+  const selectedActivities = useMemo(
+    () => activities.filter((activity) => activity.date === date).sort((left, right) => (left.startTime ?? "99:99").localeCompare(right.startTime ?? "99:99")),
+    [activities, date],
+  );
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
   const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
 
   const resetForm = () => {
     setEditing(null);
-    setCategory("기타");
+    setCategory(DEFAULT_CATEGORY);
     setHasTime(true);
     setHasEndTime(false);
     setStartTime(getDefaultActivityTime());
@@ -62,7 +88,7 @@ export function LifeActivitiesView({
   const editActivity = (activity: LifeActivityRecord) => {
     setEditing(activity);
     setDate(activity.date);
-    setCategory(activity.category ?? "기타");
+    setCategory(activity.category ?? DEFAULT_CATEGORY);
     setHasTime(Boolean(activity.startTime));
     setHasEndTime(Boolean(activity.endTime));
     setStartTime(activity.startTime ?? getDefaultActivityTime());
@@ -74,6 +100,26 @@ export function LifeActivitiesView({
     setFood(activity.food ?? "");
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
+    setFormError("");
+  };
+
+  const startNow = () => {
+    setDate(formatDateKey(new Date()));
+    setHasTime(true);
+    setHasEndTime(false);
+    setStartTime(getDefaultActivityTime());
+    setEndTime("");
+    setMessage("지금 시작하는 활동으로 맞췄어요.");
+  };
+
+  const finishRecent = () => {
+    const endMinutes = parseTimeToMinutes(getDefaultActivityTime()) ?? 0;
+    setDate(formatDateKey(new Date()));
+    setHasTime(true);
+    setHasEndTime(true);
+    setStartTime(formatMinutesLabel(Math.max(0, endMinutes - 60)));
+    setEndTime(formatMinutesLabel(endMinutes));
+    setMessage("최근 1시간 활동으로 맞췄어요.");
   };
 
   const saveActivity = async () => {
@@ -101,6 +147,9 @@ export function LifeActivitiesView({
         food: food.trim() || undefined,
         expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
         memo: memo.trim() || undefined,
+        sourceId: editing?.sourceId,
+        sourceTitle: editing?.sourceTitle,
+        sourceType: editing?.sourceType,
       });
       setMessage(editing ? "활동 기록을 수정했어요." : "활동 기록을 저장했어요.");
       resetForm();
@@ -130,7 +179,7 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="dailyOS의 메인 입력입니다. 실제로 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 뭘 먹고 얼마를 썼는지 남깁니다." />
+      <LifeTabHeading title="활동 기록" description="dailyOS의 핵심 입력입니다. 실제로 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남깁니다." />
       <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
           <div className="section-heading">
@@ -138,13 +187,17 @@ export function LifeActivitiesView({
               <p className="eyebrow">Core Life Block</p>
               <h2>{editing ? "활동 수정" : "활동 추가"}</h2>
             </div>
-            {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}
+            <div className="life-record-actions">
+              <button onClick={startNow} type="button">지금 시작</button>
+              <button onClick={finishRecent} type="button">방금 끝남</button>
+              {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}
+            </div>
           </div>
 
           <div className="event-form-card event-form-card--title">
             <label>
               <span>무엇을 했나</span>
-              <input placeholder="예: 점심 먹고 성수동 산책" value={title} onChange={(event) => setTitle(event.target.value)} />
+              <input placeholder="예: 점심 먹고 산책, 프로젝트 작업" value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
           </div>
 
@@ -162,7 +215,7 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>날짜와 시간</strong>
-            <span>공백 없는 하루 복원의 핵심입니다.</span>
+            <span>공백 없는 하루 복원을 위해 시작 시간만이라도 남겨두는 것을 추천합니다.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <label className="event-form-row event-form-row--field schedule-field">
@@ -183,20 +236,29 @@ export function LifeActivitiesView({
               <span>시간 옵션</span>
               <div className="schedule-option-toggle-group">
                 <label className="schedule-option-toggle">
-                  <input checked={!hasTime} onChange={(event) => {
-                    setHasTime(!event.target.checked);
-                    if (event.target.checked) {
-                      setHasEndTime(false);
-                      setEndTime("");
-                    }
-                  }} type="checkbox" />
+                  <input
+                    checked={!hasTime}
+                    type="checkbox"
+                    onChange={(event) => {
+                      setHasTime(!event.target.checked);
+                      if (event.target.checked) {
+                        setHasEndTime(false);
+                        setEndTime("");
+                      }
+                    }}
+                  />
                   시간 미정
                 </label>
                 <label className="schedule-option-toggle">
-                  <input checked={hasEndTime} disabled={!hasTime} onChange={(event) => {
-                    setHasEndTime(event.target.checked);
-                    if (!event.target.checked) setEndTime("");
-                  }} type="checkbox" />
+                  <input
+                    checked={hasEndTime}
+                    disabled={!hasTime}
+                    type="checkbox"
+                    onChange={(event) => {
+                      setHasEndTime(event.target.checked);
+                      if (!event.target.checked) setEndTime("");
+                    }}
+                  />
                   종료시간 설정
                 </label>
               </div>
@@ -205,7 +267,7 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>장소와 사람</strong>
-            <span>어디서 누구와 있었는지 남깁니다.</span>
+            <span>어디서 누구와 있었는지를 함께 저장합니다.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
@@ -224,7 +286,7 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>먹은 것과 지출</strong>
-            <span>활동에서 발생한 소비도 가계부로 이어집니다.</span>
+            <span>활동에서 발생한 소비는 가계부로 자동 연결됩니다.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
@@ -237,7 +299,7 @@ export function LifeActivitiesView({
             </label>
             <label className="event-form-row event-form-row--field schedule-field">
               <span>메모</span>
-              <textarea placeholder="짧은 맥락이나 감정" value={memo} onChange={(event) => setMemo(event.target.value)} />
+              <textarea placeholder="지금의 맥락이나 감정" value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
           </div>
 
@@ -258,7 +320,7 @@ export function LifeActivitiesView({
           <div className="life-activity-day-summary">
             <article>
               <span>기록 시간</span>
-              <strong>{selectedCoveredMinutes > 0 ? `${Math.round(selectedCoveredMinutes / 60 * 10) / 10}시간` : "-"}</strong>
+              <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
             </article>
             <article>
               <span>활동 지출</span>
@@ -266,24 +328,34 @@ export function LifeActivitiesView({
             </article>
             <article>
               <span>연결 밀도</span>
-              <strong>{selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo).length}/{selectedActivities.length}</strong>
+              <strong>{selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length}/{selectedActivities.length}</strong>
             </article>
           </div>
-          {selectedActivities.length > 0 ? selectedActivities.map((activity) => (
-            <article className="life-activity-item" key={activity.id}>
-              <div>
-                <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
-                <strong>{activity.title}</strong>
-                <p>{[activity.placeName, activity.companions ? `함께 · ${activity.companions}` : null, activity.food ? `음식 · ${activity.food}` : null, activity.expenseAmount ? formatWon(activity.expenseAmount) : null].filter(Boolean).join(" · ")}</p>
-              </div>
-              <div className="life-record-actions">
-                <button onClick={() => editActivity(activity)} type="button">수정</button>
-                <button disabled={deletingActivityId === activity.id} onClick={() => void deleteActivity(activity)} type="button">
-                  {deletingActivityId === activity.id ? "삭제 중" : "삭제"}
-                </button>
-              </div>
-            </article>
-          )) : (
+          {selectedActivities.length > 0 ? (
+            selectedActivities.map((activity) => (
+              <article className="life-activity-item" key={activity.id}>
+                <div>
+                  <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
+                  <strong>{activity.title}</strong>
+                  <p>
+                    {[
+                      activity.sourceTitle ? `출처 · ${activity.sourceTitle}` : null,
+                      activity.placeName,
+                      activity.companions ? `함께 · ${activity.companions}` : null,
+                      activity.food ? `식사 · ${activity.food}` : null,
+                      activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
+                    ].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                <div className="life-record-actions">
+                  <button onClick={() => editActivity(activity)} type="button">수정</button>
+                  <button disabled={deletingActivityId === activity.id} onClick={() => void deleteActivity(activity)} type="button">
+                    {deletingActivityId === activity.id ? "삭제 중" : "삭제"}
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
             <div className="life-map-empty life-map-empty--compact">
               <NotebookPen aria-hidden size={28} />
               <strong>이 날짜의 활동 기록이 없습니다.</strong>
@@ -299,7 +371,7 @@ export function LifeActivitiesView({
 function getDefaultActivityTime() {
   const now = new Date();
   now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
-  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  return formatMinutesLabel(now.getHours() * 60 + now.getMinutes());
 }
 
 function getLifeActionErrorMessage(error: unknown, fallback: string) {

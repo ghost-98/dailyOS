@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -30,7 +31,7 @@ import {
   uploadLifePhotosToDb,
 } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import { expandDateRange, formatDateKey, formatFullDate, getMonthDays, isDateInRange } from "@/features/life/dateTime";
+import { expandDateRange, formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, isDateInRange } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import {
   buildLifeContextBundles,
@@ -45,6 +46,7 @@ import type { LifeContextBundle, LifeSearchItem } from "@/features/life/insights
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 import { LifeHomeView } from "@/features/life/LifeHomeView";
 import { LifeActivitiesView } from "@/features/life/views/LifeActivitiesView";
+import type { LifeActivityDraft } from "@/features/life/views/LifeActivitiesView";
 import { LifeHealthView } from "@/features/life/views/LifeHealthView";
 import { LifeLogsView } from "@/features/life/views/LifeLogsView";
 import { LifePhotosView } from "@/features/life/views/LifePhotosView";
@@ -67,12 +69,13 @@ import { buildDayGapItems, buildDayReconstructionItems, formatActivityTime, form
 import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 type LifeViewProps = {
+  activityDraft?: LifeActivityDraft;
   initialDate?: string;
   mode: LifeViewMode;
 };
 
-export function LifeView({ initialDate, mode }: LifeViewProps) {
-  return <div className="life-page">{mode === "home" ? <LifeHomeView /> : mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
+export function LifeView({ activityDraft, initialDate, mode }: LifeViewProps) {
+  return <div className="life-page">{mode === "home" ? <LifeHomeView /> : mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} activityDraft={activityDraft} initialDate={initialDate} />}</div>;
 }
 
 type LifeDataSnapshot = {
@@ -145,7 +148,7 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
   };
 }
 
-function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode; initialDate?: string }) {
+function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab: LifeDataMode; activityDraft?: LifeActivityDraft; initialDate?: string }) {
   const router = useRouter();
   const [reportDate, setReportDate] = useState(initialDate ?? formatDateKey(new Date()));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -333,7 +336,7 @@ function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode;
       ) : activeTab === "ask" ? (
         <LifeAskView activities={activities} dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "activities" ? (
-        <LifeActivitiesView activities={activities} onDeleteActivity={deleteActivity} onSaveActivity={saveActivity} />
+        <LifeActivitiesView activities={activities} initialDraft={activityDraft} onDeleteActivity={deleteActivity} onSaveActivity={saveActivity} />
       ) : activeTab === "logs" ? (
         <LifeLogsView activities={activities} logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onUpdateLog={updateDailyLog} />
       ) : activeTab === "photos" ? (
@@ -470,6 +473,14 @@ function LifeReportView({
                     <b>{item.label}</b>
                     <strong>{item.title}</strong>
                     {item.description ? <p>{item.description}</p> : null}
+                    {item.tone === "gap" && typeof item.startMinutes === "number" && typeof item.endMinutes === "number" ? (
+                      <Link
+                        className="empty-dashboard-link"
+                        href={`/life/activities?date=${date}&start=${formatMinutesLabel(item.startMinutes)}&end=${formatMinutesLabel(item.endMinutes)}&title=${encodeURIComponent("빈 시간 기록")}`}
+                      >
+                        활동으로 채우기
+                      </Link>
+                    ) : null}
                   </div>
                 </article>
               ))}

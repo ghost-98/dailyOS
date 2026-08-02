@@ -17,6 +17,9 @@ type LifeActivityRow = {
   companions: string | null;
   place_name: string | null;
   place_address: string | null;
+  source_id: string | null;
+  source_title: string | null;
+  source_type: "schedule" | "todo" | "event" | null;
   created_at: string;
 };
 
@@ -48,7 +51,7 @@ type LifePhotoRow = {
   created_at: string;
 };
 
-const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,created_at";
+const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,source_type,source_id,source_title,created_at";
 const dailyLogColumns = "id,log_date,content,linked_target_id,linked_target_title,linked_target_type,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,created_at";
 
@@ -126,6 +129,9 @@ function mapLifeActivityRow(row: LifeActivityRow): LifeActivityRecord {
     companions: row.companions ?? undefined,
     placeName: row.place_name ?? undefined,
     placeAddress: row.place_address ?? undefined,
+    sourceId: row.source_id ?? undefined,
+    sourceTitle: row.source_title ?? undefined,
+    sourceType: row.source_type ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -144,6 +150,9 @@ function mapLifeActivityToPayload(activity: LifeActivityRecord) {
     companions: activity.companions?.trim() || null,
     place_name: activity.placeName?.trim() || null,
     place_address: activity.placeAddress?.trim() || null,
+    source_id: activity.sourceId ?? null,
+    source_title: activity.sourceTitle?.trim() || null,
+    source_type: activity.sourceType ?? null,
   };
 }
 

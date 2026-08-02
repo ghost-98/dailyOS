@@ -85,6 +85,9 @@ export type LifeActivityRecord = {
   companions?: string;
   placeName?: string;
   placeAddress?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  sourceType?: "schedule" | "todo" | "event";
   createdAt?: string;
 };
 

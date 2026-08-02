@@ -247,12 +247,15 @@ export function CalendarView({
         endTime: event.isAllDay ? undefined : event.endTime,
         isAllDay: event.isAllDay,
         title: event.title,
-        category: event.type === "event" ? "기타" : "작업",
+        category: event.type === "event" ? "이벤트" : "일정",
         companions: event.companions,
         expenseAmount: event.expenseAmount,
         memo: event.meta ? `${event.meta} · ${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록` : `${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록`,
         placeAddress: event.place?.address,
         placeName: event.place?.name,
+        sourceId: event.id,
+        sourceTitle: event.title,
+        sourceType: targetType,
       });
 
       if (event.expenseAmount) {
@@ -284,12 +287,15 @@ export function CalendarView({
         endTime: task.isAllDay ? undefined : task.endTime,
         isAllDay: task.isAllDay,
         title: task.title,
-        category: "작업",
+        category: "할 일",
         companions: task.companions,
         expenseAmount: task.expenseAmount,
         memo: task.memo ? `${task.memo} · 할 일에서 활동으로 기록` : "할 일에서 활동으로 기록",
         placeAddress: task.place?.address,
         placeName: task.place?.name,
+        sourceId: task.id,
+        sourceTitle: task.title,
+        sourceType: "todo",
       });
 
       const nextTask = {

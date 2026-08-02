@@ -197,6 +197,9 @@ create table if not exists public.life_activities (
   companions text,
   place_name text,
   place_address text,
+  source_type text check (source_type is null or source_type in ('schedule', 'todo', 'event')),
+  source_id text,
+  source_title text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -211,7 +214,10 @@ alter table public.life_activities
   add column if not exists expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   add column if not exists companions text,
   add column if not exists place_name text,
-  add column if not exists place_address text;
+  add column if not exists place_address text,
+  add column if not exists source_type text check (source_type is null or source_type in ('schedule', 'todo', 'event')),
+  add column if not exists source_id text,
+  add column if not exists source_title text;
 
 alter table public.daily_logs
   add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
@@ -544,6 +550,7 @@ create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date)
 create index if not exists calendar_events_user_date_idx on public.calendar_events(user_id, event_date);
 create index if not exists calendar_events_user_type_date_idx on public.calendar_events(user_id, type, event_date);
 create index if not exists life_activities_user_date_idx on public.life_activities(user_id, activity_date, start_time, created_at desc);
+create index if not exists life_activities_user_source_idx on public.life_activities(user_id, source_type, source_id);
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);

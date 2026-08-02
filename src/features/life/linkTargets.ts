@@ -3,12 +3,20 @@ import type { LifeActivityRecord, LifePhotoRecord, TaskItem } from "@/types/doma
 
 export type LifeLinkedTarget = { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" };
 
+export type LifeLinkedTargetOption = {
+  id: string;
+  key: string;
+  label: string;
+  title: string;
+  type: LifeLinkedTarget["type"];
+};
+
 export function getPhotoLinkedTargetOptions(
   date: string,
   events: CalendarEvent[],
   tasks: TaskItem[],
   activities: LifeActivityRecord[],
-): Array<{ id: string; key: string; label: string; title: string; type: LifeLinkedTarget["type"] }> {
+): LifeLinkedTargetOption[] {
   return [
     ...activities
       .filter((activity) => activity.date === date)

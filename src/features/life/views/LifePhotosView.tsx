@@ -5,15 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import { ImagePlus } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
+import type { CalendarEvent } from "@/features/calendar/data";
+import { formatDateKey, formatFullDate, parseTimeToMinutes } from "@/features/life/dateTime";
 import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features/life/linkTargets";
-import type { LifeLinkedTarget } from "@/features/life/linkTargets";
+import type { LifeLinkedTarget, LifeLinkedTargetOption } from "@/features/life/linkTargets";
 import { createLifeMediaPreview, formatMediaMeta, formatStoredMediaMeta, getMediaFigureStyle } from "@/features/life/media";
 import type { LifeMediaPreview } from "@/features/life/media";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { getLifePhotoErrorDebugInfo, getLifePhotoUploadErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { CalendarEvent } from "@/features/calendar/data";
 import type { LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, TaskItem } from "@/types/domain";
 
 export function LifePhotosView({
@@ -40,6 +40,10 @@ export function LifePhotosView({
   const selectedPhotos = photos.filter((photo) => photo.date === date);
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
   const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
+  const suggestedTarget = useMemo(
+    () => (linkedTargetKey ? null : getSuggestedPhotoTarget(date, previews, activities, events, tasks, linkedTargetOptions)),
+    [activities, date, events, linkedTargetKey, linkedTargetOptions, previews, tasks],
+  );
 
   useEffect(() => () => previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl)), [previews]);
 
@@ -110,7 +114,7 @@ export function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="사진" description="사진과 영상은 활동에 먼저 연결하고, 필요하면 일정·할일·이벤트나 날짜에만 연결합니다. 사진 탭과 하루 리포트에서 함께 조회됩니다." />
+      <LifeTabHeading title="사진" description="사진과 영상은 활동을 증명하는 기억 조각입니다. 촬영 시간과 기록 시간을 바탕으로 활동/일정/할 일에 연결해 하루 리포트와 검색에서 함께 조회합니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
@@ -127,21 +131,26 @@ export function LifePhotosView({
               <option value="">날짜에만 연결</option>
               {linkedTargetOptions.map((option) => (
                 <option key={option.key} value={option.key}>
-                  {option.label}
+                  {option.label} · {option.title}
                 </option>
               ))}
             </select>
           </label>
+          {suggestedTarget ? (
+            <button className="life-capture-secondary" onClick={() => setLinkedTargetKey(suggestedTarget.key)} type="button">
+              추천 연결: {suggestedTarget.label} · {suggestedTarget.title}
+            </button>
+          ) : null}
           <label className="life-photo-dropzone">
             <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
             <ImagePlus aria-hidden size={24} />
             <strong>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
-            <span>선택한 날짜의 사진 기록으로 저장됩니다.</span>
+            <span>선택한 파일의 크기, 비율, 촬영 추정 시간을 미리 확인합니다.</span>
           </label>
           {previews.length > 0 ? (
             <div className="life-media-preview-grid">
               {previews.map((preview) => (
-                <figure key={preview.id}>
+                <figure key={preview.id} style={getMediaFigureStyle(preview)}>
                   {preview.mimeType.startsWith("video/") ? (
                     <video muted playsInline src={preview.objectUrl} />
                   ) : (
@@ -198,7 +207,7 @@ export function LifePhotosView({
           ) : (
             <div className="life-map-empty life-map-empty--compact">
               <ImagePlus aria-hidden size={28} />
-              <strong>이날 업로드한 사진이 없습니다.</strong>
+              <strong>이 날짜에 업로드한 사진이 없습니다.</strong>
               <p>왼쪽에서 사진이나 영상을 선택하면 이곳에서 조회할 수 있습니다.</p>
             </div>
           )}
@@ -206,4 +215,53 @@ export function LifePhotosView({
       </div>
     </div>
   );
+}
+
+function getSuggestedPhotoTarget(
+  date: string,
+  previews: LifeMediaPreview[],
+  activities: LifeActivityRecord[],
+  events: CalendarEvent[],
+  tasks: TaskItem[],
+  options: LifeLinkedTargetOption[],
+) {
+  const mediaMinutes = previews
+    .map((preview) => {
+      const takenAt = new Date(preview.lastModified);
+      if (formatDateKey(takenAt) !== date) return undefined;
+      return takenAt.getHours() * 60 + takenAt.getMinutes();
+    })
+    .filter((value): value is number => typeof value === "number");
+
+  if (mediaMinutes.length === 0) return null;
+
+  const candidates = [
+    ...activities
+      .filter((activity) => activity.date === date)
+      .map((activity) => ({ end: parseTimeToMinutes(activity.endTime), key: `activity:${activity.id}`, start: parseTimeToMinutes(activity.startTime) })),
+    ...events
+      .filter((event) => event.date <= date && (event.endDate ?? event.date) >= date)
+      .map((event) => ({ end: parseTimeToMinutes(event.endTime), key: `${event.type}:${event.id}`, start: parseTimeToMinutes(event.time) })),
+    ...tasks
+      .filter((task) => task.scheduledDate <= date && (task.dueDate ?? task.scheduledDate) >= date)
+      .map((task) => ({ end: parseTimeToMinutes(task.endTime), key: `todo:${task.id}`, start: parseTimeToMinutes(task.startTime) })),
+  ].filter((candidate) => typeof candidate.start === "number");
+
+  const exactCandidate = candidates.find((candidate) =>
+    mediaMinutes.some((minute) => {
+      const end = typeof candidate.end === "number" ? candidate.end : candidate.start! + 90;
+      return minute >= candidate.start! && minute <= end;
+    }),
+  );
+  if (exactCandidate) return options.find((option) => option.key === exactCandidate.key) ?? null;
+
+  const nearestCandidate = candidates
+    .map((candidate) => ({
+      ...candidate,
+      distance: Math.min(...mediaMinutes.map((minute) => Math.abs(minute - candidate.start!))),
+    }))
+    .filter((candidate) => candidate.distance <= 120)
+    .sort((left, right) => left.distance - right.distance)[0];
+
+  return nearestCandidate ? options.find((option) => option.key === nearestCandidate.key) ?? null : null;
 }

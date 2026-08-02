@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatContextMeta } from "@/features/life/insights";
-import { formatWon } from "@/features/life/formatters";
 import { formatMinutesLabel, parseTimeToMinutes } from "@/features/life/dateTime";
+import { formatWon } from "@/features/life/formatters";
 import type { DailyLogRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type LifeDayReconstructionItem = {
@@ -15,10 +15,10 @@ export type LifeDayReconstructionItem = {
   tone: "plan" | "activity" | "record" | "health" | "gap";
 };
 
-
 export function formatRunDuration(durationSeconds: number) {
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = Math.round(durationSeconds % 60);
+  if (minutes <= 0) return `${seconds}초`;
   return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
 }
 
@@ -47,14 +47,21 @@ export function buildDayReconstructionItems(
       description: [task.memo, task.place?.name, task.companions ? `함께 · ${task.companions}` : null, task.expenseAmount ? formatWon(task.expenseAmount) : null].filter(Boolean).join(" · "),
       endMinutes: parseTimeToMinutes(task.endTime),
       id: `task-${task.id}`,
-      label: "할일",
+      label: "할 일",
       startMinutes: parseTimeToMinutes(task.startTime),
       timeLabel: formatContextMeta(date, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions) || "시간 미정",
       title: task.title,
       tone: "plan" as const,
     })),
     ...activities.map((activity) => ({
-      description: [activity.placeName, activity.companions ? `함께 · ${activity.companions}` : null, activity.food ? `음식 · ${activity.food}` : null, activity.expenseAmount ? formatWon(activity.expenseAmount) : null, activity.memo].filter(Boolean).join(" · "),
+      description: [
+        activity.sourceTitle ? `출처 · ${activity.sourceTitle}` : null,
+        activity.placeName,
+        activity.companions ? `함께 · ${activity.companions}` : null,
+        activity.food ? `먹은 것 · ${activity.food}` : null,
+        activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
+        activity.memo,
+      ].filter(Boolean).join(" · "),
       endMinutes: parseTimeToMinutes(activity.endTime),
       id: `activity-${activity.id}`,
       label: activity.category ?? "활동",
@@ -118,7 +125,7 @@ export function buildDayGapItems(items: LifeDayReconstructionItem[]): LifeDayRec
     const nextStart = timedItems[index].startMinutes!;
     if (nextStart - previousEnd >= 90) {
       gaps.push({
-        description: "이 구간에 무엇을 했는지 활동기록으로 보강하면 하루 DB가 촘촘해집니다.",
+        description: "이 구간에 무엇을 했는지 활동 기록으로 보강하면 하루 DB가 더 촘촘해집니다.",
         endMinutes: nextStart,
         id: `gap-${previousEnd}-${nextStart}`,
         label: "빈 시간",
@@ -150,4 +157,3 @@ export function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" 
   if (activity.isAllDay || !activity.startTime) return "시간 미정";
   return activity.endTime ? `${activity.startTime}-${activity.endTime}` : activity.startTime;
 }
-
