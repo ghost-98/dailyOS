@@ -46,12 +46,21 @@ type LifeViewProps = {
 
 type LifeCalendarTab = Exclude<LifeViewMode, "home" | "map">;
 
+type LifePlaceRef = {
+  address?: string;
+  category?: string;
+  latitude?: number;
+  longitude?: number;
+  name: string;
+  providerPlaceId?: string;
+};
+
 type PlaceTimelineItem = {
   date: string;
   id: string;
-  kind: "schedule" | "task" | "event";
+  kind: "schedule" | "task" | "event" | "activity";
   meta: string;
-  place: PlanPlace;
+  place: LifePlaceRef;
   title: string;
 };
 
@@ -65,6 +74,7 @@ type LifeMediaPreview = LifeMediaUploadInput & {
 };
 
 const kindLabels: Record<PlaceTimelineItem["kind"], string> = {
+  activity: "활동",
   schedule: "일정",
   task: "할 일",
   event: "이벤트",
@@ -2636,6 +2646,7 @@ function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAl
 }
 
 function LifePlacesView() {
+  const [activities, setActivities] = useState<LifeActivityRecord[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -2646,11 +2657,12 @@ function LifePlacesView() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
-      .then(([dbEvents, dbTasks]) => {
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb(), fetchLifeActivitiesFromDb()])
+      .then(([dbEvents, dbTasks, dbActivities]) => {
         if (!isMounted) return;
         setEvents(dbEvents ?? []);
         setTasks(dbTasks ?? []);
+        setActivities(dbActivities ?? []);
       })
       .catch((error) => console.error("Failed to load life place data from Supabase", error))
       .finally(() => {
@@ -2664,22 +2676,28 @@ function LifePlacesView() {
 
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const placesByDate = useMemo(() => {
-    const grouped = new Map<string, PlanPlace[]>();
+    const grouped = new Map<string, LifePlaceRef[]>();
     for (const event of events) {
       if (!event.place) continue;
       for (const date of expandDateRange(event.date, event.endDate)) {
-        grouped.set(date, uniquePlanPlaces([...(grouped.get(date) ?? []), event.place]));
+        grouped.set(date, uniqueLifePlaceRefs([...(grouped.get(date) ?? []), event.place]));
       }
     }
     for (const task of tasks) {
       if (!task.place) continue;
       for (const date of expandDateRange(task.scheduledDate, task.dueDate)) {
-        grouped.set(date, uniquePlanPlaces([...(grouped.get(date) ?? []), task.place]));
+        grouped.set(date, uniqueLifePlaceRefs([...(grouped.get(date) ?? []), task.place]));
       }
     }
+    for (const activity of activities) {
+      const place = getActivityPlaceRef(activity);
+      if (!place) continue;
+      grouped.set(activity.date, uniqueLifePlaceRefs([...(grouped.get(activity.date) ?? []), place]));
+    }
     return grouped;
-  }, [events, tasks]);
+  }, [activities, events, tasks]);
   const selectedPlaces = placesByDate.get(selectedDate) ?? [];
+  const selectedMappablePlaces = selectedPlaces.filter(hasPlanPlaceCoordinates);
 
   const moveMonth = (direction: -1 | 1) => {
     const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
@@ -2689,7 +2707,7 @@ function LifePlacesView() {
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="장소" description="일정과 할 일에 연결된 장소를 날짜별 동선으로 확인하세요." />
+      <LifeTabHeading title="장소" description="일정, 할 일, 활동에 연결된 장소를 날짜별 동선으로 확인하세요." />
 
       <div className="life-places-view">
         <SectionCard className="calendar-board life-places-calendar">
@@ -2750,13 +2768,28 @@ function LifePlacesView() {
             <strong className="life-places-count">{selectedPlaces.length}곳</strong>
           </div>
 
-          <SelectedDatePlacesMap places={selectedPlaces} />
+          {selectedMappablePlaces.length > 0 ? (
+            <SelectedDatePlacesMap places={selectedMappablePlaces} />
+          ) : selectedPlaces.length > 0 ? (
+            <div className="schedule-date-map schedule-date-map--empty">
+              <button className="schedule-date-map__toggle" type="button">
+                <span>
+                  <MapPin aria-hidden size={18} />
+                  지도 연결 전 장소
+                </span>
+                <strong>{selectedPlaces.length}곳</strong>
+              </button>
+              <p>활동기록의 장소는 아직 좌표가 없어 목록으로만 보여줍니다. 나중에 장소 보관함과 연결하면 지도에도 올릴 수 있습니다.</p>
+            </div>
+          ) : (
+            <SelectedDatePlacesMap places={[]} />
+          )}
 
           {selectedPlaces.length > 0 ? (
             <div className="life-place-card__items">
               {selectedPlaces.map((place) => (
-                <article className="life-place-event" key={`${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`}>
-                  <span>장소</span>
+                <article className="life-place-event" key={`${place.providerPlaceId ?? ""}-${place.name}-${place.latitude ?? "text"}-${place.longitude ?? "only"}`}>
+                  <span>{hasPlanPlaceCoordinates(place) ? "지도 장소" : "텍스트 장소"}</span>
                   <div>
                     <strong>{place.name}</strong>
                     <p>{place.address || place.category || "주소 정보 없음"}</p>
@@ -2768,7 +2801,7 @@ function LifePlacesView() {
             <div className="life-map-empty life-map-empty--compact">
               <MapPin aria-hidden size={28} />
               <strong>{isLoading ? "장소를 불러오는 중입니다." : "이날 연결된 장소가 없습니다."}</strong>
-              <p>사건 탭에서 일정이나 할 일에 장소를 추가하면 이곳에 날짜별 장소가 모입니다.</p>
+              <p>일정, 할 일, 활동기록에 장소를 추가하면 이곳에 날짜별 장소가 모입니다.</p>
             </div>
           )}
         </SectionCard>
@@ -2800,6 +2833,7 @@ function LifeTabHeading({ description, title }: { description: string; title: st
 }
 
 function LifeMapView() {
+  const [activities, setActivities] = useState<LifeActivityRecord[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -2810,11 +2844,12 @@ function LifeMapView() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb(), fetchExpenseRecordsFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
-      .then(([dbEvents, dbTasks, dbExpenses, dbWeights, dbWorkouts]) => {
+    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb(), fetchLifeActivitiesFromDb(), fetchExpenseRecordsFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
+      .then(([dbEvents, dbTasks, dbActivities, dbExpenses, dbWeights, dbWorkouts]) => {
         if (!isMounted) return;
         setEvents(dbEvents ?? []);
         setTasks(dbTasks ?? []);
+        setActivities(dbActivities ?? []);
         setExpenses(dbExpenses ?? []);
         setWeights(dbWeights ?? []);
         setWorkouts(dbWorkouts ?? []);
@@ -2829,9 +2864,9 @@ function LifeMapView() {
     };
   }, []);
 
-  const timelineItems = useMemo(() => buildPlaceTimeline(events, tasks), [events, tasks]);
+  const timelineItems = useMemo(() => buildPlaceTimeline(events, tasks, activities), [activities, events, tasks]);
   const groups = useMemo(() => groupTimelineByPlace(timelineItems), [timelineItems]);
-  const unlinkedCount = expenses.length + weights.length + workouts.length;
+  const unlinkedCount = expenses.length + weights.length + workouts.length + activities.filter((activity) => !activity.placeName).length;
 
   return (
     <div className="life-map-view">
@@ -2839,7 +2874,7 @@ function LifeMapView() {
         <div>
           <MapPin aria-hidden size={22} />
           <h2>장소축 라이프</h2>
-          <p>장소가 연결된 일정과 할 일을 모아서 어디에서 무엇이 있었는지 확인합니다.</p>
+          <p>장소가 연결된 일정, 할 일, 활동을 모아서 어디에서 무엇이 있었는지 확인합니다.</p>
         </div>
       </section>
 
@@ -2847,12 +2882,12 @@ function LifeMapView() {
         <article>
           <span>장소 연결됨</span>
           <strong>{timelineItems.length}건</strong>
-          <p>일정, 이벤트, 할 일</p>
+          <p>일정, 이벤트, 할 일, 활동</p>
         </article>
         <article>
           <span>장소 연결 필요</span>
           <strong>{unlinkedCount}건</strong>
-          <p>가계부, 운동, 몸무게</p>
+          <p>장소 없는 활동, 가계부, 운동, 몸무게</p>
         </article>
       </section>
 
@@ -2886,14 +2921,14 @@ function LifeMapView() {
         <SectionCard className="life-map-empty">
           <MapPin aria-hidden size={32} />
           <strong>{isLoading ? "장소 기록을 불러오는 중입니다." : "장소가 연결된 라이프 항목이 없습니다."}</strong>
-          <p>일정이나 할 일에 장소를 추가하면 이 화면에서 장소별 타임라인으로 묶어 볼 수 있습니다.</p>
+          <p>일정, 할 일, 활동에 장소를 추가하면 이 화면에서 장소별 타임라인으로 묶어 볼 수 있습니다.</p>
         </SectionCard>
       )}
     </div>
   );
 }
 
-function buildPlaceTimeline(events: CalendarEvent[], tasks: TaskItem[]) {
+function buildPlaceTimeline(events: CalendarEvent[], tasks: TaskItem[], activities: LifeActivityRecord[]) {
   const eventItems: PlaceTimelineItem[] = events
     .filter((event) => (event.type === "schedule" || event.type === "event") && Boolean(event.place))
     .map((event) => ({
@@ -2916,7 +2951,22 @@ function buildPlaceTimeline(events: CalendarEvent[], tasks: TaskItem[]) {
       place: task.place as PlanPlace,
     }));
 
-  return [...eventItems, ...taskItems].sort((a, b) => b.date.localeCompare(a.date));
+  const activityItems: PlaceTimelineItem[] = activities
+    .map((activity) => {
+      const place = getActivityPlaceRef(activity);
+      if (!place) return null;
+      return {
+        id: activity.id,
+        date: activity.date,
+        kind: "activity" as const,
+        title: activity.title,
+        meta: formatTimelineMeta(formatActivityTime(activity), activity.companions, activity.expenseAmount, [activity.category, activity.food, activity.memo].filter(Boolean).join(" · ")),
+        place,
+      };
+    })
+    .filter(Boolean) as PlaceTimelineItem[];
+
+  return [...eventItems, ...taskItems, ...activityItems].sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function formatEventTimeRange(startTime?: string, endTime?: string, isAllDay = true) {
@@ -2929,15 +2979,44 @@ function formatTimelineMeta(timeLabel?: string, companions?: string, expenseAmou
   return [timeLabel, companions, expenseAmount !== undefined ? `${new Intl.NumberFormat("ko-KR").format(expenseAmount)}원` : undefined, memo].filter(Boolean).join(" · ");
 }
 
+function getActivityPlaceRef(activity: LifeActivityRecord): LifePlaceRef | null {
+  const name = activity.placeName?.trim();
+  if (!name) return null;
+  return {
+    address: activity.placeAddress?.trim() || undefined,
+    category: "활동기록",
+    name,
+  };
+}
+
+function hasPlanPlaceCoordinates(place: LifePlaceRef): place is PlanPlace {
+  return typeof place.latitude === "number" && typeof place.longitude === "number";
+}
+
+function getLifePlaceKey(place: LifePlaceRef) {
+  if (place.providerPlaceId) return place.providerPlaceId;
+  if (hasPlanPlaceCoordinates(place)) return `${place.latitude}:${place.longitude}:${place.name}`;
+  return `text:${place.name}:${place.address ?? ""}`;
+}
+
+function uniqueLifePlaceRefs(places: LifePlaceRef[]) {
+  const uniquePlaces = new Map<string, LifePlaceRef>();
+  places.forEach((place) => {
+    const key = getLifePlaceKey(place);
+    if (!uniquePlaces.has(key)) uniquePlaces.set(key, place);
+  });
+  return [...uniquePlaces.values()];
+}
+
 function formatWon(amount: number) {
   return `${new Intl.NumberFormat("ko-KR").format(amount)}원`;
 }
 
 function groupTimelineByPlace(items: PlaceTimelineItem[]) {
-  const grouped = new Map<string, { items: PlaceTimelineItem[]; key: string; place: PlanPlace }>();
+  const grouped = new Map<string, { items: PlaceTimelineItem[]; key: string; place: LifePlaceRef }>();
 
   for (const item of items) {
-    const key = item.place.providerPlaceId ?? `${item.place.latitude}:${item.place.longitude}:${item.place.name}`;
+    const key = getLifePlaceKey(item.place);
     const current = grouped.get(key);
     if (current) {
       current.items.push(item);
