@@ -70,6 +70,9 @@ export function CalendarView({
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [isSavingTask, setIsSavingTask] = useState(false);
+  const [deletingPlan, setDeletingPlan] = useState<{ id: string; type: "event" | "task" } | null>(null);
   const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
   const [activityConversionMessage, setActivityConversionMessage] = useState("");
@@ -171,60 +174,84 @@ export function CalendarView({
   };
 
   const saveEvent = async (event: CalendarEvent) => {
-    const exists = events.some((item) => item.id === event.id);
-    const previousEvent = events.find((item) => item.id === event.id);
-    const savedEvent = exists ? await updateCalendarEventInDb(event) : await createCalendarEventInDb(event);
-    const nextEvent = savedEvent ?? event;
-    const nextTargetType = nextEvent.type === "event" ? "event" : "schedule";
-    const previousTargetType = previousEvent?.type === "event" ? "event" : previousEvent ? "schedule" : nextTargetType;
-    if (previousEvent && previousTargetType !== nextTargetType) await deleteLinkedExpenseRecordInDb(previousTargetType, nextEvent.id);
-    await syncLinkedExpenseRecordInDb({
-      amount: nextEvent.expenseAmount,
-      date: nextEvent.date,
-      memo: nextEvent.meta,
-      targetId: nextEvent.id,
-      targetType: nextTargetType,
-      title: nextEvent.title,
-    });
-    await updateLifeActivitiesBySourceInDb({ ...createActivitySourceFromEvent(nextEvent), previousSourceType: previousTargetType });
+    if (isSavingEvent) return;
+    setIsSavingEvent(true);
+    try {
+      const exists = events.some((item) => item.id === event.id);
+      const previousEvent = events.find((item) => item.id === event.id);
+      const savedEvent = exists ? await updateCalendarEventInDb(event) : await createCalendarEventInDb(event);
+      const nextEvent = savedEvent ?? event;
+      const nextTargetType = nextEvent.type === "event" ? "event" : "schedule";
+      const previousTargetType = previousEvent?.type === "event" ? "event" : previousEvent ? "schedule" : nextTargetType;
+      if (previousEvent && previousTargetType !== nextTargetType) await deleteLinkedExpenseRecordInDb(previousTargetType, nextEvent.id);
+      await syncLinkedExpenseRecordInDb({
+        amount: nextEvent.expenseAmount,
+        date: nextEvent.date,
+        memo: nextEvent.meta,
+        targetId: nextEvent.id,
+        targetType: nextTargetType,
+        title: nextEvent.title,
+      });
+      await updateLifeActivitiesBySourceInDb({ ...createActivitySourceFromEvent(nextEvent), previousSourceType: previousTargetType });
 
-    setEvents((current) => (exists ? current.map((item) => (item.id === event.id ? nextEvent : item)) : [nextEvent, ...current]));
-    setIsEventSheetOpen(false);
-    setEditingEvent(null);
+      setEvents((current) => (exists ? current.map((item) => (item.id === event.id ? nextEvent : item)) : [nextEvent, ...current]));
+      setIsEventSheetOpen(false);
+      setEditingEvent(null);
+    } finally {
+      setIsSavingEvent(false);
+    }
   };
 
   const deleteEvent = async (id: string) => {
-    const targetEvent = events.find((event) => event.id === id);
-    await deleteCalendarEventFromDb(id);
-    if (targetEvent) await deleteLinkedExpenseRecordInDb(targetEvent.type === "event" ? "event" : "schedule", id);
-    if (targetEvent) await deleteLifeActivitiesBySourceFromDb(targetEvent.type === "event" ? "event" : "schedule", id);
-    setEvents((current) => current.filter((item) => item.id !== id));
+    if (deletingPlan) return;
+    setDeletingPlan({ id, type: "event" });
+    try {
+      const targetEvent = events.find((event) => event.id === id);
+      await deleteCalendarEventFromDb(id);
+      if (targetEvent) await deleteLinkedExpenseRecordInDb(targetEvent.type === "event" ? "event" : "schedule", id);
+      if (targetEvent) await deleteLifeActivitiesBySourceFromDb(targetEvent.type === "event" ? "event" : "schedule", id);
+      setEvents((current) => current.filter((item) => item.id !== id));
+    } finally {
+      setDeletingPlan(null);
+    }
   };
 
   const saveTask = async (task: TaskItem) => {
-    const exists = tasks.some((item) => item.id === task.id);
-    const savedTask = exists ? await updateTaskInDb(task) : await createTaskInDb(task);
-    const nextTask = savedTask ?? task;
-    await syncLinkedExpenseRecordInDb({
-      amount: nextTask.expenseAmount,
-      date: nextTask.scheduledDate,
-      memo: nextTask.memo,
-      targetId: nextTask.id,
-      targetType: "todo",
-      title: nextTask.title,
-    });
-    await updateLifeActivitiesBySourceInDb(createActivitySourceFromTask(nextTask));
+    if (isSavingTask) return;
+    setIsSavingTask(true);
+    try {
+      const exists = tasks.some((item) => item.id === task.id);
+      const savedTask = exists ? await updateTaskInDb(task) : await createTaskInDb(task);
+      const nextTask = savedTask ?? task;
+      await syncLinkedExpenseRecordInDb({
+        amount: nextTask.expenseAmount,
+        date: nextTask.scheduledDate,
+        memo: nextTask.memo,
+        targetId: nextTask.id,
+        targetType: "todo",
+        title: nextTask.title,
+      });
+      await updateLifeActivitiesBySourceInDb(createActivitySourceFromTask(nextTask));
 
-    setTasks((current) => (exists ? current.map((item) => (item.id === task.id ? nextTask : item)) : [nextTask, ...current]));
-    setIsTaskSheetOpen(false);
-    setEditingTask(null);
+      setTasks((current) => (exists ? current.map((item) => (item.id === task.id ? nextTask : item)) : [nextTask, ...current]));
+      setIsTaskSheetOpen(false);
+      setEditingTask(null);
+    } finally {
+      setIsSavingTask(false);
+    }
   };
 
   const deleteTask = async (id: string) => {
-    await deleteTaskFromDb(id);
-    await deleteLinkedExpenseRecordInDb("todo", id);
-    await deleteLifeActivitiesBySourceFromDb("todo", id);
-    setTasks((current) => current.filter((item) => item.id !== id));
+    if (deletingPlan) return;
+    setDeletingPlan({ id, type: "task" });
+    try {
+      await deleteTaskFromDb(id);
+      await deleteLinkedExpenseRecordInDb("todo", id);
+      await deleteLifeActivitiesBySourceFromDb("todo", id);
+      setTasks((current) => current.filter((item) => item.id !== id));
+    } finally {
+      setDeletingPlan(null);
+    }
   };
 
   const toggleTaskDone = async (task: TaskItem) => {
@@ -486,6 +513,7 @@ export function CalendarView({
               <div className="date-event-list">
                 <DayTimelineSection
                   countsByCategory={countsByCategory}
+                  deletingPlan={deletingPlan}
                   draggingItem={draggingItem}
                   dropTarget={dropTarget}
                   externalCount={selectedExternalItems.length}
@@ -528,6 +556,7 @@ export function CalendarView({
           defaultDate={selectedDate ?? formatDateKey(currentMonth)}
           defaultType={sheetDefaultType === "todo" ? "schedule" : sheetDefaultType}
           event={editingEvent}
+          isSaving={isSavingEvent}
           onClose={() => {
             setIsEventSheetOpen(false);
             setEditingEvent(null);
@@ -539,6 +568,7 @@ export function CalendarView({
       {isTaskSheetOpen ? (
         <TaskCreateSheet
           defaultDate={selectedDate ?? formatDateKey(currentMonth)}
+          isSaving={isSavingTask}
           onClose={() => {
             setIsTaskSheetOpen(false);
             setEditingTask(null);
@@ -568,6 +598,7 @@ function EventCreateSheet({
   defaultDate,
   defaultType,
   event,
+  isSaving,
   onClose,
   onSave,
 }: {
@@ -575,6 +606,7 @@ function EventCreateSheet({
   defaultDate: string;
   defaultType: CalendarCategory;
   event: CalendarEvent | null;
+  isSaving: boolean;
   onClose: () => void;
   onSave: (event: CalendarEvent) => void;
 }) {
@@ -793,11 +825,11 @@ function EventCreateSheet({
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+          <button className="event-sheet__secondary-button" disabled={isSaving} onClick={onClose} type="button">
             취소
           </button>
-          <button className="event-sheet__primary-button" onClick={saveCurrentEvent} type="button">
-            저장
+          <button className="event-sheet__primary-button" disabled={isSaving} onClick={saveCurrentEvent} type="button">
+            {isSaving ? "저장 중..." : "저장"}
           </button>
         </footer>
       </section>
@@ -807,11 +839,13 @@ function EventCreateSheet({
 
 function TaskCreateSheet({
   defaultDate,
+  isSaving,
   onClose,
   onSave,
   task,
 }: {
   defaultDate: string;
+  isSaving: boolean;
   onClose: () => void;
   onSave: (task: TaskItem) => void;
   task: TaskItem | null;
@@ -1045,11 +1079,11 @@ function TaskCreateSheet({
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+          <button className="event-sheet__secondary-button" disabled={isSaving} onClick={onClose} type="button">
             취소
           </button>
-          <button className="event-sheet__primary-button" onClick={saveTask} type="button">
-            저장
+          <button className="event-sheet__primary-button" disabled={isSaving} onClick={saveTask} type="button">
+            {isSaving ? "저장 중..." : "저장"}
           </button>
         </footer>
       </section>

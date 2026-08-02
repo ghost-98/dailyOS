@@ -162,7 +162,7 @@ export function LifeHealthView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="건강" description="러닝과 아침 몸무게를 저장하면 건강 탭과 하루 리포트의 해당 날짜 타임라인에 함께 표시됩니다." />
+      <LifeTabHeading title="건강" description="러닝과 아침 몸무게를 저장하면 건강 탭과 리포트의 해당 날짜 타임라인에 함께 표시됩니다." />
       <div className="life-health-view">
         <SectionCard className="life-capture-list life-health-summary">
           <div className="section-heading">

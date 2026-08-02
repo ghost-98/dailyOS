@@ -449,6 +449,17 @@ function LifeReportView({
   const monthLogs = dailyLogs.filter((log) => log.date.startsWith(monthKey));
   const monthPhotos = photos.filter((photo) => photo.date.startsWith(monthKey));
   const monthWorkouts = workouts.filter((workout) => workout.date.startsWith(monthKey));
+  const weekRange = getWeekRange(date);
+  const weekDates = expandDateRange(weekRange.start, weekRange.end);
+  const weekEvents = events.filter((event) => weekDates.some((weekDate) => isDateInRange(weekDate, event.date, event.endDate)));
+  const weekTasks = tasks.filter((task) => weekDates.some((weekDate) => isDateInRange(weekDate, task.scheduledDate, task.dueDate)));
+  const weekActivities = activities.filter((activity) => weekDates.includes(activity.date));
+  const weekLogs = dailyLogs.filter((log) => weekDates.includes(log.date));
+  const weekPhotos = photos.filter((photo) => weekDates.includes(photo.date));
+  const weekExpenses = expenses.filter((expense) => weekDates.includes(expense.date));
+  const weekWorkouts = workouts.filter((workout) => weekDates.includes(workout.date));
+  const weekExpenseTotal = weekExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const weekRunningKm = weekWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
   const totalExpense = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const monthExpenseTotal = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const monthRunningKm = monthWorkouts.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
@@ -476,7 +487,7 @@ function LifeReportView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="하루 리포트" description="날짜 하나를 기준으로 사건, 장소, 지출, 사진, 기록, 건강을 한 장의 개인 DB 뷰로 묶어봅니다." />
+      <LifeTabHeading title="리포트" description="선택한 날짜와 그 날짜가 속한 주간 기록을 한 장의 개인 DB 뷰로 묶어봅니다." />
       <div className={isDayPanelOpen ? "life-report-layout" : "life-report-layout life-report-layout--panel-closed"}>
       <SectionCard className="life-report-panel">
         <div className="section-heading">
@@ -496,6 +507,38 @@ function LifeReportView({
           <ReportMetric label="장소" value={`${places.length}곳`} hint={places[0]?.name ?? "장소 연결 없음"} />
           <ReportMetric label="미디어/기록" value={`${dayPhotos.length + dayLogs.length}개`} hint={`사진 ${dayPhotos.length} · 기록 ${dayLogs.length}`} />
         </div>
+
+        <section className="life-week-report">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Weekly Report</p>
+              <h2>{weekRange.label}</h2>
+            </div>
+            <span>{weekActivities.length + weekEvents.length + weekTasks.length + weekLogs.length + weekPhotos.length + weekWorkouts.length}건</span>
+          </div>
+          <div className="life-report-month">
+            <article>
+              <span>주간 활동</span>
+              <strong>{weekActivities.length}개</strong>
+              <p>일정 {weekEvents.length} · 할 일 {weekTasks.length}</p>
+            </article>
+            <article>
+              <span>주간 지출</span>
+              <strong>{weekExpenseTotal > 0 ? formatWon(weekExpenseTotal) : "-"}</strong>
+              <p>{weekExpenses.length}건 연결</p>
+            </article>
+            <article>
+              <span>주간 기록</span>
+              <strong>{weekLogs.length + weekPhotos.length}개</strong>
+              <p>하루기록 {weekLogs.length} · 사진 {weekPhotos.length}</p>
+            </article>
+            <article>
+              <span>주간 러닝</span>
+              <strong>{weekRunningKm > 0 ? `${weekRunningKm.toFixed(1)}km` : "-"}</strong>
+              <p>{weekWorkouts.length}개 운동 기록</p>
+            </article>
+          </div>
+        </section>
 
         <div className="life-report-month">
           <article>
@@ -548,7 +591,7 @@ function LifeReportView({
             <div className="life-map-empty life-map-empty--compact">
               <NotebookPen aria-hidden size={28} />
               <strong>이 날짜를 복원할 기록이 없습니다.</strong>
-              <p>일정·할일·활동·하루기록·사진·건강 중 하나라도 남기면 하루 리포트가 살아납니다.</p>
+              <p>일정·할일·활동·하루기록·사진·건강 중 하나라도 남기면 리포트가 살아납니다.</p>
             </div>
           )}
         </section>
@@ -1227,6 +1270,23 @@ function createPlanPlaceFromActivity(activity: LifeActivityRecord, fallback?: Pl
     phone: fallback?.phone,
     providerPlaceId: fallback?.providerPlaceId,
     url: fallback?.url,
+  };
+}
+
+function getWeekRange(date: string) {
+  const selectedDate = new Date(`${date}T00:00:00`);
+  const day = selectedDate.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(selectedDate);
+  monday.setDate(selectedDate.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const start = formatDateKey(monday);
+  const end = formatDateKey(sunday);
+  return {
+    end,
+    label: `${formatFullDate(start)} - ${formatFullDate(end)}`,
+    start,
   };
 }
 

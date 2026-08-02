@@ -14,6 +14,7 @@ type ActivityConversionState = { id: string; type: "event" | "task" } | null;
 
 export function DayTimelineSection({
   countsByCategory,
+  deletingPlan,
   draggingItem,
   dropTarget,
   externalCount,
@@ -36,6 +37,7 @@ export function DayTimelineSection({
   visibleCategories,
 }: {
   countsByCategory: Record<CalendarCategory, number>;
+  deletingPlan?: { id: string; type: "event" | "task" } | null;
   draggingItem: { id: string; type: CalendarCategory } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
   externalCount: number;
@@ -114,6 +116,7 @@ export function DayTimelineSection({
                   <TaskDateItem
                     dropPlacement={dropTarget?.id === item.task.id && draggingItem?.id !== item.task.id ? dropTarget.placement : null}
                     isConverting={isConvertingToActivity?.type === "task" && isConvertingToActivity.id === item.task.id}
+                    isDeleting={deletingPlan?.type === "task" && deletingPlan.id === item.task.id}
                     isDragging={draggingItem?.id === item.task.id}
                     onCreateActivity={onCreateActivityFromTask}
                     onDelete={onDeleteTask}
@@ -130,6 +133,7 @@ export function DayTimelineSection({
                     dropPlacement={dropTarget?.id === item.event.id && draggingItem?.id !== item.event.id ? dropTarget.placement : null}
                     event={item.event}
                     isConverting={isConvertingToActivity?.type === "event" && isConvertingToActivity.id === item.event.id}
+                    isDeleting={deletingPlan?.type === "event" && deletingPlan.id === item.event.id}
                     isDragging={draggingItem?.id === item.event.id}
                     onCreateActivity={onCreateActivityFromEvent}
                     onDelete={onDeleteEvent}
@@ -169,6 +173,7 @@ function EventDateItem({
   dropPlacement,
   event,
   isConverting,
+  isDeleting,
   isDragging,
   onCreateActivity,
   onDelete,
@@ -181,6 +186,7 @@ function EventDateItem({
   dropPlacement: DragPlacement | null;
   event: CalendarEvent;
   isConverting: boolean;
+  isDeleting: boolean;
   isDragging: boolean;
   onCreateActivity: (event: CalendarEvent) => void;
   onDelete: (id: string) => void;
@@ -216,13 +222,13 @@ function EventDateItem({
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
       <div className="date-event__actions">
-        <button aria-label="활동으로 기록" disabled={isConverting} onClick={() => onCreateActivity(event)} title="이 계획을 실제 활동으로 기록" type="button">
+        <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 계획을 실제 활동으로 기록" type="button">
           <Activity aria-hidden size={15} />
         </button>
-        <button aria-label="수정" onClick={() => onEdit(event)} type="button">
+        <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(event)} type="button">
           <Pencil aria-hidden size={15} />
         </button>
-        <button aria-label="삭제" onClick={() => onDelete(event.id)} type="button">
+        <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
           <Trash2 aria-hidden size={15} />
         </button>
       </div>
@@ -233,6 +239,7 @@ function EventDateItem({
 function TaskDateItem({
   dropPlacement,
   isConverting,
+  isDeleting,
   isDragging,
   onCreateActivity,
   onDelete,
@@ -246,6 +253,7 @@ function TaskDateItem({
 }: {
   dropPlacement: DragPlacement | null;
   isConverting: boolean;
+  isDeleting: boolean;
   isDragging: boolean;
   onCreateActivity: (task: TaskItem) => void;
   onDelete: (id: string) => void;
@@ -289,13 +297,13 @@ function TaskDateItem({
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
       <div className="date-event__actions">
-        <button aria-label="활동으로 기록" disabled={isConverting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
+        <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
           <Activity aria-hidden size={15} />
         </button>
-        <button aria-label="수정" onClick={() => onEdit(task)} type="button">
+        <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(task)} type="button">
           <Pencil aria-hidden size={15} />
         </button>
-        <button aria-label="삭제" onClick={() => onDelete(task.id)} type="button">
+        <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
           <Trash2 aria-hidden size={15} />
         </button>
       </div>

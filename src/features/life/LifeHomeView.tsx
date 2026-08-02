@@ -19,7 +19,7 @@ const primaryFlow = [
     description: "사진, 하루기록, 건강 데이터는 활동과 날짜에 붙는 증거와 해석입니다.",
     href: "/life/report",
     label: "Context",
-    title: "하루 리포트",
+    title: "리포트",
   },
 ];
 
@@ -31,7 +31,7 @@ const captureModel = [
 ];
 
 const retrievalModel = [
-  { description: "하루를 실제 타임라인으로 복원", href: "/life/report", icon: CalendarDays, title: "하루 리포트" },
+  { description: "하루와 주간을 실제 타임라인으로 복원", href: "/life/report", icon: CalendarDays, title: "리포트" },
   { description: "한 달의 소비, 사람, 장소, 활동 패턴 확인", href: "/life/monthly", icon: Search, title: "월간 회고" },
   { description: "기억나는 단서로 전체 인생 기록 검색", href: "/life/search", icon: Search, title: "전체 검색" },
   { description: "사람별 만남, 지출, 장소 맥락 보기", href: "/life/people", icon: UserRound, title: "사람" },
@@ -47,7 +47,7 @@ export function LifeHomeView() {
         <h1>활동을 중심으로 삶을 기록하고, 나중에 다시 꺼내 쓰는 개인 OS</h1>
         <p>
           dailyOS의 중심 단위는 이제 활동입니다. 일정과 할 일은 계획, 하루기록과 사진과 건강은 맥락, 장소·사람·지출은 활동에서 파생되는 축으로 정리합니다.
-          이렇게 쌓인 기록은 하루 리포트, 월간 회고, 검색, AI 질문의 근거가 됩니다.
+          이렇게 쌓인 기록은 리포트, 월간 회고, 검색, AI 질문의 근거가 됩니다.
         </p>
       </header>
 

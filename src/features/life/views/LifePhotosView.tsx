@@ -114,7 +114,7 @@ export function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="사진" description="사진과 영상은 활동을 증명하는 기억 조각입니다. 촬영 시간과 기록 시간을 바탕으로 활동/일정/할 일에 연결해 하루 리포트와 검색에서 함께 조회합니다." />
+      <LifeTabHeading title="사진" description="사진과 영상은 활동을 증명하는 기억 조각입니다. 촬영 시간과 기록 시간을 바탕으로 활동/일정/할 일에 연결해 리포트와 검색에서 함께 조회합니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">

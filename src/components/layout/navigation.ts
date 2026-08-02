@@ -16,7 +16,7 @@ const captureChildren = [
 ];
 
 const lifeChildren = [
-  { label: "하루 리포트", href: "/life/report", key: "life-report" },
+  { label: "리포트", href: "/life/report", key: "life-report" },
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
   { label: "AI 질문", href: "/life/ask", key: "life-ask" },
