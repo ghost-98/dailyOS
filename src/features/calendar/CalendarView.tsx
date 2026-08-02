@@ -17,7 +17,7 @@ import {
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
-import { createLifeActivityInDb } from "@/features/life/api";
+import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { FormSectionTitle } from "@/features/calendar/components";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
@@ -186,6 +186,7 @@ export function CalendarView({
       targetType: nextTargetType,
       title: nextEvent.title,
     });
+    await updateLifeActivitiesBySourceInDb({ ...createActivitySourceFromEvent(nextEvent), previousSourceType: previousTargetType });
 
     setEvents((current) => (exists ? current.map((item) => (item.id === event.id ? nextEvent : item)) : [nextEvent, ...current]));
     setIsEventSheetOpen(false);
@@ -196,6 +197,7 @@ export function CalendarView({
     const targetEvent = events.find((event) => event.id === id);
     await deleteCalendarEventFromDb(id);
     if (targetEvent) await deleteLinkedExpenseRecordInDb(targetEvent.type === "event" ? "event" : "schedule", id);
+    if (targetEvent) await deleteLifeActivitiesBySourceFromDb(targetEvent.type === "event" ? "event" : "schedule", id);
     setEvents((current) => current.filter((item) => item.id !== id));
   };
 
@@ -211,6 +213,7 @@ export function CalendarView({
       targetType: "todo",
       title: nextTask.title,
     });
+    await updateLifeActivitiesBySourceInDb(createActivitySourceFromTask(nextTask));
 
     setTasks((current) => (exists ? current.map((item) => (item.id === task.id ? nextTask : item)) : [nextTask, ...current]));
     setIsTaskSheetOpen(false);
@@ -220,6 +223,7 @@ export function CalendarView({
   const deleteTask = async (id: string) => {
     await deleteTaskFromDb(id);
     await deleteLinkedExpenseRecordInDb("todo", id);
+    await deleteLifeActivitiesBySourceFromDb("todo", id);
     setTasks((current) => current.filter((item) => item.id !== id));
   };
 
@@ -1114,6 +1118,43 @@ export function MonthPickerSheet({
 function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
   const source = allowedTypes ?? categoryDisplayOrder;
   return categoryDisplayOrder.filter((type) => source.includes(type));
+}
+
+function createActivitySourceFromEvent(event: CalendarEvent) {
+  const sourceType = event.type === "event" ? "event" : "schedule";
+  return {
+    category: event.type === "event" ? "이벤트" : "일정",
+    companions: event.companions,
+    date: event.date,
+    endTime: event.endTime,
+    expenseAmount: event.expenseAmount,
+    isAllDay: event.isAllDay,
+    memo: event.meta,
+    placeAddress: event.place?.address,
+    placeName: event.place?.name,
+    sourceId: event.id,
+    sourceType,
+    startTime: event.time,
+    title: event.title,
+  } satisfies Parameters<typeof updateLifeActivitiesBySourceInDb>[0];
+}
+
+function createActivitySourceFromTask(task: TaskItem) {
+  return {
+    category: "할 일",
+    companions: task.companions,
+    date: task.scheduledDate,
+    endTime: task.endTime,
+    expenseAmount: task.expenseAmount,
+    isAllDay: task.isAllDay,
+    memo: task.memo,
+    placeAddress: task.place?.address,
+    placeName: task.place?.name,
+    sourceId: task.id,
+    sourceType: "todo",
+    startTime: task.startTime,
+    title: task.title,
+  } satisfies Parameters<typeof updateLifeActivitiesBySourceInDb>[0];
 }
 
 function createEventTimelineItem(event: CalendarEvent): DayTimelineItem {

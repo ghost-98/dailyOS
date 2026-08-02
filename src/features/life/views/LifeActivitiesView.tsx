@@ -62,6 +62,7 @@ export function LifeActivitiesView({
   const [memo, setMemo] = useState("");
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+  const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const saveLockRef = useRef(false);
@@ -232,7 +233,7 @@ export function LifeActivitiesView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="활동 기록" description="몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남기는 dailyOS의 핵심 입력입니다." />
-      <div className="life-activity-layout">
+      <div className={isDayPanelOpen ? "life-activity-layout" : "life-activity-layout life-activity-layout--panel-closed"}>
         <SectionCard className="life-activity-form">
           <div className="section-heading">
             <div>
@@ -363,92 +364,99 @@ export function LifeActivitiesView({
           </button>
         </SectionCard>
 
-        <SectionCard className="life-activity-list">
+        <SectionCard className={isDayPanelOpen ? "life-activity-list life-selected-day-panel" : "life-activity-list life-selected-day-panel life-selected-day-panel--closed"}>
           <div className="section-heading">
             <div>
               <p className="eyebrow">Selected Day</p>
               <h2>{formatFullDate(date)} 활동 {selectedActivities.length}개</h2>
             </div>
+            <button className="life-selected-day-toggle" onClick={() => setIsDayPanelOpen((current) => !current)} type="button">
+              {isDayPanelOpen ? "접기" : "열기"}
+            </button>
           </div>
 
-          <div className="life-activity-calendar">
-            <div className="life-activity-calendar__header">
-              <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
-                <ChevronLeft aria-hidden size={16} />
-              </button>
-              <strong>{monthLabel}</strong>
-              <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
-                <ChevronRight aria-hidden size={16} />
-              </button>
-            </div>
-            <div className="life-activity-calendar__weekdays">
-              {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
-            </div>
-            <div className="life-activity-calendar__grid">
-              {calendarDays.map((day) => {
-                const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
-                return (
-                  <button
-                    aria-pressed={day.date === date}
-                    className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
-                    disabled={!day.date}
-                    key={day.key}
-                    onClick={() => day.date && selectDate(day.date)}
-                    type="button"
-                  >
-                    <span>{day.day}</span>
-                    {count > 0 ? <em>{count}</em> : null}
+          {isDayPanelOpen ? (
+            <>
+              <div className="life-activity-calendar">
+                <div className="life-activity-calendar__header">
+                  <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+                    <ChevronLeft aria-hidden size={16} />
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                  <strong>{monthLabel}</strong>
+                  <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+                    <ChevronRight aria-hidden size={16} />
+                  </button>
+                </div>
+                <div className="life-activity-calendar__weekdays">
+                  {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
+                </div>
+                <div className="life-activity-calendar__grid">
+                  {calendarDays.map((day) => {
+                    const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+                    return (
+                      <button
+                        aria-pressed={day.date === date}
+                        className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
+                        disabled={!day.date}
+                        key={day.key}
+                        onClick={() => day.date && selectDate(day.date)}
+                        type="button"
+                      >
+                        <span>{day.day}</span>
+                        {count > 0 ? <em>{count}</em> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          <div className="life-activity-day-summary">
-            <article>
-              <span>기록 시간</span>
-              <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
-            </article>
-            <article>
-              <span>활동 지출</span>
-              <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
-            </article>
-            <article>
-              <span>연결 정보</span>
-              <strong>{connectedCount}/{selectedActivities.length}</strong>
-            </article>
-          </div>
-          {selectedActivities.length > 0 ? (
-            selectedActivities.map((activity) => (
-              <article className="life-activity-item" key={activity.id}>
-                <div>
-                  <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
-                  <strong>{activity.title}</strong>
-                  <p>
-                    {[
-                      activity.sourceTitle ? `출처 · ${activity.sourceTitle}` : null,
-                      activity.placeName,
-                      activity.companions ? `함께 · ${activity.companions}` : null,
-                      activity.food ? `식사 · ${activity.food}` : null,
-                      activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
-                    ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음"}
-                  </p>
+              <div className="life-activity-day-summary">
+                <article>
+                  <span>기록 시간</span>
+                  <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
+                </article>
+                <article>
+                  <span>활동 지출</span>
+                  <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
+                </article>
+                <article>
+                  <span>연결 정보</span>
+                  <strong>{connectedCount}/{selectedActivities.length}</strong>
+                </article>
+              </div>
+              {selectedActivities.length > 0 ? (
+                selectedActivities.map((activity) => (
+                  <article className="life-activity-item" key={activity.id}>
+                    <div>
+                      <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
+                      <strong>{activity.title}</strong>
+                      <p>
+                        {[
+                          activity.sourceTitle ? `출처 · ${activity.sourceTitle}` : null,
+                          activity.placeName,
+                          activity.companions ? `함께 · ${activity.companions}` : null,
+                          activity.food ? `식사 · ${activity.food}` : null,
+                          activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
+                        ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음"}
+                      </p>
+                    </div>
+                    <div className="life-record-actions">
+                      <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
+                      <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
+                        {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="life-map-empty life-map-empty--compact">
+                  <NotebookPen aria-hidden size={28} />
+                  <strong>이 날짜의 활동 기록이 없습니다.</strong>
+                  <p>오른쪽 캘린더에서 날짜를 고르고, 왼쪽에서 활동을 추가해 하루 DB를 촘촘하게 채워보세요.</p>
                 </div>
-                <div className="life-record-actions">
-                  <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
-                  <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
-                    {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
-                  </button>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="life-map-empty life-map-empty--compact">
-              <NotebookPen aria-hidden size={28} />
-              <strong>이 날짜의 활동 기록이 없습니다.</strong>
-              <p>오른쪽 캘린더에서 날짜를 고르고, 왼쪽에서 활동을 추가해 하루 DB를 촘촘하게 채워보세요.</p>
-            </div>
-          )}
+              )}
+            </>
+          ) : null}
         </SectionCard>
       </div>
     </div>

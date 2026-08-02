@@ -1575,6 +1575,21 @@
   align-items: start;
 }
 
+.life-activity-layout--panel-closed {
+  grid-template-columns: minmax(420px, 1fr) minmax(96px, 0.12fr);
+}
+
+.life-report-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.28fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.life-report-layout--panel-closed {
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 0.08fr);
+}
+
 .life-activity-form,
 .life-activity-list {
   display: grid;
@@ -1584,6 +1599,53 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
     var(--surface);
   padding: 22px;
+}
+
+.life-selected-day-panel {
+  position: sticky;
+  top: 18px;
+  overflow: hidden;
+  transition:
+    max-width 180ms ease,
+    padding 180ms ease;
+}
+
+.life-selected-day-panel--closed {
+  align-content: start;
+  min-height: 132px;
+}
+
+.life-selected-day-panel--closed .section-heading {
+  grid-template-columns: 1fr;
+}
+
+.life-selected-day-panel--closed .section-heading h2 {
+  writing-mode: vertical-rl;
+  max-height: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.life-selected-day-toggle {
+  border: 1px solid rgba(201, 184, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 8px 11px;
+}
+
+.life-report-selected-day {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 18px;
 }
 
 .life-activity-form .section-heading button {

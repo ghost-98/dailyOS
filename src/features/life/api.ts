@@ -242,10 +242,77 @@ export async function updateLifeActivityInDb(activity: LifeActivityRecord) {
   return savedActivity;
 }
 
+export async function updateLifeActivitiesBySourceInDb(source: {
+  sourceId: string;
+  sourceType: "schedule" | "todo" | "event";
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
+  title: string;
+  category: string;
+  companions?: string;
+  expenseAmount?: number;
+  memo?: string;
+  placeAddress?: string;
+  placeName?: string;
+  previousSourceType?: "schedule" | "todo" | "event";
+}) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .update({
+      activity_date: source.date,
+      start_time: source.isAllDay ? null : source.startTime ?? null,
+      end_time: source.isAllDay ? null : source.endTime ?? null,
+      is_all_day: source.isAllDay ?? false,
+      title: source.title.trim(),
+      category: source.category,
+      companions: source.companions?.trim() || null,
+      expense_amount: source.expenseAmount ?? null,
+      memo: source.memo?.trim() || null,
+      place_address: source.placeAddress?.trim() || null,
+      place_name: source.placeName?.trim() || null,
+      source_title: source.title.trim(),
+      source_type: source.sourceType,
+    })
+    .eq("source_id", source.sourceId)
+    .eq("source_type", source.previousSourceType ?? source.sourceType)
+    .select(lifeActivityColumns);
+
+  if (error) throw error;
+  const savedActivities = (data as LifeActivityRow[]).map(mapLifeActivityRow);
+  await Promise.all(
+    savedActivities.map((activity) =>
+      syncLinkedExpenseRecordInDb({
+        amount: activity.expenseAmount,
+        date: activity.date,
+        memo: activity.memo,
+        targetId: activity.id,
+        targetType: "activity",
+        title: activity.title,
+      }),
+    ),
+  );
+  return savedActivities;
+}
+
 export async function deleteLifeActivityFromDb(id: string) {
   if (!supabase) return false;
   await deleteLinkedExpenseRecordInDb("activity", id);
   const { error } = await supabase.from("life_activities").delete().eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
+export async function deleteLifeActivitiesBySourceFromDb(sourceType: "schedule" | "todo" | "event", sourceId: string) {
+  if (!supabase) return false;
+  const { data, error: selectError } = await supabase.from("life_activities").select("id").eq("source_type", sourceType).eq("source_id", sourceId);
+  if (selectError) throw selectError;
+  const activityIds = ((data ?? []) as Array<{ id: string }>).map((activity) => activity.id);
+  await Promise.all(activityIds.map((id) => deleteLinkedExpenseRecordInDb("activity", id)));
+  const { error } = await supabase.from("life_activities").delete().eq("source_type", sourceType).eq("source_id", sourceId);
   if (error) throw error;
   return true;
 }

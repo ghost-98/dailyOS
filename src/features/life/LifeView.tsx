@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Search, X } 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
+import { deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "@/features/calendar/api";
 import { CalendarView, MonthPickerSheet } from "@/features/calendar/CalendarView";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
 import type { ExternalCalendarItem } from "@/features/calendar/types";
@@ -30,7 +30,7 @@ import {
   updateLifeActivityInDb,
   uploadLifePhotosToDb,
 } from "@/features/life/api";
-import { fetchTasksFromDb } from "@/features/tasks/api";
+import { deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { expandDateRange, formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, isDateInRange } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import {
@@ -66,7 +66,7 @@ import {
 } from "@/features/life/places";
 import type { LifePlaceRef } from "@/features/life/places";
 import { buildDayGapItems, buildDayReconstructionItems, formatActivityTime, formatRunDuration, sortReconstructionItems } from "@/features/life/reconstruction";
-import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 type LifeViewProps = {
   activityDraft?: LifeActivityDraft;
@@ -271,16 +271,73 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
     const exists = activities.some((item) => item.id === activity.id);
     const savedActivity = exists ? await updateLifeActivityInDb(activity) : await createLifeActivityInDb(activity);
     const nextActivity = savedActivity ?? activity;
+    await syncSourceFromActivity(nextActivity);
     setActivities((current) => (exists ? current.map((item) => (item.id === nextActivity.id ? nextActivity : item)) : [nextActivity, ...current]));
     const nextExpenses = await fetchExpenseRecordsFromDb();
     setExpenses(nextExpenses ?? []);
   };
 
   const deleteActivity = async (id: string) => {
+    const targetActivity = activities.find((activity) => activity.id === id);
     await deleteLifeActivityFromDb(id);
+    await deleteSourceFromActivity(targetActivity);
     setActivities((current) => current.filter((item) => item.id !== id));
     const nextExpenses = await fetchExpenseRecordsFromDb();
     setExpenses(nextExpenses ?? []);
+  };
+
+  const syncSourceFromActivity = async (activity: LifeActivityRecord) => {
+    if (!activity.sourceId || !activity.sourceType) return;
+
+    if (activity.sourceType === "todo") {
+      const sourceTask = tasks.find((task) => task.id === activity.sourceId);
+      if (!sourceTask) return;
+      const nextTask = {
+        ...sourceTask,
+        companions: activity.companions,
+        dueDate: activity.date,
+        endTime: activity.endTime,
+        isAllDay: activity.isAllDay,
+        memo: activity.memo,
+        place: createPlanPlaceFromActivity(activity, sourceTask.place),
+        scheduledDate: activity.date,
+        startTime: activity.startTime,
+        title: activity.title,
+      };
+      const savedTask = await updateTaskInDb(nextTask);
+      setTasks((current) => current.map((task) => (task.id === sourceTask.id ? savedTask ?? nextTask : task)));
+      return;
+    }
+
+    const sourceEvent = events.find((event) => event.id === activity.sourceId);
+    if (!sourceEvent) return;
+    const nextEvent = {
+      ...sourceEvent,
+      companions: activity.companions,
+      date: activity.date,
+      endDate: activity.date,
+      endTime: activity.endTime,
+      isAllDay: activity.isAllDay,
+      meta: activity.memo ?? sourceEvent.meta,
+      place: createPlanPlaceFromActivity(activity, sourceEvent.place),
+      time: activity.startTime,
+      title: activity.title,
+    };
+    const savedEvent = await updateCalendarEventInDb(nextEvent);
+    setEvents((current) => current.map((event) => (event.id === sourceEvent.id ? savedEvent ?? nextEvent : event)));
+  };
+
+  const deleteSourceFromActivity = async (activity?: LifeActivityRecord) => {
+    if (!activity?.sourceId || !activity.sourceType) return;
+
+    if (activity.sourceType === "todo") {
+      await deleteTaskFromDb(activity.sourceId);
+      setTasks((current) => current.filter((task) => task.id !== activity.sourceId));
+      return;
+    }
+
+    await deleteCalendarEventFromDb(activity.sourceId);
+    setEvents((current) => current.filter((event) => event.id !== activity.sourceId));
   };
 
   return (
@@ -378,6 +435,7 @@ function LifeReportView({
   workouts: WorkoutSession[];
 }) {
   const [selectedBundleKey, setSelectedBundleKey] = useState<string | null>(null);
+  const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const monthKey = date.slice(0, 7);
   const dayEvents = events.filter((event) => isDateInRange(date, event.date, event.endDate));
   const dayTasks = tasks.filter((task) => isDateInRange(date, task.scheduledDate, task.dueDate));
@@ -419,6 +477,7 @@ function LifeReportView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="하루 리포트" description="날짜 하나를 기준으로 사건, 장소, 지출, 사진, 기록, 건강을 한 장의 개인 DB 뷰로 묶어봅니다." />
+      <div className={isDayPanelOpen ? "life-report-layout" : "life-report-layout life-report-layout--panel-closed"}>
       <SectionCard className="life-report-panel">
         <div className="section-heading">
           <div>
@@ -549,6 +608,40 @@ function LifeReportView({
           </section>
         </div>
       </SectionCard>
+      <SectionCard className={isDayPanelOpen ? "life-selected-day-panel life-report-selected-day" : "life-selected-day-panel life-selected-day-panel--closed life-report-selected-day"}>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Selected Day</p>
+            <h2>{formatFullDate(date)}</h2>
+          </div>
+          <button className="life-selected-day-toggle" onClick={() => setIsDayPanelOpen((current) => !current)} type="button">
+            {isDayPanelOpen ? "접기" : "열기"}
+          </button>
+        </div>
+        {isDayPanelOpen ? (
+          <>
+            <label className="life-health-date-control">
+              <span>보고 싶은 날짜</span>
+              <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
+            </label>
+            <div className="life-activity-day-summary">
+              <article>
+                <span>복원 항목</span>
+                <strong>{reconstructionItems.length}</strong>
+              </article>
+              <article>
+                <span>빈 시간</span>
+                <strong>{gapItems.length}</strong>
+              </article>
+              <article>
+                <span>장소</span>
+                <strong>{places.length}</strong>
+              </article>
+            </div>
+          </>
+        ) : null}
+      </SectionCard>
+      </div>
       {selectedBundle ? <LifeContextDetailDrawer bundle={selectedBundle} onClose={() => setSelectedBundleKey(null)} onCreateLog={onCreateLog} onUploadPhotos={onUploadPhotos} /> : null}
     </div>
   );
@@ -1121,6 +1214,20 @@ function LifeAskView({
       </div>
     </div>
   );
+}
+
+function createPlanPlaceFromActivity(activity: LifeActivityRecord, fallback?: PlanPlace) {
+  if (!activity.placeName) return undefined;
+  return {
+    address: activity.placeAddress ?? fallback?.address ?? "",
+    category: fallback?.category,
+    latitude: fallback?.latitude ?? 0,
+    longitude: fallback?.longitude ?? 0,
+    name: activity.placeName,
+    phone: fallback?.phone,
+    providerPlaceId: fallback?.providerPlaceId,
+    url: fallback?.url,
+  };
 }
 
 function LifePlacesView() {
