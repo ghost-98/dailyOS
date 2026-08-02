@@ -77,6 +77,75 @@ export function LifeView({ initialDate, mode }: LifeViewProps) {
   return <div className="life-page">{mode === "home" ? <LifeHomeView /> : mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
 }
 
+type LifeDataSnapshot = {
+  activities?: LifeActivityRecord[];
+  dailyLogs?: DailyLogRecord[];
+  events?: CalendarEvent[];
+  expenses?: ExpenseRecord[];
+  lifePhotos?: LifePhotoRecord[];
+  tasks?: TaskItem[];
+  weights?: WeightRecord[];
+  workouts?: WorkoutSession[];
+};
+
+async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot> {
+  if (mode === "places") return {};
+
+  if (mode === "activities") {
+    const [activities, expenses] = await Promise.all([fetchLifeActivitiesFromDb(), fetchExpenseRecordsFromDb()]);
+    return { activities: activities ?? [], expenses: expenses ?? [] };
+  }
+
+  if (mode === "logs") {
+    const [activities, dailyLogs] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb()]);
+    return { activities: activities ?? [], dailyLogs: dailyLogs ?? [] };
+  }
+
+  if (mode === "photos") {
+    const [activities, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchLifePhotosFromDb()]);
+    return { activities: activities ?? [], lifePhotos: lifePhotos ?? [] };
+  }
+
+  if (mode === "health") {
+    const [weights, workouts] = await Promise.all([fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()]);
+    return { weights: weights ?? [], workouts: workouts ?? [] };
+  }
+
+  if (mode === "calendar") {
+    const [expenses, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
+      fetchExpenseRecordsFromDb(),
+      fetchLifeActivitiesFromDb(),
+      fetchDailyLogsFromDb(),
+      fetchLifePhotosFromDb(),
+      fetchWeightRecordsFromDb(),
+      fetchWorkoutSessionsFromDb(),
+    ]);
+    return { activities: activities ?? [], dailyLogs: dailyLogs ?? [], expenses: expenses ?? [], lifePhotos: lifePhotos ?? [], weights: weights ?? [], workouts: workouts ?? [] };
+  }
+
+  const [events, tasks, expenses, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
+    fetchCalendarEventsFromDb(),
+    fetchTasksFromDb(),
+    fetchExpenseRecordsFromDb(),
+    fetchLifeActivitiesFromDb(),
+    fetchDailyLogsFromDb(),
+    fetchLifePhotosFromDb(),
+    fetchWeightRecordsFromDb(),
+    fetchWorkoutSessionsFromDb(),
+  ]);
+
+  return {
+    activities: activities ?? [],
+    dailyLogs: dailyLogs ?? [],
+    events: events ?? [],
+    expenses: expenses ?? [],
+    lifePhotos: lifePhotos ?? [],
+    tasks: tasks ?? [],
+    weights: weights ?? [],
+    workouts: workouts ?? [],
+  };
+}
+
 function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode; initialDate?: string }) {
   const router = useRouter();
   const [reportDate, setReportDate] = useState(initialDate ?? formatDateKey(new Date()));
@@ -93,19 +162,20 @@ function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode;
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb(), fetchExpenseRecordsFromDb(), fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb(), fetchLifePhotosFromDb(), fetchWeightRecordsFromDb(), fetchWorkoutSessionsFromDb()])
-      .then(([nextEvents, nextTasks, nextExpenses, nextActivities, logs, photos, nextWeights, nextWorkouts]) => {
+    setIsLifeDataLoading(true);
+    loadLifeDataForMode(activeTab)
+      .then((data) => {
         if (!isMounted) return;
-        setEvents(nextEvents ?? []);
-        setTasks(nextTasks ?? []);
-        setExpenses(nextExpenses ?? []);
-        setActivities(nextActivities ?? []);
-        setDailyLogs(logs ?? []);
-        setLifePhotos(photos ?? []);
-        setWeights(nextWeights ?? []);
-        setWorkouts(nextWorkouts ?? []);
+        if (data.events) setEvents(data.events);
+        if (data.tasks) setTasks(data.tasks);
+        if (data.expenses) setExpenses(data.expenses);
+        if (data.activities) setActivities(data.activities);
+        if (data.dailyLogs) setDailyLogs(data.dailyLogs);
+        if (data.lifePhotos) setLifePhotos(data.lifePhotos);
+        if (data.weights) setWeights(data.weights);
+        if (data.workouts) setWorkouts(data.workouts);
       })
-      .catch((error) => console.error("Failed to load life capture data from Supabase", error))
+      .catch((error) => console.error("Failed to load life data from Supabase", error))
       .finally(() => {
         if (isMounted) setIsLifeDataLoading(false);
       });
@@ -113,7 +183,7 @@ function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode;
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (initialDate) setReportDate(initialDate);

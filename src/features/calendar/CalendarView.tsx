@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Clock3,
   ListChecks,
-  ListFilter,
   MapPin,
   Maximize2,
   Pencil,
@@ -28,7 +27,8 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
-import { escapeHtml, formatCurrency, formatDateKey, formatSelectedDate, getMonthDays, getPlanPlaceKey, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
+import { EmptyDateState, ExpenseLine, FormSectionTitle, PeopleLine, PlaceLine } from "@/features/calendar/components";
+import { escapeHtml, formatDateKey, formatSelectedDate, getMonthDays, getPlanPlaceKey, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import type { CalendarEvent } from "./data";
 
@@ -825,22 +825,6 @@ function TaskDateItem({
   );
 }
 
-function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean; label: string; onAdd?: () => void }) {
-  return (
-    <div className="date-empty-state">
-      <ListFilter aria-hidden size={24} />
-      <strong>{label} 항목이 없습니다.</strong>
-      <p>{isLoading ? "불러오는 중입니다." : "상단 추가 버튼으로 새 항목을 등록할 수 있습니다."}</p>
-      {!isLoading && onAdd ? (
-        <button className="date-empty-state__add" onClick={onAdd} type="button">
-          <Plus aria-hidden size={15} />
-          {label} 추가
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
   const [results, setResults] = useState<PlaceRecord[]>([]);
@@ -1183,43 +1167,6 @@ function DatePlacesMapCanvas({ className, places, routeVisible }: { className: s
       {mapStatus === "missing" ? <span>네이버 지도 키가 필요합니다.</span> : null}
       {mapStatus === "error" ? <span>지도를 불러오지 못했습니다.</span> : null}
       {mapStatus === "ready" && places.length === 0 ? <span>표시할 장소를 선택해 주세요.</span> : null}
-    </div>
-  );
-}
-
-function PlaceLine({ place }: { place: PlanPlace }) {
-  return (
-    <p className="date-event__place">
-      <MapPin aria-hidden size={14} />
-      <span>{place.name}</span>
-      {place.address ? <em>{place.address}</em> : null}
-    </p>
-  );
-}
-
-function PeopleLine({ companions }: { companions: string }) {
-  return (
-    <p className="date-event__place">
-      <UsersRound aria-hidden size={14} />
-      <span>{companions}</span>
-    </p>
-  );
-}
-
-function ExpenseLine({ amount }: { amount: number }) {
-  return (
-    <p className="date-event__place">
-      <WalletCards aria-hidden size={14} />
-      <span>{formatCurrency(amount)}</span>
-    </p>
-  );
-}
-
-function FormSectionTitle({ description, title }: { description: string; title: string }) {
-  return (
-    <div className="schedule-form-section-title">
-      <strong>{title}</strong>
-      <span>{description}</span>
     </div>
   );
 }
