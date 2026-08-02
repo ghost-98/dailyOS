@@ -28,6 +28,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PlanPlace, PlaceRecord, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
+import { escapeHtml, formatCurrency, formatDateKey, formatSelectedDate, getMonthDays, getPlanPlaceKey, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import type { CalendarEvent } from "./data";
 
@@ -1087,10 +1088,6 @@ export function SelectedDatePlacesMap({ places }: { places: PlanPlace[] }) {
   );
 }
 
-function getPlanPlaceKey(place: PlanPlace) {
-  return `${place.providerPlaceId ?? place.name}-${place.latitude}-${place.longitude}`;
-}
-
 function DatePlacesMapCanvas({ className, places, routeVisible }: { className: string; places: PlanPlace[]; routeVisible: boolean }) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
@@ -1784,40 +1781,8 @@ function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
   return categoryDisplayOrder.filter((type) => source.includes(type));
 }
 
-function getMonthDays(year: number, monthIndex: number) {
-  const firstDay = new Date(year, monthIndex, 1);
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const leadingEmptyDays = firstDay.getDay();
-
-  return [
-    ...Array.from({ length: leadingEmptyDays }, (_, index) => ({ key: `empty-${index}`, day: null, date: null })),
-    ...Array.from({ length: daysInMonth }, (_, index) => {
-      const day = index + 1;
-      const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      return { key: date, day, date };
-    }),
-  ];
-}
-
-function formatDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function formatSelectedDate(dateKey: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(new Date(`${dateKey}T00:00:00`));
-}
-
 function formatShortDate(dateKey: string) {
   return `${Number(dateKey.slice(5, 7))}/${Number(dateKey.slice(8, 10))}`;
-}
-
-function isDateInRange(date: string, startDate: string, endDate?: string) {
-  const normalizedEndDate = endDate || startDate;
-  return startDate <= date && date <= normalizedEndDate;
 }
 
 function formatPlanDateTime(startDate: string, endDate?: string, startTime?: string, endTime?: string, isAllDay = true) {
@@ -1889,16 +1854,6 @@ function isExternalTimelineType(type: CalendarCategory | ExternalCalendarCategor
   return type === "activity" || type === "expense" || type === "workout" || type === "weight" || type === "daily_log" || type === "photo";
 }
 
-function parseOptionalAmount(value: string) {
-  if (!value.trim()) return undefined;
-  const amount = Number(value);
-  return Number.isFinite(amount) ? amount : undefined;
-}
-
-function formatCurrency(value: number) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
-}
-
 function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
   const planSummaries = categoryDisplayOrder
     .filter((type) => categories.includes(type))
@@ -1941,15 +1896,6 @@ function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {
   };
 }
 
-function uniquePlanPlaces(places: PlanPlace[]) {
-  const uniquePlaces = new Map<string, PlanPlace>();
-  places.forEach((place) => {
-    const key = `${place.providerPlaceId ?? ""}|${place.name}|${place.latitude}|${place.longitude}`;
-    if (!uniquePlaces.has(key)) uniquePlaces.set(key, place);
-  });
-  return [...uniquePlaces.values()];
-}
-
 function getSchedulePlaceMarkerContent(place: PlanPlace, index: number) {
   const safeName = escapeHtml(place.name);
   return `
@@ -1958,41 +1904,4 @@ function getSchedulePlaceMarkerContent(place: PlanPlace, index: number) {
       <strong>${safeName}</strong>
     </div>
   `;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function reorderScopedItems<T extends { id: string }>(
-  items: T[],
-  belongsToScope: (item: T) => boolean,
-  sourceId: string,
-  targetId: string,
-  placement: DragPlacement,
-) {
-  const scopedItems = items.filter(belongsToScope);
-  const sourceIndex = scopedItems.findIndex((item) => item.id === sourceId);
-  const targetIndex = scopedItems.findIndex((item) => item.id === targetId);
-
-  if (sourceIndex < 0 || targetIndex < 0) return items;
-
-  const reordered = [...scopedItems];
-  const [movedItem] = reordered.splice(sourceIndex, 1);
-  let insertionIndex = targetIndex + (placement === "after" ? 1 : 0);
-
-  if (sourceIndex < insertionIndex) {
-    insertionIndex -= 1;
-  }
-
-  insertionIndex = Math.max(0, Math.min(insertionIndex, reordered.length));
-  reordered.splice(insertionIndex, 0, movedItem);
-
-  let nextScopedIndex = 0;
-  return items.map((item) => (belongsToScope(item) ? reordered[nextScopedIndex++] : item));
 }
