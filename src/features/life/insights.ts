@@ -386,20 +386,20 @@ function getLifeAskTypeScore(question: string, type: LifeSearchItem["type"]) {
 }
 
 function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
-  if (type === "schedule") return "??";
-  if (type === "todo") return "??";
-  if (type === "event") return "???";
-  if (type === "activity") return "??";
-  return "??";
+  if (type === "schedule") return "일정";
+  if (type === "todo") return "할 일";
+  if (type === "event") return "이벤트";
+  if (type === "activity") return "활동";
+  return "날짜";
 }
 
 function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAllDay" | "startTime">) {
-  if (activity.isAllDay || !activity.startTime) return "?? ??";
+  if (activity.isAllDay || !activity.startTime) return "시간 미정";
   return activity.endTime ? `${activity.startTime}-${activity.endTime}` : activity.startTime;
 }
 
 function formatRunDuration(durationSeconds: number) {
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = Math.round(durationSeconds % 60);
-  return `${minutes}? ${seconds}?`;
+  return `${minutes}분 ${seconds}초`;
 }

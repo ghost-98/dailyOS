@@ -9,7 +9,7 @@ import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import type { LifeActivityRecord } from "@/types/domain";
 
-const ACTIVITY_CATEGORIES = ["??", "??", "??", "??", "??", "??", "??", "???", "??"];
+const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
 
 export function LifeActivitiesView({
   activities,

@@ -4,9 +4,9 @@ import type { CalendarCategory, ExternalCalendarCategory } from "@/features/cale
 export const categoryDisplayOrder: CalendarCategory[] = ["schedule", "todo", "event"];
 
 export const categoryLabels: Record<CalendarCategory, string> = {
-  schedule: "??",
-  event: "???",
-  todo: "??",
+  schedule: "일정",
+  event: "이벤트",
+  todo: "할 일",
 };
 
 export const eventTone: Record<CalendarCategory, "violet" | "green" | "pink"> = {
@@ -16,15 +16,15 @@ export const eventTone: Record<CalendarCategory, "violet" | "green" | "pink"> = 
 };
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
-  todo: "??",
-  inProgress: "?? ?",
-  done: "??",
+  todo: "할 일",
+  inProgress: "진행 중",
+  done: "완료",
 };
 
 export const taskPriorityLabels: Record<TaskPriority, string> = {
-  high: "??",
-  normal: "??",
-  low: "??",
+  high: "높음",
+  normal: "보통",
+  low: "낮음",
 };
 
 export const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> = {
@@ -39,9 +39,9 @@ export function formatShortDate(dateKey: string) {
 
 export function formatPlanDateTime(startDate: string, endDate?: string, startTime?: string, endTime?: string, isAllDay = true) {
   const dateLabel = endDate && endDate !== startDate ? `${formatShortDate(startDate)}-${formatShortDate(endDate)}` : formatShortDate(startDate);
-  if (isAllDay) return `${dateLabel} ? ????`;
-  if (startTime && endTime) return `${dateLabel} ? ${startTime}-${endTime}`;
-  if (startTime) return `${dateLabel} ? ${startTime}`;
+  if (isAllDay) return `${dateLabel} · 하루종일`;
+  if (startTime && endTime) return `${dateLabel} · ${startTime}-${endTime}`;
+  if (startTime) return `${dateLabel} · ${startTime}`;
   return dateLabel;
 }
 
@@ -50,11 +50,11 @@ export function isExternalTimelineType(type: CalendarCategory | ExternalCalendar
 }
 
 export function getCalendarSummaryLabel(type: CalendarCategory | ExternalCalendarCategory) {
-  if (type === "activity") return "??";
-  if (type === "expense") return "???";
-  if (type === "workout") return "??";
-  if (type === "weight") return "???";
-  if (type === "daily_log") return "??";
-  if (type === "photo") return "??";
+  if (type === "activity") return "활동";
+  if (type === "expense") return "지출";
+  if (type === "workout") return "운동";
+  if (type === "weight") return "몸무게";
+  if (type === "daily_log") return "기록";
+  if (type === "photo") return "사진";
   return categoryLabels[type];
 }
