@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { Activity, ChevronLeft, ChevronRight, ImagePlus, MapPin, NotebookPen, Scale, Search, X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -35,16 +34,15 @@ import {
   uploadLifePhotosToDb,
 } from "@/features/life/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
+import { expandDateRange, formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, isDateInRange, parseTimeToMinutes } from "@/features/life/dateTime";
+import { LifeHomeView } from "@/features/life/LifeHomeView";
+import type { LifeDataMode, LifeViewMode } from "@/features/life/modes";
 import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
-
-export type LifeViewMode = "home" | "calendar" | "report" | "monthly" | "search" | "people" | "ask" | "places" | "activities" | "logs" | "photos" | "health" | "map";
 
 type LifeViewProps = {
   initialDate?: string;
   mode: LifeViewMode;
 };
-
-type LifeCalendarTab = Exclude<LifeViewMode, "home" | "map">;
 
 type LifePlaceRef = {
   address?: string;
@@ -134,103 +132,7 @@ export function LifeView({ initialDate, mode }: LifeViewProps) {
   return <div className="life-page">{mode === "home" ? <LifeHomeView /> : mode === "map" ? <LifeMapView /> : <LifeCalendarView activeTab={mode} initialDate={initialDate} />}</div>;
 }
 
-const lifeDatabaseModel = [
-  {
-    description: "일정·할일·활동을 하루의 시간축에 올리고 사진, 기록, 지출, 건강을 같은 날짜에 겹쳐 봅니다.",
-    href: "/life/calendar",
-    label: "시간축",
-    title: "언제 무엇을 했는가",
-  },
-  {
-    description: "하루 리포트는 날짜 하나를 기준으로 계획, 실제 활동, 사진, 하루기록, 건강, 소비를 한 장으로 복원합니다.",
-    href: "/life/report",
-    label: "하루",
-    title: "그날이 어떤 하루였는가",
-  },
-  {
-    description: "월간 회고와 전체 검색, AI 질문은 쌓인 기록을 다시 꺼내 의미와 답으로 바꾸는 해석 계층입니다.",
-    href: "/life/ask",
-    label: "해석",
-    title: "기록을 다시 쓰는 지식으로 바꾸기",
-  },
-];
-
-const lifeEntryModel = [
-  { description: "몇 시부터 어디서 무엇을 했는지 남기는 실제 행동 기록", href: "/life/activities", title: "활동 기록" },
-  { description: "날짜나 일정·할일·활동에 연결되는 짧은 텍스트 기록", href: "/life/logs", title: "하루기록" },
-  { description: "사진·영상과 메타데이터를 날짜나 맥락에 연결", href: "/life/photos", title: "사진" },
-  { description: "러닝 거리·시간, 아침 몸무게를 날짜에 누적", href: "/life/health", title: "건강" },
-];
-
-function LifeHomeView() {
-  return (
-    <div className="life-axis-view">
-      <header className="life-db-hero">
-        <p className="eyebrow">Life Database OS</p>
-        <h1>내 삶의 원본 기록을 모으고, 연결하고, 다시 질문하는 시스템</h1>
-        <p>
-          dailyOS의 라이프 DB는 캘린더, 일기, 사진첩, 가계부를 따로 흩어두지 않습니다. 하루의 시간축 위에 실제 활동, 장소, 사람,
-          소비, 사진, 건강 기록을 연결해 나중에 검색·회고·AI 질문의 근거로 쓰는 개인 데이터베이스입니다.
-        </p>
-      </header>
-
-      <div className="life-db-flow">
-        <SectionCard>
-          <p className="eyebrow">01 Capture</p>
-          <h2>하루의 원본을 남긴다</h2>
-          <p>일정·할일은 계획이고, 활동 기록은 실제 행동입니다. 하루기록·사진·건강은 그날을 설명하는 증거 자료로 붙습니다.</p>
-        </SectionCard>
-        <SectionCard>
-          <p className="eyebrow">02 Connect</p>
-          <h2>맥락으로 묶는다</h2>
-          <p>날짜, 시간, 장소, 함께한 사람, 지출, 사진, 메모가 같은 일정·할일·활동 아래에서 연결됩니다.</p>
-        </SectionCard>
-        <SectionCard>
-          <p className="eyebrow">03 Retrieve</p>
-          <h2>필요할 때 다시 꺼낸다</h2>
-          <p>하루 리포트, 월간 회고, 전체 검색, AI 질문을 통해 내 생활 패턴과 기억을 다시 사용할 수 있습니다.</p>
-        </SectionCard>
-      </div>
-
-      <section className="life-db-section">
-        <LifeTabHeading title="조회와 해석" description="라이프 DB는 입력한 기록을 다시 읽고, 비교하고, 질문하기 위한 최종 조회 공간입니다." />
-        <div className="life-db-card-grid">
-          {lifeDatabaseModel.map((item) => (
-            <Link className="life-db-card" href={item.href} key={item.title}>
-              <span>{item.label}</span>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
-            </Link>
-          ))}
-          <Link className="life-db-card life-db-card--accent" href="/life/search">
-            <span>검색</span>
-            <strong>흐릿한 기억을 찾아내기</strong>
-            <p>사람, 장소, 날짜, 금액, 사진명, 메모를 한 번에 찾아서 원하는 하루나 맥락으로 바로 돌아갑니다.</p>
-          </Link>
-          <Link className="life-db-card life-db-card--accent" href="/life/ask">
-            <span>AI 질문</span>
-            <strong>기록을 읽고 답하게 하기</strong>
-            <p>“3월에 자주 만난 사람과 그때의 소비·건강 흐름이 어땠어?” 같은 질문을 내 기록 기반으로 묻습니다.</p>
-          </Link>
-        </div>
-      </section>
-
-      <section className="life-db-section">
-        <LifeTabHeading title="입력과 축적" description="매일 쓰는 입력은 빠르게, 나중에 보는 조회는 강하게 분리했습니다." />
-        <div className="life-db-card-grid life-db-card-grid--compact">
-          {lifeEntryModel.map((item) => (
-            <Link className="life-db-card" href={item.href} key={item.title}>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeCalendarTab; initialDate?: string }) {
+function LifeCalendarView({ activeTab, initialDate }: { activeTab: LifeDataMode; initialDate?: string }) {
   const router = useRouter();
   const [reportDate, setReportDate] = useState(initialDate ?? formatDateKey(new Date()));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -2791,21 +2693,6 @@ function toneOrder(tone: LifeDayReconstructionItem["tone"]) {
   return 0;
 }
 
-function parseTimeToMinutes(time?: string) {
-  if (!time) return undefined;
-  const [hourText, minuteText] = time.split(":");
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return undefined;
-  return hour * 60 + minute;
-}
-
-function formatMinutesLabel(minutes: number) {
-  const hour = Math.floor(minutes / 60).toString().padStart(2, "0");
-  const minute = (minutes % 60).toString().padStart(2, "0");
-  return `${hour}:${minute}`;
-}
-
 function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAllDay" | "startTime">) {
   if (activity.isAllDay || !activity.startTime) return "시간 미정";
   return activity.endTime ? `${activity.startTime}-${activity.endTime}` : activity.startTime;
@@ -3192,54 +3079,6 @@ function groupTimelineByPlace(items: PlaceTimelineItem[]) {
   }
 
   return [...grouped.values()].sort((a, b) => b.items.length - a.items.length || a.place.name.localeCompare(b.place.name));
-}
-
-function getMonthDays(year: number, monthIndex: number) {
-  const firstDay = new Date(year, monthIndex, 1);
-  const lastDay = new Date(year, monthIndex + 1, 0);
-  const cells: Array<{ date: string | null; day: number | null; key: string }> = [];
-
-  for (let index = 0; index < firstDay.getDay(); index += 1) {
-    cells.push({ date: null, day: null, key: `empty-start-${index}` });
-  }
-
-  for (let day = 1; day <= lastDay.getDate(); day += 1) {
-    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    cells.push({ date, day, key: date });
-  }
-
-  while (cells.length % 7 !== 0) {
-    cells.push({ date: null, day: null, key: `empty-end-${cells.length}` });
-  }
-
-  return cells;
-}
-
-function formatDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function formatFullDate(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", { day: "numeric", month: "long", weekday: "long" }).format(new Date(`${value}T00:00:00`));
-}
-
-function isDateInRange(date: string, startDate: string, endDate?: string) {
-  const normalizedEndDate = endDate || startDate;
-  return startDate <= date && date <= normalizedEndDate;
-}
-
-function expandDateRange(startDate: string, endDate?: string) {
-  const dates: string[] = [];
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate || startDate}T00:00:00`);
-
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start > end) return [startDate];
-
-  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    dates.push(formatDateKey(cursor));
-  }
-
-  return dates;
 }
 
 function uniquePlanPlaces(places: PlanPlace[]) {

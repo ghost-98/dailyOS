@@ -2,73 +2,15 @@
 
 import {
   Activity,
-  BookOpenCheck,
-  BriefcaseBusiness,
-  CalendarDays,
   ChevronDown,
-  Grid2X2,
-  Layers3,
   LogOut,
-  Map,
-  MapPinned,
-  NotebookPen,
-  ReceiptText,
-  Settings,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
-
-const lifeChildren = [
-  { label: "캘린더", href: "/life/calendar", key: "life-calendar" },
-  { label: "하루 리포트", href: "/life/report", key: "life-report" },
-  { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
-  { label: "전체 검색", href: "/life/search", key: "life-search" },
-  { label: "사람", href: "/life/people", key: "life-people" },
-  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
-];
-
-const captureChildren = [
-  { label: "일정·할일", href: "/life/calendar", key: "life-capture-calendar" },
-  { label: "활동 기록", href: "/life/activities", key: "life-activities" },
-  { label: "하루기록", href: "/life/logs", key: "life-logs" },
-  { label: "사진", href: "/life/photos", key: "life-photos" },
-  { label: "건강", href: "/life/health", key: "life-health" },
-];
-
-const placeChildren = [
-  { label: "장소 보관함", href: "/places", key: "places-vault" },
-  { label: "장소 흐름", href: "/life/places-flow", key: "life-places-flow" },
-  { label: "장소 지도", href: "/life/map", key: "life-map" },
-];
-
-const careerChildren = [
-  { label: "지원한 기업", href: "/career/applied", key: "applied" },
-  { label: "지원 예정", href: "/career/planned", key: "planned" },
-  { label: "자격증", href: "/career/certificates", key: "certificates" },
-];
-
-const primaryNav = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프 DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "기록 입력", href: "/life/activities", key: "capture", icon: NotebookPen, children: captureChildren },
-  { label: "가계부", href: "/ledger", key: "ledger", icon: ReceiptText },
-  { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
-  { label: "커리어", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
-];
-
-const mobileNav = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프", href: "/life", key: "life", icon: Layers3 },
-  { label: "캘린더", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
-  { label: "기록", href: "/life/activities", key: "life-activities", icon: BookOpenCheck },
-  { label: "질문", href: "/life/ask", key: "life-ask", icon: Sparkles },
-  { label: "장소", href: "/places", key: "places", icon: Map },
-];
+import { mobileNav, primaryNav } from "@/components/layout/navigation";
 
 type AppShellProps = {
   activeKey?: string;
@@ -162,7 +104,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive = item.key === "life" ? pathname === "/life" : item.key.startsWith("life-") ? pathname === item.href : item.key === activeKey;
+          const isActive = isMobileNavActive(item.key, item.href, pathname, activeKey);
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />
@@ -173,6 +115,13 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       </nav>
     </div>
   );
+}
+
+function isMobileNavActive(key: string, href: string, pathname: string, activeKey?: string) {
+  if (key === "life") return pathname === "/life";
+  if (key === "life-activities") return ["/life/activities", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
+  if (key.startsWith("life-")) return pathname === href;
+  return key === activeKey;
 }
 
 function NavGroup({

@@ -39,5 +39,6 @@ npm run start
 ## 문서
 
 - `docs/architecture.md`: 현재 코드/데이터 구조와 관리 기준
+- `docs/product-map.md`: 상품 가치, 정보 구조, UI 원칙
 - `docs/raspberry-pi-deploy.md`: 라즈베리파이 배포 순서
 - `docs/dailyos-ui-design.md`: UI 디자인 방향
