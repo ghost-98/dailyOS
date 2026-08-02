@@ -16,7 +16,21 @@ export type LifeActivityDraft = {
   startTime?: string;
 };
 
+type ActivityTemplate = {
+  category: string;
+  title: string;
+};
+
 const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
+const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
+  { category: "식사", title: "식사" },
+  { category: "이동", title: "이동" },
+  { category: "작업", title: "프로젝트 작업" },
+  { category: "공부", title: "공부" },
+  { category: "만남", title: "사람 만남" },
+  { category: "운동", title: "운동" },
+  { category: "휴식", title: "휴식" },
+];
 const DEFAULT_CATEGORY = "기타";
 
 export function LifeActivitiesView({
@@ -67,6 +81,7 @@ export function LifeActivitiesView({
   );
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
   const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
+  const connectedCount = selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length;
 
   const resetForm = () => {
     setEditing(null);
@@ -101,6 +116,11 @@ export function LifeActivitiesView({
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
     setFormError("");
+  };
+
+  const applyTemplate = (template: ActivityTemplate) => {
+    setCategory(template.category);
+    if (!title.trim()) setTitle(template.title);
   };
 
   const startNow = () => {
@@ -179,7 +199,7 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="dailyOS의 핵심 입력입니다. 실제로 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남깁니다." />
+      <LifeTabHeading title="활동 기록" description="dailyOS의 핵심 입력입니다. 몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남깁니다." />
       <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
           <div className="section-heading">
@@ -192,6 +212,14 @@ export function LifeActivitiesView({
               <button onClick={finishRecent} type="button">방금 끝남</button>
               {editing ? <button onClick={resetForm} type="button">새 기록</button> : null}
             </div>
+          </div>
+
+          <div className="life-activity-quick-grid">
+            {ACTIVITY_TEMPLATES.map((template) => (
+              <button key={template.category} onClick={() => applyTemplate(template)} type="button">
+                {template.category}
+              </button>
+            ))}
           </div>
 
           <div className="event-form-card event-form-card--title">
@@ -328,7 +356,7 @@ export function LifeActivitiesView({
             </article>
             <article>
               <span>연결 밀도</span>
-              <strong>{selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length}/{selectedActivities.length}</strong>
+              <strong>{connectedCount}/{selectedActivities.length}</strong>
             </article>
           </div>
           {selectedActivities.length > 0 ? (

@@ -1604,6 +1604,34 @@
   letter-spacing: -0.04em;
 }
 
+.life-activity-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-activity-quick-grid button {
+  border: 1px solid rgba(201, 184, 255, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(201, 184, 255, 0.14), rgba(201, 184, 255, 0.06));
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 11px 8px;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.life-activity-quick-grid button:hover {
+  border-color: rgba(201, 184, 255, 0.38);
+  background: rgba(201, 184, 255, 0.17);
+  transform: translateY(-1px);
+}
+
 .life-activity-template-grid {
   display: flex;
   flex-wrap: wrap;

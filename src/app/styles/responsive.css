@@ -31,6 +31,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .life-activity-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .life-activity-quick-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .calendar-detail {
     animation: detail-slide-up 220ms ease-out both;
   }
@@ -515,6 +523,34 @@
 
   .schedule-date-row,
   .schedule-time-row {
+    grid-template-columns: 1fr;
+  }
+
+  .life-activity-form,
+  .life-activity-list {
+    padding: 16px;
+  }
+
+  .life-activity-form .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .life-activity-form .life-record-actions,
+  .life-activity-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .life-activity-form .life-record-actions button {
+    flex: 1 1 auto;
+  }
+
+  .life-activity-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .life-activity-day-summary {
     grid-template-columns: 1fr;
   }
 
