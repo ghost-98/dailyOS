@@ -11,9 +11,9 @@ const primaryFlow = [
   },
   {
     description: "일정·할 일·이벤트는 미래 계획과 중요한 마커로 두고, 실제 결과는 활동으로 회수합니다.",
-    href: "/life/calendar",
+    href: "/life/plans",
     label: "Plan",
-    title: "계획 캘린더",
+    title: "일정·할 일·이벤트",
   },
   {
     description: "사진, 하루기록, 건강 데이터는 활동과 날짜에 붙는 증거와 해석입니다.",
@@ -31,6 +31,7 @@ const captureModel = [
 ];
 
 const retrievalModel = [
+  { description: "날짜별 전체 DB를 캘린더로 조회", href: "/life/calendar", icon: CalendarDays, title: "라이프 캘린더" },
   { description: "하루와 주간을 실제 타임라인으로 복원", href: "/life/report", icon: CalendarDays, title: "리포트" },
   { description: "한 달의 소비, 사람, 장소, 활동 패턴 확인", href: "/life/monthly", icon: Search, title: "월간 회고" },
   { description: "기억나는 단서로 전체 인생 기록 검색", href: "/life/search", icon: Search, title: "전체 검색" },

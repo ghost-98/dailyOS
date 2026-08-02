@@ -1,4 +1,4 @@
-import { Activity, BookOpenCheck, CalendarDays, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
+import { Activity, BookOpenCheck, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
 
 export type NavItem = {
   children?: Array<Omit<NavItem, "children" | "icon">>;
@@ -10,12 +10,14 @@ export type NavItem = {
 
 const captureChildren = [
   { label: "활동 기록", href: "/life/activities", key: "life-activities" },
+  { label: "일정·할 일·이벤트", href: "/life/plans", key: "life-plans" },
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "사진·영상", href: "/life/photos", key: "life-photos" },
   { label: "건강", href: "/life/health", key: "life-health" },
 ];
 
 const lifeChildren = [
+  { label: "라이프 캘린더", href: "/life/calendar", key: "life-calendar" },
   { label: "리포트", href: "/life/report", key: "life-report" },
   { label: "월간 회고", href: "/life/monthly", key: "life-monthly" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
@@ -33,7 +35,6 @@ const placeChildren = [
 export const primaryNav: NavItem[] = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "기록", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
-  { label: "계획", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
   { label: "DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
@@ -42,7 +43,6 @@ export const primaryNav: NavItem[] = [
 export const mobileNav: NavItem[] = [
   { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
-  { label: "계획", href: "/life/calendar", key: "life-calendar", icon: CalendarDays },
   { label: "DB", href: "/life", key: "life", icon: BookOpenCheck },
   { label: "장소", href: "/places", key: "places", icon: Map },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },

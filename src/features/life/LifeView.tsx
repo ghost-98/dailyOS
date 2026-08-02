@@ -90,7 +90,7 @@ type LifeDataSnapshot = {
 };
 
 async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot> {
-  if (mode === "places") return {};
+  if (mode === "places" || mode === "plans") return {};
 
   if (mode === "activities") {
     const [activities, expenses] = await Promise.all([fetchLifeActivitiesFromDb(), fetchExpenseRecordsFromDb()]);
@@ -342,7 +342,19 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
 
   return (
     <div className="life-axis-view">
-      {activeTab === "calendar" ? (
+      {activeTab === "plans" ? (
+        <CalendarView
+          allowedTypes={["schedule", "event", "todo"]}
+          defaultSelectedDate={formatDateKey(new Date())}
+          description="미래 계획과 당일 해야 할 일, 중요한 이벤트를 기록하고 관리합니다. 실제로 끝난 것은 활동 기록으로 전환할 수 있습니다."
+          headerVariant="tab"
+          keepDateSelected
+          showEventAddButton
+          showSelectedDatePlacesMap
+          title="일정·할 일·이벤트"
+          viewMode="manage"
+        />
+      ) : activeTab === "calendar" ? (
         <CalendarView
           allowedTypes={["schedule", "event", "todo"]}
           defaultSelectedDate={formatDateKey(new Date())}
@@ -350,8 +362,9 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
           externalItems={externalItems}
           headerVariant="tab"
           keepDateSelected
-          showEventAddButton
+          showEventAddButton={false}
           showSelectedDatePlacesMap={false}
+          viewMode="database"
           title="라이프 캘린더"
         />
       ) : activeTab === "report" ? (

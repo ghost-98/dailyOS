@@ -58,6 +58,46 @@
   padding: 24px;
 }
 
+.life-calendar-db-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.life-calendar-db-summary article {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(201, 184, 255, 0.11), transparent 34%),
+    rgba(255, 255, 255, 0.04);
+  padding: 12px;
+}
+
+.life-calendar-db-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.life-calendar-db-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 950;
+}
+
+.life-axis-view .date-event--readonly {
+  cursor: default;
+}
+
+.life-axis-view .date-event--readonly .date-event__check,
+.life-axis-view .date-event--readonly .date-event__actions {
+  display: none;
+}
+
 .life-tab-heading {
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);

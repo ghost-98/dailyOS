@@ -34,6 +34,7 @@ export function DayTimelineSection({
   onResolveDropPlacement,
   onSetDragging,
   onToggleDone,
+  readOnly = false,
   visibleCategories,
 }: {
   countsByCategory: Record<CalendarCategory, number>;
@@ -57,6 +58,7 @@ export function DayTimelineSection({
   onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
   onSetDragging: (item: { id: string; type: CalendarCategory }) => void;
   onToggleDone: (task: TaskItem) => void;
+  readOnly?: boolean;
   visibleCategories: CalendarCategory[];
 }) {
   const [activeFilters, setActiveFilters] = useState<DayTimelineFilter[]>([]);
@@ -126,6 +128,7 @@ export function DayTimelineSection({
                     onDrop={(dragEvent) => onReorderTask(item.task.id, onResolveDropPlacement(dragEvent))}
                     onEdit={onEditTask}
                     onToggleDone={onToggleDone}
+                    readOnly={readOnly}
                     task={item.task}
                   />
                 ) : "event" in item ? (
@@ -142,6 +145,7 @@ export function DayTimelineSection({
                     onDragStart={() => onSetDragging({ id: item.event.id, type: item.event.type as CalendarCategory })}
                     onDrop={(dragEvent) => onReorderEvent(item.event.id, onResolveDropPlacement(dragEvent))}
                     onEdit={onEditEvent}
+                    readOnly={readOnly}
                   />
                 ) : (
                   <ExternalTimelineItem item={item.external} />
@@ -182,6 +186,7 @@ function EventDateItem({
   onDragStart,
   onDrop,
   onEdit,
+  readOnly,
 }: {
   dropPlacement: DragPlacement | null;
   event: CalendarEvent;
@@ -195,13 +200,14 @@ function EventDateItem({
   onDragStart: () => void;
   onDrop: (event: DragEvent<HTMLElement>) => void;
   onEdit: (event: CalendarEvent) => void;
+  readOnly: boolean;
 }) {
   return (
     <article
-      className={`date-event date-event--${event.type} ${isDragging ? "date-event--dragging" : ""} ${
+      className={`date-event date-event--${event.type} ${readOnly ? "date-event--readonly" : ""} ${isDragging ? "date-event--dragging" : ""} ${
         dropPlacement ? `date-event--drop-${dropPlacement}` : ""
       }`}
-      draggable
+      draggable={!readOnly}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
@@ -221,7 +227,7 @@ function EventDateItem({
         {event.expenseAmount !== undefined ? <ExpenseLine amount={event.expenseAmount} /> : null}
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
-      <div className="date-event__actions">
+      {!readOnly ? <div className="date-event__actions">
         <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 계획을 실제 활동으로 기록" type="button">
           <Activity aria-hidden size={15} />
         </button>
@@ -231,7 +237,7 @@ function EventDateItem({
         <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
           <Trash2 aria-hidden size={15} />
         </button>
-      </div>
+      </div> : null}
     </article>
   );
 }
@@ -249,6 +255,7 @@ function TaskDateItem({
   onDrop,
   onEdit,
   onToggleDone,
+  readOnly,
   task,
 }: {
   dropPlacement: DragPlacement | null;
@@ -263,16 +270,17 @@ function TaskDateItem({
   onDrop: (event: DragEvent<HTMLElement>) => void;
   onEdit: (task: TaskItem) => void;
   onToggleDone: (task: TaskItem) => void;
+  readOnly: boolean;
   task: TaskItem;
 }) {
   const isDone = task.status === "done";
 
   return (
     <article
-      className={`date-event date-event--todo date-event--task ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""} ${
+      className={`date-event date-event--todo date-event--task ${readOnly ? "date-event--readonly" : ""} ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""} ${
         dropPlacement ? `date-event--drop-${dropPlacement}` : ""
       }`}
-      draggable
+      draggable={!readOnly}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
@@ -296,7 +304,7 @@ function TaskDateItem({
         {task.expenseAmount !== undefined ? <ExpenseLine amount={task.expenseAmount} /> : null}
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
-      <div className="date-event__actions">
+      {!readOnly ? <div className="date-event__actions">
         <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
           <Activity aria-hidden size={15} />
         </button>
@@ -306,7 +314,7 @@ function TaskDateItem({
         <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
           <Trash2 aria-hidden size={15} />
         </button>
-      </div>
+      </div> : null}
     </article>
   );
 }

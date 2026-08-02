@@ -39,6 +39,7 @@ type CalendarViewProps = {
   showEventAddButton?: boolean;
   showSelectedDatePlacesMap?: boolean;
   title?: string;
+  viewMode?: "manage" | "database";
 };
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
@@ -54,8 +55,10 @@ export function CalendarView({
   keepDateSelected = false,
   showEventAddButton = false,
   showSelectedDatePlacesMap = true,
+  viewMode = "manage",
   title = "일정",
 }: CalendarViewProps) {
+  const isDatabaseView = viewMode === "database";
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarCategory[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -138,6 +141,17 @@ export function CalendarView({
     () => uniquePlanPlaces([...selectedSchedules, ...selectedEvents, ...selectedTasks].map((item) => item.place).filter((place): place is PlanPlace => Boolean(place))),
     [selectedEvents, selectedSchedules, selectedTasks],
   );
+  const selectedExternalCounts = useMemo(
+    () => ({
+      activity: selectedExternalItems.filter((item) => item.type === "activity").length,
+      dailyLog: selectedExternalItems.filter((item) => item.type === "daily_log").length,
+      expense: selectedExternalItems.filter((item) => item.type === "expense").length,
+      health: selectedExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
+      media: selectedExternalItems.filter((item) => item.type === "photo").length,
+    }),
+    [selectedExternalItems],
+  );
+  const selectedDbTotal = selectedTimelineItems.length;
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
@@ -510,6 +524,35 @@ export function CalendarView({
 
               {showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
+              {isDatabaseView ? (
+                <div className="life-calendar-db-summary">
+                  <article>
+                    <span>전체 기록</span>
+                    <strong>{selectedDbTotal}</strong>
+                  </article>
+                  <article>
+                    <span>활동</span>
+                    <strong>{selectedExternalCounts.activity}</strong>
+                  </article>
+                  <article>
+                    <span>계획</span>
+                    <strong>{selectedSchedules.length + selectedTasks.length + selectedEvents.length}</strong>
+                  </article>
+                  <article>
+                    <span>기록·사진</span>
+                    <strong>{selectedExternalCounts.dailyLog + selectedExternalCounts.media}</strong>
+                  </article>
+                  <article>
+                    <span>지출</span>
+                    <strong>{selectedExternalCounts.expense}</strong>
+                  </article>
+                  <article>
+                    <span>건강</span>
+                    <strong>{selectedExternalCounts.health}</strong>
+                  </article>
+                </div>
+              ) : null}
+
               <div className="date-event-list">
                 <DayTimelineSection
                   countsByCategory={countsByCategory}
@@ -540,6 +583,7 @@ export function CalendarView({
                   onResolveDropPlacement={getDropPlacement}
                   onSetDragging={setDraggingItem}
                   onToggleDone={toggleTaskDone}
+                  readOnly={isDatabaseView}
                   visibleCategories={detailSections.map((section) => section.type)}
                 />
                 {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
