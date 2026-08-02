@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 
@@ -31,13 +32,6 @@ type TaskInsert = Omit<TaskRow, "id"> & {
 };
 
 type TaskUpdate = Partial<Omit<TaskInsert, "user_id">>;
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 const taskColumns =
   "id,title,status,priority,scheduled_date,due_date,start_time,end_time,is_all_day,completed_at,deferred_count,memo,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
@@ -134,7 +128,7 @@ function mapTaskToUpdate(task: TaskItem): TaskUpdate {
 
 export async function fetchTasksFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -149,7 +143,7 @@ export async function fetchTasksFromDb() {
 
 export async function createTaskInDb(task: TaskItem) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase

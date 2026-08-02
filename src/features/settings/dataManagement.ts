@@ -1,3 +1,4 @@
+import { requireCurrentUser } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 
 const exportTables = [
@@ -35,18 +36,9 @@ type DailyOSExportPayload = {
   version: 1;
 };
 
-async function getCurrentUser() {
-  if (!supabase) throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
-
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  if (!data.user) throw new Error("로그인이 필요합니다.");
-  return data.user;
-}
-
 export async function exportDailyOSData() {
   if (!supabase) throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
-  const user = await getCurrentUser();
+  const user = await requireCurrentUser();
   const tables: DailyOSExportPayload["tables"] = {};
 
   for (const table of exportTables) {
@@ -76,7 +68,7 @@ export function downloadDailyOSExport(payload: DailyOSExportPayload) {
 
 export async function importDailyOSData(file: File) {
   if (!supabase) throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
-  const user = await getCurrentUser();
+  const user = await requireCurrentUser();
   const payload = JSON.parse(await file.text()) as Partial<DailyOSExportPayload>;
   if (payload.version !== 1 || !payload.tables) throw new Error("dailyOS 백업 파일 형식이 아닙니다.");
 
@@ -96,7 +88,7 @@ export async function importDailyOSData(file: File) {
 
 export async function deleteDailyOSData() {
   if (!supabase) throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
-  const user = await getCurrentUser();
+  const user = await requireCurrentUser();
   const { data: photoRows } = await supabase.from("life_photos").select("file_path").eq("user_id", user.id);
   const filePaths = (photoRows ?? []).map((row) => String((row as { file_path: string }).file_path)).filter(Boolean);
 

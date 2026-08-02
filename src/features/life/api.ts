@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import type { DailyLogRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord } from "@/types/domain";
@@ -61,13 +62,6 @@ type SupabaseErrorLike = {
   status?: unknown;
   statusCode?: unknown;
 };
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 function getObjectErrorEntries(error: SupabaseErrorLike) {
   return Object.getOwnPropertyNames(error)
@@ -178,7 +172,7 @@ async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
 
 export async function fetchLifeActivitiesFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -194,7 +188,7 @@ export async function fetchLifeActivitiesFromDb() {
 
 export async function createLifeActivityInDb(activity: LifeActivityRecord) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -243,7 +237,7 @@ export async function deleteLifeActivityFromDb(id: string) {
 
 export async function fetchDailyLogsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -258,7 +252,7 @@ export async function fetchDailyLogsFromDb() {
 
 export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" }) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -307,7 +301,7 @@ export async function deleteDailyLogFromDb(id: string) {
 
 export async function fetchLifePhotosFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -327,7 +321,7 @@ export async function uploadLifePhotosToDb(
   linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" },
 ) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const uploadedRows: LifePhotoRow[] = [];

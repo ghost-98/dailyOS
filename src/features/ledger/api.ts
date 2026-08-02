@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { ExpenseCategory, ExpenseRecord } from "@/types/domain";
 
@@ -19,13 +20,6 @@ type ExpenseInsert = Omit<ExpenseRow, "id"> & {
 type ExpenseUpdate = Partial<Omit<ExpenseInsert, "user_id">>;
 
 const expenseColumns = "id,expense_date,title,amount,category,memo,target_type,target_id";
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 function mapExpenseRow(row: ExpenseRow): ExpenseRecord {
   return {
@@ -67,7 +61,7 @@ function mapExpenseUpdate(record: ExpenseRecord): ExpenseUpdate {
 
 export async function fetchExpenseRecordsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -96,7 +90,7 @@ export async function syncLinkedExpenseRecordInDb({
   title: string;
 }) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data: existing, error: fetchError } = await supabase
@@ -151,7 +145,7 @@ export async function syncLinkedExpenseRecordInDb({
 
 export async function deleteLinkedExpenseRecordInDb(targetType: NonNullable<ExpenseRecord["targetType"]>, targetId: string) {
   if (!supabase) return false;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return false;
 
   const { error } = await supabase.from("expense_records").delete().eq("user_id", userId).eq("target_type", targetType).eq("target_id", targetId);

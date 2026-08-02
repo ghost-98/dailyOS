@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { EventType } from "@/types/domain";
 import type { CalendarEvent } from "./data";
@@ -32,13 +33,6 @@ type CalendarEventUpdate = Partial<Omit<CalendarEventInsert, "user_id">>;
 
 const selectColumns =
   "id,event_date,end_date,event_time,end_time,is_all_day,type,title,meta,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 function mapRowToEvent(row: CalendarEventRow): CalendarEvent {
   return {
@@ -123,7 +117,7 @@ function mapEventToUpdate(event: CalendarEvent): CalendarEventUpdate {
 
 export async function fetchCalendarEventsFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -139,7 +133,7 @@ export async function fetchCalendarEventsFromDb() {
 
 export async function createCalendarEventInDb(event: CalendarEvent) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
