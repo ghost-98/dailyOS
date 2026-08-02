@@ -1115,6 +1115,10 @@ function LifeActivitiesView({
   const [food, setFood] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [memo, setMemo] = useState("");
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const selectedActivities = activities.filter((activity) => activity.date === date).sort((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"));
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
   const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
@@ -1133,6 +1137,7 @@ function LifeActivitiesView({
     setFood("");
     setExpenseAmount("");
     setMemo("");
+    setFormError("");
   };
 
   const editActivity = (activity: LifeActivityRecord) => {
@@ -1154,22 +1159,54 @@ function LifeActivitiesView({
 
   const saveActivity = async () => {
     if (!title.trim()) return;
-    await onSaveActivity({
-      id: editing?.id ?? `activity-${Date.now()}`,
-      date,
-      startTime: hasTime ? startTime || undefined : undefined,
-      endTime: hasTime && hasEndTime ? endTime || undefined : undefined,
-      isAllDay: !hasTime,
-      title: title.trim(),
-      category,
-      placeName: placeName.trim() || undefined,
-      placeAddress: placeAddress.trim() || undefined,
-      companions: companions.trim() || undefined,
-      food: food.trim() || undefined,
-      expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
-      memo: memo.trim() || undefined,
-    });
-    resetForm();
+    if (hasTime && hasEndTime && startTime && endTime && endTime < startTime) {
+      setFormError("종료 시간은 시작 시간보다 늦어야 합니다.");
+      return;
+    }
+
+    setIsSaving(true);
+    setFormError("");
+    setMessage("");
+    try {
+      await onSaveActivity({
+        id: editing?.id ?? `activity-${Date.now()}`,
+        date,
+        startTime: hasTime ? startTime || undefined : undefined,
+        endTime: hasTime && hasEndTime ? endTime || undefined : undefined,
+        isAllDay: !hasTime,
+        title: title.trim(),
+        category,
+        placeName: placeName.trim() || undefined,
+        placeAddress: placeAddress.trim() || undefined,
+        companions: companions.trim() || undefined,
+        food: food.trim() || undefined,
+        expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
+        memo: memo.trim() || undefined,
+      });
+      setMessage(editing ? "활동 기록을 수정했어요." : "활동 기록을 저장했어요.");
+      resetForm();
+    } catch (error) {
+      console.error("Failed to save life activity", error);
+      setFormError(getLifeActionErrorMessage(error, "활동 기록을 저장하지 못했습니다."));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteActivity = async (activity: LifeActivityRecord) => {
+    setDeletingActivityId(activity.id);
+    setFormError("");
+    setMessage("");
+    try {
+      await onDeleteActivity(activity.id);
+      if (editing?.id === activity.id) resetForm();
+      setMessage("활동 기록을 삭제했어요.");
+    } catch (error) {
+      console.error("Failed to delete life activity", error);
+      setFormError(getLifeActionErrorMessage(error, "활동 기록을 삭제하지 못했습니다."));
+    } finally {
+      setDeletingActivityId(null);
+    }
   };
 
   return (
@@ -1285,8 +1322,10 @@ function LifeActivitiesView({
             </label>
           </div>
 
-          <button className="life-ask-submit" disabled={!title.trim()} onClick={() => void saveActivity()} type="button">
-            {editing ? "활동 저장" : "활동 추가"}
+          {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+          {message ? <p className="life-health-message">{message}</p> : null}
+          <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
+            {isSaving ? "저장 중" : editing ? "활동 저장" : "활동 추가"}
           </button>
         </SectionCard>
 
@@ -1320,7 +1359,9 @@ function LifeActivitiesView({
               </div>
               <div className="life-record-actions">
                 <button onClick={() => editActivity(activity)} type="button">수정</button>
-                <button onClick={() => void onDeleteActivity(activity.id)} type="button">삭제</button>
+                <button disabled={deletingActivityId === activity.id} onClick={() => void deleteActivity(activity)} type="button">
+                  {deletingActivityId === activity.id ? "삭제 중" : "삭제"}
+                </button>
               </div>
             </article>
           )) : (
@@ -1804,7 +1845,9 @@ function LifeLogsView({
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const selectedLogs = logs.filter((log) => log.date === date);
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
   const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
@@ -1830,6 +1873,8 @@ function LifeLogsView({
     if (!trimmedContent) return;
 
     setIsSaving(true);
+    setFormError("");
+    setMessage("");
     try {
       const linkedTargetPayload = linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined;
       if (editingLogId) {
@@ -1847,6 +1892,10 @@ function LifeLogsView({
       setContent("");
       setLinkedTargetKey("");
       setEditingLogId(null);
+      setMessage(editingLogId ? "하루기록을 수정했어요." : "하루기록을 저장했어요.");
+    } catch (error) {
+      console.error("Failed to save daily log", error);
+      setFormError(getLifeActionErrorMessage(error, "하루기록을 저장하지 못했습니다."));
     } finally {
       setIsSaving(false);
     }
@@ -1861,6 +1910,8 @@ function LifeLogsView({
 
   const deleteLog = async (id: string) => {
     setDeletingLogId(id);
+    setFormError("");
+    setMessage("");
     try {
       await onDeleteLog(id);
       if (editingLogId === id) {
@@ -1868,6 +1919,10 @@ function LifeLogsView({
         setContent("");
         setLinkedTargetKey("");
       }
+      setMessage("하루기록을 삭제했어요.");
+    } catch (error) {
+      console.error("Failed to delete daily log", error);
+      setFormError(getLifeActionErrorMessage(error, "하루기록을 삭제하지 못했습니다."));
     } finally {
       setDeletingLogId(null);
     }
@@ -1914,6 +1969,8 @@ function LifeLogsView({
           <button className="life-capture-primary" disabled={!content.trim() || isSaving} onClick={saveLog} type="button">
             {isSaving ? "저장 중" : editingLogId ? "기록 수정" : "기록 저장"}
           </button>
+          {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+          {message ? <p className="life-health-message">{message}</p> : null}
         </SectionCard>
 
         <SectionCard className="life-capture-list">
@@ -1974,6 +2031,7 @@ function LifePhotosView({
   const [previews, setPreviews] = useState<LifeMediaPreview[]>([]);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [message, setMessage] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const selectedPhotos = photos.filter((photo) => photo.date === date);
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
@@ -1999,6 +2057,7 @@ function LifePhotosView({
 
   const selectFiles = async (files: File[]) => {
     setUploadError(null);
+    setMessage("");
     previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
     try {
       setPreviews(await Promise.all(files.map(createLifeMediaPreview)));
@@ -2013,6 +2072,7 @@ function LifePhotosView({
     if (previews.length === 0) return;
 
     setIsUploading(true);
+    setMessage("");
     try {
       await onUploadPhotos(date, previews, caption.trim() || undefined, linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined);
       previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
@@ -2020,6 +2080,7 @@ function LifePhotosView({
       setCaption("");
       setLinkedTargetKey("");
       setUploadError(null);
+      setMessage("사진/영상을 업로드했어요.");
     } catch (error) {
       console.error("Failed to upload life photos", getLifePhotoErrorDebugInfo(error));
       setUploadError(getLifePhotoUploadErrorMessage(error));
@@ -2030,8 +2091,14 @@ function LifePhotosView({
 
   const deletePhoto = async (photo: LifePhotoRecord) => {
     setDeletingPhotoId(photo.id);
+    setMessage("");
+    setUploadError(null);
     try {
       await onDeletePhoto(photo);
+      setMessage("사진/영상을 삭제했어요.");
+    } catch (error) {
+      console.error("Failed to delete life photo", getLifePhotoErrorDebugInfo(error));
+      setUploadError(getLifePhotoUploadErrorMessage(error));
     } finally {
       setDeletingPhotoId(null);
     }
@@ -2086,6 +2153,7 @@ function LifePhotosView({
           ) : null}
           <input className="life-photo-caption-input" placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
           {uploadError ? <p className="life-photo-upload-error">{uploadError}</p> : null}
+          {message ? <p className="life-health-message">{message}</p> : null}
           <button className="life-capture-primary" disabled={previews.length === 0 || isUploading} onClick={uploadPhotos} type="button">
             {isUploading ? "업로드 중" : "업로드"}
           </button>
@@ -2134,6 +2202,14 @@ function LifePhotosView({
       </div>
     </div>
   );
+}
+
+function getLifeActionErrorMessage(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  if (message) return message;
+
+  const detail = getLifePhotoErrorDebugInfo(error);
+  return detail && detail !== "{}" ? `${fallback} ${detail}` : fallback;
 }
 
 function getLifePhotoUploadErrorMessage(error: unknown) {

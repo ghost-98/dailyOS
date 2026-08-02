@@ -396,7 +396,7 @@ export function TodayDashboard() {
 
         <div className="today-side-grid">
           <SectionCard className="schedule-card today-command-card">
-            <DashboardHeader href="/life/calendar" icon={<NotebookPen aria-hidden size={20} />} title={text.dailyLog} trailing={`${text.thisMonth} ${monthLogs.length}${text.count}`} />
+            <DashboardHeader href="/life/logs" icon={<NotebookPen aria-hidden size={20} />} title={text.dailyLog} trailing={`${text.thisMonth} ${monthLogs.length}${text.count}`} />
             <div className="today-log-stack">
               {todayLogs.length > 0 ? (
                 todayLogs.slice(0, 3).map((log) => (
@@ -406,13 +406,13 @@ export function TodayDashboard() {
                   </article>
                 ))
               ) : (
-                <EmptyBlock href="/life/calendar" text={text.noDailyLog} />
+                <EmptyBlock href="/life/logs" text={text.noDailyLog} />
               )}
             </div>
           </SectionCard>
 
           <SectionCard className="schedule-card today-command-card">
-            <DashboardHeader href="/life/calendar" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
+            <DashboardHeader href="/life/photos" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
             {todayPhotos.length > 0 ? (
               <div className="today-photo-strip">
                 {todayPhotos.slice(0, 4).map((photo) => (
@@ -422,7 +422,7 @@ export function TodayDashboard() {
                 ))}
               </div>
             ) : (
-              <EmptyBlock href="/life/calendar" text={text.noPhoto} />
+              <EmptyBlock href="/life/photos" text={text.noPhoto} />
             )}
           </SectionCard>
         </div>
@@ -430,7 +430,7 @@ export function TodayDashboard() {
 
       <div className="today-support-grid">
         <SectionCard className="schedule-card today-command-card">
-          <DashboardHeader href="/life/calendar" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
+          <DashboardHeader href="/life/places-flow" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
           <div className="today-place-list">
             {places.length > 0 ? (
               places.slice(0, 5).map((place) => (
@@ -440,13 +440,13 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/calendar" text={text.noPlaces} />
+              <EmptyBlock href="/life/places-flow" text={text.noPlaces} />
             )}
           </div>
         </SectionCard>
 
         <SectionCard className="schedule-card today-command-card">
-          <DashboardHeader href="/life/calendar" icon={<WalletCards aria-hidden size={20} />} title={text.ledger} trailing={`${todayExpenses.length}\uAC74`} />
+          <DashboardHeader href="/ledger" icon={<WalletCards aria-hidden size={20} />} title={text.ledger} trailing={`${todayExpenses.length}\uAC74`} />
           <div className="today-ledger-total">
             <span>{text.todayUsed}</span>
             <strong>{formatCurrency(todayExpenseTotal)}</strong>
@@ -469,7 +469,7 @@ export function TodayDashboard() {
         </SectionCard>
 
         <SectionCard className="vitals-card today-command-card today-health-card">
-          <DashboardHeader href="/life/calendar" icon={<Dumbbell aria-hidden size={20} />} title={text.health} />
+          <DashboardHeader href="/life/health" icon={<Dumbbell aria-hidden size={20} />} title={text.health} />
           <div className="today-health-grid">
             <div className="workout-plan">
               <Dumbbell aria-hidden size={18} />
