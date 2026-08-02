@@ -1,0 +1,40 @@
+.empty-dashboard-card {
+  align-content: start;
+  gap: 18px;
+}
+
+.empty-dashboard-card p,
+.empty-dashboard-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.empty-dashboard-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.today-empty-block {
+  display: grid;
+  gap: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 18px;
+}
+
+.today-empty-block p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
