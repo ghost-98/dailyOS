@@ -118,6 +118,7 @@ type LifeDayReconstructionItem = {
 };
 
 const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
+const LIFE_ASK_RECORD_LIMIT = 220;
 
 type PersonSummary = {
   expenseTotal: number;
@@ -1359,7 +1360,7 @@ function LifeAskView({
   const [isAsking, setIsAsking] = useState(false);
   const [question, setQuestion] = useState("나 3월달에 자주 했던 일과 그때의 소비, 사람, 건강 흐름이 어땠어?");
   const records = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, photos, tasks, weights, workouts]);
-  const latestRecords = useMemo(() => records.slice(0, 160), [records]);
+  const scopedRecords = useMemo(() => selectRelevantLifeAskRecords(question, records), [question, records]);
 
   const askLifeDb = async () => {
     const trimmedQuestion = question.trim();
@@ -1372,7 +1373,7 @@ function LifeAskView({
       const response = await fetch("/api/life/ask", {
         body: JSON.stringify({
           question: trimmedQuestion,
-          records: latestRecords.map((record) => ({
+          records: scopedRecords.map((record) => ({
             date: record.date,
             description: record.description,
             label: record.label,
@@ -1406,7 +1407,7 @@ function LifeAskView({
               <p className="eyebrow">Life DB Copilot</p>
               <h2>내 기록에 질문하기</h2>
             </div>
-            <strong className="life-places-count">{records.length}건</strong>
+            <strong className="life-places-count">{scopedRecords.length}/{records.length}건</strong>
           </div>
           <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 나 3월달에 부산 갔던 것 같은데 그때 어땠어?" />
           <div className="life-ask-examples">
@@ -1715,6 +1716,72 @@ function buildLifeSearchItems(
       type: "weight" as const,
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function selectRelevantLifeAskRecords(question: string, records: LifeSearchItem[]) {
+  const normalizedQuestion = question.trim().toLowerCase();
+  if (!normalizedQuestion) return records.slice(0, LIFE_ASK_RECORD_LIMIT);
+
+  const monthKeys = getQuestionMonthKeys(normalizedQuestion);
+  const dateKeys = getQuestionDateKeys(normalizedQuestion);
+  const terms = getQuestionTerms(normalizedQuestion);
+  const scored = records
+    .map((record) => {
+      const searchableText = [record.date, record.label, record.title, record.description, record.tags.join(" ")].join(" ").toLowerCase();
+      const monthScore = monthKeys.some((monthKey) => record.date.startsWith(monthKey) || record.date.slice(5, 7) === monthKey) ? 10 : 0;
+      const dateScore = dateKeys.some((dateKey) => record.date === dateKey) ? 16 : 0;
+      const termScore = terms.reduce((score, term) => score + (searchableText.includes(term) ? 2 : 0), 0);
+      const typeScore = getLifeAskTypeScore(normalizedQuestion, record.type);
+      return { record, score: monthScore + dateScore + termScore + typeScore };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || b.record.date.localeCompare(a.record.date))
+    .map((item) => item.record);
+
+  if (scored.length === 0) return records.slice(0, LIFE_ASK_RECORD_LIMIT);
+
+  const selected = new Map<string, LifeSearchItem>();
+  scored.forEach((record) => selected.set(record.id, record));
+  records.slice(0, 60).forEach((record) => selected.set(record.id, record));
+  return [...selected.values()].slice(0, LIFE_ASK_RECORD_LIMIT);
+}
+
+function getQuestionMonthKeys(question: string) {
+  const monthKeys = new Set<string>();
+  for (const match of question.matchAll(/(20\d{2})\s*[년\-./]?\s*(1[0-2]|0?[1-9])\s*월?/g)) {
+    monthKeys.add(`${match[1]}-${match[2].padStart(2, "0")}`);
+  }
+  for (const match of question.matchAll(/(?:^|[^0-9])(1[0-2]|0?[1-9])\s*월/g)) {
+    monthKeys.add(match[1].padStart(2, "0"));
+  }
+  return [...monthKeys];
+}
+
+function getQuestionDateKeys(question: string) {
+  const dateKeys = new Set<string>();
+  for (const match of question.matchAll(/(20\d{2})[년\-./\s]+(1[0-2]|0?[1-9])[월\-./\s]+([12]\d|3[01]|0?[1-9])\s*일?/g)) {
+    dateKeys.add(`${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
+  }
+  return [...dateKeys];
+}
+
+function getQuestionTerms(question: string) {
+  const stopWords = new Set(["그때", "어땠어", "어때", "했던", "같은데", "자주", "최근", "이번", "지난", "나", "내가", "기록", "흐름"]);
+  return question
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length >= 2 && !stopWords.has(term) && !/^\d+$/.test(term));
+}
+
+function getLifeAskTypeScore(question: string, type: LifeSearchItem["type"]) {
+  if ((question.includes("사진") || question.includes("영상")) && type === "photo") return 4;
+  if ((question.includes("소비") || question.includes("지출") || question.includes("돈")) && type === "expense") return 4;
+  if ((question.includes("운동") || question.includes("러닝") || question.includes("건강")) && (type === "workout" || type === "weight")) return 4;
+  if ((question.includes("누구") || question.includes("사람") || question.includes("친구")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
+  if ((question.includes("장소") || question.includes("어디")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
+  if ((question.includes("활동") || question.includes("뭐했") || question.includes("무엇")) && type === "activity") return 4;
+  return 0;
 }
 
 function LifeLogsView({
