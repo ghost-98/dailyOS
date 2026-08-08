@@ -1,23 +1,20 @@
 "use client";
 
 import type { DragEvent } from "react";
-import { useState } from "react";
 import { Activity, Check, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
-import { categoryLabels, eventTone, formatPlanDateTime, isExternalTimelineType, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
-import type { CalendarCategory, DayTimelineFilter, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
+import { categoryLabels, eventTone, formatPlanDateTime, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
+import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
 
 type ActivityConversionState = { id: string; type: "event" | "task" } | null;
 
 export function DayTimelineSection({
-  countsByCategory,
   deletingPlan,
   draggingItem,
   dropTarget,
-  externalCount,
   isConvertingToActivity,
   isLoading,
   items,
@@ -35,13 +32,12 @@ export function DayTimelineSection({
   onSetDragging,
   onToggleDone,
   readOnly = false,
-  visibleCategories,
 }: {
-  countsByCategory: Record<CalendarCategory, number>;
+  countsByCategory?: { event: number; schedule: number; todo: number };
   deletingPlan?: { id: string; type: "event" | "task" } | null;
-  draggingItem: { id: string; type: CalendarCategory } | null;
+  draggingItem: { id: string; type: "schedule" | "event" | "todo" } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
-  externalCount: number;
+  externalCount?: number;
   isConvertingToActivity?: ActivityConversionState;
   isLoading: boolean;
   items: DayTimelineItem[];
@@ -50,62 +46,29 @@ export function DayTimelineSection({
   onCreateActivityFromTask: (task: TaskItem) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => void;
+  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: "schedule" | "event" | "todo") => void;
   onEditEvent: (event: CalendarEvent) => void;
   onEditTask: (task: TaskItem) => void;
   onReorderEvent: (targetId: string, placement?: DragPlacement) => void;
   onReorderTask: (targetId: string, placement?: DragPlacement) => void;
   onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
-  onSetDragging: (item: { id: string; type: CalendarCategory }) => void;
+  onSetDragging: (item: { id: string; type: "schedule" | "event" | "todo" }) => void;
   onToggleDone: (task: TaskItem) => void;
   readOnly?: boolean;
-  visibleCategories: CalendarCategory[];
+  visibleCategories?: Array<"schedule" | "event" | "todo">;
 }) {
-  const [activeFilters, setActiveFilters] = useState<DayTimelineFilter[]>([]);
-  const totalCount = visibleCategories.reduce((sum, type) => sum + countsByCategory[type], 0) + externalCount;
-  const filterChips = [
-    ...visibleCategories.map((type) => ({ count: countsByCategory[type], label: categoryLabels[type], type })),
-    ...(externalCount > 0 ? [{ count: externalCount, label: "생활 기록", type: "life" as const }] : []),
-  ];
-  const filteredItems =
-    activeFilters.length === 0 ? items : items.filter((item) => (isExternalTimelineType(item.type) ? activeFilters.includes("life") : activeFilters.includes(item.type)));
-
-  const toggleFilter = (type: DayTimelineFilter) => {
-    setActiveFilters((current) => (current.includes(type) ? current.filter((filter) => filter !== type) : [...current, type]));
-  };
-
   return (
     <section className="day-timeline" aria-label="하루 타임라인">
       <div className="day-timeline__summary">
         <div>
           <span>하루 타임라인</span>
-          <strong>{totalCount}개 기록</strong>
-        </div>
-        <div className="day-timeline__chips" aria-label="기록 필터">
-          {filterChips.map((filter) => {
-            const isActive = activeFilters.includes(filter.type);
-            const isMuted = activeFilters.length > 0 && !isActive;
-
-            return (
-              <button
-                aria-pressed={isActive}
-                className={`day-timeline__chip ${isActive ? "day-timeline__chip--active" : ""} ${isMuted ? "day-timeline__chip--muted" : ""}`}
-                key={filter.type}
-                onClick={() => toggleFilter(filter.type)}
-                type="button"
-              >
-                {filter.type !== "life" ? <span className={`calendar-dot calendar-dot--${filter.type}`} /> : null}
-                {filter.label}
-                <strong>{filter.count}</strong>
-              </button>
-            );
-          })}
+          <strong>{items.length}개 기록</strong>
         </div>
       </div>
 
-      {filteredItems.length > 0 ? (
+      {items.length > 0 ? (
         <div className="day-timeline__items">
-          {filteredItems.map((item) => (
+          {items.map((item) => (
             <div className={`day-timeline__row day-timeline__row--${item.type}`} key={item.id}>
               <div className="day-timeline__time">
                 <span>{item.timeLabel}</span>

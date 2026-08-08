@@ -7,8 +7,10 @@ import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
+import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
+import { PeoplePickerField } from "@/features/people/PeoplePickerField";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
-import type { LifeActivityRecord, PlanPlace } from "@/types/domain";
+import type { LifeActivityRecord, PersonRecord, PlanPlace } from "@/types/domain";
 
 export type LifeActivityDraft = {
   date?: string;
@@ -22,11 +24,11 @@ type ActivityTemplate = {
   title: string;
 };
 
-const ACTIVITY_CATEGORIES = ["식사", "이동", "작업", "공부", "만남", "운동", "휴식", "집안일", "기타"];
+const ACTIVITY_CATEGORIES = ["식사", "이동", "일", "공부", "만남", "운동", "휴식", "소비", "기타"];
 const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
   { category: "식사", title: "식사" },
   { category: "이동", title: "이동" },
-  { category: "작업", title: "프로젝트 작업" },
+  { category: "일", title: "일" },
   { category: "공부", title: "공부" },
   { category: "만남", title: "사람 만남" },
   { category: "운동", title: "운동" },
@@ -56,10 +58,11 @@ export function LifeActivitiesView({
   const [endTime, setEndTime] = useState(initialDraft?.endTime ?? "");
   const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [place, setPlace] = useState<PlanPlace | undefined>();
-  const [companions, setCompanions] = useState("");
+  const [companions, setCompanions] = useState<string[]>([]);
   const [food, setFood] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [memo, setMemo] = useState("");
+  const [people, setPeople] = useState<PersonRecord[]>([]);
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
@@ -81,6 +84,20 @@ export function LifeActivitiesView({
     setFormError("");
     setMessage("");
   }, [initialDraft]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchPeopleFromDb()
+      .then((records) => {
+        if (isMounted) setPeople(records ?? []);
+      })
+      .catch((error) => console.error("Failed to load people list", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedActivities = useMemo(
     () => activities.filter((activity) => activity.date === date).sort((left, right) => (left.startTime ?? "99:99").localeCompare(right.startTime ?? "99:99")),
@@ -108,7 +125,7 @@ export function LifeActivitiesView({
     setEndTime("");
     setTitle("");
     setPlace(undefined);
-    setCompanions("");
+    setCompanions([]);
     setFood("");
     setExpenseAmount("");
     setMemo("");
@@ -130,7 +147,7 @@ export function LifeActivitiesView({
     setEndTime(activity.endTime ?? "");
     setTitle(activity.title);
     setPlace(createActivityPlace(activity));
-    setCompanions(activity.companions ?? "");
+    setCompanions(parseCompanionNames(activity.companions));
     setFood(activity.food ?? "");
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
@@ -187,7 +204,7 @@ export function LifeActivitiesView({
         category,
         placeName: place?.name,
         placeAddress: place?.address,
-        companions: companions.trim() || undefined,
+        companions: companions.length > 0 ? companions.join(", ") : undefined,
         food: food.trim() || undefined,
         expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
         memo: memo.trim() || undefined,
@@ -204,6 +221,14 @@ export function LifeActivitiesView({
       saveLockRef.current = false;
       setIsSaving(false);
     }
+  };
+
+  const createPerson = async (name: string) => {
+    const savedPerson = await createPersonInDb({ name });
+    if (savedPerson) {
+      setPeople((current) => [...current, savedPerson].sort((left, right) => left.name.localeCompare(right.name)));
+    }
+    return savedPerson;
   };
 
   const deleteActivity = async (activity: LifeActivityRecord) => {
@@ -332,10 +357,10 @@ export function LifeActivitiesView({
           </div>
           <div className="life-activity-place-stack">
             <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
-            <label className="event-form-row event-form-row--field schedule-field">
+            <div className="event-form-row event-form-row--field schedule-field schedule-field--stack">
               <span>함께한 사람</span>
-              <input placeholder="쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} />
-            </label>
+              <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
+            </div>
           </div>
 
           <div className="schedule-form-section-title">
@@ -488,4 +513,11 @@ function createActivityPlace(activity: LifeActivityRecord): PlanPlace | undefine
 function getLifeActionErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+}
+
+function parseCompanionNames(value?: string) {
+  return (value ?? "")
+    .split(/[,，、·]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

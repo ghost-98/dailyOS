@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -15,9 +15,11 @@ import {
   X,
 } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { EventType, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
+import type { EventType, PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
+import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
+import { PeoplePickerField } from "@/features/people/PeoplePickerField";
 import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { FormSectionTitle } from "@/features/calendar/components";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
@@ -28,7 +30,6 @@ import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEvents
 import { categoryDisplayOrder, categoryLabels, getCalendarSummaryLabel } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "./data";
-
 type CalendarViewProps = {
   allowedTypes?: EventType[];
   defaultSelectedDate?: string | null;
@@ -45,6 +46,8 @@ type CalendarViewProps = {
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
+type LifeCalendarScope = "day" | "week" | "month" | "range";
+type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "expense" | "health";
 
 export function CalendarView({
   allowedTypes,
@@ -80,6 +83,11 @@ export function CalendarView({
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
   const [activityConversionMessage, setActivityConversionMessage] = useState("");
   const [convertingToActivity, setConvertingToActivity] = useState<{ id: string; type: "event" | "task" } | null>(null);
+  const [people, setPeople] = useState<PersonRecord[]>([]);
+  const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
+  const [dbAxis, setDbAxis] = useState<LifeCalendarAxis>("all");
+  const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
+  const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
 
   useEffect(() => {
     let isMounted = true;
@@ -100,15 +108,53 @@ export function CalendarView({
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    fetchPeopleFromDb()
+      .then((records) => {
+        if (!isMounted) return;
+        setPeople(records ?? []);
+      })
+      .catch((error) => console.error("Failed to load people from Supabase", error));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
   const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
   const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
+  const detailAnchorDate = selectedDate ?? todayKey;
+  const periodBounds = useMemo(() => {
+    if (!isDatabaseView) return { end: detailAnchorDate, start: detailAnchorDate };
+    if (dbScope === "week") return getWeekBounds(detailAnchorDate);
+    if (dbScope === "month") return getMonthBounds(currentMonth);
+    if (dbScope === "range") return normalizeRangeBounds(rangeStart, rangeEnd);
+    return { end: detailAnchorDate, start: detailAnchorDate };
+  }, [currentMonth, dbScope, detailAnchorDate, isDatabaseView, rangeEnd, rangeStart]);
   const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule") : []), [selectedDate, visibleEvents]);
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
   const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
+  const periodSchedules = useMemo(
+    () => visibleEvents.filter((event) => event.type === "schedule" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
+    [periodBounds.end, periodBounds.start, visibleEvents],
+  );
+  const periodEvents = useMemo(
+    () => visibleEvents.filter((event) => event.type === "event" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
+    [periodBounds.end, periodBounds.start, visibleEvents],
+  );
+  const periodTasks = useMemo(
+    () => tasks.filter((task) => isRangeOverlapping(task.scheduledDate, task.dueDate, periodBounds.start, periodBounds.end)),
+    [periodBounds.end, periodBounds.start, tasks],
+  );
+  const periodExternalItems = useMemo(
+    () => externalItems.filter((item) => item.date >= periodBounds.start && item.date <= periodBounds.end),
+    [externalItems, periodBounds.end, periodBounds.start],
+  );
   const selectedTimelineItems = useMemo(
     () =>
       [
@@ -118,6 +164,21 @@ export function CalendarView({
         ...selectedExternalItems.map((external) => createExternalTimelineItem(external)),
       ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type)),
     [selectedEvents, selectedExternalItems, selectedSchedules, selectedTasks],
+  );
+  const periodTimelineItems = useMemo(
+    () =>
+      [
+        ...periodSchedules.map((event) => createEventTimelineItem(event)),
+        ...periodTasks.map((task) => createTaskTimelineItem(task)),
+        ...periodEvents.map((event) => createEventTimelineItem(event)),
+        ...periodExternalItems.map((external) => createExternalTimelineItem(external)),
+      ].sort((first, second) => {
+        const firstDate = getTimelineItemDate(first);
+        const secondDate = getTimelineItemDate(second);
+        if (firstDate !== secondDate) return firstDate.localeCompare(secondDate);
+        return first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type);
+      }),
+    [periodEvents, periodExternalItems, periodSchedules, periodTasks],
   );
   const detailSections = useMemo(
     () =>
@@ -130,28 +191,53 @@ export function CalendarView({
   );
 
   const countsByCategory = useMemo(() => {
+    if (isDatabaseView) {
+      return {
+        schedule: periodSchedules.length,
+        event: periodEvents.length,
+        todo: periodTasks.length,
+      };
+    }
     if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
     return {
       schedule: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule").length,
       event: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event").length,
       todo: selectedTasks.length,
     };
-  }, [selectedDate, selectedTasks.length, visibleEvents]);
-  const selectedPlanPlaces = useMemo(
-    () => uniquePlanPlaces([...selectedSchedules, ...selectedEvents, ...selectedTasks].map((item) => item.place).filter((place): place is PlanPlace => Boolean(place))),
-    [selectedEvents, selectedSchedules, selectedTasks],
-  );
-  const selectedExternalCounts = useMemo(
+  }, [isDatabaseView, periodEvents.length, periodSchedules.length, periodTasks.length, selectedDate, selectedTasks.length, visibleEvents]);
+  const selectedPlanPlaces = useMemo(() => {
+    const sourceItems = isDatabaseView ? [...periodSchedules, ...periodEvents, ...periodTasks] : [...selectedSchedules, ...selectedEvents, ...selectedTasks];
+    return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
+  }, [isDatabaseView, periodEvents, periodSchedules, periodTasks, selectedEvents, selectedSchedules, selectedTasks]);
+  const selectedDbTotal = (isDatabaseView ? periodTimelineItems : selectedTimelineItems).length;
+  const dbAxisCounts = useMemo(
     () => ({
-      activity: selectedExternalItems.filter((item) => item.type === "activity").length,
-      dailyLog: selectedExternalItems.filter((item) => item.type === "daily_log").length,
-      expense: selectedExternalItems.filter((item) => item.type === "expense").length,
-      health: selectedExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
-      media: selectedExternalItems.filter((item) => item.type === "photo").length,
+      activity: periodExternalItems.filter((item) => item.type === "activity").length,
+      all: periodTimelineItems.length,
+      expense: periodExternalItems.filter((item) => item.type === "expense").length,
+      health: periodExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
+      places: periodTimelineItems.filter((item) => hasTimelinePlace(item)).length,
+      records: periodExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
     }),
-    [selectedExternalItems],
+    [periodExternalItems, periodTimelineItems],
   );
-  const selectedDbTotal = selectedTimelineItems.length;
+  const visibleTimelineItems = useMemo(() => {
+    if (!isDatabaseView) return selectedTimelineItems;
+    switch (dbAxis) {
+      case "activity":
+        return periodTimelineItems.filter((item) => item.type === "activity");
+      case "places":
+        return periodTimelineItems.filter((item) => hasTimelinePlace(item));
+      case "records":
+        return periodTimelineItems.filter((item) => item.type === "daily_log" || item.type === "photo");
+      case "expense":
+        return periodTimelineItems.filter((item) => item.type === "expense");
+      case "health":
+        return periodTimelineItems.filter((item) => item.type === "workout" || item.type === "weight");
+      default:
+        return periodTimelineItems;
+    }
+  }, [dbAxis, isDatabaseView, periodTimelineItems, selectedTimelineItems]);
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
@@ -185,6 +271,17 @@ export function CalendarView({
     setSheetDefaultType(type);
     setEditingEvent(null);
     setIsEventSheetOpen(true);
+  };
+
+  const handleCreatePerson = async (name: string) => {
+    const created = await createPersonInDb({ name });
+    if (created) {
+      setPeople((current) => {
+        if (current.some((person) => person.id === created.id)) return current;
+        return [...current, created].sort((left, right) => left.name.localeCompare(right.name));
+      });
+    }
+    return created;
   };
 
   const saveEvent = async (event: CalendarEvent) => {
@@ -440,7 +537,7 @@ export function CalendarView({
         </div>
       </header>
 
-      <div className={`calendar-layout ${selectedDate ? "calendar-layout--detail-open" : ""}`}>
+      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""}`}>
         <SectionCard className="calendar-board">
           <div className="calendar-toolbar">
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
@@ -455,7 +552,7 @@ export function CalendarView({
             </button>
           </div>
 
-          <div className="calendar-filters" aria-label="표시 항목">
+          {!isDatabaseView ? <div className="calendar-filters" aria-label="표시 항목">
             {categories.map((type) => (
               <button
                 className={`calendar-filter calendar-filter--${type} ${
@@ -468,11 +565,11 @@ export function CalendarView({
                 {categoryLabels[type]}
               </button>
             ))}
-          </div>
+          </div> : null}
 
           <div className="calendar-weekdays">
-            {weekdays.map((weekday) => (
-              <span key={weekday}>{weekday}</span>
+            {weekdays.map((weekday, index) => (
+              <span className={index === 0 ? "calendar-weekday calendar-weekday--sun" : "calendar-weekday"} key={weekday}>{weekday}</span>
             ))}
           </div>
 
@@ -492,7 +589,7 @@ export function CalendarView({
                   onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
                   type="button"
                 >
-                  {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
+                  {cell.day ? <span className={`calendar-day__number ${cell.date?.endsWith(`-${String(cell.day).padStart(2, "0")}`) && new Date(`${cell.date}T00:00:00`).getDay() === 0 ? "calendar-day__number--sunday" : ""}`}>{cell.day}</span> : null}
                   <div className="calendar-day__events">
                     {eventSummaries.slice(0, 4).map((summary) => (
                       <span
@@ -512,44 +609,61 @@ export function CalendarView({
           </div>
         </SectionCard>
 
-        {selectedDate ? (
+        {selectedDate || isDatabaseView ? (
           <aside className="calendar-detail">
             <SectionCard className="date-detail-card">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">선택한 날짜</p>
-                  <h2>{formatSelectedDate(selectedDate)}</h2>
+                  <p className="eyebrow">{isDatabaseView ? "라이프 캘린더" : "선택한 날짜"}</p>
+                  <h2>{isDatabaseView ? getScopeTitle(dbScope, periodBounds.start, periodBounds.end, currentMonth) : formatSelectedDate(selectedDate ?? detailAnchorDate)}</h2>
                 </div>
               </div>
 
-              {showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
+              {!isDatabaseView && showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
               {isDatabaseView ? (
-                <div className="life-calendar-db-summary">
-                  <article>
-                    <span>전체 기록</span>
-                    <strong>{selectedDbTotal}</strong>
-                  </article>
-                  <article>
-                    <span>활동</span>
-                    <strong>{selectedExternalCounts.activity}</strong>
-                  </article>
-                  <article>
-                    <span>계획</span>
-                    <strong>{selectedSchedules.length + selectedTasks.length + selectedEvents.length}</strong>
-                  </article>
-                  <article>
-                    <span>기록·사진</span>
-                    <strong>{selectedExternalCounts.dailyLog + selectedExternalCounts.media}</strong>
-                  </article>
-                  <article>
-                    <span>지출</span>
-                    <strong>{selectedExternalCounts.expense}</strong>
-                  </article>
-                  <article>
-                    <span>건강</span>
-                    <strong>{selectedExternalCounts.health}</strong>
-                  </article>
+                <div className="life-calendar-db-panel">
+                  <div className="life-calendar-db-scopes" aria-label="기간 보기">
+                    {([
+                      ["day", "일간"],
+                      ["week", "주간"],
+                      ["month", "월간"],
+                      ["range", "기간"],
+                    ] as const).map(([scope, label]) => (
+                      <button className={dbScope === scope ? "life-calendar-db-chip life-calendar-db-chip--active" : "life-calendar-db-chip"} key={scope} onClick={() => setDbScope(scope)} type="button">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {dbScope === "range" ? (
+                    <div className="life-calendar-db-range">
+                      <label>
+                        <span>시작</span>
+                        <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
+                      </label>
+                      <label>
+                        <span>종료</span>
+                        <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
+                      </label>
+                    </div>
+                  ) : null}
+
+                  <div className="life-calendar-db-summary" aria-label="기록 축">
+                    {([
+                      ["all", "전체 기록", selectedDbTotal],
+                      ["activity", "활동", dbAxisCounts.activity],
+                      ["places", "장소축", dbAxisCounts.places],
+                      ["records", "기록 사진", dbAxisCounts.records],
+                      ["expense", "지출", dbAxisCounts.expense],
+                      ["health", "건강", dbAxisCounts.health],
+                    ] as const).map(([axis, label, count]) => (
+                      <button className={dbAxis === axis ? "life-calendar-db-summary__card life-calendar-db-summary__card--active" : "life-calendar-db-summary__card"} key={axis} onClick={() => setDbAxis(axis)} type="button">
+                        <span>{label}</span>
+                        <strong>{count}</strong>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -559,10 +673,10 @@ export function CalendarView({
                   deletingPlan={deletingPlan}
                   draggingItem={draggingItem}
                   dropTarget={dropTarget}
-                  externalCount={selectedExternalItems.length}
+                  externalCount={isDatabaseView ? periodExternalItems.length : selectedExternalItems.length}
                   isConvertingToActivity={convertingToActivity}
                   isLoading={isLoading}
-                  items={selectedTimelineItems}
+                  items={visibleTimelineItems}
                   onClearDrag={clearDragState}
                   onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
                   onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
@@ -584,7 +698,7 @@ export function CalendarView({
                   onSetDragging={setDraggingItem}
                   onToggleDone={toggleTaskDone}
                   readOnly={isDatabaseView}
-                  visibleCategories={detailSections.map((section) => section.type)}
+                  visibleCategories={isDatabaseView ? ["schedule", "todo", "event"] : detailSections.map((section) => section.type)}
                 />
                 {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
               </div>
@@ -605,7 +719,9 @@ export function CalendarView({
             setIsEventSheetOpen(false);
             setEditingEvent(null);
           }}
+          onCreatePerson={handleCreatePerson}
           onSave={saveEvent}
+          people={people}
         />
       ) : null}
 
@@ -617,7 +733,9 @@ export function CalendarView({
             setIsTaskSheetOpen(false);
             setEditingTask(null);
           }}
+          onCreatePerson={handleCreatePerson}
           onSave={saveTask}
+          people={people}
           task={editingTask}
         />
       ) : null}
@@ -644,7 +762,9 @@ function EventCreateSheet({
   event,
   isSaving,
   onClose,
+  onCreatePerson,
   onSave,
+  people,
 }: {
   allowedTypes: CalendarCategory[];
   defaultDate: string;
@@ -652,7 +772,9 @@ function EventCreateSheet({
   event: CalendarEvent | null;
   isSaving: boolean;
   onClose: () => void;
+  onCreatePerson: (name: string) => Promise<PersonRecord | null>;
   onSave: (event: CalendarEvent) => void;
+  people: PersonRecord[];
 }) {
   const [title, setTitle] = useState(event?.title ?? "");
   const [date, setDate] = useState(event?.date ?? defaultDate);
@@ -665,7 +787,7 @@ function EventCreateSheet({
   const [type, setType] = useState<CalendarCategory>(event?.type === "event" ? "event" : defaultType);
   const [meta, setMeta] = useState(event?.meta ?? "");
   const [expenseAmount, setExpenseAmount] = useState(event?.expenseAmount !== undefined ? String(event.expenseAmount) : "");
-  const [companions, setCompanions] = useState(event?.companions ?? "");
+  const [companions, setCompanions] = useState<string[]>(parseCompanionNames(event?.companions));
   const [place, setPlace] = useState<PlanPlace | undefined>(event?.place);
 
   const saveCurrentEvent = () => {
@@ -683,7 +805,7 @@ function EventCreateSheet({
       isAllDay,
       meta: meta.trim() || "메모 없음",
       expenseAmount: parseOptionalAmount(expenseAmount),
-      companions: companions.trim() || undefined,
+      companions: companions.length > 0 ? companions.join(", ") : undefined,
       place,
     });
   };
@@ -725,7 +847,7 @@ function EventCreateSheet({
                 <UsersRound aria-hidden size={18} />
                 <span>함께한 사람</span>
               </div>
-              <input placeholder="이름을 쉼표로 구분" value={companions} onChange={(changeEvent) => setCompanions(changeEvent.target.value)} />
+              <PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} />
             </label>
 
             <label className="event-form-row event-form-row--field schedule-field">
@@ -885,13 +1007,17 @@ function TaskCreateSheet({
   defaultDate,
   isSaving,
   onClose,
+  onCreatePerson,
   onSave,
+  people,
   task,
 }: {
   defaultDate: string;
   isSaving: boolean;
   onClose: () => void;
+  onCreatePerson: (name: string) => Promise<PersonRecord | null>;
   onSave: (task: TaskItem) => void;
+  people: PersonRecord[];
   task: TaskItem | null;
 }) {
   const [title, setTitle] = useState(task?.title ?? "");
@@ -906,7 +1032,7 @@ function TaskCreateSheet({
   const [isAllDay, setIsAllDay] = useState(task ? task.isAllDay ?? !task.startTime : true);
   const [hasEndTime, setHasEndTime] = useState(Boolean(task?.endTime));
   const [expenseAmount, setExpenseAmount] = useState(task?.expenseAmount !== undefined ? String(task.expenseAmount) : "");
-  const [companions, setCompanions] = useState(task?.companions ?? "");
+  const [companions, setCompanions] = useState<string[]>(parseCompanionNames(task?.companions));
   const [place, setPlace] = useState<PlanPlace | undefined>(task?.place);
 
   const saveTask = () => {
@@ -927,7 +1053,7 @@ function TaskCreateSheet({
       deferredCount: task?.deferredCount ?? 0,
       memo: memo.trim() || undefined,
       expenseAmount: parseOptionalAmount(expenseAmount),
-      companions: companions.trim() || undefined,
+      companions: companions.length > 0 ? companions.join(", ") : undefined,
       place,
     });
   };
@@ -969,7 +1095,7 @@ function TaskCreateSheet({
                 <UsersRound aria-hidden size={18} />
                 <span>함께한 사람</span>
               </div>
-              <input placeholder="이름을 쉼표로 구분" value={companions} onChange={(event) => setCompanions(event.target.value)} />
+              <PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} />
             </label>
 
             <label className="event-form-row event-form-row--field schedule-field">
@@ -1191,6 +1317,58 @@ export function MonthPickerSheet({
       </section>
     </div>
   );
+}
+
+function parseCompanionNames(value?: string) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeRangeBounds(start: string, end: string) {
+  if (start <= end) return { end, start };
+  return { end: start, start: end };
+}
+
+function getWeekBounds(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const start = new Date(date);
+  start.setDate(date.getDate() - date.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { end: formatDateKey(end), start: formatDateKey(start) };
+}
+
+function getMonthBounds(month: Date) {
+  const start = new Date(month.getFullYear(), month.getMonth(), 1);
+  const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  return { end: formatDateKey(end), start: formatDateKey(start) };
+}
+
+function isRangeOverlapping(startDate: string, endDate: string | undefined, filterStart: string, filterEnd: string) {
+  const normalizedEndDate = endDate ?? startDate;
+  return startDate <= filterEnd && normalizedEndDate >= filterStart;
+}
+
+function getTimelineItemDate(item: DayTimelineItem) {
+  if ("event" in item) return item.event.date;
+  if ("task" in item) return item.task.scheduledDate;
+  return item.external.date;
+}
+
+function hasTimelinePlace(item: DayTimelineItem) {
+  if ("event" in item) return Boolean(item.event.place?.name || item.event.place?.address);
+  if ("task" in item) return Boolean(item.task.place?.name || item.task.place?.address);
+  return Boolean(item.external.placeName || item.external.placeAddress);
+}
+
+function getScopeTitle(scope: LifeCalendarScope, start: string, end: string, currentMonth: Date) {
+  if (scope === "day") return formatSelectedDate(start);
+  if (scope === "week") return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
+  if (scope === "month") return `${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`;
+  return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
 }
 
 function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {

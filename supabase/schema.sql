@@ -717,6 +717,8 @@ alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
 alter table public.place_folder_links enable row level security;
 alter table public.place_links enable row level security;
+alter table public.people enable row level security;
+alter table public.people_links enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -1079,6 +1081,78 @@ with check (
 drop policy if exists "Users can delete own place links" on public.place_links;
 create policy "Users can delete own place links"
 on public.place_links for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own people" on public.people;
+create policy "Users can read own people"
+on public.people for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own people" on public.people;
+create policy "Users can insert own people"
+on public.people for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own people" on public.people;
+create policy "Users can update own people"
+on public.people for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own people" on public.people;
+create policy "Users can delete own people"
+on public.people for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own people links" on public.people_links;
+create policy "Users can read own people links"
+on public.people_links for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own people links" on public.people_links;
+create policy "Users can insert own people links"
+on public.people_links for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and (
+    person_id is null
+    or exists (
+      select 1
+      from public.people
+      where people.id = people_links.person_id
+        and people.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can update own people links" on public.people_links;
+create policy "Users can update own people links"
+on public.people_links for update
+to authenticated
+using (user_id = auth.uid())
+with check (
+  user_id = auth.uid()
+  and (
+    person_id is null
+    or exists (
+      select 1
+      from public.people
+      where people.id = people_links.person_id
+        and people.user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users can delete own people links" on public.people_links;
+create policy "Users can delete own people links"
+on public.people_links for delete
 to authenticated
 using (user_id = auth.uid());
 

@@ -118,7 +118,7 @@ export function LifeLogsView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="하루기록" description="가능하면 활동에 연결하고, 아직 활동이 없다면 날짜나 계획에 붙여두세요. 리포트와 해당 날짜 타임라인에서 함께 조회됩니다." />
+      <LifeTabHeading title="하루기록" description="가능하면 활동에 연결하고, 아직 활동이 없다면 날짜나 계획에 붙여두세요. 라이프 캘린더와 검색에서 함께 조회됩니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
