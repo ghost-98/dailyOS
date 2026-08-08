@@ -371,12 +371,13 @@
     height: auto;
     min-height: 0;
     grid-template-areas:
-      "main"
+      "timeline"
       "map"
+      "companions"
+      "finance"
       "photos";
   }
 
-  .life-calendar-day-main__meta,
   .life-calendar-day-finance,
   .life-calendar-day-photo-preview,
   .life-calendar-day-photo-gallery {

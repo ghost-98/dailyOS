@@ -232,10 +232,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
   grid-template-areas:
-    "main map"
-    "main photos"
-    "main companions"
-    "main finance";
+    "timeline map"
+    "timeline photos"
+    "timeline companions"
+    "timeline finance";
   grid-template-rows: minmax(168px, 1fr) minmax(158px, 0.94fr) minmax(118px, 0.7fr) minmax(118px, 0.7fr);
   gap: 10px;
   height: 720px;
@@ -256,8 +256,8 @@
   text-align: left;
 }
 
-.life-calendar-day-card--main {
-  grid-area: main;
+.life-calendar-day-card--timeline {
+  grid-area: timeline;
 }
 
 .life-calendar-day-card--map {
@@ -283,8 +283,12 @@
   gap: 12px;
 }
 
+.life-calendar-day-card__head > div {
+  min-width: 0;
+}
+
 .life-calendar-day-card__head span,
-.life-calendar-day-activity-preview__item span,
+.life-calendar-day-timeline__time span,
 .life-calendar-day-stop-list__item span,
 .life-calendar-day-photo-gallery__item figcaption span {
   color: var(--muted);
@@ -293,43 +297,18 @@
 }
 
 .life-calendar-day-card__head strong,
-.life-calendar-day-activity-preview__item strong,
+.life-calendar-day-timeline__body strong,
 .life-calendar-day-stop-list__item strong,
 .life-calendar-day-photo-gallery__item figcaption strong {
   color: var(--text);
 }
 
 .life-calendar-day-card__head b {
+  flex: 0 0 auto;
   color: var(--violet);
   font-size: 0.76rem;
 }
 
-.life-calendar-day-main {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
-  min-height: 0;
-}
-
-.life-calendar-day-main__summary {
-  display: grid;
-  gap: 10px;
-}
-
-.life-calendar-day-main__summary > p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.life-calendar-day-main__meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.life-calendar-day-main__meta article,
 .life-calendar-day-finance article {
   display: grid;
   gap: 5px;
@@ -339,8 +318,6 @@
   padding: 11px 12px;
 }
 
-.life-calendar-day-main__meta span,
-.life-calendar-day-main__tags b,
 .life-calendar-day-finance span,
 .life-calendar-day-card__chips b {
   color: var(--muted);
@@ -348,20 +325,17 @@
   font-weight: 820;
 }
 
-.life-calendar-day-main__meta strong,
 .life-calendar-day-finance strong {
   color: var(--text);
   font-size: 0.92rem;
 }
 
-.life-calendar-day-main__tags,
 .life-calendar-day-card__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.life-calendar-day-main__tags b,
 .life-calendar-day-card__chips b {
   display: inline-flex;
   min-height: 30px;
@@ -372,7 +346,7 @@
   padding: 0 10px;
 }
 
-.life-calendar-day-main__list {
+.life-calendar-day-timeline {
   display: grid;
   align-content: start;
   gap: 8px;
@@ -381,31 +355,83 @@
   padding-right: 4px;
 }
 
-.life-calendar-day-main__item {
+.life-calendar-day-timeline__item {
+  position: relative;
   display: grid;
-  gap: 5px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.life-calendar-day-timeline__item::before {
+  position: absolute;
+  top: 32px;
+  bottom: -12px;
+  left: 80px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(201, 184, 255, 0.24), rgba(255, 255, 255, 0.06));
+  content: "";
+}
+
+.life-calendar-day-timeline__item:last-child::before {
+  display: none;
+}
+
+.life-calendar-day-timeline__time {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  padding-top: 2px;
+}
+
+.life-calendar-day-timeline__time b {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.life-calendar-day-timeline__body {
+  display: grid;
+  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.035);
-  color: inherit;
-  font: inherit;
   padding: 12px;
-  text-align: left;
 }
 
-.life-calendar-day-main__item span,
+.life-calendar-day-timeline__body strong {
+  font-size: 0.95rem;
+}
+
+.life-calendar-day-timeline__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-calendar-day-timeline__meta span,
+.life-calendar-day-timeline__tags b,
 .life-calendar-day-card > p,
 .life-calendar-day-stop-list__item p,
 .life-calendar-day-photo-gallery__item figcaption span {
-  margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.45;
 }
 
-.life-calendar-day-main__item strong {
-  color: var(--text);
-  font-size: 0.94rem;
+.life-calendar-day-timeline__meta span,
+.life-calendar-day-timeline__tags b {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0 10px;
+}
+
+.life-calendar-day-timeline__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .life-calendar-day-map {

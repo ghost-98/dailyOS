@@ -1453,45 +1453,30 @@ function LifeCalendarDatabasePanel({
     items.flatMap((item) => ("event" in item ? parseCompanionNames(item.event.companions) : "task" in item ? parseCompanionNames(item.task.companions) : [])),
   ).slice(0, 4);
   const topPlaces = getTopValues(places.map((place) => place.name)).slice(0, 4);
-  const topHighlights = getDayHighlights(items).slice(0, 5);
   const topPatterns = getPatternHighlights(daySummaries).slice(0, 5);
-  const headlineItem = topHighlights[0];
   const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
+  const dayEventCounts = getDayEventCounts(items);
 
   if (scope === "day") {
     return (
       <div className="life-calendar-db-content">
         <section className="life-calendar-db-section">
-          <div className="life-calendar-db-section__head">
-            <div>
-              <p className="eyebrow">Day Brief</p>
-              <h3>{headlineItem ? `${headlineItem.title}이 남은 날` : "이 날은 이렇게 흘렀어요"}</h3>
-            </div>
-          </div>
           <article className="life-calendar-db-story">
             <span>한 줄 요약</span>
             <strong>{narrative}</strong>
           </article>
-          <div className="life-calendar-db-hero">
+          <div className="life-calendar-day-events">
             <article>
-              <span>실제 활동</span>
-              <strong>{summary?.activityCount ?? 0}</strong>
-              <p>실제로 남긴 활동 기록</p>
+              <span>일정</span>
+              <strong>{dayEventCounts.schedule}</strong>
             </article>
             <article>
-              <span>하루 흔적</span>
-              <strong>{summary?.recordCount ?? 0}</strong>
-              <p>기록과 사진으로 남은 증거</p>
+              <span>할 일</span>
+              <strong>{dayEventCounts.todo}</strong>
             </article>
             <article>
-              <span>자금 흐름</span>
-              <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
-              <p>수입 {formatNumberWithUnit(finance.income, "원")} · 지출 {formatNumberWithUnit(finance.expense, "원")}</p>
-            </article>
-            <article>
-              <span>움직인 범위</span>
-              <strong>{summary?.placeCount ?? 0}</strong>
-              <p>장소와 건강 기록까지 포함한 하루 밀도</p>
+              <span>이벤트</span>
+              <strong>{dayEventCounts.event}</strong>
             </article>
           </div>
         </section>
@@ -1613,51 +1598,40 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
     () => getTopValues(activityItems.flatMap((item) => parseCompanionNames(item.external.companions))).slice(0, 8),
     [activityItems],
   );
-  const leadActivity = activityItems[0];
-  const activityTags = useMemo(
-    () =>
-      leadActivity
-        ? [leadActivity.external.category, leadActivity.external.food, leadActivity.external.placeName].filter(Boolean).slice(0, 6)
-        : [],
-    [leadActivity],
-  );
 
   return (
     <>
       <div className="life-calendar-day-panel">
         <div className="life-calendar-day-panel__layout">
-          <section className="life-calendar-day-card life-calendar-day-card--main">
+          <section className="life-calendar-day-card life-calendar-day-card--timeline">
             <div className="life-calendar-day-card__head">
               <div>
-                <span>메인 활동</span>
-                <strong>{leadActivity ? leadActivity.external.title : "대표 활동 없음"}</strong>
+                <span>활동 타임라인</span>
+                <strong>이 날의 실제 활동 흐름</strong>
               </div>
               <b>{activityItems.length}개 활동</b>
             </div>
-            {leadActivity ? (
-              <div className="life-calendar-day-main">
-                <div className="life-calendar-day-main__summary">
-                  <p>{[leadActivity.timeLabel, leadActivity.external.endTime ? `~ ${leadActivity.external.endTime}` : null].filter(Boolean).join(" ")}</p>
-                  <div className="life-calendar-day-main__meta">
-                    {leadActivity.external.amount ? <article><span>지출</span><strong>{formatNumberWithUnit(leadActivity.external.amount, "원")}</strong></article> : null}
-                    {leadActivity.external.companions ? <article><span>함께한 사람</span><strong>{leadActivity.external.companions}</strong></article> : null}
-                    {leadActivity.external.placeName ? <article><span>장소</span><strong>{leadActivity.external.placeName}</strong></article> : null}
+            <div className="life-calendar-day-timeline">
+              {activityItems.length > 0 ? activityItems.map((item) => (
+                <article className="life-calendar-day-timeline__item" key={item.id}>
+                  <div className="life-calendar-day-timeline__time">
+                    <span>{item.timeLabel}</span>
+                    {item.external.endTime ? <b>{item.external.endTime}</b> : null}
                   </div>
-                  <div className="life-calendar-day-main__tags">
-                    {activityTags.length > 0 ? activityTags.map((tag) => <b key={tag}>{tag}</b>) : <b>태그 없음</b>}
+                  <div className="life-calendar-day-timeline__body">
+                    <strong>{item.external.title}</strong>
+                    <div className="life-calendar-day-timeline__meta">
+                      {item.external.amount ? <span>지출 {formatNumberWithUnit(item.external.amount, "원")}</span> : null}
+                      {item.external.companions ? <span>{item.external.companions}</span> : null}
+                      {item.external.placeName ? <span>{item.external.placeName}</span> : null}
+                    </div>
+                    <div className="life-calendar-day-timeline__tags">
+                      {[item.external.category, item.external.food, item.external.placeName].filter(Boolean).slice(0, 5).map((tag) => <b key={`${item.id}-${tag}`}>{tag}</b>)}
+                    </div>
                   </div>
-                </div>
-                <div className="life-calendar-day-main__list">
-                  {activityItems.length > 0 ? activityItems.map((item) => (
-                    <button className="life-calendar-day-main__item" key={item.id} onClick={() => setDetailView("activities")} type="button">
-                      <span>{item.timeLabel}{item.external.endTime ? ` ~ ${item.external.endTime}` : ""}</span>
-                      <strong>{item.external.title}</strong>
-                      <p>{[item.external.placeName, item.external.companions, item.external.amount ? formatNumberWithUnit(item.external.amount, "원") : null].filter(Boolean).join(" · ") || "활동 기록"}</p>
-                    </button>
-                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
-                </div>
-              </div>
-            ) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "대표로 보여줄 활동 기록이 아직 없어요."}</div>}
+                </article>
+              )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+            </div>
           </section>
 
           <button className="life-calendar-day-card life-calendar-day-card--map" onClick={() => setDetailView("map")} type="button">
@@ -2048,19 +2022,6 @@ function getTopValues(values: string[]) {
   return [...counts.entries()].map(([value, count]) => ({ count, value })).sort((left, right) => right.count - left.count || left.value.localeCompare(right.value));
 }
 
-function getDayHighlights(items: DayTimelineItem[]) {
-  return items
-    .map((item) => ({
-      description: getTimelineItemDescription(item),
-      id: item.id,
-      label: getCalendarSummaryLabel(item.type),
-      priority: getTimelineHighlightPriority(item),
-      title: getTimelineItemTitle(item),
-    }))
-    .sort((left, right) => right.priority - left.priority)
-    .filter((item, index, array) => array.findIndex((candidate) => candidate.title === item.title && candidate.label === item.label) === index);
-}
-
 function getDayNarrative(summary: PeriodDaySummary | undefined, finance: { expense: number; income: number; net: number }, topCompanions: Array<{ count: number; value: string }>, topPlaces: Array<{ count: number; value: string }>) {
   if (!summary) return "아직 남은 기록이 적어서 이 날의 결을 읽기 어려워요.";
   const density =
@@ -2074,6 +2035,17 @@ function getDayNarrative(summary: PeriodDaySummary | undefined, finance: { expen
     finance.net < 0 ? `자금 흐름은 ${formatNumberWithUnit(finance.net, " 순지출")}` :
     "자금 흐름은 거의 균형이에요";
   return `${density}. ${people} ${place} ${financeTone}.`;
+}
+
+function getDayEventCounts(items: DayTimelineItem[]) {
+  return items.reduce(
+    (counts, item) => {
+      if ("event" in item) counts[item.event.type as "schedule" | "event"] += 1;
+      if ("task" in item) counts.todo += 1;
+      return counts;
+    },
+    { event: 0, schedule: 0, todo: 0 },
+  );
 }
 
 function buildDayRouteStops(items: DayTimelineItem[]) {
@@ -2145,17 +2117,6 @@ function getPatternHighlights(daySummaries: PeriodDaySummary[]) {
   ].filter((item): item is { description: string; id: string; label: string; title: string } => Boolean(item));
 }
 
-function getTimelineHighlightPriority(item: DayTimelineItem) {
-  if ("external" in item) {
-    if (item.external.type === "income") return 6;
-    if (item.external.type === "expense" || item.external.type === "activity") return 5;
-    if (item.external.type === "photo" || item.external.type === "daily_log") return 4;
-    return 3;
-  }
-  if ("event" in item) return item.event.type === "event" ? 5 : 4;
-  return item.task.priority === "high" ? 4 : 3;
-}
-
 function formatNumberWithUnit(value: number, unit: string) {
   const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
@@ -2219,16 +2180,6 @@ function getTimelineItemTitle(item: DayTimelineItem) {
   if ("event" in item) return item.event.title;
   if ("task" in item) return item.task.title;
   return item.external.title;
-}
-
-function getTimelineItemDescription(item: DayTimelineItem) {
-  if ("event" in item) {
-    return [item.event.place?.name, item.event.companions ? `함께 · ${item.event.companions}` : null, item.event.meta].filter(Boolean).join(" · ") || "계획 기록";
-  }
-  if ("task" in item) {
-    return [item.task.place?.name, item.task.companions ? `함께 · ${item.task.companions}` : null, item.task.memo].filter(Boolean).join(" · ") || "할 일 기록";
-  }
-  return [item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || getCalendarSummaryLabel(item.external.type);
 }
 
 function buildPeriodDaySummaries(
