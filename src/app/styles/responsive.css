@@ -360,10 +360,23 @@
   }
 
   .manage-calendar-overview__cards,
+  .life-calendar-day-panel__layout,
   .life-calendar-db-rhythm,
   .life-calendar-db-meta,
   .life-calendar-db-hero {
     grid-template-columns: 1fr;
+  }
+
+  .life-calendar-day-panel__layout {
+    grid-template-areas:
+      "map"
+      "activities"
+      "photos";
+  }
+
+  .life-calendar-day-photo-preview,
+  .life-calendar-day-photo-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .calendar-day__number {

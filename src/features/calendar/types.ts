@@ -5,16 +5,23 @@ export type CalendarCategory = "schedule" | "event" | "todo";
 export type ExternalCalendarCategory = "activity" | "expense" | "income" | "workout" | "weight" | "daily_log" | "photo";
 export type ExternalCalendarItem = {
   amount?: number;
+  caption?: string;
   date: string;
   endTime?: string;
+  fileUrl?: string;
+  height?: number;
   id: string;
   isAllDay?: boolean;
   meta?: string;
+  mimeType?: string;
   placeAddress?: string;
+  placeLatitude?: number;
+  placeLongitude?: number;
   placeName?: string;
   startTime?: string;
   title: string;
   type: ExternalCalendarCategory;
+  width?: number;
 };
 export type DayTimelineItem =
   | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "schedule" | "event" }

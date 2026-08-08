@@ -1,7 +1,8 @@
 ﻿"use client";
 
+import Image from "next/image";
 import type { DragEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -48,6 +49,41 @@ const initialMonth = new Date();
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 type LifeCalendarScope = "day" | "week" | "month" | "range";
 type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "finance" | "health";
+const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+
+type NaverLatLng = unknown;
+type NaverLatLngBounds = {
+  extend: (latLng: NaverLatLng) => void;
+};
+type NaverMap = {
+  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
+  setCenter: (latLng: NaverLatLng) => void;
+  setZoom: (zoom: number) => void;
+};
+type NaverMarker = {
+  setMap: (map: NaverMap | null) => void;
+};
+type NaverPolyline = {
+  setMap: (map: NaverMap | null) => void;
+};
+
+declare global {
+  interface Window {
+    naver?: {
+      maps: {
+        Event: {
+          addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
+        };
+        LatLng: new (latitude: number, longitude: number) => NaverLatLng;
+        LatLngBounds: new () => NaverLatLngBounds;
+        Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
+        Marker: new (options: Record<string, unknown>) => NaverMarker;
+        Point: new (x: number, y: number) => unknown;
+        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
+      };
+    };
+  }
+}
 
 export function CalendarView({
   allowedTypes,
@@ -1419,7 +1455,6 @@ function LifeCalendarDatabasePanel({
   const topPlaces = getTopValues(places.map((place) => place.name)).slice(0, 4);
   const topHighlights = getDayHighlights(items).slice(0, 5);
   const topPatterns = getPatternHighlights(daySummaries).slice(0, 5);
-  const dayRhythm = buildDayRhythm(items);
   const headlineItem = topHighlights[0];
   const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
 
@@ -1464,19 +1499,11 @@ function LifeCalendarDatabasePanel({
         <section className="life-calendar-db-section">
           <div className="life-calendar-db-section__head">
             <div>
-              <p className="eyebrow">Rhythm</p>
-              <h3>시간대별 리듬</h3>
+              <p className="eyebrow">Day Canvas</p>
+              <h3>지도, 활동, 사진으로 보는 하루</h3>
             </div>
           </div>
-          <div className="life-calendar-db-rhythm">
-            {dayRhythm.length > 0 ? dayRhythm.map((bucket) => (
-              <article className="life-calendar-db-rhythm__card" key={bucket.key}>
-                <span>{bucket.label}</span>
-                <strong>{bucket.count}개 기록</strong>
-                <p>{bucket.lead}</p>
-              </article>
-            )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "시간 흐름을 읽을 수 있는 기록이 아직 없어요."}</div>}
-          </div>
+          <LifeCalendarDayPanel isLoading={isLoading} items={items} />
         </section>
 
         <section className="life-calendar-db-section">
@@ -1495,24 +1522,6 @@ function LifeCalendarDatabasePanel({
               <span>주요 장소</span>
               <div>{topPlaces.length > 0 ? topPlaces.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>연결된 장소 기록이 아직 없어요.</p>}</div>
             </article>
-          </div>
-        </section>
-
-        <section className="life-calendar-db-section">
-          <div className="life-calendar-db-section__head">
-            <div>
-              <p className="eyebrow">Highlights</p>
-              <h3>이 날의 핵심 장면</h3>
-            </div>
-          </div>
-          <div className="life-calendar-db-brief-list">
-            {topHighlights.length > 0 ? topHighlights.map((item) => (
-              <article className="life-calendar-db-brief-item" key={item.id}>
-                <span>{item.label}</span>
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-              </article>
-            )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날을 요약할 핵심 기록이 아직 부족해요."}</div>}
           </div>
         </section>
       </div>
@@ -1589,6 +1598,329 @@ function LifeCalendarDatabasePanel({
       </section>
     </div>
   );
+}
+
+type DayDetailView = "activities" | "map" | "photos" | null;
+type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "activity" };
+type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
+type DayRouteStop = {
+  address?: string;
+  id: string;
+  label: string;
+  latitude?: number;
+  longitude?: number;
+  name: string;
+  timeLabel: string;
+};
+type DayResolvedRouteStop = DayRouteStop & { latitude: number; longitude: number };
+
+function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items: DayTimelineItem[] }) {
+  const [detailView, setDetailView] = useState<DayDetailView>(null);
+  const activityItems = useMemo(
+    () => items.filter((item): item is DayActivityItem => "external" in item && item.external.type === "activity"),
+    [items],
+  );
+  const photoItems = useMemo(
+    () => items.filter((item): item is DayPhotoItem => "external" in item && item.external.type === "photo"),
+    [items],
+  );
+  const routeStops = useMemo(() => buildDayRouteStops(items), [items]);
+  const previewActivities = activityItems.slice(0, 4);
+  const previewPhotos = photoItems.slice(0, 3);
+
+  return (
+    <>
+      <div className="life-calendar-day-panel">
+        <div className="life-calendar-day-panel__layout">
+          <button className="life-calendar-day-card life-calendar-day-card--map" onClick={() => setDetailView("map")} type="button">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>동선 지도</span>
+                <strong>{routeStops.length > 0 ? `${routeStops.length}곳 흐름` : "장소 흐름 없음"}</strong>
+              </div>
+              <b>자세히 보기</b>
+            </div>
+            <DayRouteMap compact stops={routeStops} />
+            <p>{routeStops.length > 1 ? "그날 남은 장소를 순서대로 지도 위에 연결했어요." : "좌표가 남은 장소가 아직 부족해서 흐름선은 짧게 보여요."}</p>
+          </button>
+
+          <button className="life-calendar-day-card life-calendar-day-card--activities" onClick={() => setDetailView("activities")} type="button">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>활동 기록</span>
+                <strong>{activityItems.length}개 활동</strong>
+              </div>
+              <b>전체 보기</b>
+            </div>
+            <div className="life-calendar-day-activity-preview">
+              {previewActivities.length > 0 ? previewActivities.map((item) => (
+                <article className="life-calendar-day-activity-preview__item" key={item.id}>
+                  <span>{item.timeLabel}</span>
+                  <strong>{item.external.title}</strong>
+                  <p>{[item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || "활동 기록"}</p>
+                </article>
+              )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+            </div>
+          </button>
+
+          <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => setDetailView("photos")} type="button">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>사진 기억</span>
+                <strong>{photoItems.length}개 사진</strong>
+              </div>
+              <b>갤러리 보기</b>
+            </div>
+            <div className="life-calendar-day-photo-preview">
+              {previewPhotos.length > 0 ? previewPhotos.map((item) => (
+                <figure className="life-calendar-day-photo-preview__item" key={item.id}>
+                  {item.external.fileUrl ? (
+                    item.external.mimeType?.startsWith("video/") ? (
+                      <div>{item.external.caption || "영상 기록"}</div>
+                    ) : (
+                      <Image
+                        alt={item.external.caption || item.external.title}
+                        height={item.external.height ?? 160}
+                        src={item.external.fileUrl}
+                        unoptimized
+                        width={item.external.width ?? 160}
+                      />
+                    )
+                  ) : (
+                    <div>{item.external.caption || item.external.title}</div>
+                  )}
+                </figure>
+              )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {detailView ? (
+        <div className="life-detail-overlay" onClick={() => setDetailView(null)}>
+          <section className="life-detail-drawer life-calendar-day-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
+            <div className="life-detail-drawer__head">
+              <div>
+                <span>{detailView === "map" ? "동선 지도" : detailView === "activities" ? "활동 기록" : "사진 갤러리"}</span>
+                <h2>{detailView === "map" ? "이 날 방문한 장소 흐름" : detailView === "activities" ? "시간 순 활동 기록" : "사진으로 남은 장면"}</h2>
+                <p>
+                  {detailView === "map"
+                    ? "좌표가 있는 장소는 바로 그리고, 없는 장소는 검색 API로 보강해 동선을 구성합니다."
+                    : detailView === "activities"
+                      ? "활동 기록만 시간대 순으로 보여줘서 이 날의 실제 움직임이 눈에 잘 들어오게 했어요."
+                      : "사진은 짧은 썸네일로 압축하고, 여기서 전체를 한 번에 볼 수 있게 했어요."}
+                </p>
+              </div>
+              <button aria-label="닫기" onClick={() => setDetailView(null)} type="button">
+                <X aria-hidden size={18} />
+              </button>
+            </div>
+
+            {detailView === "map" ? (
+              <>
+                <div className="life-calendar-day-drawer__map">
+                  <DayRouteMap stops={routeStops} />
+                </div>
+                <div className="life-calendar-day-stop-list">
+                  {routeStops.length > 0 ? routeStops.map((stop) => (
+                    <article className="life-calendar-day-stop-list__item" key={stop.id}>
+                      <span>{stop.timeLabel}</span>
+                      <strong>{stop.name}</strong>
+                      <p>{[stop.label, stop.address].filter(Boolean).join(" · ")}</p>
+                    </article>
+                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "지도에 그릴 장소 기록이 아직 부족해요."}</div>}
+                </div>
+              </>
+            ) : null}
+
+            {detailView === "activities" ? (
+              <div className="life-calendar-day-activity-list">
+                {activityItems.length > 0 ? activityItems.map((item) => (
+                  <article className="life-calendar-day-activity-list__item" key={item.id}>
+                    <span>{item.timeLabel}</span>
+                    <div>
+                      <strong>{item.external.title}</strong>
+                      <p>{[item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || "활동 기록"}</p>
+                    </div>
+                  </article>
+                )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+              </div>
+            ) : null}
+
+            {detailView === "photos" ? (
+              <div className="life-calendar-day-photo-gallery">
+                {photoItems.length > 0 ? photoItems.map((item) => (
+                  <figure className="life-calendar-day-photo-gallery__item" key={item.id}>
+                    {item.external.fileUrl ? (
+                      item.external.mimeType?.startsWith("video/") ? (
+                        <video controls src={item.external.fileUrl} />
+                      ) : (
+                        <Image
+                          alt={item.external.caption || item.external.title}
+                          height={item.external.height ?? 220}
+                          src={item.external.fileUrl}
+                          unoptimized
+                          width={item.external.width ?? 220}
+                        />
+                      )
+                    ) : (
+                      <div>{item.external.caption || item.external.title}</div>
+                    )}
+                    <figcaption>
+                      <strong>{item.external.caption || item.external.title}</strong>
+                      <span>{item.external.meta || "사진 기록"}</span>
+                    </figcaption>
+                  </figure>
+                )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: DayRouteStop[] }) {
+  const mapElementRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<NaverMap | null>(null);
+  const markersRef = useRef<NaverMarker[]>([]);
+  const polylineRef = useRef<NaverPolyline | null>(null);
+  const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
+  const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, { latitude: number; longitude: number }>>({});
+
+  useEffect(() => {
+    if (!naverMapClientId) {
+      setMapStatus("missing-key");
+      return;
+    }
+
+    if (window.naver?.maps) {
+      setMapStatus("ready");
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
+      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.dataset.dailyosNaverMap = "true";
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
+    script.onload = () => setMapStatus("ready");
+    script.onerror = () => setMapStatus("error");
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    const unresolvedStops = stops.filter((stop) => !hasCoordinates(stop) && (stop.address || stop.name));
+    if (unresolvedStops.length === 0) return;
+
+    let isMounted = true;
+    Promise.all(
+      unresolvedStops.map(async (stop) => {
+        const query = [stop.name, stop.address].filter(Boolean).join(" ");
+        try {
+          const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
+          const payload = (await response.json()) as { places?: Array<{ latitude: number; longitude: number }> };
+          const firstPlace = payload.places?.[0];
+          if (!firstPlace) return null;
+          return { id: stop.id, latitude: firstPlace.latitude, longitude: firstPlace.longitude };
+        } catch (error) {
+          console.error("Failed to resolve day route stop", error);
+          return null;
+        }
+      }),
+    ).then((results) => {
+      if (!isMounted) return;
+      setResolvedCoordinates((current) => {
+        const next = { ...current };
+        results.forEach((item) => {
+          if (!item) return;
+          next[item.id] = { latitude: item.latitude, longitude: item.longitude };
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [stops]);
+
+  const visibleStops = useMemo(
+    () =>
+      stops
+        .map((stop) => ({
+          ...stop,
+          latitude: stop.latitude ?? resolvedCoordinates[stop.id]?.latitude,
+          longitude: stop.longitude ?? resolvedCoordinates[stop.id]?.longitude,
+        }))
+        .filter((stop): stop is DayResolvedRouteStop => hasCoordinates(stop)),
+    [resolvedCoordinates, stops],
+  );
+
+  useEffect(() => {
+    if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps || visibleStops.length === 0) return;
+
+    if (!mapRef.current) {
+      const firstStop = visibleStops[0];
+      mapRef.current = new window.naver.maps.Map(mapElementRef.current, {
+        center: new window.naver.maps.LatLng(firstStop.latitude!, firstStop.longitude!),
+        zoom: visibleStops.length > 1 ? 12 : 15,
+      });
+    }
+
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = visibleStops.map((stop, index) =>
+      new window.naver!.maps.Marker({
+        icon: {
+          anchor: new window.naver!.maps.Point(18, 18),
+          content: `<div class="life-calendar-route-marker"><span>${index + 1}</span></div>`,
+        },
+        map: mapRef.current,
+        position: new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!),
+        title: stop.name,
+      }),
+    );
+
+    polylineRef.current?.setMap(null);
+    if (visibleStops.length > 1) {
+      polylineRef.current = new window.naver.maps.Polyline({
+        map: mapRef.current,
+        path: visibleStops.map((stop) => new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)),
+        strokeColor: "#c9b8ff",
+        strokeLineCap: "round",
+        strokeLineJoin: "round",
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+      });
+    }
+
+    if (visibleStops.length === 1) {
+      mapRef.current.setCenter(new window.naver.maps.LatLng(visibleStops[0].latitude!, visibleStops[0].longitude!));
+      mapRef.current.setZoom(15);
+      return;
+    }
+
+    const bounds = new window.naver.maps.LatLngBounds();
+    visibleStops.forEach((stop) => bounds.extend(new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)));
+    mapRef.current.fitBounds(bounds, compact ? { bottom: 40, left: 40, right: 40, top: 40 } : { bottom: 90, left: 60, right: 60, top: 60 });
+  }, [compact, mapStatus, visibleStops]);
+
+  if (mapStatus === "missing-key") {
+    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>네이버 지도 키가 없어서 지도를 표시할 수 없어요.</div>;
+  }
+
+  if (visibleStops.length === 0) {
+    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>지도에 그릴 장소 기록을 더 쌓아보면 여기서 하루 동선이 보입니다.</div>;
+  }
+
+  return <div className={`life-calendar-day-map ${compact ? "life-calendar-day-map--compact" : ""}`} ref={mapElementRef} />;
 }
 
 function getFinanceTotals(items: DayTimelineItem[]) {
@@ -1704,26 +2036,58 @@ function getDayNarrative(summary: PeriodDaySummary | undefined, finance: { expen
   return `${density}. ${people} ${place} ${financeTone}.`;
 }
 
-function buildDayRhythm(items: DayTimelineItem[]) {
-  const buckets = [
-    { end: 12 * 60, key: "morning", label: "오전" },
-    { end: 18 * 60, key: "afternoon", label: "오후" },
-    { end: 22 * 60, key: "evening", label: "저녁" },
-    { end: Number.POSITIVE_INFINITY, key: "night", label: "밤" },
-  ] as const;
+function buildDayRouteStops(items: DayTimelineItem[]) {
+  const stops: DayRouteStop[] = [];
 
-  return buckets
-    .map((bucket, index) => {
-      const start = index === 0 ? 0 : buckets[index - 1].end;
-      const bucketItems = items.filter((item) => item.sortMinutes >= start && item.sortMinutes < bucket.end);
-      return {
-        count: bucketItems.length,
-        key: bucket.key,
-        label: bucket.label,
-        lead: bucketItems[0] ? getTimelineItemTitle(bucketItems[0]) : "",
-      };
-    })
-    .filter((bucket) => bucket.count > 0);
+  items.forEach((item) => {
+    if ("event" in item && item.event.place) {
+      stops.push({
+        address: item.event.place.address,
+        id: item.id,
+        label: categoryLabels[item.event.type as CalendarCategory],
+        latitude: item.event.place.latitude,
+        longitude: item.event.place.longitude,
+        name: item.event.place.name,
+        timeLabel: item.timeLabel,
+      });
+      return;
+    }
+
+    if ("task" in item && item.task.place) {
+      stops.push({
+        address: item.task.place.address,
+        id: item.id,
+        label: "할 일",
+        latitude: item.task.place.latitude,
+        longitude: item.task.place.longitude,
+        name: item.task.place.name,
+        timeLabel: item.timeLabel,
+      });
+      return;
+    }
+
+    if ("external" in item && item.external.type === "activity" && item.external.placeName) {
+      stops.push({
+        address: item.external.placeAddress,
+        id: item.id,
+        label: "활동",
+        latitude: item.external.placeLatitude,
+        longitude: item.external.placeLongitude,
+        name: item.external.placeName,
+        timeLabel: item.timeLabel,
+      });
+    }
+  });
+
+  return stops.filter((stop, index, array) => {
+    const previous = array[index - 1];
+    if (!previous) return true;
+    return `${previous.name}|${previous.address ?? ""}` !== `${stop.name}|${stop.address ?? ""}`;
+  });
+}
+
+function hasCoordinates(stop: DayRouteStop): stop is DayResolvedRouteStop {
+  return typeof stop.latitude === "number" && Number.isFinite(stop.latitude) && typeof stop.longitude === "number" && Number.isFinite(stop.longitude);
 }
 
 function getPatternHighlights(daySummaries: PeriodDaySummary[]) {

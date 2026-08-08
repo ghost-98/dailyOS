@@ -176,11 +176,16 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
         type: "daily_log" as const,
       })),
       ...lifePhotos.map((photo) => ({
+        caption: photo.caption,
         date: photo.date,
+        fileUrl: photo.fileUrl,
+        height: photo.height,
         id: photo.id,
         meta: photo.caption || photo.fileName,
+        mimeType: photo.mimeType,
         title: "사진 기록",
         type: "photo" as const,
+        width: photo.width,
       })),
       ...expenses.map((expense) => ({
         amount: expense.amount,
