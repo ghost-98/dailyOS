@@ -361,6 +361,10 @@
 
   .manage-calendar-overview__cards,
   .life-calendar-day-panel__layout,
+  .life-calendar-week-overview,
+  .life-calendar-week-days,
+  .life-calendar-week-layout,
+  .life-calendar-week-metrics,
   .life-calendar-db-rhythm,
   .life-calendar-db-meta,
   .life-calendar-db-hero {
