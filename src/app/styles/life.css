@@ -285,7 +285,7 @@
 
 .life-calendar-day-card__head > div {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -390,14 +390,9 @@
 
 .life-calendar-day-timeline__time {
   display: grid;
-  gap: 3px;
+  gap: 6px;
   justify-items: start;
   padding-top: 2px;
-}
-
-.life-calendar-day-timeline__time b {
-  color: var(--text);
-  font-size: 0.86rem;
 }
 
 .life-calendar-day-timeline__body {
@@ -409,17 +404,13 @@
   padding: 12px;
 }
 
-.life-calendar-day-timeline__body strong {
-  font-size: 0.95rem;
-}
-
 .life-calendar-day-timeline__detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.life-calendar-day-timeline__detail-grid div {
+.life-calendar-day-timeline__detail {
   display: grid;
   gap: 4px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -428,14 +419,23 @@
   padding: 9px 10px;
 }
 
-.life-calendar-day-timeline__detail-grid em {
+.life-calendar-day-timeline__detail-grid--four .life-calendar-day-timeline__detail--wide {
+  grid-column: 1 / -1;
+}
+
+.life-calendar-day-timeline__detail em {
   color: var(--muted);
   font-size: 0.72rem;
   font-style: normal;
   font-weight: 800;
 }
 
-.life-calendar-day-timeline__detail-grid span,
+.life-calendar-day-timeline__detail strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.life-calendar-day-timeline__detail span,
 .life-calendar-day-timeline__tags b,
 .life-calendar-day-card > p,
 .life-calendar-day-stop-list__item p,
@@ -458,6 +458,16 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.life-calendar-day-timeline__time .life-calendar-day-timeline__tags {
+  gap: 4px;
+}
+
+.life-calendar-day-timeline__time .life-calendar-day-timeline__tags b {
+  min-height: 24px;
+  font-size: 0.72rem;
+  padding: 0 8px;
 }
 
 .life-calendar-day-events {

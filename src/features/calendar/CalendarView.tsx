@@ -1618,7 +1618,6 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             <div className="life-calendar-day-card__head">
               <div>
                 <span>활동 타임라인</span>
-                <strong>시간순 활동 기록</strong>
               </div>
               <b>{activityItems.length}건</b>
             </div>
@@ -1626,18 +1625,29 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
               {activityItems.length > 0 ? activityItems.map((item) => (
                 <article className="life-calendar-day-timeline__item" key={item.id}>
                   <div className="life-calendar-day-timeline__time">
-                    <span>{item.timeLabel}</span>
-                    {item.external.endTime ? <b>{item.external.endTime}</b> : null}
+                    <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
+                    <div className="life-calendar-day-timeline__tags">
+                      {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag) => <b key={`${item.id}-${tag}`}>{tag}</b>)}
+                    </div>
                   </div>
                   <div className="life-calendar-day-timeline__body">
-                    <strong>{item.external.title}</strong>
-                    <div className="life-calendar-day-timeline__detail-grid">
-                      {item.external.amount ? <div><em>지출</em><span>{formatNumberWithUnit(item.external.amount, "원")}</span></div> : null}
-                      {item.external.companions ? <div><em>함께</em><span>{item.external.companions}</span></div> : null}
-                      {item.external.placeName ? <div><em>장소</em><span>{item.external.placeName}</span></div> : null}
-                    </div>
-                    <div className="life-calendar-day-timeline__tags">
-                      {[item.external.category, item.external.food, item.external.placeName].filter(Boolean).slice(0, 5).map((tag) => <b key={`${item.id}-${tag}`}>{tag}</b>)}
+                    <div className="life-calendar-day-timeline__detail-grid life-calendar-day-timeline__detail-grid--four">
+                      <div className="life-calendar-day-timeline__detail life-calendar-day-timeline__detail--wide">
+                        <em>활동</em>
+                        <strong>{item.external.title}</strong>
+                      </div>
+                      <div className="life-calendar-day-timeline__detail">
+                        <em>장소</em>
+                        <span>{item.external.placeName || "-"}</span>
+                      </div>
+                      <div className="life-calendar-day-timeline__detail">
+                        <em>함께한 사람</em>
+                        <span>{item.external.companions || "-"}</span>
+                      </div>
+                      <div className="life-calendar-day-timeline__detail">
+                        <em>소비지출</em>
+                        <span>{item.external.amount ? formatNumberWithUnit(item.external.amount, "원") : "-"}</span>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -2371,6 +2381,11 @@ function getTimelineSortMinutes(time?: string, isAllDay = true) {
 function getTimelineTimeLabel(time?: string, isAllDay = true) {
   if (isAllDay) return "하루종일";
   return time || "시간 미정";
+}
+
+function formatTimelineRange(startLabel: string, endTime?: string) {
+  if (!endTime || startLabel === "하루종일" || startLabel === "기록" || startLabel === "시간 미정") return startLabel;
+  return `${startLabel} ~ ${endTime}`;
 }
 
 function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory) {
