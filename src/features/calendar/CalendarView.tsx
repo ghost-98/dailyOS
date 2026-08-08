@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Banknote,
   Bell,
   CalendarDays,
   ChevronLeft,
@@ -1638,10 +1639,10 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                     <strong>{item.external.title}</strong>
                     {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
                     {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
-                    {item.external.amount ? <p>{formatExpenseAmount(item.external.amount)}</p> : null}
+                    {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
                   </div>
                 </article>
-              )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+              )) : <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
             </div>
           </section>
 
@@ -1935,13 +1936,19 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
 
     if (visibleStops.length === 1) {
       mapRef.current.setCenter(new window.naver.maps.LatLng(visibleStops[0].latitude!, visibleStops[0].longitude!));
-      mapRef.current.setZoom(15);
+      mapRef.current.setZoom(compact ? 16 : 15);
       return;
     }
 
     const bounds = new window.naver.maps.LatLngBounds();
     visibleStops.forEach((stop) => bounds.extend(new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)));
-    mapRef.current.fitBounds(bounds, compact ? { bottom: 40, left: 40, right: 40, top: 40 } : { bottom: 90, left: 60, right: 60, top: 60 });
+    const padding = compact ? { bottom: 24, left: 24, right: 24, top: 24 } : { bottom: 56, left: 40, right: 40, top: 40 };
+    (window.naver.maps.Event as { trigger?: (target: unknown, eventName: string) => void }).trigger?.(mapRef.current, "resize");
+    mapRef.current.fitBounds(bounds, padding);
+    const boundsCenter = (bounds as NaverLatLngBounds & { getCenter?: () => NaverLatLng }).getCenter?.();
+    if (boundsCenter) {
+      mapRef.current.setCenter(boundsCenter);
+    }
   }, [compact, mapStatus, visibleStops]);
 
   if (mapStatus === "missing-key") {
