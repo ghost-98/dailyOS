@@ -164,9 +164,9 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 6px 12px;
+  padding: 0 6px 14px;
 }
 
 .calendar-weekdays span {
@@ -200,6 +200,16 @@
   color: var(--text);
   padding: 10px;
   text-align: left;
+}
+
+.calendar-day--sunday {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.08), rgba(255, 255, 255, 0.035));
+  border-color: rgba(248, 113, 113, 0.18);
+}
+
+.calendar-day--sunday:not(:disabled):hover {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.12), rgba(201, 184, 255, 0.06));
+  border-color: rgba(248, 113, 113, 0.28);
 }
 
 .calendar-day:disabled {

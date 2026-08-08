@@ -661,7 +661,7 @@ export function CalendarView({
               const eventSummaries = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
               return (
                 <button
-                  className={`calendar-day ${cell.date === todayKey ? "calendar-day--today" : ""} ${cell.date === selectedDate ? "calendar-day--selected" : ""}`}
+                  className={`calendar-day ${cell.date === todayKey ? "calendar-day--today" : ""} ${cell.date === selectedDate ? "calendar-day--selected" : ""} ${cell.date && new Date(`${cell.date}T00:00:00`).getDay() === 0 ? "calendar-day--sunday" : ""}`}
                   disabled={!cell.date}
                   key={cell.key}
                   onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
