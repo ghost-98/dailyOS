@@ -12,7 +12,7 @@ import {
   fetchWeightRecordsFromDb,
   fetchWorkoutSessionsFromDb,
 } from "@/features/health/api";
-import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
+import { fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
 import {
   createDailyLogInDb,
   createLifeActivityInDb,
@@ -46,7 +46,7 @@ import { LifePhotosView } from "@/features/life/views/LifePhotosView";
 import type { LifeDataMode, LifeViewMode } from "@/features/life/modes";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatRunDuration } from "@/features/life/reconstruction";
-import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 type LifeViewProps = {
   activityDraft?: LifeActivityDraft;
@@ -63,6 +63,7 @@ type LifeDataSnapshot = {
   dailyLogs?: DailyLogRecord[];
   events?: CalendarEvent[];
   expenses?: ExpenseRecord[];
+  incomes?: IncomeRecord[];
   lifePhotos?: LifePhotoRecord[];
   tasks?: TaskItem[];
   weights?: WeightRecord[];
@@ -73,8 +74,8 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
   if (mode === "plans") return {};
 
   if (mode === "activities") {
-    const [activities, expenses] = await Promise.all([fetchLifeActivitiesFromDb(), fetchExpenseRecordsFromDb()]);
-    return { activities: activities ?? [], expenses: expenses ?? [] };
+    const [activities, expenses, incomes] = await Promise.all([fetchLifeActivitiesFromDb(), fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()]);
+    return { activities: activities ?? [], expenses: expenses ?? [], incomes: incomes ?? [] };
   }
 
   if (mode === "logs") {
@@ -93,21 +94,23 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
   }
 
   if (mode === "calendar") {
-    const [expenses, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
+    const [expenses, incomes, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
       fetchExpenseRecordsFromDb(),
+      fetchIncomeRecordsFromDb(),
       fetchLifeActivitiesFromDb(),
       fetchDailyLogsFromDb(),
       fetchLifePhotoMetadataFromDb(),
       fetchWeightRecordsFromDb(),
       fetchWorkoutSessionsFromDb(),
     ]);
-    return { activities: activities ?? [], dailyLogs: dailyLogs ?? [], expenses: expenses ?? [], lifePhotos: lifePhotos ?? [], weights: weights ?? [], workouts: workouts ?? [] };
+    return { activities: activities ?? [], dailyLogs: dailyLogs ?? [], expenses: expenses ?? [], incomes: incomes ?? [], lifePhotos: lifePhotos ?? [], weights: weights ?? [], workouts: workouts ?? [] };
   }
 
-  const [events, tasks, expenses, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
+  const [events, tasks, expenses, incomes, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
     fetchCalendarEventsFromDb(),
     fetchTasksFromDb(),
     fetchExpenseRecordsFromDb(),
+    fetchIncomeRecordsFromDb(),
     fetchLifeActivitiesFromDb(),
     fetchDailyLogsFromDb(),
     fetchLifePhotoMetadataFromDb(),
@@ -120,6 +123,7 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
     dailyLogs: dailyLogs ?? [],
     events: events ?? [],
     expenses: expenses ?? [],
+    incomes: incomes ?? [],
     lifePhotos: lifePhotos ?? [],
     tasks: tasks ?? [],
     weights: weights ?? [],
@@ -132,6 +136,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
+  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [activities, setActivities] = useState<LifeActivityRecord[]>([]);
   const [dailyLogs, setDailyLogs] = useState<DailyLogRecord[]>([]);
   const [lifePhotos, setLifePhotos] = useState<LifePhotoRecord[]>([]);
@@ -147,6 +152,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
         if (data.events) setEvents(data.events);
         if (data.tasks) setTasks(data.tasks);
         if (data.expenses) setExpenses(data.expenses);
+        if (data.incomes) setIncomes(data.incomes);
         if (data.activities) setActivities(data.activities);
         if (data.dailyLogs) setDailyLogs(data.dailyLogs);
         if (data.lifePhotos) setLifePhotos(data.lifePhotos);
@@ -177,11 +183,20 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
         type: "photo" as const,
       })),
       ...expenses.map((expense) => ({
+        amount: expense.amount,
         date: expense.date,
         id: expense.id,
         meta: `${formatWon(expense.amount)} · ${expense.title}`,
         title: "지출 기록",
         type: "expense" as const,
+      })),
+      ...incomes.map((income) => ({
+        amount: income.amount,
+        date: income.date,
+        id: income.id,
+        meta: `${formatWon(income.amount)} · ${income.title}`,
+        title: "수입 기록",
+        type: "income" as const,
       })),
       ...activities.map((activity) => ({
         date: activity.date,
@@ -210,7 +225,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
         type: "weight" as const,
       })),
     ],
-    [activities, dailyLogs, expenses, lifePhotos, weights, workouts],
+    [activities, dailyLogs, expenses, incomes, lifePhotos, weights, workouts],
   );
 
   const createDailyLog = async (date: string, content: string, linkedTarget?: LifeLinkedTarget) => {
@@ -342,6 +357,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
           activities={activities}
           events={events}
           expenses={expenses}
+          incomes={incomes}
           onOpenDate={(date) => {
             router.push(`/life/calendar?date=${date}`);
           }}
@@ -353,7 +369,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
       ) : activeTab === "people" ? (
         <LifePeopleView activities={activities} dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} />
       ) : activeTab === "ask" ? (
-        <LifeAskView activities={activities} dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
+        <LifeAskView activities={activities} dailyLogs={dailyLogs} events={events} expenses={expenses} incomes={incomes} photos={lifePhotos} tasks={tasks} weights={weights} workouts={workouts} />
       ) : activeTab === "activities" ? (
         <LifeActivitiesView activities={activities} initialDraft={activityDraft} onDeleteActivity={deleteActivity} onSaveActivity={saveActivity} />
       ) : activeTab === "logs" ? (
@@ -372,6 +388,7 @@ function LifeSearchView({
   dailyLogs,
   events,
   expenses,
+  incomes,
   onOpenDate,
   photos,
   tasks,
@@ -382,6 +399,7 @@ function LifeSearchView({
   dailyLogs: DailyLogRecord[];
   events: CalendarEvent[];
   expenses: ExpenseRecord[];
+  incomes: IncomeRecord[];
   onOpenDate: (date: string) => void;
   photos: LifePhotoRecord[];
   tasks: TaskItem[];
@@ -390,7 +408,7 @@ function LifeSearchView({
 }) {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | LifeSearchItem["type"]>("all");
-  const items = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, photos, tasks, weights, workouts]);
+  const items = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, incomes, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, incomes, photos, tasks, weights, workouts]);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredItems = items.filter((item) => {
     const matchesType = typeFilter === "all" || item.type === typeFilter;
@@ -414,6 +432,7 @@ function LifeSearchView({
             <option value="event">이벤트</option>
             <option value="activity">활동</option>
             <option value="expense">지출</option>
+            <option value="income">수입</option>
             <option value="daily_log">하루기록</option>
             <option value="photo">사진</option>
             <option value="workout">운동</option>
@@ -453,6 +472,7 @@ function LifeAskView({
   dailyLogs,
   events,
   expenses,
+  incomes,
   photos,
   tasks,
   weights,
@@ -462,6 +482,7 @@ function LifeAskView({
   dailyLogs: DailyLogRecord[];
   events: CalendarEvent[];
   expenses: ExpenseRecord[];
+  incomes: IncomeRecord[];
   photos: LifePhotoRecord[];
   tasks: TaskItem[];
   weights: WeightRecord[];
@@ -471,7 +492,7 @@ function LifeAskView({
   const [error, setError] = useState("");
   const [isAsking, setIsAsking] = useState(false);
   const [question, setQuestion] = useState("나 3월달에 자주 했던 일과 그때의 소비, 사람, 건강 흐름이 어땠어?");
-  const records = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, photos, tasks, weights, workouts]);
+  const records = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, incomes, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, incomes, photos, tasks, weights, workouts]);
   const scopedRecords = useMemo(() => selectRelevantLifeAskRecords(question, records), [question, records]);
 
   const askLifeDb = async () => {

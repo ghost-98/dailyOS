@@ -2,7 +2,7 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import { formatWon } from "@/features/life/formatters";
 import { getActivityPlaceRef } from "@/features/life/places";
 import type { LifePlaceRef } from "@/features/life/places";
-import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type LifeContextBundle = {
   date: string;
@@ -26,7 +26,7 @@ export type LifeSearchItem = {
   label: string;
   tags: string[];
   title: string;
-  type: "schedule" | "todo" | "event" | "activity" | "expense" | "daily_log" | "photo" | "workout" | "weight";
+  type: "schedule" | "todo" | "event" | "activity" | "expense" | "income" | "daily_log" | "photo" | "workout" | "weight";
 };
 
 const LIFE_ASK_RECORD_LIMIT = 220;
@@ -236,6 +236,7 @@ export function buildLifeSearchItems(
   tasks: TaskItem[],
   activities: LifeActivityRecord[],
   expenses: ExpenseRecord[],
+  incomes: IncomeRecord[],
   logs: DailyLogRecord[],
   photos: LifePhotoRecord[],
   weights: WeightRecord[],
@@ -279,6 +280,15 @@ export function buildLifeSearchItems(
       tags: [expense.category, expense.memo, expense.targetType, expense.targetId].filter(Boolean) as string[],
       title: expense.title,
       type: "expense" as const,
+    })),
+    ...incomes.map((income) => ({
+      date: income.date,
+      description: [income.category, formatWon(income.amount), income.memo].filter(Boolean).join(" · "),
+      id: `income-${income.id}`,
+      label: "수입",
+      tags: [income.category, income.memo].filter(Boolean) as string[],
+      title: income.title,
+      type: "income" as const,
     })),
     ...logs.map((log) => ({
       date: log.date,
@@ -378,6 +388,7 @@ function getQuestionTerms(question: string) {
 function getLifeAskTypeScore(question: string, type: LifeSearchItem["type"]) {
   if ((question.includes("사진") || question.includes("영상")) && type === "photo") return 4;
   if ((question.includes("소비") || question.includes("지출") || question.includes("돈")) && type === "expense") return 4;
+  if ((question.includes("수입") || question.includes("월급") || question.includes("입금")) && type === "income") return 4;
   if ((question.includes("운동") || question.includes("러닝") || question.includes("건강")) && (type === "workout" || type === "weight")) return 4;
   if ((question.includes("누구") || question.includes("사람") || question.includes("친구")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
   if ((question.includes("장소") || question.includes("어디")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
@@ -390,6 +401,7 @@ function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
   if (type === "todo") return "할 일";
   if (type === "event") return "이벤트";
   if (type === "activity") return "활동";
+  if (type === "income") return "수입";
   return "날짜";
 }
 

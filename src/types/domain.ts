@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense" | "income";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -69,6 +69,17 @@ export type ExpenseRecord = {
   memo?: string;
   targetType: "schedule" | "todo" | "event" | "activity";
   targetId: string;
+};
+
+export type IncomeCategory = "salary" | "business" | "investment" | "gift" | "refund" | "side" | "etc";
+
+export type IncomeRecord = {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: IncomeCategory;
+  memo?: string;
 };
 
 export type LifeActivityRecord = {
@@ -152,5 +163,11 @@ export type PlaceRecord = {
   category?: string;
   url?: string;
   isFavorite?: boolean;
+  memo?: string;
+};
+
+export type PersonRecord = {
+  id: string;
+  name: string;
   memo?: string;
 };

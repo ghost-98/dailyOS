@@ -152,7 +152,9 @@
 }
 
 .life-calendar-db-overview article,
-.life-calendar-db-day-grid article {
+.life-calendar-db-day-grid article,
+.life-calendar-db-hero article,
+.life-calendar-db-brief-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.035);
@@ -161,6 +163,8 @@
 
 .life-calendar-db-overview span,
 .life-calendar-db-day-grid span,
+.life-calendar-db-hero span,
+.life-calendar-db-brief-item span,
 .life-calendar-db-meta article > span,
 .life-calendar-db-section__head .eyebrow {
   color: var(--muted);
@@ -169,7 +173,9 @@
 }
 
 .life-calendar-db-overview strong,
-.life-calendar-db-day-grid strong {
+.life-calendar-db-day-grid strong,
+.life-calendar-db-hero strong,
+.life-calendar-db-brief-item strong {
   display: block;
   margin-top: 4px;
   font-size: 1.1rem;
@@ -178,9 +184,10 @@
 
 .life-calendar-db-overview p,
 .life-calendar-db-period-card p,
-.life-calendar-db-timeline__item p,
 .life-calendar-db-busy-item span,
-.life-calendar-db-meta p {
+.life-calendar-db-meta p,
+.life-calendar-db-hero p,
+.life-calendar-db-brief-item p {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
@@ -207,6 +214,12 @@
 }
 
 .life-calendar-db-day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-calendar-db-hero {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -275,23 +288,14 @@
 }
 
 .life-calendar-db-busy-list,
-.life-calendar-db-timeline {
+.life-calendar-db-brief-list {
   display: grid;
   gap: 10px;
 }
 
-.life-calendar-db-timeline__item {
+.life-calendar-db-brief-item {
   display: grid;
   gap: 4px;
-  border-left: 2px solid rgba(201, 184, 255, 0.32);
-  background: rgba(255, 255, 255, 0.025);
-  padding: 10px 0 10px 12px;
-}
-
-.life-calendar-db-timeline__time {
-  color: var(--muted);
-  font-size: 0.77rem;
-  font-weight: 760;
 }
 
 .life-calendar-db-empty {
@@ -826,15 +830,28 @@
   gap: 8px;
 }
 
-.ledger-day__amount {
+.ledger-day__stack {
+  display: grid;
   width: 100%;
+  gap: 4px;
+}
+
+.ledger-day__income,
+.ledger-day__expense {
   overflow: hidden;
-  color: var(--green);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ledger-day__income {
+  color: #4ade80;
+}
+
+.ledger-day__expense {
+  color: #fda4af;
 }
 
 .ledger-day__empty {
@@ -1795,6 +1812,63 @@
   border: 1px solid rgba(201, 184, 255, 0.28);
   background: rgba(201, 184, 255, 0.12);
   color: var(--text);
+}
+
+.ledger-record--income {
+  border-color: rgba(74, 222, 128, 0.22);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.ledger-capture-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  margin: 18px 0;
+  padding: 16px;
+}
+
+.ledger-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 840;
+  padding: 0 11px;
+}
+
+.ledger-income-form {
+  display: grid;
+  gap: 12px;
+}
+
+.ledger-income-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.ledger-income-form span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ledger-income-form input,
+.ledger-income-form select,
+.ledger-income-form textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  padding: 12px 14px;
 }
 
 .life-people-delete-button {

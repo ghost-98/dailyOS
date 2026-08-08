@@ -1,6 +1,6 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
-import type { ExpenseCategory, ExpenseRecord } from "@/types/domain";
+import type { ExpenseCategory, ExpenseRecord, IncomeCategory, IncomeRecord } from "@/types/domain";
 
 type ExpenseRow = {
   id: string;
@@ -19,7 +19,23 @@ type ExpenseInsert = Omit<ExpenseRow, "id"> & {
 
 type ExpenseUpdate = Partial<Omit<ExpenseInsert, "user_id">>;
 
+type IncomeRow = {
+  id: string;
+  income_date: string;
+  title: string;
+  amount: number | string;
+  category: IncomeCategory;
+  memo: string | null;
+};
+
+type IncomeInsert = Omit<IncomeRow, "id"> & {
+  user_id: string;
+};
+
+type IncomeUpdate = Partial<Omit<IncomeInsert, "user_id">>;
+
 const expenseColumns = "id,expense_date,title,amount,category,memo,target_type,target_id";
+const incomeColumns = "id,income_date,title,amount,category,memo";
 
 function mapExpenseRow(row: ExpenseRow): ExpenseRecord {
   return {
@@ -59,6 +75,38 @@ function mapExpenseUpdate(record: ExpenseRecord): ExpenseUpdate {
   };
 }
 
+function mapIncomeRow(row: IncomeRow): IncomeRecord {
+  return {
+    amount: Number(row.amount),
+    category: row.category,
+    date: row.income_date,
+    id: row.id,
+    memo: row.memo ?? undefined,
+    title: row.title,
+  };
+}
+
+function mapIncomeInsert(record: IncomeRecord, userId: string): IncomeInsert {
+  return {
+    amount: record.amount,
+    category: record.category,
+    income_date: record.date,
+    memo: record.memo?.trim() || null,
+    title: record.title.trim(),
+    user_id: userId,
+  };
+}
+
+function mapIncomeUpdate(record: IncomeRecord): IncomeUpdate {
+  return {
+    amount: record.amount,
+    category: record.category,
+    income_date: record.date,
+    memo: record.memo?.trim() || null,
+    title: record.title.trim(),
+  };
+}
+
 export async function fetchExpenseRecordsFromDb() {
   if (!supabase) return null;
   const userId = await getCurrentUserId();
@@ -67,11 +115,70 @@ export async function fetchExpenseRecordsFromDb() {
   const { data, error } = await supabase
     .from("expense_records")
     .select(expenseColumns)
+    .eq("user_id", userId)
     .order("expense_date", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return (data as ExpenseRow[]).map(mapExpenseRow);
+}
+
+export async function fetchIncomeRecordsFromDb() {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("income_records")
+    .select(incomeColumns)
+    .eq("user_id", userId)
+    .order("income_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data as IncomeRow[]).map(mapIncomeRow);
+}
+
+export async function createIncomeRecordInDb(record: IncomeRecord) {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("income_records")
+    .insert(mapIncomeInsert(record, userId))
+    .select(incomeColumns)
+    .single();
+
+  if (error) throw error;
+  return mapIncomeRow(data as IncomeRow);
+}
+
+export async function updateIncomeRecordInDb(record: IncomeRecord) {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("income_records")
+    .update(mapIncomeUpdate(record))
+    .eq("id", record.id)
+    .eq("user_id", userId)
+    .select(incomeColumns)
+    .single();
+
+  if (error) throw error;
+  return mapIncomeRow(data as IncomeRow);
+}
+
+export async function deleteIncomeRecordFromDb(id: string) {
+  if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+
+  const { error } = await supabase.from("income_records").delete().eq("id", id).eq("user_id", userId);
+  if (error) throw error;
+  return true;
 }
 
 export async function syncLinkedExpenseRecordInDb({

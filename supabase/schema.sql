@@ -271,6 +271,18 @@ create table if not exists public.expense_records (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.income_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  income_date date not null,
+  title text not null,
+  amount numeric(12, 0) not null check (amount > 0),
+  category text not null default 'etc' check (category in ('salary', 'business', 'investment', 'gift', 'refund', 'side', 'etc')),
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.expense_records
   add column if not exists target_type text check (target_type in ('schedule', 'todo', 'event', 'activity')),
   add column if not exists target_id uuid;
@@ -382,6 +394,7 @@ create index if not exists life_activities_user_source_idx on public.life_activi
 create index if not exists weight_records_user_date_idx on public.weight_records(user_id, record_date desc);
 create index if not exists workout_sessions_user_date_idx on public.workout_sessions(user_id, workout_date desc);
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
+create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
@@ -689,6 +702,11 @@ create trigger set_expense_records_updated_at
 before update on public.expense_records
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_income_records_updated_at on public.income_records;
+create trigger set_income_records_updated_at
+before update on public.income_records
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_places_updated_at on public.places;
 create trigger set_places_updated_at
 before update on public.places
@@ -713,6 +731,7 @@ alter table public.workout_sessions enable row level security;
 alter table public.daily_logs enable row level security;
 alter table public.life_photos enable row level security;
 alter table public.expense_records enable row level security;
+alter table public.income_records enable row level security;
 alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
 alter table public.place_folder_links enable row level security;
@@ -936,6 +955,31 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own expense records" on public.expense_records;
 create policy "Users can delete own expense records"
 on public.expense_records for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own income records" on public.income_records;
+create policy "Users can read own income records"
+on public.income_records for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own income records" on public.income_records;
+create policy "Users can insert own income records"
+on public.income_records for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own income records" on public.income_records;
+create policy "Users can update own income records"
+on public.income_records for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own income records" on public.income_records;
+create policy "Users can delete own income records"
+on public.income_records for delete
 to authenticated
 using (user_id = auth.uid());
 
