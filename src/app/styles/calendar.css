@@ -164,7 +164,9 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 6px 12px;
 }
 
 .calendar-weekdays span {
@@ -183,6 +185,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  padding: 4px 6px 0;
 }
 
 .calendar-day {

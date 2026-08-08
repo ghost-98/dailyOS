@@ -238,10 +238,10 @@
     "timeline companions"
     "timeline finance"
     "timeline logs";
-  grid-template-rows: minmax(180px, 0.95fr) minmax(180px, 0.95fr) minmax(152px, 0.78fr) minmax(98px, 0.5fr) minmax(106px, 0.56fr) minmax(108px, 0.56fr);
+  grid-template-rows: minmax(180px, 0.95fr) minmax(180px, 0.95fr) minmax(152px, 0.78fr) minmax(110px, 0.54fr) minmax(124px, 0.64fr) minmax(110px, 0.56fr);
   gap: 10px;
-  height: 940px;
-  min-height: 940px;
+  height: 972px;
+  min-height: 972px;
 }
 
 .life-calendar-day-card {
@@ -260,6 +260,8 @@
 
 .life-calendar-day-card--timeline {
   grid-area: timeline;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
 }
 
 .life-calendar-day-card--map {
@@ -294,6 +296,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  align-self: start;
 }
 
 .life-calendar-day-card__head span,
@@ -345,6 +348,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.035);
+  align-content: start;
   padding: 11px 12px;
 }
 
@@ -383,6 +387,8 @@
 .life-calendar-day-timeline {
   display: grid;
   align-content: start;
+  align-items: start;
+  justify-items: stretch;
   gap: 8px;
   min-height: 0;
   overflow: auto;
@@ -660,20 +666,29 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  align-items: start;
 }
 
 .life-calendar-day-photo-gallery__item {
   display: grid;
+  align-content: start;
 }
 
 .life-calendar-day-photo-gallery__item img,
-.life-calendar-day-photo-gallery__item video,
-.life-calendar-day-photo-gallery__item > div {
+.life-calendar-day-photo-gallery__item video {
   display: block;
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.life-calendar-day-photo-gallery__item > div {
+  display: grid;
   width: 100%;
   aspect-ratio: 1;
   min-height: 220px;
-  object-fit: cover;
 }
 
 .life-calendar-day-photo-gallery__item figcaption {
@@ -686,6 +701,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  align-items: start;
 }
 
 .life-calendar-day-logs {
