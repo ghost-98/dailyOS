@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { MapPin, Search, Star } from "lucide-react";
 import { PlaceLine } from "@/features/calendar/components";
-import { fetchPlacesFromDb } from "@/features/places/api";
-import type { PlanPlace, PlaceRecord } from "@/types/domain";
+import { fetchPersonalPlacesFromDb } from "@/features/personalPlaces/api";
+import type { PersonalPlaceRecord, PlanPlace, PlaceRecord } from "@/types/domain";
 
 type SearchMode = "saved" | "map";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
   const [searchMode, setSearchMode] = useState<SearchMode>("saved");
-  const [savedPlaces, setSavedPlaces] = useState<PlaceRecord[]>([]);
+  const [savedPlaces, setSavedPlaces] = useState<PersonalPlaceRecord[]>([]);
   const [results, setResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
@@ -20,13 +20,13 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   useEffect(() => {
     let isMounted = true;
 
-    fetchPlacesFromDb()
+    fetchPersonalPlacesFromDb()
       .then((records) => {
         if (!isMounted) return;
         setSavedPlaces(records ?? []);
       })
       .catch((error) => {
-        console.error("Failed to load saved places", error);
+        console.error("Failed to load personal places", error);
       })
       .finally(() => {
         if (isMounted) setIsLoadingSaved(false);
@@ -41,7 +41,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return savedPlaces.slice(0, 12);
     return savedPlaces
-      .filter((place) => [place.name, place.address, place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery))
+      .filter((place) => [place.label, place.address, place.mappedName ?? "", place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery))
       .slice(0, 12);
   }, [query, savedPlaces]);
 
@@ -66,14 +66,20 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       setResults(nextResults);
       if (nextResults.length === 0) setMessage("검색 결과가 없습니다.");
     } catch (error) {
-      console.error("Failed to search plan place", error);
+      console.error("Failed to search place", error);
       setMessage("장소 검색 중 문제가 발생했습니다.");
     } finally {
       setIsSearching(false);
     }
   };
 
-  const choosePlace = (place: PlaceRecord) => {
+  const choosePersonalPlace = (place: PersonalPlaceRecord) => {
+    onSelect(convertPersonalPlaceToPlanPlace(place));
+    setQuery(place.label);
+    setMessage("");
+  };
+
+  const chooseMapPlace = (place: PlaceRecord) => {
     onSelect(convertPlaceRecordToPlanPlace(place));
     setQuery(place.name);
     setMessage("");
@@ -116,15 +122,13 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       <div className="schedule-place-search">
         <MapPin aria-hidden size={18} />
         <input
-          placeholder={searchMode === "saved" ? "내 장소 이름 또는 주소 찾기" : "장소명이나 주소 검색"}
+          placeholder={searchMode === "saved" ? "내 장소 이름이나 주소 찾기" : "장소명이나 주소 검색"}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              if (searchMode === "map") {
-                void searchPlaces();
-              }
+              if (searchMode === "map") void searchPlaces();
             }
           }}
         />
@@ -143,21 +147,21 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
         <div className="schedule-place-results">
           {filteredSavedPlaces.length > 0 ? (
             filteredSavedPlaces.map((place) => (
-              <button key={`${place.id}-${place.name}`} onClick={() => choosePlace(place)} type="button">
-                <strong>{place.name}</strong>
-                <span>{place.address || "주소 정보 없음"}</span>
+              <button key={place.id} onClick={() => choosePersonalPlace(place)} type="button">
+                <strong>{place.label}</strong>
+                <span>{place.address}</span>
               </button>
             ))
           ) : (
             <p className="schedule-place-message">
-              {isLoadingSaved ? "내 장소 불러오는 중..." : "저장된 내 장소가 없어요. 장소 탭에서 먼저 만들어둘 수 있어요."}
+              {isLoadingSaved ? "내 장소 불러오는 중..." : "저장된 내 장소가 없어요. DB의 장소 탭에서 먼저 만들어둘 수 있어요."}
             </p>
           )}
         </div>
       ) : results.length > 0 ? (
         <div className="schedule-place-results">
           {results.map((place) => (
-            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => choosePlace(place)} type="button">
+            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMapPlace(place)} type="button">
               <strong>{place.name}</strong>
               <span>{place.address || place.category || "주소 정보 없음"}</span>
             </button>
@@ -179,6 +183,19 @@ async function readPlaceSearchResponse(response: Response): Promise<{ places?: P
   } catch {
     return { error: "장소 검색 응답을 읽지 못했습니다.", places: [] };
   }
+}
+
+function convertPersonalPlaceToPlanPlace(place: PersonalPlaceRecord): PlanPlace {
+  return {
+    name: place.label,
+    address: place.address,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    providerPlaceId: place.providerPlaceId,
+    phone: place.phone,
+    category: place.category,
+    url: place.url,
+  };
 }
 
 function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {

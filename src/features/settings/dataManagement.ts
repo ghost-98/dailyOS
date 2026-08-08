@@ -5,6 +5,7 @@ const exportTables = [
   { name: "profiles", conflict: "user_id" },
   { name: "place_folders", conflict: "id" },
   { name: "places", conflict: "id" },
+  { name: "personal_places", conflict: "id" },
   { name: "tasks", conflict: "id" },
   { name: "calendar_events", conflict: "id" },
   { name: "daily_logs", conflict: "id" },

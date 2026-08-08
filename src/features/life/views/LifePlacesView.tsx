@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarRange, MapPin, Plus, Save, Search, Star, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { CalendarRange, MapPin, Plus, Save, Search, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
-import { createPlaceInDb, deletePlaceFromDb, fetchPlacesFromDb, updatePlaceInDb } from "@/features/places/api";
-import type { DailyLogRecord, LifeActivityRecord, LifePhotoRecord, PlaceRecord } from "@/types/domain";
+import {
+  createPersonalPlaceInDb,
+  deletePersonalPlaceFromDb,
+  fetchPersonalPlacesFromDb,
+  updatePersonalPlaceInDb,
+} from "@/features/personalPlaces/api";
+import type { DailyLogRecord, LifeActivityRecord, LifePhotoRecord, PersonalPlaceRecord, PlaceRecord } from "@/types/domain";
 
 type LifePlacesViewProps = {
   activities: LifeActivityRecord[];
@@ -84,17 +89,22 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
   const [endDate, setEndDate] = useState(defaultEndDate);
   const [showVisitedMarkers, setShowVisitedMarkers] = useState(true);
   const [selectedPlaceKey, setSelectedPlaceKey] = useState("");
-  const [selectedManagedPlaceId, setSelectedManagedPlaceId] = useState("");
-  const [managedName, setManagedName] = useState("");
-  const [managedAddress, setManagedAddress] = useState("");
-  const [managedMemo, setManagedMemo] = useState("");
-  const [managedPlaces, setManagedPlaces] = useState<PlaceRecord[]>([]);
   const [searchResults, setSearchResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isSavingPlace, setIsSavingPlace] = useState(false);
-  const [isDeletingPlace, setIsDeletingPlace] = useState(false);
   const [searchMessage, setSearchMessage] = useState("");
-  const [managedMessage, setManagedMessage] = useState("");
+
+  const [personalPlaces, setPersonalPlaces] = useState<PersonalPlaceRecord[]>([]);
+  const [selectedPersonalPlaceId, setSelectedPersonalPlaceId] = useState("");
+  const [placeLabel, setPlaceLabel] = useState("");
+  const [placeMemo, setPlaceMemo] = useState("");
+  const [mappingQuery, setMappingQuery] = useState("");
+  const [mappingResults, setMappingResults] = useState<PlaceRecord[]>([]);
+  const [mappedPlace, setMappedPlace] = useState<PlaceRecord | null>(null);
+  const [isMappingSearchLoading, setIsMappingSearchLoading] = useState(false);
+  const [personalPlaceMessage, setPersonalPlaceMessage] = useState("");
+  const [isSavingPersonalPlace, setIsSavingPersonalPlace] = useState(false);
+  const [isDeletingPersonalPlace, setIsDeletingPersonalPlace] = useState(false);
+
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [resolvedPlaces, setResolvedPlaces] = useState<Record<string, ResolvedVisitedPlace>>({});
 
@@ -110,13 +120,13 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
   useEffect(() => {
     let isMounted = true;
 
-    fetchPlacesFromDb()
+    fetchPersonalPlacesFromDb()
       .then((records) => {
         if (!isMounted) return;
-        setManagedPlaces(records ?? []);
+        setPersonalPlaces(records ?? []);
       })
       .catch((error) => {
-        console.error("Failed to load managed places", error);
+        console.error("Failed to load personal places", error);
       });
 
     return () => {
@@ -151,20 +161,32 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     document.head.appendChild(script);
   }, []);
 
-  const selectedManagedPlace = managedPlaces.find((place) => place.id === selectedManagedPlaceId) ?? null;
+  const selectedPersonalPlace = personalPlaces.find((place) => place.id === selectedPersonalPlaceId) ?? null;
 
   useEffect(() => {
-    if (!selectedManagedPlace) return;
-    setManagedName(selectedManagedPlace.name);
-    setManagedAddress(selectedManagedPlace.address);
-    setManagedMemo(selectedManagedPlace.memo ?? "");
-  }, [selectedManagedPlace]);
+    if (!selectedPersonalPlace) return;
+    setPlaceLabel(selectedPersonalPlace.label);
+    setPlaceMemo(selectedPersonalPlace.memo ?? "");
+    setMappedPlace({
+      id: selectedPersonalPlace.id,
+      address: selectedPersonalPlace.address,
+      latitude: selectedPersonalPlace.latitude,
+      longitude: selectedPersonalPlace.longitude,
+      name: selectedPersonalPlace.mappedName ?? selectedPersonalPlace.address,
+      provider: "manual",
+      providerPlaceId: selectedPersonalPlace.providerPlaceId,
+      phone: selectedPersonalPlace.phone,
+      category: selectedPersonalPlace.category,
+      url: selectedPersonalPlace.url,
+    });
+    setMappingQuery(selectedPersonalPlace.address);
+  }, [selectedPersonalPlace]);
 
-  const managedPlacesFiltered = useMemo(() => {
+  const personalPlacesFiltered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return managedPlaces;
-    return managedPlaces.filter((place) => [place.name, place.address, place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery));
-  }, [managedPlaces, query]);
+    if (!normalizedQuery) return personalPlaces;
+    return personalPlaces.filter((place) => [place.label, place.address, place.mappedName ?? "", place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery));
+  }, [personalPlaces, query]);
 
   const periodActivities = useMemo(
     () =>
@@ -321,7 +343,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
   const selectedVisitedPlace = filteredVisitedPlaces.find((place) => place.key === selectedPlaceKey) ?? null;
 
-  const runExternalPlaceSearch = async () => {
+  const runPlaceSearch = async () => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
       setSearchResults([]);
@@ -343,7 +365,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       setSearchResults(payload.places);
       if (payload.places.length === 0) setSearchMessage("검색 결과가 없습니다. 다른 키워드로 다시 찾아보세요.");
     } catch (error) {
-      console.error("Failed to search external places", error);
+      console.error("Failed to search places", error);
       setSearchResults([]);
       setSearchMessage("장소 검색 중 문제가 발생했습니다.");
     } finally {
@@ -351,7 +373,33 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     }
   };
 
-  const visibleVisitedMarkers = useMemo(() => (showVisitedMarkers ? filteredVisitedPlaces : []), [filteredVisitedPlaces, showVisitedMarkers]);
+  const runMappingSearch = async () => {
+    const trimmedQuery = mappingQuery.trim();
+    if (!trimmedQuery) {
+      setMappingResults([]);
+      return;
+    }
+
+    setIsMappingSearchLoading(true);
+    try {
+      const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
+      const payload = (await response.json()) as SearchResponse;
+      if (!response.ok) {
+        setMappingResults([]);
+        setPersonalPlaceMessage(payload.error ?? "위치 검색에 실패했습니다.");
+        return;
+      }
+
+      setMappingResults(payload.places);
+      if (payload.places.length === 0) setPersonalPlaceMessage("매핑할 위치를 찾지 못했어요.");
+    } catch (error) {
+      console.error("Failed to search mapping places", error);
+      setMappingResults([]);
+      setPersonalPlaceMessage("위치 검색 중 문제가 발생했습니다.");
+    } finally {
+      setIsMappingSearchLoading(false);
+    }
+  };
 
   const fitVisibleMarkers = useCallback(
     (placesToRender: Array<{ latitude: number; longitude: number }>) => {
@@ -379,6 +427,8 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     [],
   );
 
+  const visibleVisitedMarkers = useMemo(() => (showVisitedMarkers ? filteredVisitedPlaces : []), [filteredVisitedPlaces, showVisitedMarkers]);
+
   const renderMarkers = useCallback(() => {
     if (!mapRef.current || !window.naver?.maps) return;
 
@@ -400,17 +450,17 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       nextMarkers.push(marker);
     });
 
-    managedPlacesFiltered.forEach((place) => {
+    personalPlacesFiltered.forEach((place) => {
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(44, 9),
-          content: getLifePlaceMarkerContent(place.name, undefined, "#4f8cff"),
+          content: getLifePlaceMarkerContent(place.label, undefined, "#4f8cff"),
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
-        title: place.name,
+        title: place.label,
       });
-      window.naver!.maps.Event.addListener(marker, "click", () => setSelectedManagedPlaceId(place.id));
+      window.naver!.maps.Event.addListener(marker, "click", () => setSelectedPersonalPlaceId(place.id));
       nextMarkers.push(marker);
     });
 
@@ -428,8 +478,12 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     });
 
     markersRef.current = nextMarkers;
-    fitVisibleMarkers([...visibleVisitedMarkers, ...managedPlacesFiltered, ...searchResults]);
-  }, [fitVisibleMarkers, managedPlacesFiltered, searchResults, visibleVisitedMarkers]);
+    fitVisibleMarkers([
+      ...visibleVisitedMarkers,
+      ...personalPlacesFiltered.map((place) => ({ latitude: place.latitude, longitude: place.longitude })),
+      ...searchResults,
+    ]);
+  }, [fitVisibleMarkers, personalPlacesFiltered, searchResults, visibleVisitedMarkers]);
 
   useEffect(() => {
     if (mapStatus !== "ready" || !mapElementRef.current || !window.naver?.maps) return;
@@ -444,116 +498,90 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     renderMarkers();
   }, [mapStatus, renderMarkers]);
 
-  const beginCreateManagedPlace = () => {
-    setSelectedManagedPlaceId("");
-    setManagedName(query.trim());
-    setManagedAddress("");
-    setManagedMemo("");
-    setManagedMessage("");
+  const startCreatingPersonalPlace = () => {
+    setSelectedPersonalPlaceId("");
+    setPlaceLabel("");
+    setPlaceMemo("");
+    setMappingQuery("");
+    setMappingResults([]);
+    setMappedPlace(null);
+    setPersonalPlaceMessage("");
   };
 
-  const saveManagedPlace = async () => {
-    const trimmedName = managedName.trim();
-    const trimmedAddress = managedAddress.trim();
-    if (!trimmedName || !trimmedAddress || isSavingPlace) return;
+  const chooseMappingPlace = (place: PlaceRecord) => {
+    setMappedPlace(place);
+    setMappingQuery(place.address || place.name);
+    setMappingResults([]);
+    setPersonalPlaceMessage("");
+  };
 
-    setIsSavingPlace(true);
-    setManagedMessage("");
+  const savePersonalPlace = async () => {
+    if (!placeLabel.trim() || !mappedPlace || isSavingPersonalPlace) return;
+
+    setIsSavingPersonalPlace(true);
+    setPersonalPlaceMessage("");
+
     try {
-      const coordinates = await resolvePlaceCoordinates(trimmedName, trimmedAddress);
-      if (!coordinates) {
-        setManagedMessage("주소 좌표를 찾지 못했어요. 주소를 조금 더 정확히 적어주세요.");
-        return;
-      }
-
-      const basePlace: PlaceRecord = {
-        id: selectedManagedPlace?.id ?? "",
-        address: trimmedAddress,
-        category: selectedManagedPlace?.category,
-        folderId: selectedManagedPlace?.folderId,
-        folderIds: selectedManagedPlace?.folderIds ?? [],
-        isFavorite: selectedManagedPlace?.isFavorite ?? false,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        memo: managedMemo.trim() || undefined,
-        name: trimmedName,
-        phone: selectedManagedPlace?.phone,
-        provider: selectedManagedPlace?.provider ?? "manual",
-        providerPlaceId: selectedManagedPlace?.providerPlaceId,
-        url: selectedManagedPlace?.url,
-      };
-
-      if (selectedManagedPlace) {
-        const updated = await updatePlaceInDb(basePlace);
+      if (selectedPersonalPlace) {
+        const updated = await updatePersonalPlaceInDb({
+          id: selectedPersonalPlace.id,
+          label: placeLabel.trim(),
+          mappedName: mappedPlace.name,
+          address: mappedPlace.address,
+          latitude: mappedPlace.latitude,
+          longitude: mappedPlace.longitude,
+          providerPlaceId: mappedPlace.providerPlaceId,
+          phone: mappedPlace.phone,
+          category: mappedPlace.category,
+          url: mappedPlace.url,
+          memo: placeMemo.trim() || undefined,
+        });
         if (!updated) return;
-        setManagedPlaces((current) => current.map((place) => (place.id === updated.id ? updated : place)));
-        setSelectedManagedPlaceId(updated.id);
-        setManagedMessage("내 장소를 수정했어요.");
+        setPersonalPlaces((current) => current.map((place) => (place.id === updated.id ? updated : place)));
+        setSelectedPersonalPlaceId(updated.id);
+        setPersonalPlaceMessage("내 장소를 수정했어요.");
         return;
       }
 
-      const duplicate = managedPlaces.find((place) => getVisitedPlaceKey(place.name, place.address) === getVisitedPlaceKey(trimmedName, trimmedAddress));
+      const duplicate = personalPlaces.find((place) => place.label === placeLabel.trim());
       if (duplicate) {
-        setSelectedManagedPlaceId(duplicate.id);
-        setManagedMessage("같은 이름과 주소의 내 장소가 이미 있어요.");
+        setSelectedPersonalPlaceId(duplicate.id);
+        setPersonalPlaceMessage("같은 이름의 내 장소가 이미 있어요.");
         return;
       }
 
-      const created = await createPlaceInDb(basePlace);
-      if (!created) return;
-      setManagedPlaces((current) => [created, ...current]);
-      setSelectedManagedPlaceId(created.id);
-      setManagedMessage("내 장소에 추가했어요.");
-    } finally {
-      setIsSavingPlace(false);
-    }
-  };
-
-  const deleteManagedPlace = async () => {
-    if (!selectedManagedPlace || isDeletingPlace) return;
-    setIsDeletingPlace(true);
-    try {
-      await deletePlaceFromDb(selectedManagedPlace.id);
-      setManagedPlaces((current) => current.filter((place) => place.id !== selectedManagedPlace.id));
-      setSelectedManagedPlaceId("");
-      setManagedName("");
-      setManagedAddress("");
-      setManagedMemo("");
-      setManagedMessage("내 장소를 삭제했어요.");
-    } finally {
-      setIsDeletingPlace(false);
-    }
-  };
-
-  const saveSearchResultToManagedPlaces = async (place: PlaceRecord) => {
-    const duplicate = managedPlaces.find((item) => getVisitedPlaceKey(item.name, item.address) === getVisitedPlaceKey(place.name, place.address));
-    if (duplicate) {
-      setSelectedManagedPlaceId(duplicate.id);
-      setManagedName(duplicate.name);
-      setManagedAddress(duplicate.address);
-      setManagedMemo(duplicate.memo ?? "");
-      setManagedMessage("이미 저장된 내 장소예요.");
-      return;
-    }
-
-    setIsSavingPlace(true);
-    setManagedMessage("");
-    try {
-      const created = await createPlaceInDb({
-        ...place,
-        folderId: undefined,
-        folderIds: [],
-        memo: undefined,
+      const created = await createPersonalPlaceInDb({
+        label: placeLabel.trim(),
+        mappedName: mappedPlace.name,
+        address: mappedPlace.address,
+        latitude: mappedPlace.latitude,
+        longitude: mappedPlace.longitude,
+        providerPlaceId: mappedPlace.providerPlaceId,
+        phone: mappedPlace.phone,
+        category: mappedPlace.category,
+        url: mappedPlace.url,
+        memo: placeMemo.trim() || undefined,
       });
       if (!created) return;
-      setManagedPlaces((current) => [created, ...current]);
-      setSelectedManagedPlaceId(created.id);
-      setManagedName(created.name);
-      setManagedAddress(created.address);
-      setManagedMemo(created.memo ?? "");
-      setManagedMessage("검색 결과를 내 장소에 저장했어요.");
+      setPersonalPlaces((current) => [created, ...current]);
+      setSelectedPersonalPlaceId(created.id);
+      setPersonalPlaceMessage("내 장소를 추가했어요.");
     } finally {
-      setIsSavingPlace(false);
+      setIsSavingPersonalPlace(false);
+    }
+  };
+
+  const deletePersonalPlace = async () => {
+    if (!selectedPersonalPlace || isDeletingPersonalPlace) return;
+
+    setIsDeletingPersonalPlace(true);
+    try {
+      await deletePersonalPlaceFromDb(selectedPersonalPlace.id);
+      setPersonalPlaces((current) => current.filter((place) => place.id !== selectedPersonalPlace.id));
+      startCreatingPersonalPlace();
+      setPersonalPlaceMessage("내 장소를 삭제했어요.");
+    } finally {
+      setIsDeletingPersonalPlace(false);
     }
   };
 
@@ -563,20 +591,20 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="장소" description="방문 흐름을 보는 장소 축과, 앞으로 기록 입력에 재사용할 내 장소 사전을 한 곳에서 함께 관리합니다." />
+      <LifeTabHeading title="장소" description="방문한 장소 흐름을 보고, 별도의 내 장소 사전을 만들어 기록 입력에서 반복 재사용할 수 있게 정리합니다." />
 
       <SectionCard className="life-places-toolbar">
         <label className="life-places-search">
           <Search aria-hidden size={17} />
           <input
-            placeholder="장소명, 주소, 함께한 사람으로 찾기"
+            placeholder="방문 장소, 주소, 함께한 사람으로 찾기"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void runExternalPlaceSearch();
+              if (event.key === "Enter") void runPlaceSearch();
             }}
           />
-          <button disabled={isSearching || query.trim().length === 0} onClick={() => void runExternalPlaceSearch()} type="button">
+          <button disabled={isSearching || query.trim().length === 0} onClick={() => void runPlaceSearch()} type="button">
             {isSearching ? "검색 중..." : "장소 검색"}
           </button>
         </label>
@@ -599,7 +627,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       </SectionCard>
 
       {searchMessage ? <p className="life-places-message">{searchMessage}</p> : null}
-      {managedMessage ? <p className="life-places-message">{managedMessage}</p> : null}
+      {personalPlaceMessage ? <p className="life-places-message">{personalPlaceMessage}</p> : null}
 
       <div className="life-places-layout">
         <SectionCard className="life-places-map-panel">
@@ -617,13 +645,13 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
                 <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 준비하는 중입니다."}</strong>
-                <p>방문 장소와 내 장소를 같은 지도 위에서 함께 읽을 수 있게 불러오고 있어요.</p>
+                <p>방문 장소와 내 장소를 한 지도 위에서 같이 볼 수 있게 불러오고 있어요.</p>
               </div>
-            ) : filteredVisitedPlaces.length === 0 && managedPlacesFiltered.length === 0 && searchResults.length === 0 ? (
+            ) : filteredVisitedPlaces.length === 0 && personalPlacesFiltered.length === 0 && searchResults.length === 0 ? (
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
                 <strong>표시할 장소가 아직 없습니다.</strong>
-                <p>활동에 장소를 더 붙이거나, 아래에서 내 장소를 먼저 만들어둘 수 있어요.</p>
+                <p>활동에 장소를 더 붙이거나, 오른쪽에서 내 장소를 먼저 등록해둘 수 있어요.</p>
               </div>
             ) : null}
           </div>
@@ -636,9 +664,8 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     <strong>{place.name}</strong>
                     <span>{place.address}</span>
                   </div>
-                  <button disabled={isSavingPlace} onClick={() => void saveSearchResultToManagedPlaces(place)} type="button">
-                    <Star aria-hidden size={14} />
-                    내 장소 저장
+                  <button onClick={() => chooseMappingPlace(place)} type="button">
+                    이 위치로 매핑
                   </button>
                 </article>
               ))}
@@ -650,68 +677,106 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           <SectionCard className="life-places-manager">
             <div className="life-places-panel-head">
               <div>
-                <span>Managed Places</span>
-                <strong>내 장소 {managedPlaces.length}곳</strong>
+                <span>My Places</span>
+                <strong>내 장소 {personalPlaces.length}곳</strong>
               </div>
-              <p>지도 검색과 별개로, 기록 입력에서 반복 재사용할 장소 사전</p>
+              <p>장소 보관함과 분리된, 내가 이름을 붙여 관리하는 장소 사전</p>
             </div>
 
             <div className="life-places-manager__actions">
-              <button onClick={beginCreateManagedPlace} type="button">
+              <button onClick={startCreatingPersonalPlace} type="button">
                 <Plus aria-hidden size={15} />
-                새 장소
+                새 내 장소
               </button>
             </div>
 
             <div className="life-places-manager__list">
-              {managedPlacesFiltered.length > 0 ? (
-                managedPlacesFiltered.map((place) => (
+              {personalPlacesFiltered.length > 0 ? (
+                personalPlacesFiltered.map((place) => (
                   <button
-                    className={selectedManagedPlaceId === place.id ? "life-places-manager__place life-places-manager__place--active" : "life-places-manager__place"}
+                    className={selectedPersonalPlaceId === place.id ? "life-places-manager__place life-places-manager__place--active" : "life-places-manager__place"}
                     key={place.id}
-                    onClick={() => setSelectedManagedPlaceId(place.id)}
+                    onClick={() => setSelectedPersonalPlaceId(place.id)}
                     type="button"
                   >
-                    <strong>{place.name}</strong>
+                    <strong>{place.label}</strong>
                     <span>{place.address}</span>
                   </button>
                 ))
               ) : (
                 <div className="life-places-empty-inline">
-                  <strong>아직 저장된 내 장소가 없습니다.</strong>
-                  <p>위 검색 결과에서 저장하거나, 직접 이름과 주소를 입력해서 만들 수 있어요.</p>
+                  <strong>아직 등록된 내 장소가 없습니다.</strong>
+                  <p>예: 내 집, 본가, 회사, 단골 카페처럼 내가 직접 이름을 붙여 저장할 수 있어요.</p>
                 </div>
               )}
             </div>
 
             <div className="life-places-manager__form">
               <div className="life-places-manager__form-head">
-                <strong>{selectedManagedPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
-                {selectedManagedPlace ? <span>{selectedManagedPlace.provider === "naver" ? "지도 기반" : "직접 관리"}</span> : null}
+                <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
+                {mappedPlace ? <span>{mappedPlace.name}</span> : null}
               </div>
 
               <label>
-                <span>장소 이름</span>
-                <input placeholder="예: 집, 회사, 단골 카페" value={managedName} onChange={(event) => setManagedName(event.target.value)} />
+                <span>내 장소 이름</span>
+                <input placeholder="예: 내 집, 부산 집, 회사" value={placeLabel} onChange={(event) => setPlaceLabel(event.target.value)} />
               </label>
 
               <label>
-                <span>주소</span>
-                <input placeholder="예: 서울시 강남구 ..." value={managedAddress} onChange={(event) => setManagedAddress(event.target.value)} />
+                <span>위치 매핑 검색</span>
+                <div className="schedule-place-search">
+                  <MapPin aria-hidden size={18} />
+                  <input
+                    placeholder="예: 부산광역시 ... 아파트"
+                    value={mappingQuery}
+                    onChange={(event) => setMappingQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void runMappingSearch();
+                      }
+                    }}
+                  />
+                  <button disabled={isMappingSearchLoading || mappingQuery.trim().length === 0} onClick={() => void runMappingSearch()} type="button">
+                    {isMappingSearchLoading ? "검색 중" : "검색"}
+                  </button>
+                </div>
               </label>
+
+              {mappedPlace ? (
+                <div className="life-places-manager__mapped">
+                  <strong>{mappedPlace.name}</strong>
+                  <span>{mappedPlace.address}</span>
+                </div>
+              ) : (
+                <div className="life-places-empty-inline life-places-empty-inline--compact">
+                  <strong>먼저 매핑할 실제 위치를 골라주세요.</strong>
+                </div>
+              )}
+
+              {mappingResults.length > 0 ? (
+                <div className="schedule-place-results">
+                  {mappingResults.map((place) => (
+                    <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMappingPlace(place)} type="button">
+                      <strong>{place.name}</strong>
+                      <span>{place.address || place.category || "주소 정보 없음"}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               <label>
                 <span>메모</span>
-                <textarea placeholder="이 장소를 어떻게 기억하면 좋은지 적어둘 수 있어요." rows={3} value={managedMemo} onChange={(event) => setManagedMemo(event.target.value)} />
+                <textarea placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요." rows={3} value={placeMemo} onChange={(event) => setPlaceMemo(event.target.value)} />
               </label>
 
               <div className="life-places-manager__buttons">
-                <button disabled={isSavingPlace || !managedName.trim() || !managedAddress.trim()} onClick={() => void saveManagedPlace()} type="button">
+                <button disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace} onClick={() => void savePersonalPlace()} type="button">
                   <Save aria-hidden size={15} />
-                  {selectedManagedPlace ? "수정 저장" : "내 장소 저장"}
+                  {selectedPersonalPlace ? "수정 저장" : "내 장소 저장"}
                 </button>
-                {selectedManagedPlace ? (
-                  <button className="life-places-manager__delete" disabled={isDeletingPlace} onClick={() => void deleteManagedPlace()} type="button">
+                {selectedPersonalPlace ? (
+                  <button className="life-places-manager__delete" disabled={isDeletingPersonalPlace} onClick={() => void deletePersonalPlace()} type="button">
                     <Trash2 aria-hidden size={15} />
                     삭제
                   </button>
@@ -726,7 +791,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <span>Visited Places</span>
                 <strong>{filteredVisitedPlaces.length}곳</strong>
               </div>
-              <p>현재 필터 기준으로 실제 방문 기록이 남은 장소</p>
+              <p>현재 기간 안에서 실제 방문 기록이 남은 장소</p>
             </div>
 
             <div className="life-places-place-list">
@@ -757,7 +822,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <span>Place Records</span>
                 <strong>{selectedVisitedPlace?.name ?? "장소를 선택하세요"}</strong>
               </div>
-              <p>{selectedVisitedPlace ? `${selectedVisitedPlace.visitCount}건 방문 기록` : "마커나 목록을 눌러 오른쪽에서 기록을 봅니다."}</p>
+              <p>{selectedVisitedPlace ? `${selectedVisitedPlace.visitCount}건 방문 기록` : "방문 장소를 누르면 오른쪽에 기록이 열립니다."}</p>
             </div>
 
             {selectedVisitedPlace ? (

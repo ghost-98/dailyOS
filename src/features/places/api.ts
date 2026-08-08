@@ -33,7 +33,6 @@ type PlaceFolderLinkRow = {
 type PlaceInsert = Omit<PlaceRow, "id"> & {
   user_id: string;
 };
-type PlaceUpdate = Omit<PlaceInsert, "user_id">;
 type PlaceFolderInsert = Omit<PlaceFolderRow, "id"> & {
   user_id: string;
 };
@@ -128,7 +127,7 @@ export async function fetchPlacesFromDb() {
 
   return (data as PlaceRow[])
     .map((row) => mapPlaceRow(row, linksByPlaceId.get(row.id) ?? []))
-    .sort((left, right) => right.id.localeCompare(left.id));
+    .filter((place) => (place.folderIds?.length ?? 0) > 0);
 }
 
 export async function createPlaceInDb(place: PlaceRecord) {
@@ -139,29 +138,6 @@ export async function createPlaceInDb(place: PlaceRecord) {
   const { data, error } = await supabase.from("places").insert(mapPlaceInsert(place, userId)).select(placeColumns).single();
   if (error) throw error;
   return mapPlaceRow(data as PlaceRow);
-}
-
-export async function updatePlaceInDb(place: PlaceRecord) {
-  if (!supabase) return null;
-
-  const row: PlaceUpdate = {
-    folder_id: place.folderId ?? null,
-    name: place.name.trim(),
-    address: place.address.trim(),
-    latitude: place.latitude,
-    longitude: place.longitude,
-    provider: place.provider,
-    provider_place_id: place.providerPlaceId ?? null,
-    phone: place.phone?.trim() || null,
-    category: place.category?.trim() || null,
-    url: place.url?.trim() || null,
-    is_favorite: Boolean(place.isFavorite),
-    memo: place.memo?.trim() || null,
-  };
-
-  const { data, error } = await supabase.from("places").update(row).eq("id", place.id).select(placeColumns).single();
-  if (error) throw error;
-  return mapPlaceRow(data as PlaceRow, place.folderIds ?? []);
 }
 
 export async function setPlaceFolderLinksInDb(placeId: string, folderIds: string[]) {

@@ -166,6 +166,20 @@ export type PlaceRecord = {
   memo?: string;
 };
 
+export type PersonalPlaceRecord = {
+  id: string;
+  label: string;
+  mappedName?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  providerPlaceId?: string;
+  phone?: string;
+  category?: string;
+  url?: string;
+  memo?: string;
+};
+
 export type PersonRecord = {
   id: string;
   name: string;

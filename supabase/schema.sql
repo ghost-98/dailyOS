@@ -337,6 +337,24 @@ create table if not exists public.places (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.personal_places (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  label text not null,
+  mapped_name text,
+  address text not null,
+  latitude numeric(10, 7) not null,
+  longitude numeric(10, 7) not null,
+  provider_place_id text,
+  phone text,
+  category text,
+  url text,
+  memo text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, label)
+);
+
 create table if not exists public.place_folder_links (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -398,6 +416,7 @@ create index if not exists income_records_user_date_idx on public.income_records
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
+create index if not exists personal_places_user_label_idx on public.personal_places(user_id, label);
 
 create or replace view public.life_people_index
 with (security_invoker = true)
@@ -712,6 +731,11 @@ create trigger set_places_updated_at
 before update on public.places
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_personal_places_updated_at on public.personal_places;
+create trigger set_personal_places_updated_at
+before update on public.personal_places
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_place_folders_updated_at on public.place_folders;
 create trigger set_place_folders_updated_at
 before update on public.place_folders
@@ -734,6 +758,7 @@ alter table public.expense_records enable row level security;
 alter table public.income_records enable row level security;
 alter table public.place_folders enable row level security;
 alter table public.places enable row level security;
+alter table public.personal_places enable row level security;
 alter table public.place_folder_links enable row level security;
 alter table public.place_links enable row level security;
 alter table public.people enable row level security;
@@ -1052,6 +1077,31 @@ with check (
 drop policy if exists "Users can delete own places" on public.places;
 create policy "Users can delete own places"
 on public.places for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own personal places" on public.personal_places;
+create policy "Users can read own personal places"
+on public.personal_places for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own personal places" on public.personal_places;
+create policy "Users can insert own personal places"
+on public.personal_places for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own personal places" on public.personal_places;
+create policy "Users can update own personal places"
+on public.personal_places for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own personal places" on public.personal_places;
+create policy "Users can delete own personal places"
+on public.personal_places for delete
 to authenticated
 using (user_id = auth.uid());
 
