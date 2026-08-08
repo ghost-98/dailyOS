@@ -378,7 +378,9 @@
       "photos";
   }
 
+  .life-calendar-day-events,
   .life-calendar-day-finance,
+  .life-calendar-day-timeline__detail-grid,
   .life-calendar-day-photo-preview,
   .life-calendar-day-photo-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));

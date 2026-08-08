@@ -1456,6 +1456,7 @@ function LifeCalendarDatabasePanel({
   const topPatterns = getPatternHighlights(daySummaries).slice(0, 5);
   const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
   const dayEventCounts = getDayEventCounts(items);
+  const dayEventGroups = buildDayEventGroups(items);
 
   if (scope === "day") {
     return (
@@ -1466,17 +1467,26 @@ function LifeCalendarDatabasePanel({
             <strong>{narrative}</strong>
           </article>
           <div className="life-calendar-day-events">
-            <article>
+            <article className="life-calendar-day-events__card">
               <span>일정</span>
-              <strong>{dayEventCounts.schedule}</strong>
+              <strong>{dayEventCounts.schedule}건</strong>
+              <div className="life-calendar-day-events__list">
+                {dayEventGroups.schedule.length > 0 ? dayEventGroups.schedule.map((item) => <p key={item.id}><b>{item.meta}</b>{item.title}</p>) : <p>등록된 일정이 없어요.</p>}
+              </div>
             </article>
-            <article>
+            <article className="life-calendar-day-events__card">
               <span>할 일</span>
-              <strong>{dayEventCounts.todo}</strong>
+              <strong>{dayEventCounts.todo}건</strong>
+              <div className="life-calendar-day-events__list">
+                {dayEventGroups.todo.length > 0 ? dayEventGroups.todo.map((item) => <p key={item.id}><b>{item.meta}</b>{item.title}</p>) : <p>등록된 할 일이 없어요.</p>}
+              </div>
             </article>
-            <article>
+            <article className="life-calendar-day-events__card">
               <span>이벤트</span>
-              <strong>{dayEventCounts.event}</strong>
+              <strong>{dayEventCounts.event}건</strong>
+              <div className="life-calendar-day-events__list">
+                {dayEventGroups.event.length > 0 ? dayEventGroups.event.map((item) => <p key={item.id}><b>{item.meta}</b>{item.title}</p>) : <p>등록된 이벤트가 없어요.</p>}
+              </div>
             </article>
           </div>
         </section>
@@ -1569,6 +1579,7 @@ function LifeCalendarDatabasePanel({
 
 type DayDetailView = "activities" | "map" | "photos" | null;
 type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "activity" };
+type DayEventPreview = { id: string; meta: string; title: string; type: "event" | "schedule" | "todo" };
 type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
 type DayRouteStop = {
   address?: string;
@@ -1607,9 +1618,9 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             <div className="life-calendar-day-card__head">
               <div>
                 <span>활동 타임라인</span>
-                <strong>이 날의 실제 활동 흐름</strong>
+                <strong>시간순 활동 기록</strong>
               </div>
-              <b>{activityItems.length}개 활동</b>
+              <b>{activityItems.length}건</b>
             </div>
             <div className="life-calendar-day-timeline">
               {activityItems.length > 0 ? activityItems.map((item) => (
@@ -1620,10 +1631,10 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                   </div>
                   <div className="life-calendar-day-timeline__body">
                     <strong>{item.external.title}</strong>
-                    <div className="life-calendar-day-timeline__meta">
-                      {item.external.amount ? <span>지출 {formatNumberWithUnit(item.external.amount, "원")}</span> : null}
-                      {item.external.companions ? <span>{item.external.companions}</span> : null}
-                      {item.external.placeName ? <span>{item.external.placeName}</span> : null}
+                    <div className="life-calendar-day-timeline__detail-grid">
+                      {item.external.amount ? <div><em>지출</em><span>{formatNumberWithUnit(item.external.amount, "원")}</span></div> : null}
+                      {item.external.companions ? <div><em>함께</em><span>{item.external.companions}</span></div> : null}
+                      {item.external.placeName ? <div><em>장소</em><span>{item.external.placeName}</span></div> : null}
                     </div>
                     <div className="life-calendar-day-timeline__tags">
                       {[item.external.category, item.external.food, item.external.placeName].filter(Boolean).slice(0, 5).map((tag) => <b key={`${item.id}-${tag}`}>{tag}</b>)}
@@ -2046,6 +2057,41 @@ function getDayEventCounts(items: DayTimelineItem[]) {
     },
     { event: 0, schedule: 0, todo: 0 },
   );
+}
+
+function buildDayEventGroups(items: DayTimelineItem[]) {
+  const groups: Record<"event" | "schedule" | "todo", DayEventPreview[]> = {
+    event: [],
+    schedule: [],
+    todo: [],
+  };
+
+  items.forEach((item) => {
+    if ("event" in item) {
+      groups[item.event.type as "schedule" | "event"].push({
+        id: item.id,
+        meta: item.timeLabel === "하루종일" ? "종일" : item.timeLabel,
+        title: item.event.title,
+        type: item.event.type as "schedule" | "event",
+      });
+      return;
+    }
+
+    if ("task" in item) {
+      groups.todo.push({
+        id: item.id,
+        meta: item.timeLabel === "하루종일" ? "종일" : item.timeLabel,
+        title: item.task.title,
+        type: "todo",
+      });
+    }
+  });
+
+  return {
+    event: groups.event.slice(0, 3),
+    schedule: groups.schedule.slice(0, 3),
+    todo: groups.todo.slice(0, 3),
+  };
 }
 
 function buildDayRouteStops(items: DayTimelineItem[]) {
