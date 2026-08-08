@@ -1506,24 +1506,6 @@ function LifeCalendarDatabasePanel({
           <LifeCalendarDayPanel isLoading={isLoading} items={items} />
         </section>
 
-        <section className="life-calendar-db-section">
-          <div className="life-calendar-db-section__head">
-            <div>
-              <p className="eyebrow">Context</p>
-              <h3>누구와 어디에서 보냈는지</h3>
-            </div>
-          </div>
-          <div className="life-calendar-db-meta">
-            <article>
-              <span>함께한 사람</span>
-              <div>{topCompanions.length > 0 ? topCompanions.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>이 날 함께한 사람 기록이 아직 없어요.</p>}</div>
-            </article>
-            <article>
-              <span>주요 장소</span>
-              <div>{topPlaces.length > 0 ? topPlaces.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>연결된 장소 기록이 아직 없어요.</p>}</div>
-            </article>
-          </div>
-        </section>
       </div>
     );
   }
@@ -1625,13 +1607,59 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
     [items],
   );
   const routeStops = useMemo(() => buildDayRouteStops(items), [items]);
-  const previewActivities = activityItems.slice(0, 4);
   const previewPhotos = photoItems.slice(0, 3);
+  const finance = useMemo(() => getFinanceTotals(items), [items]);
+  const companionCounts = useMemo(
+    () => getTopValues(activityItems.flatMap((item) => parseCompanionNames(item.external.companions))).slice(0, 8),
+    [activityItems],
+  );
+  const leadActivity = activityItems[0];
+  const activityTags = useMemo(
+    () =>
+      leadActivity
+        ? [leadActivity.external.category, leadActivity.external.food, leadActivity.external.placeName].filter(Boolean).slice(0, 6)
+        : [],
+    [leadActivity],
+  );
 
   return (
     <>
       <div className="life-calendar-day-panel">
         <div className="life-calendar-day-panel__layout">
+          <section className="life-calendar-day-card life-calendar-day-card--main">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>메인 활동</span>
+                <strong>{leadActivity ? leadActivity.external.title : "대표 활동 없음"}</strong>
+              </div>
+              <b>{activityItems.length}개 활동</b>
+            </div>
+            {leadActivity ? (
+              <div className="life-calendar-day-main">
+                <div className="life-calendar-day-main__summary">
+                  <p>{[leadActivity.timeLabel, leadActivity.external.endTime ? `~ ${leadActivity.external.endTime}` : null].filter(Boolean).join(" ")}</p>
+                  <div className="life-calendar-day-main__meta">
+                    {leadActivity.external.amount ? <article><span>지출</span><strong>{formatNumberWithUnit(leadActivity.external.amount, "원")}</strong></article> : null}
+                    {leadActivity.external.companions ? <article><span>함께한 사람</span><strong>{leadActivity.external.companions}</strong></article> : null}
+                    {leadActivity.external.placeName ? <article><span>장소</span><strong>{leadActivity.external.placeName}</strong></article> : null}
+                  </div>
+                  <div className="life-calendar-day-main__tags">
+                    {activityTags.length > 0 ? activityTags.map((tag) => <b key={tag}>{tag}</b>) : <b>태그 없음</b>}
+                  </div>
+                </div>
+                <div className="life-calendar-day-main__list">
+                  {activityItems.length > 0 ? activityItems.map((item) => (
+                    <button className="life-calendar-day-main__item" key={item.id} onClick={() => setDetailView("activities")} type="button">
+                      <span>{item.timeLabel}{item.external.endTime ? ` ~ ${item.external.endTime}` : ""}</span>
+                      <strong>{item.external.title}</strong>
+                      <p>{[item.external.placeName, item.external.companions, item.external.amount ? formatNumberWithUnit(item.external.amount, "원") : null].filter(Boolean).join(" · ") || "활동 기록"}</p>
+                    </button>
+                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+                </div>
+              </div>
+            ) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "대표로 보여줄 활동 기록이 아직 없어요."}</div>}
+          </section>
+
           <button className="life-calendar-day-card life-calendar-day-card--map" onClick={() => setDetailView("map")} type="button">
             <div className="life-calendar-day-card__head">
               <div>
@@ -1644,32 +1672,13 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             <p>{routeStops.length > 1 ? "그날 남은 장소를 순서대로 지도 위에 연결했어요." : "좌표가 남은 장소가 아직 부족해서 흐름선은 짧게 보여요."}</p>
           </button>
 
-          <button className="life-calendar-day-card life-calendar-day-card--activities" onClick={() => setDetailView("activities")} type="button">
-            <div className="life-calendar-day-card__head">
-              <div>
-                <span>활동 기록</span>
-                <strong>{activityItems.length}개 활동</strong>
-              </div>
-              <b>전체 보기</b>
-            </div>
-            <div className="life-calendar-day-activity-preview">
-              {previewActivities.length > 0 ? previewActivities.map((item) => (
-                <article className="life-calendar-day-activity-preview__item" key={item.id}>
-                  <span>{item.timeLabel}</span>
-                  <strong>{item.external.title}</strong>
-                  <p>{[item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || "활동 기록"}</p>
-                </article>
-              )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
-            </div>
-          </button>
-
           <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => setDetailView("photos")} type="button">
             <div className="life-calendar-day-card__head">
               <div>
                 <span>사진 기억</span>
                 <strong>{photoItems.length}개 사진</strong>
               </div>
-              <b>갤러리 보기</b>
+              <b>{photoItems.length > 3 ? "모두 보기" : "갤러리 보기"}</b>
             </div>
             <div className="life-calendar-day-photo-preview">
               {previewPhotos.length > 0 ? previewPhotos.map((item) => (
@@ -1693,6 +1702,37 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
               )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
             </div>
           </button>
+
+          <section className="life-calendar-day-card life-calendar-day-card--companions">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>함께한 사람</span>
+                <strong>{companionCounts.length}명 흐름</strong>
+              </div>
+            </div>
+            <div className="life-calendar-day-card__chips">
+              {companionCounts.length > 0 ? companionCounts.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>이 날 함께한 사람 기록이 아직 없어요.</p>}
+            </div>
+          </section>
+
+          <section className="life-calendar-day-card life-calendar-day-card--finance">
+            <div className="life-calendar-day-card__head">
+              <div>
+                <span>총 수입·지출</span>
+                <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
+              </div>
+            </div>
+            <div className="life-calendar-day-finance">
+              <article>
+                <span>수입</span>
+                <strong>{formatNumberWithUnit(finance.income, "원")}</strong>
+              </article>
+              <article>
+                <span>지출</span>
+                <strong>{formatNumberWithUnit(finance.expense, "원")}</strong>
+              </article>
+            </div>
+          </section>
         </div>
       </div>
 

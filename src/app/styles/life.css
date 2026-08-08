@@ -230,11 +230,16 @@
 
 .life-calendar-day-panel__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
   grid-template-areas:
-    "map activities"
-    "map photos";
+    "main map"
+    "main photos"
+    "main companions"
+    "main finance";
+  grid-template-rows: minmax(168px, 1fr) minmax(158px, 0.94fr) minmax(118px, 0.7fr) minmax(118px, 0.7fr);
   gap: 10px;
+  height: 720px;
+  min-height: 720px;
 }
 
 .life-calendar-day-card {
@@ -245,20 +250,30 @@
   background: rgba(255, 255, 255, 0.035);
   color: inherit;
   font: inherit;
+  min-height: 0;
+  overflow: hidden;
   padding: 14px;
   text-align: left;
+}
+
+.life-calendar-day-card--main {
+  grid-area: main;
 }
 
 .life-calendar-day-card--map {
   grid-area: map;
 }
 
-.life-calendar-day-card--activities {
-  grid-area: activities;
-}
-
 .life-calendar-day-card--photos {
   grid-area: photos;
+}
+
+.life-calendar-day-card--companions {
+  grid-area: companions;
+}
+
+.life-calendar-day-card--finance {
+  grid-area: finance;
 }
 
 .life-calendar-day-card__head {
@@ -289,8 +304,97 @@
   font-size: 0.76rem;
 }
 
+.life-calendar-day-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.life-calendar-day-main__summary {
+  display: grid;
+  gap: 10px;
+}
+
+.life-calendar-day-main__summary > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.life-calendar-day-main__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-calendar-day-main__meta article,
+.life-calendar-day-finance article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 11px 12px;
+}
+
+.life-calendar-day-main__meta span,
+.life-calendar-day-main__tags b,
+.life-calendar-day-finance span,
+.life-calendar-day-card__chips b {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-calendar-day-main__meta strong,
+.life-calendar-day-finance strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.life-calendar-day-main__tags,
+.life-calendar-day-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-calendar-day-main__tags b,
+.life-calendar-day-card__chips b {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 0 10px;
+}
+
+.life-calendar-day-main__list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.life-calendar-day-main__item {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  color: inherit;
+  font: inherit;
+  padding: 12px;
+  text-align: left;
+}
+
+.life-calendar-day-main__item span,
 .life-calendar-day-card > p,
-.life-calendar-day-activity-preview__item p,
 .life-calendar-day-stop-list__item p,
 .life-calendar-day-photo-gallery__item figcaption span {
   margin: 0;
@@ -299,15 +403,21 @@
   line-height: 1.45;
 }
 
+.life-calendar-day-main__item strong {
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
 .life-calendar-day-map {
-  min-height: 220px;
+  min-height: 100%;
+  height: 100%;
   overflow: hidden;
   border-radius: 16px;
   background: rgba(10, 11, 14, 0.72);
 }
 
 .life-calendar-day-map--compact {
-  min-height: 180px;
+  min-height: 100%;
 }
 
 .life-calendar-day-map--empty {
@@ -334,14 +444,12 @@
   font-weight: 900;
 }
 
-.life-calendar-day-activity-preview,
 .life-calendar-day-activity-list,
 .life-calendar-day-stop-list {
   display: grid;
   gap: 8px;
 }
 
-.life-calendar-day-activity-preview__item,
 .life-calendar-day-activity-list__item,
 .life-calendar-day-stop-list__item {
   display: grid;
@@ -361,6 +469,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  min-height: 0;
 }
 
 .life-calendar-day-photo-preview__item,
@@ -375,7 +484,8 @@
 .life-calendar-day-photo-preview__item img,
 .life-calendar-day-photo-preview__item div {
   width: 100%;
-  height: 112px;
+  height: 100%;
+  min-height: 112px;
   object-fit: cover;
 }
 
@@ -416,6 +526,12 @@
   display: grid;
   gap: 5px;
   padding: 10px;
+}
+
+.life-calendar-day-finance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .life-calendar-db-section {

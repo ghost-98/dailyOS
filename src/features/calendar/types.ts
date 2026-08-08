@@ -6,9 +6,12 @@ export type ExternalCalendarCategory = "activity" | "expense" | "income" | "work
 export type ExternalCalendarItem = {
   amount?: number;
   caption?: string;
+  category?: string;
+  companions?: string;
   date: string;
   endTime?: string;
   fileUrl?: string;
+  food?: string;
   height?: number;
   id: string;
   isAllDay?: boolean;

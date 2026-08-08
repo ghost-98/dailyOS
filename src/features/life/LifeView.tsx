@@ -204,8 +204,12 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
         type: "income" as const,
       })),
       ...activities.map((activity) => ({
+        amount: activity.expenseAmount,
+        category: activity.category,
+        companions: activity.companions,
         date: activity.date,
         endTime: activity.endTime,
+        food: activity.food,
         id: activity.id,
         isAllDay: activity.isAllDay,
         meta: [activity.placeName, activity.food, activity.expenseAmount ? formatWon(activity.expenseAmount) : null].filter(Boolean).join(" · "),
