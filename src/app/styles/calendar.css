@@ -116,6 +116,73 @@
   line-height: 1;
 }
 
+.calendar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 16px;
+}
+
+.calendar-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 0 12px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.calendar-filter:hover {
+  border-color: rgba(201, 184, 255, 0.26);
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.calendar-filter--active {
+  color: var(--text);
+}
+
+.calendar-filter--schedule.calendar-filter--active {
+  border-color: rgba(201, 184, 255, 0.34);
+  background: rgba(201, 184, 255, 0.14);
+}
+
+.calendar-filter--todo.calendar-filter--active {
+  border-color: rgba(110, 231, 183, 0.3);
+  background: rgba(110, 231, 183, 0.12);
+}
+
+.calendar-filter--event.calendar-filter--active {
+  border-color: rgba(244, 114, 182, 0.3);
+  background: rgba(244, 114, 182, 0.12);
+}
+
+.calendar-filter--muted {
+  opacity: 0.5;
+}
+
+.calendar-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
 .calendar-dot--schedule {
   background: var(--violet);
 }

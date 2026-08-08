@@ -632,7 +632,7 @@ export function CalendarView({
             </button>
           </div>
 
-          {!isDatabaseView ? <div className="calendar-filters" aria-label="표시 항목">
+          <div className="calendar-filters" aria-label="표시 항목">
             {categories.map((type) => (
               <button
                 className={`calendar-filter calendar-filter--${type} ${
@@ -642,10 +642,11 @@ export function CalendarView({
                 onClick={() => toggleCalendarCategoryFilter(type)}
                 type="button"
               >
+                <span className={`calendar-dot calendar-dot--${type}`} />
                 {categoryLabels[type]}
               </button>
             ))}
-          </div> : null}
+          </div>
 
           <div className="calendar-weekdays">
             {weekdays.map((weekday, index) => (
