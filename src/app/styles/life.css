@@ -232,9 +232,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1.24fr) minmax(340px, 0.9fr);
   grid-template-areas:
-    "timeline map"
-    "timeline map"
     "timeline photos"
+    "timeline photos"
+    "timeline map"
     "timeline companions"
     "timeline finance"
     "timeline logs";
@@ -3270,6 +3270,7 @@ button:disabled {
 }
 
 .life-places-map-panel,
+.life-places-manager,
 .life-places-summary,
 .life-places-detail {
   display: grid;
@@ -3358,13 +3359,20 @@ button:disabled {
 }
 
 .life-places-search-results article {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--line);
+}
+
+.life-places-search-results article div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .life-places-search-results strong {
@@ -3377,6 +3385,23 @@ button:disabled {
   font-size: 12px;
 }
 
+.life-places-search-results button,
+.life-places-manager__actions button,
+.life-places-manager__buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(126, 105, 255, 0.12);
+  color: var(--violet-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
 .life-places-place-list,
 .life-places-record-list {
   display: grid;
@@ -3384,6 +3409,100 @@ button:disabled {
   max-height: 320px;
   overflow: auto;
   padding-right: 4px;
+}
+
+.life-places-manager__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.life-places-manager__list {
+  display: grid;
+  gap: 10px;
+  max-height: 180px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.life-places-manager__place {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 12px 14px;
+}
+
+.life-places-manager__place--active {
+  border-color: rgba(79, 140, 255, 0.28);
+  background: rgba(79, 140, 255, 0.08);
+}
+
+.life-places-manager__place strong,
+.life-places-manager__form-head strong {
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.life-places-manager__place span,
+.life-places-manager__form-head span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.life-places-manager__form {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(126, 105, 255, 0.12);
+  padding-top: 14px;
+}
+
+.life-places-manager__form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.life-places-manager__form label {
+  display: grid;
+  gap: 7px;
+}
+
+.life-places-manager__form label span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.life-places-manager__form input,
+.life-places-manager__form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-strong);
+  font: inherit;
+  outline: none;
+  padding: 11px 12px;
+}
+
+.life-places-manager__form textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.life-places-manager__buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.life-places-manager__delete {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #b91c1c !important;
 }
 
 .life-places-place-button {
