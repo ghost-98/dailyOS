@@ -40,6 +40,7 @@ import { LifeHomeView } from "@/features/life/LifeHomeView";
 import { LifeActivitiesView } from "@/features/life/views/LifeActivitiesView";
 import type { LifeActivityDraft } from "@/features/life/views/LifeActivitiesView";
 import { LifeHealthView } from "@/features/life/views/LifeHealthView";
+import { LifePlacesView } from "@/features/life/views/LifePlacesView";
 import { LifeLogsView } from "@/features/life/views/LifeLogsView";
 import { LifePeopleView } from "@/features/life/views/LifePeopleView";
 import { LifePhotosView } from "@/features/life/views/LifePhotosView";
@@ -81,6 +82,11 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
   if (mode === "logs") {
     const [activities, dailyLogs] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb()]);
     return { activities: activities ?? [], dailyLogs: dailyLogs ?? [] };
+  }
+
+  if (mode === "places") {
+    const [activities, dailyLogs, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb(), fetchLifePhotoMetadataFromDb()]);
+    return { activities: activities ?? [], dailyLogs: dailyLogs ?? [], lifePhotos: lifePhotos ?? [] };
   }
 
   if (mode === "photos") {
@@ -375,6 +381,8 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
           weights={weights}
           workouts={workouts}
         />
+      ) : activeTab === "places" ? (
+        <LifePlacesView activities={activities} dailyLogs={dailyLogs} photos={lifePhotos} />
       ) : activeTab === "people" ? (
         <LifePeopleView activities={activities} dailyLogs={dailyLogs} events={events} expenses={expenses} photos={lifePhotos} tasks={tasks} />
       ) : activeTab === "ask" ? (

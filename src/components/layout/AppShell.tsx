@@ -114,14 +114,14 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
 
 function isPrimaryNavActive(key: string, href: string, pathname: string, activeKey?: string) {
   if (key === "capture") return ["/life/activities", "/life/plans", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
-  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/ask", "/ledger"].includes(pathname);
+  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/places", "/life/ask", "/ledger"].includes(pathname);
   if (key === "places") return pathname === "/places";
   if (key.startsWith("life-")) return pathname === href;
   return key === activeKey || pathname === href;
 }
 
 function isMobileNavActive(key: string, href: string, pathname: string, activeKey?: string) {
-  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/ask", "/ledger"].includes(pathname);
+  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/places", "/life/ask", "/ledger"].includes(pathname);
   if (key === "life-activities") return ["/life/activities", "/life/plans", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
   if (key === "places") return pathname === "/places";
   if (key.startsWith("life-")) return pathname === href;

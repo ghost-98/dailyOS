@@ -19,8 +19,9 @@ const captureChildren = [
 const lifeChildren = [
   { label: "라이프 캘린더", href: "/life/calendar", key: "life-calendar" },
   { label: "전체 검색", href: "/life/search", key: "life-search" },
-  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
   { label: "사람", href: "/life/people", key: "life-people" },
+  { label: "장소", href: "/life/places", key: "life-places" },
+  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
   { label: "가계부", href: "/ledger", key: "ledger" },
 ];
 
