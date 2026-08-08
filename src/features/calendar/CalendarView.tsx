@@ -1823,6 +1823,7 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
   const polylineRef = useRef<NaverPolyline | null>(null);
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, { latitude: number; longitude: number }>>({});
+  const [isResolvingStops, setIsResolvingStops] = useState(false);
 
   useEffect(() => {
     if (!naverMapClientId) {
@@ -1862,32 +1863,15 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
 
   useEffect(() => {
     const unresolvedStops = stops.filter((stop) => !hasCoordinates(stop) && (stop.address || stop.name));
-    if (unresolvedStops.length === 0) return;
+    if (unresolvedStops.length === 0) {
+      setIsResolvingStops(false);
+      return;
+    }
 
     let isMounted = true;
+    setIsResolvingStops(true);
     Promise.all(
-      unresolvedStops.map(async (stop) => {
-        const query = [stop.name, stop.address].filter(Boolean).join(" ");
-        const cached = dayRouteGeocodeCache.get(query);
-        if (cached !== undefined) {
-          return cached ? { id: stop.id, latitude: cached.latitude, longitude: cached.longitude } : null;
-        }
-        try {
-          const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
-          const payload = (await response.json()) as { places?: Array<{ latitude: number; longitude: number }> };
-          const firstPlace = payload.places?.[0];
-          if (!firstPlace) {
-            dayRouteGeocodeCache.set(query, null);
-            return null;
-          }
-          dayRouteGeocodeCache.set(query, { latitude: firstPlace.latitude, longitude: firstPlace.longitude });
-          return { id: stop.id, latitude: firstPlace.latitude, longitude: firstPlace.longitude };
-        } catch (error) {
-          console.error("Failed to resolve day route stop", error);
-          dayRouteGeocodeCache.set(query, null);
-          return null;
-        }
-      }),
+      unresolvedStops.map((stop) => resolveDayRouteStopCoordinates(stop)),
     ).then((results) => {
       if (!isMounted) return;
       setResolvedCoordinates((current) => {
@@ -1898,6 +1882,7 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
         });
         return next;
       });
+      setIsResolvingStops(false);
     });
 
     return () => {
@@ -1962,17 +1947,33 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
 
     const bounds = new window.naver.maps.LatLngBounds();
     visibleStops.forEach((stop) => bounds.extend(new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)));
-    const padding = compact ? { bottom: 24, left: 24, right: 24, top: 24 } : { bottom: 56, left: 40, right: 40, top: 40 };
-    (window.naver.maps.Event as { trigger?: (target: unknown, eventName: string) => void }).trigger?.(mapRef.current, "resize");
-    mapRef.current.fitBounds(bounds, padding);
-    const boundsCenter = (bounds as NaverLatLngBounds & { getCenter?: () => NaverLatLng }).getCenter?.();
-    if (boundsCenter) {
-      mapRef.current.setCenter(boundsCenter);
-    }
+    syncDayRouteMapViewport(mapRef.current, bounds, compact);
   }, [compact, mapStatus, visibleStops]);
+
+  useEffect(() => {
+    if (!mapElementRef.current || !mapRef.current || !window.naver?.maps || visibleStops.length === 0) return;
+
+    const handleResize = () => {
+      const bounds = new window.naver!.maps.LatLngBounds();
+      visibleStops.forEach((stop) => bounds.extend(new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)));
+      syncDayRouteMapViewport(mapRef.current, bounds, compact);
+    };
+
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+      window.requestAnimationFrame(handleResize);
+    });
+    observer?.observe(mapElementRef.current);
+    window.requestAnimationFrame(handleResize);
+
+    return () => observer?.disconnect();
+  }, [compact, visibleStops]);
 
   if (mapStatus === "missing-key") {
     return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>네이버 지도 키가 없어서 지도를 표시할 수 없어요.</div>;
+  }
+
+  if (visibleStops.length === 0 && isResolvingStops) {
+    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>장소 좌표를 확인하면서 지도를 준비하고 있어요.</div>;
   }
 
   if (visibleStops.length === 0) {
@@ -1980,6 +1981,53 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
   }
 
   return <div className={`life-calendar-day-map ${compact ? "life-calendar-day-map--compact" : ""}`} ref={mapElementRef} />;
+}
+
+async function resolveDayRouteStopCoordinates(stop: DayRouteStop) {
+  const candidates = [
+    stop.address?.trim(),
+    stop.name?.trim(),
+    [stop.name, stop.address].filter(Boolean).join(" ").trim(),
+  ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
+
+  for (const query of candidates) {
+    const cached = dayRouteGeocodeCache.get(query);
+    if (cached !== undefined) {
+      if (cached) return { id: stop.id, latitude: cached.latitude, longitude: cached.longitude };
+      continue;
+    }
+
+    try {
+      const endpoint = query === stop.address?.trim() ? "/api/maps/geocode" : "/api/maps/search-place";
+      const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+      const payload = (await response.json()) as { places?: Array<{ latitude: number; longitude: number }> };
+      const firstPlace = payload.places?.[0];
+      if (!firstPlace) {
+        dayRouteGeocodeCache.set(query, null);
+        continue;
+      }
+
+      const resolved = { latitude: firstPlace.latitude, longitude: firstPlace.longitude };
+      dayRouteGeocodeCache.set(query, resolved);
+      return { id: stop.id, latitude: resolved.latitude, longitude: resolved.longitude };
+    } catch (error) {
+      console.error("Failed to resolve day route stop", error);
+      dayRouteGeocodeCache.set(query, null);
+    }
+  }
+
+  return null;
+}
+
+function syncDayRouteMapViewport(map: NaverMap | null, bounds: NaverLatLngBounds, compact: boolean) {
+  if (!map || !window.naver?.maps) return;
+  const padding = compact ? { bottom: 24, left: 24, right: 24, top: 24 } : { bottom: 56, left: 40, right: 40, top: 40 };
+  (window.naver.maps.Event as { trigger?: (target: unknown, eventName: string) => void }).trigger?.(map, "resize");
+  map.fitBounds(bounds, padding);
+  const boundsCenter = (bounds as NaverLatLngBounds & { getCenter?: () => NaverLatLng }).getCenter?.();
+  if (boundsCenter) {
+    map.setCenter(boundsCenter);
+  }
 }
 
 function getFinanceTotals(items: DayTimelineItem[]) {
