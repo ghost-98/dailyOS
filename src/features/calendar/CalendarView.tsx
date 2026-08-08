@@ -1968,19 +1968,29 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
     return () => observer?.disconnect();
   }, [compact, visibleStops]);
 
-  if (mapStatus === "missing-key") {
-    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>네이버 지도 키가 없어서 지도를 표시할 수 없어요.</div>;
-  }
+  useEffect(() => {
+    if (visibleStops.length > 0) return;
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
+    polylineRef.current?.setMap(null);
+    polylineRef.current = null;
+  }, [visibleStops.length]);
 
-  if (visibleStops.length === 0 && isResolvingStops) {
-    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>장소 좌표를 확인하면서 지도를 준비하고 있어요.</div>;
-  }
+  const overlayMessage =
+    mapStatus === "missing-key"
+      ? "네이버 지도 키가 없어서 지도를 표시할 수 없어요."
+      : visibleStops.length === 0 && isResolvingStops
+        ? "장소 좌표를 확인하면서 지도를 준비하고 있어요."
+        : visibleStops.length === 0
+          ? "지도에 그릴 장소 기록을 더 쌓아보면 여기서 하루 동선이 보입니다."
+          : null;
 
-  if (visibleStops.length === 0) {
-    return <div className={`life-calendar-day-map life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>지도에 그릴 장소 기록을 더 쌓아보면 여기서 하루 동선이 보입니다.</div>;
-  }
-
-  return <div className={`life-calendar-day-map ${compact ? "life-calendar-day-map--compact" : ""}`} ref={mapElementRef} />;
+  return (
+    <div className={`life-calendar-day-map-shell ${compact ? "life-calendar-day-map-shell--compact" : ""}`}>
+      <div className={`life-calendar-day-map ${compact ? "life-calendar-day-map--compact" : ""} ${overlayMessage ? "life-calendar-day-map--hidden" : ""}`} ref={mapElementRef} />
+      {overlayMessage ? <div className={`life-calendar-day-map-overlay life-calendar-day-map--empty ${compact ? "life-calendar-day-map--compact" : ""}`}>{overlayMessage}</div> : null}
+    </div>
+  );
 }
 
 async function resolveDayRouteStopCoordinates(stop: DayRouteStop) {
