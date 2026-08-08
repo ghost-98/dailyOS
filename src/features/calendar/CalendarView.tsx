@@ -622,21 +622,23 @@ export function CalendarView({
             </button>
           </div>
 
-          <div className="calendar-filters" aria-label="표시 항목">
-            {categories.map((type) => (
-              <button
-                className={`calendar-filter calendar-filter--${type} ${
-                  calendarCategoryFilters.includes(type) ? "calendar-filter--active" : ""
-                } ${calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type) ? "calendar-filter--muted" : ""}`}
-                key={type}
-                onClick={() => toggleCalendarCategoryFilter(type)}
-                type="button"
-              >
-                <span className={`calendar-dot calendar-dot--${type}`} />
-                {categoryLabels[type]}
-              </button>
-            ))}
-          </div>
+          {!(isDatabaseView && dbScope === "day") ? (
+            <div className="calendar-filters" aria-label="표시 항목">
+              {categories.map((type) => (
+                <button
+                  className={`calendar-filter calendar-filter--${type} ${
+                    calendarCategoryFilters.includes(type) ? "calendar-filter--active" : ""
+                  } ${calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+                  key={type}
+                  onClick={() => toggleCalendarCategoryFilter(type)}
+                  type="button"
+                >
+                  <span className={`calendar-dot calendar-dot--${type}`} />
+                  {categoryLabels[type]}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="calendar-weekdays">
             {weekdays.map((weekday, index) => (
@@ -1718,7 +1720,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
               </article>
               <article>
                 <span>지출</span>
-                <strong>{formatNumberWithUnit(finance.expense, "원")}</strong>
+                <strong>{formatExpenseValueWithUnit(finance.expense, "원")}</strong>
               </article>
             </div>
           </section>
@@ -2361,6 +2363,11 @@ function getPatternHighlights(daySummaries: PeriodDaySummary[]) {
 function formatNumberWithUnit(value: number, unit: string) {
   const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
+}
+
+function formatExpenseValueWithUnit(value: number, unit: string) {
+  if (value === 0) return `0${unit}`;
+  return `-${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
 }
 
 function parseCompanionNames(value?: string) {
