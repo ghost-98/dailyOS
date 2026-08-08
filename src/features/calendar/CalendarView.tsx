@@ -521,6 +521,32 @@ export function CalendarView({
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>
+        {isDatabaseView ? (
+          <div className="life-calendar-header-modes">
+            {([
+              ["day", "일간"],
+              ["week", "주간"],
+              ["month", "월간"],
+              ["range", "선택 기간"],
+            ] as const).map(([scope, label]) => (
+              <button
+                className={dbScope === scope ? "life-calendar-header-modes__button life-calendar-header-modes__button--active" : "life-calendar-header-modes__button"}
+                key={scope}
+                onClick={() => setDbScope(scope)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+            {dbScope === "range" ? (
+              <div className="life-calendar-header-modes__range">
+                <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
+                <span>~</span>
+                <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {!isDatabaseView ? <div className="header-actions">
           <div className="add-menu">
             <button className="header-action" aria-expanded={isAddMenuOpen} onClick={() => setIsAddMenuOpen((current) => !current)} type="button">
@@ -551,7 +577,7 @@ export function CalendarView({
         </div> : null}
       </header>
 
-      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""}`}>
+      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""}`}>
         <SectionCard className="calendar-board">
           <div className="calendar-toolbar">
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
@@ -637,32 +663,6 @@ export function CalendarView({
 
               {isDatabaseView ? (
                 <div className="life-calendar-db-panel">
-                  <div className="life-calendar-db-scopes" aria-label="기간 보기">
-                    {([
-                      ["day", "일간"],
-                      ["week", "주간"],
-                      ["month", "월간"],
-                      ["range", "기간"],
-                    ] as const).map(([scope, label]) => (
-                      <button className={dbScope === scope ? "life-calendar-db-chip life-calendar-db-chip--active" : "life-calendar-db-chip"} key={scope} onClick={() => setDbScope(scope)} type="button">
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {dbScope === "range" ? (
-                    <div className="life-calendar-db-range">
-                      <label>
-                        <span>시작</span>
-                        <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
-                      </label>
-                      <label>
-                        <span>종료</span>
-                        <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
-                      </label>
-                    </div>
-                  ) : null}
-
                   <div className="life-calendar-db-summary" aria-label="기록 축">
                     {([
                       ["activity", "활동", dbAxisCounts.activity],
