@@ -52,6 +52,8 @@ const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFull
 type LifeCalendarScope = "day" | "week" | "month" | "range";
 type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "finance" | "health";
 const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+let naverMapScriptPromise: Promise<void> | null = null;
+const dayRouteGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
 type NaverLatLng = unknown;
 type NaverLatLngBounds = {
@@ -1833,20 +1835,29 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
-    if (existingScript) {
-      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
-      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
-      return;
+    if (!naverMapScriptPromise) {
+      naverMapScriptPromise = new Promise<void>((resolve, reject) => {
+        const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
+        if (existingScript) {
+          existingScript.addEventListener("load", () => resolve(), { once: true });
+          existingScript.addEventListener("error", () => reject(new Error("Failed to load Naver Maps script")), { once: true });
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.dataset.dailyosNaverMap = "true";
+        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load Naver Maps script"));
+        document.head.appendChild(script);
+      });
     }
 
-    const script = document.createElement("script");
-    script.async = true;
-    script.dataset.dailyosNaverMap = "true";
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
-    script.onload = () => setMapStatus("ready");
-    script.onerror = () => setMapStatus("error");
-    document.head.appendChild(script);
+    naverMapScriptPromise.then(
+      () => setMapStatus("ready"),
+      () => setMapStatus("error"),
+    );
   }, []);
 
   useEffect(() => {
@@ -1857,14 +1868,23 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
     Promise.all(
       unresolvedStops.map(async (stop) => {
         const query = [stop.name, stop.address].filter(Boolean).join(" ");
+        const cached = dayRouteGeocodeCache.get(query);
+        if (cached !== undefined) {
+          return cached ? { id: stop.id, latitude: cached.latitude, longitude: cached.longitude } : null;
+        }
         try {
           const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
           const payload = (await response.json()) as { places?: Array<{ latitude: number; longitude: number }> };
           const firstPlace = payload.places?.[0];
-          if (!firstPlace) return null;
+          if (!firstPlace) {
+            dayRouteGeocodeCache.set(query, null);
+            return null;
+          }
+          dayRouteGeocodeCache.set(query, { latitude: firstPlace.latitude, longitude: firstPlace.longitude });
           return { id: stop.id, latitude: firstPlace.latitude, longitude: firstPlace.longitude };
         } catch (error) {
           console.error("Failed to resolve day route stop", error);
+          dayRouteGeocodeCache.set(query, null);
           return null;
         }
       }),
