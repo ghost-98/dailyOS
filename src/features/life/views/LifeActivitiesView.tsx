@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, NotebookPen } from "lucide-react";
+import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, NotebookPen, Sunrise } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
+import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
-import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import type { LifeActivityRecord, PersonRecord, PlanPlace } from "@/types/domain";
 
 export type LifeActivityDraft = {
@@ -24,15 +24,15 @@ type ActivityTemplate = {
   title: string;
 };
 
-const ACTIVITY_CATEGORIES = ["식사", "이동", "일", "공부", "만남", "운동", "휴식", "소비", "기타"];
+const ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "기타"];
 const ACTIVITY_TEMPLATES: ActivityTemplate[] = [
-  { category: "식사", title: "식사" },
+  { category: "생활", title: "일상 정리" },
   { category: "이동", title: "이동" },
-  { category: "일", title: "일" },
+  { category: "업무", title: "업무" },
   { category: "공부", title: "공부" },
   { category: "만남", title: "사람 만남" },
   { category: "운동", title: "운동" },
-  { category: "휴식", title: "휴식" },
+  { category: "식사", title: "식사" },
 ];
 const DEFAULT_CATEGORY = "기타";
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -68,6 +68,10 @@ export function LifeActivitiesView({
   const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [sleepTime, setSleepTime] = useState("23:30");
+  const [wakeTime, setWakeTime] = useState("07:00");
+  const [sleepPlace, setSleepPlace] = useState<PlanPlace | undefined>();
+  const [wakePlace, setWakePlace] = useState<PlanPlace | undefined>();
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -115,6 +119,15 @@ export function LifeActivitiesView({
   const connectedCount = selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length;
   const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
+  const sleepActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [selectedActivities]);
+  const wakeActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "wake")), [selectedActivities]);
+
+  useEffect(() => {
+    setSleepTime(sleepActivity?.startTime ?? "23:30");
+    setWakeTime(wakeActivity?.startTime ?? "07:00");
+    setSleepPlace(createActivityPlace(sleepActivity));
+    setWakePlace(createActivityPlace(wakeActivity));
+  }, [sleepActivity, wakeActivity]);
 
   const resetForm = () => {
     setEditing(null);
@@ -152,7 +165,7 @@ export function LifeActivitiesView({
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
     setFormError("");
-    setMessage("수정할 기록을 불러왔어요.");
+    setMessage("활동 기록을 불러왔어요.");
   };
 
   const applyTemplate = (template: ActivityTemplate) => {
@@ -167,7 +180,7 @@ export function LifeActivitiesView({
     setHasEndTime(false);
     setStartTime(getDefaultActivityTime());
     setEndTime("");
-    setMessage("지금 시작하는 활동으로 맞췄어요.");
+    setMessage("지금 시작한 활동 기준으로 시간을 맞췄어요.");
   };
 
   const finishRecent = () => {
@@ -178,14 +191,14 @@ export function LifeActivitiesView({
     setHasEndTime(true);
     setStartTime(formatMinutesLabel(Math.max(0, endMinutes - 60)));
     setEndTime(formatMinutesLabel(endMinutes));
-    setMessage("최근 1시간 활동으로 맞췄어요.");
+    setMessage("최근 1시간 활동 기준으로 시간을 맞췄어요.");
   };
 
   const saveActivity = async () => {
     if (saveLockRef.current || isSaving) return;
     if (!title.trim()) return;
     if (hasTime && hasEndTime && startTime && endTime && endTime < startTime) {
-      setFormError("종료 시간은 시작 시간보다 늦어야 합니다.");
+      setFormError("종료 시간은 시작 시간보다 뒤여야 합니다.");
       return;
     }
 
@@ -217,6 +230,52 @@ export function LifeActivitiesView({
     } catch (error) {
       console.error("Failed to save life activity", error);
       setFormError(getLifeActionErrorMessage(error, "활동 기록을 저장하지 못했습니다."));
+    } finally {
+      saveLockRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  const saveSleepWake = async (kind: "sleep" | "wake") => {
+    if (saveLockRef.current || isSaving) return;
+    const isSleep = kind === "sleep";
+    const targetActivity = isSleep ? sleepActivity : wakeActivity;
+    const targetTime = isSleep ? sleepTime : wakeTime;
+    const targetPlace = isSleep ? sleepPlace : wakePlace;
+    const label = isSleep ? "취침" : "기상";
+
+    if (!targetTime) {
+      setFormError(`${label} 시간은 비워둘 수 없어요.`);
+      return;
+    }
+
+    saveLockRef.current = true;
+    setIsSaving(true);
+    setFormError("");
+    setMessage("");
+    try {
+      await onSaveActivity({
+        id: targetActivity?.id ?? `activity-${Date.now()}-${kind}`,
+        date,
+        startTime: targetTime,
+        endTime: undefined,
+        isAllDay: false,
+        title: label,
+        category: "수면",
+        placeName: targetPlace?.name,
+        placeAddress: targetPlace?.address,
+        companions: undefined,
+        food: undefined,
+        expenseAmount: undefined,
+        memo: targetActivity?.memo,
+        sourceId: targetActivity?.sourceId,
+        sourceTitle: targetActivity?.sourceTitle,
+        sourceType: targetActivity?.sourceType,
+      });
+      setMessage(targetActivity ? `${label} 기록을 수정했어요.` : `${label} 기록을 저장했어요.`);
+    } catch (error) {
+      console.error(`Failed to save ${kind} record`, error);
+      setFormError(getLifeActionErrorMessage(error, `${label} 기록을 저장하지 못했습니다.`));
     } finally {
       saveLockRef.current = false;
       setIsSaving(false);
@@ -257,7 +316,7 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="몇 시부터 몇 시까지 어디서 무엇을 했고, 누구와 있었고, 무엇을 먹고 썼는지 남기는 dailyOS의 핵심 입력입니다." />
+      <LifeTabHeading title="활동 기록" description="언제부터 언제까지 어디서 무엇을 했고, 누구와 있었고 무엇을 먹었는지 dailyOS의 핵심 기록으로 남겨요." />
       <div className={isDayPanelOpen ? "life-activity-layout" : "life-activity-layout life-activity-layout--panel-closed"}>
         <SectionCard className="life-activity-form">
           <div className="section-heading">
@@ -283,13 +342,13 @@ export function LifeActivitiesView({
           <div className="event-form-card event-form-card--title">
             <label>
               <span>무엇을 했나</span>
-              <input placeholder="예: 점심 먹고 산책, 프로젝트 작업" value={title} onChange={(event) => setTitle(event.target.value)} />
+              <input placeholder="예: 점심 먹고 대화, 프로젝트 작업" value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
           </div>
 
           <div className="schedule-form-section-title">
             <strong>활동 유형</strong>
-            <span>나중에 AI가 하루 패턴을 읽는 태그입니다.</span>
+            <span>나중에 AI가 하루 흐름을 이해할 때 쓰이는 기본 분류예요.</span>
           </div>
           <div className="life-activity-template-grid">
             {ACTIVITY_CATEGORIES.map((item) => (
@@ -301,7 +360,7 @@ export function LifeActivitiesView({
 
           <div className="schedule-form-section-title">
             <strong>날짜와 시간</strong>
-            <span>날짜는 오른쪽 캘린더와 같이 움직이고, 시간은 시작 시간만으로도 저장됩니다.</span>
+            <span>날짜는 오른쪽 달력과 함께 움직이고, 시간은 시작만 있어도 저장할 수 있어요.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
             <label className="event-form-row event-form-row--field schedule-field">
@@ -345,15 +404,75 @@ export function LifeActivitiesView({
                       if (!event.target.checked) setEndTime("");
                     }}
                   />
-                  종료 시간 설정
+                  종료 시간 사용
                 </label>
               </div>
             </div>
           </div>
 
           <div className="schedule-form-section-title">
-            <strong>장소와 사람</strong>
-            <span>일정/할 일과 같은 방식으로 장소를 검색해 연결합니다.</span>
+            <strong>취침 · 기상</strong>
+            <span>선택한 날짜에 잠든 시각과 일어난 시각, 그리고 장소를 따로 빠르게 저장할 수 있어요.</span>
+          </div>
+          <div className="life-sleepwake-grid">
+            <article className="life-sleepwake-card">
+              <div className="life-sleepwake-card__header">
+                <div>
+                  <p className="eyebrow">Sleep Check</p>
+                  <strong>취침</strong>
+                </div>
+                <BedDouble aria-hidden size={18} />
+              </div>
+              <label className="event-form-row event-form-row--field schedule-field">
+                <span>
+                  <Clock3 aria-hidden size={14} />
+                  시간
+                </span>
+                <input type="time" value={sleepTime} onChange={(event) => setSleepTime(event.target.value)} />
+              </label>
+              <label className="life-sleepwake-card__field">
+                <span>
+                  <MapPin aria-hidden size={14} />
+                  장소
+                </span>
+                <PlaceSearchField selectedPlace={sleepPlace} onSelect={setSleepPlace} />
+              </label>
+              <button className="life-sleepwake-card__submit" disabled={isSaving} onClick={() => void saveSleepWake("sleep")} type="button">
+                {sleepActivity ? "취침 수정" : "취침 저장"}
+              </button>
+            </article>
+
+            <article className="life-sleepwake-card">
+              <div className="life-sleepwake-card__header">
+                <div>
+                  <p className="eyebrow">Wake Check</p>
+                  <strong>기상</strong>
+                </div>
+                <Sunrise aria-hidden size={18} />
+              </div>
+              <label className="event-form-row event-form-row--field schedule-field">
+                <span>
+                  <Clock3 aria-hidden size={14} />
+                  시간
+                </span>
+                <input type="time" value={wakeTime} onChange={(event) => setWakeTime(event.target.value)} />
+              </label>
+              <label className="life-sleepwake-card__field">
+                <span>
+                  <MapPin aria-hidden size={14} />
+                  장소
+                </span>
+                <PlaceSearchField selectedPlace={wakePlace} onSelect={setWakePlace} />
+              </label>
+              <button className="life-sleepwake-card__submit" disabled={isSaving} onClick={() => void saveSleepWake("wake")} type="button">
+                {wakeActivity ? "기상 수정" : "기상 저장"}
+              </button>
+            </article>
+          </div>
+
+          <div className="schedule-form-section-title">
+            <strong>장소와 함께한 사람</strong>
+            <span>일정과 같은 방식으로 장소를 연결하고, 함께한 사람도 바로 묶어둘 수 있어요.</span>
           </div>
           <div className="life-activity-place-stack">
             <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
@@ -364,13 +483,13 @@ export function LifeActivitiesView({
           </div>
 
           <div className="schedule-form-section-title">
-            <strong>먹은 것과 지출</strong>
-            <span>활동에서 발생한 소비는 가계부로 자동 연결됩니다.</span>
+            <strong>식사, 지출, 메모</strong>
+            <span>활동에서 발생한 소비와 맥락을 함께 남겨두면 나중에 복원이 더 쉬워져요.</span>
           </div>
           <div className="event-form-card schedule-form-card schedule-form-card--grid">
             <label className="event-form-row event-form-row--field schedule-field">
               <span>먹은 것</span>
-              <input placeholder="예: 라멘, 커피" value={food} onChange={(event) => setFood(event.target.value)} />
+              <input placeholder="예: 샐러드, 커피" value={food} onChange={(event) => setFood(event.target.value)} />
             </label>
             <label className="event-form-row event-form-row--field schedule-field">
               <span>지출</span>
@@ -393,7 +512,7 @@ export function LifeActivitiesView({
           <div className="section-heading">
             <div>
               <p className="eyebrow">Selected Day</p>
-              <h2>{formatFullDate(date)} 활동 {selectedActivities.length}개</h2>
+              <h2>{formatFullDate(date)} 활동 {selectedActivities.length}건</h2>
             </div>
             <button className="life-selected-day-toggle" onClick={() => setIsDayPanelOpen((current) => !current)} type="button">
               {isDayPanelOpen ? "접기" : "열기"}
@@ -446,14 +565,14 @@ export function LifeActivitiesView({
                 </article>
                 <article>
                   <span>연결 정보</span>
-                  <strong>{connectedCount}/{selectedActivities.length}</strong>
+                  <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
                 </article>
               </div>
               {selectedActivities.length > 0 ? (
                 selectedActivities.map((activity) => (
                   <article className="life-activity-item" key={activity.id}>
                     <div>
-                      <span>{formatActivityTime(activity)} · {activity.category ?? "활동"}</span>
+                      <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
                       <strong>{activity.title}</strong>
                       <p>
                         {[
@@ -476,8 +595,8 @@ export function LifeActivitiesView({
               ) : (
                 <div className="life-map-empty life-map-empty--compact">
                   <NotebookPen aria-hidden size={28} />
-                  <strong>이 날짜의 활동 기록이 없습니다.</strong>
-                  <p>오른쪽 캘린더에서 날짜를 고르고, 왼쪽에서 활동을 추가해 하루 DB를 촘촘하게 채워보세요.</p>
+                  <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
+                  <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
                 </div>
               )}
             </>
@@ -500,8 +619,8 @@ function createMonthCursor(date: string) {
   return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
 }
 
-function createActivityPlace(activity: LifeActivityRecord): PlanPlace | undefined {
-  if (!activity.placeName) return undefined;
+function createActivityPlace(activity?: LifeActivityRecord | null): PlanPlace | undefined {
+  if (!activity?.placeName) return undefined;
   return {
     address: activity.placeAddress ?? "",
     latitude: 0,
@@ -517,7 +636,12 @@ function getLifeActionErrorMessage(error: unknown, fallback: string) {
 
 function parseCompanionNames(value?: string) {
   return (value ?? "")
-    .split(/[,，、·]/)
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | "wake") {
+  if ((activity.category ?? "").trim() !== "수면") return false;
+  return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
 }

@@ -3016,6 +3016,19 @@
   padding: 22px;
 }
 
+.life-activity-form > .section-heading,
+.life-selected-day-panel > .section-heading {
+  min-height: 76px;
+  align-items: flex-start;
+}
+
+.life-activity-form > .section-heading > div:first-child,
+.life-selected-day-panel > .section-heading > div:first-child {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
 .life-selected-day-panel {
   position: sticky;
   top: 18px;
@@ -3169,6 +3182,69 @@ button:disabled {
 .life-activity-place-stack {
   display: grid;
   gap: 12px;
+}
+
+.life-sleepwake-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.life-sleepwake-card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(15, 23, 42, 0.64);
+}
+
+.life-sleepwake-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-sleepwake-card__header strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.life-sleepwake-card__header svg {
+  color: rgba(201, 184, 255, 0.92);
+}
+
+.life-sleepwake-card__field {
+  display: grid;
+  gap: 8px;
+}
+
+.life-sleepwake-card__field > span,
+.life-sleepwake-card .schedule-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-sleepwake-card__submit {
+  border: 1px solid rgba(201, 184, 255, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1));
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 850;
+  padding: 12px 14px;
+}
+
+.life-sleepwake-card__submit:hover {
+  border-color: rgba(201, 184, 255, 0.36);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.26), rgba(99, 102, 241, 0.16));
 }
 
 .life-places-toolbar {
