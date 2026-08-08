@@ -3114,69 +3114,254 @@ button:disabled {
   padding: 8px 12px;
 }
 
+.life-activity-form__heading {
+  gap: 18px;
+}
+
+.life-activity-form__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.life-activity-quick-toggle--active {
+  border-color: rgba(201, 184, 255, 0.42) !important;
+  background: rgba(201, 184, 255, 0.18) !important;
+  color: var(--text) !important;
+}
+
+.life-activity-quick-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(201, 184, 255, 0.18);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    rgba(12, 18, 32, 0.78);
+}
+
+.life-activity-quick-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-activity-quick-panel__head strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.life-activity-quick-panel__head svg {
+  color: rgba(201, 184, 255, 0.92);
+}
+
+.life-activity-quick-panel__hint,
+.life-activity-quick-panel__date-mode p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.life-activity-quick-panel__date-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: 8px;
+  align-items: start;
+}
+
+.life-activity-date-mode {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 8px 12px;
+}
+
+.life-activity-date-mode--active {
+  border-color: rgba(201, 184, 255, 0.4);
+  background: rgba(201, 184, 255, 0.16);
+  color: var(--text);
+}
+
+.life-activity-quick-panel__date-mode p {
+  grid-column: 1 / -1;
+}
+
+.life-activity-quick-panel__grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.42fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.life-activity-quick-panel__place {
+  display: grid;
+  gap: 8px;
+}
+
+.life-activity-quick-panel__place > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.life-activity-quick-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.life-activity-quick-panel__save {
+  border-color: rgba(201, 184, 255, 0.28) !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(99, 102, 241, 0.12)) !important;
+  color: var(--text) !important;
+}
+
 .life-activity-form .event-form-card--title input {
   font-size: clamp(1.28rem, 2.2vw, 1.85rem);
   font-weight: 900;
   letter-spacing: -0.04em;
 }
 
-.life-activity-quick-grid {
+.life-activity-form-card {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.022)),
+    rgba(15, 23, 42, 0.58);
+}
+
+.life-activity-form-card__title {
+  margin-bottom: 0;
+}
+
+.life-activity-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.life-activity-title-field {
+  display: grid;
   gap: 8px;
 }
 
-.life-activity-quick-grid button {
-  border: 1px solid rgba(201, 184, 255, 0.16);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(201, 184, 255, 0.14), rgba(201, 184, 255, 0.06));
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
+.life-activity-title-field span {
+  color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 900;
-  padding: 11px 8px;
-  transition:
-    border-color 160ms ease,
-    transform 160ms ease,
-    background 160ms ease;
+  font-weight: 850;
 }
 
-.life-activity-quick-grid button:hover {
-  border-color: rgba(201, 184, 255, 0.38);
-  background: rgba(201, 184, 255, 0.17);
-  transform: translateY(-1px);
+.life-activity-title-field input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.04rem;
+  font-weight: 800;
+  outline: none;
+  padding: 14px 16px;
 }
 
-.life-activity-template-grid {
+.life-activity-tag-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
-.life-activity-template {
+.life-activity-tag {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.055);
+  overflow: hidden;
+}
+
+.life-activity-tag button {
+  border: 0;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
   font-weight: 850;
   padding: 9px 12px;
-  transition:
-    background 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
 }
 
-.life-activity-template:hover,
-.life-activity-template--active {
+.life-activity-tag--active {
   border-color: rgba(201, 184, 255, 0.34);
   background: rgba(201, 184, 255, 0.14);
+}
+
+.life-activity-tag--active button {
   color: var(--text);
-  transform: translateY(-1px);
+}
+
+.life-activity-tag__remove {
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 9px 10px !important;
+}
+
+.life-activity-tag-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed rgba(201, 184, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.08);
+  color: var(--violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding: 9px 12px;
+}
+
+.life-activity-tag-editor {
+  display: flex;
+  gap: 10px;
+}
+
+.life-activity-tag-editor input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  padding: 11px 13px;
+}
+
+.life-activity-tag-editor button {
+  border: 1px solid rgba(201, 184, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 850;
+  padding: 11px 13px;
 }
 
 .life-activity-place-stack {

@@ -439,8 +439,15 @@
     flex: 1 1 auto;
   }
 
-  .life-activity-quick-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .life-activity-form__actions,
+  .life-activity-quick-panel__actions,
+  .life-activity-tag-editor {
+    flex-direction: column;
+  }
+
+  .life-activity-quick-panel__grid,
+  .life-activity-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .life-sleepwake-grid {
