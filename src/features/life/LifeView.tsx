@@ -390,7 +390,7 @@ function LifeCalendarView({ activeTab, activityDraft, initialDate }: { activeTab
       ) : activeTab === "activities" ? (
         <LifeActivitiesView activities={activities} initialDraft={activityDraft} onDeleteActivity={deleteActivity} onSaveActivity={saveActivity} />
       ) : activeTab === "logs" ? (
-        <LifeLogsView activities={activities} logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onUpdateLog={updateDailyLog} />
+        <LifeLogsView activities={activities} logs={dailyLogs} onCreateLog={createDailyLog} onDeleteLog={deleteDailyLog} onSaveActivity={saveActivity} onUpdateLog={updateDailyLog} />
       ) : activeTab === "photos" ? (
         <LifePhotosView activities={activities} onDeletePhoto={deleteLifePhoto} onUploadPhotos={uploadLifePhotos} photos={lifePhotos} />
       ) : (

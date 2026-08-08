@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, NotebookPen, Sunrise } from "lucide-react";
+import { ChevronLeft, ChevronRight, NotebookPen } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
@@ -68,10 +68,6 @@ export function LifeActivitiesView({
   const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [sleepTime, setSleepTime] = useState("23:30");
-  const [wakeTime, setWakeTime] = useState("07:00");
-  const [sleepPlace, setSleepPlace] = useState<PlanPlace | undefined>();
-  const [wakePlace, setWakePlace] = useState<PlanPlace | undefined>();
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -109,9 +105,7 @@ export function LifeActivitiesView({
   );
   const activityCountsByDate = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const activity of activities) {
-      counts.set(activity.date, (counts.get(activity.date) ?? 0) + 1);
-    }
+    for (const activity of activities) counts.set(activity.date, (counts.get(activity.date) ?? 0) + 1);
     return counts;
   }, [activities]);
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
@@ -119,15 +113,6 @@ export function LifeActivitiesView({
   const connectedCount = selectedActivities.filter((activity) => activity.placeName || activity.companions || activity.food || activity.memo || activity.sourceId).length;
   const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
-  const sleepActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [selectedActivities]);
-  const wakeActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "wake")), [selectedActivities]);
-
-  useEffect(() => {
-    setSleepTime(sleepActivity?.startTime ?? "23:30");
-    setWakeTime(wakeActivity?.startTime ?? "07:00");
-    setSleepPlace(createActivityPlace(sleepActivity));
-    setWakePlace(createActivityPlace(wakeActivity));
-  }, [sleepActivity, wakeActivity]);
 
   const resetForm = () => {
     setEditing(null);
@@ -236,57 +221,9 @@ export function LifeActivitiesView({
     }
   };
 
-  const saveSleepWake = async (kind: "sleep" | "wake") => {
-    if (saveLockRef.current || isSaving) return;
-    const isSleep = kind === "sleep";
-    const targetActivity = isSleep ? sleepActivity : wakeActivity;
-    const targetTime = isSleep ? sleepTime : wakeTime;
-    const targetPlace = isSleep ? sleepPlace : wakePlace;
-    const label = isSleep ? "취침" : "기상";
-
-    if (!targetTime) {
-      setFormError(`${label} 시간은 비워둘 수 없어요.`);
-      return;
-    }
-
-    saveLockRef.current = true;
-    setIsSaving(true);
-    setFormError("");
-    setMessage("");
-    try {
-      await onSaveActivity({
-        id: targetActivity?.id ?? `activity-${Date.now()}-${kind}`,
-        date,
-        startTime: targetTime,
-        endTime: undefined,
-        isAllDay: false,
-        title: label,
-        category: "수면",
-        placeName: targetPlace?.name,
-        placeAddress: targetPlace?.address,
-        companions: undefined,
-        food: undefined,
-        expenseAmount: undefined,
-        memo: targetActivity?.memo,
-        sourceId: targetActivity?.sourceId,
-        sourceTitle: targetActivity?.sourceTitle,
-        sourceType: targetActivity?.sourceType,
-      });
-      setMessage(targetActivity ? `${label} 기록을 수정했어요.` : `${label} 기록을 저장했어요.`);
-    } catch (error) {
-      console.error(`Failed to save ${kind} record`, error);
-      setFormError(getLifeActionErrorMessage(error, `${label} 기록을 저장하지 못했습니다.`));
-    } finally {
-      saveLockRef.current = false;
-      setIsSaving(false);
-    }
-  };
-
   const createPerson = async (name: string) => {
     const savedPerson = await createPersonInDb({ name });
-    if (savedPerson) {
-      setPeople((current) => [...current, savedPerson].sort((left, right) => left.name.localeCompare(right.name)));
-    }
+    if (savedPerson) setPeople((current) => [...current, savedPerson].sort((left, right) => left.name.localeCompare(right.name)));
     return savedPerson;
   };
 
@@ -408,66 +345,6 @@ export function LifeActivitiesView({
                 </label>
               </div>
             </div>
-          </div>
-
-          <div className="schedule-form-section-title">
-            <strong>취침 · 기상</strong>
-            <span>선택한 날짜에 잠든 시각과 일어난 시각, 그리고 장소를 따로 빠르게 저장할 수 있어요.</span>
-          </div>
-          <div className="life-sleepwake-grid">
-            <article className="life-sleepwake-card">
-              <div className="life-sleepwake-card__header">
-                <div>
-                  <p className="eyebrow">Sleep Check</p>
-                  <strong>취침</strong>
-                </div>
-                <BedDouble aria-hidden size={18} />
-              </div>
-              <label className="event-form-row event-form-row--field schedule-field">
-                <span>
-                  <Clock3 aria-hidden size={14} />
-                  시간
-                </span>
-                <input type="time" value={sleepTime} onChange={(event) => setSleepTime(event.target.value)} />
-              </label>
-              <label className="life-sleepwake-card__field">
-                <span>
-                  <MapPin aria-hidden size={14} />
-                  장소
-                </span>
-                <PlaceSearchField selectedPlace={sleepPlace} onSelect={setSleepPlace} />
-              </label>
-              <button className="life-sleepwake-card__submit" disabled={isSaving} onClick={() => void saveSleepWake("sleep")} type="button">
-                {sleepActivity ? "취침 수정" : "취침 저장"}
-              </button>
-            </article>
-
-            <article className="life-sleepwake-card">
-              <div className="life-sleepwake-card__header">
-                <div>
-                  <p className="eyebrow">Wake Check</p>
-                  <strong>기상</strong>
-                </div>
-                <Sunrise aria-hidden size={18} />
-              </div>
-              <label className="event-form-row event-form-row--field schedule-field">
-                <span>
-                  <Clock3 aria-hidden size={14} />
-                  시간
-                </span>
-                <input type="time" value={wakeTime} onChange={(event) => setWakeTime(event.target.value)} />
-              </label>
-              <label className="life-sleepwake-card__field">
-                <span>
-                  <MapPin aria-hidden size={14} />
-                  장소
-                </span>
-                <PlaceSearchField selectedPlace={wakePlace} onSelect={setWakePlace} />
-              </label>
-              <button className="life-sleepwake-card__submit" disabled={isSaving} onClick={() => void saveSleepWake("wake")} type="button">
-                {wakeActivity ? "기상 수정" : "기상 저장"}
-              </button>
-            </article>
           </div>
 
           <div className="schedule-form-section-title">
@@ -639,9 +516,4 @@ function parseCompanionNames(value?: string) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | "wake") {
-  if ((activity.category ?? "").trim() !== "수면") return false;
-  return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
 }
