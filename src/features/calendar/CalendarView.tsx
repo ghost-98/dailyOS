@@ -25,7 +25,7 @@ import { FormSectionTitle } from "@/features/calendar/components";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
-import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
+import { formatDateKey, formatSelectedDate, getMonthDays, getPlanPlaceKey, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
 import { categoryDisplayOrder, categoryLabels, getCalendarSummaryLabel } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
@@ -209,7 +209,6 @@ export function CalendarView({
     const sourceItems = isDatabaseView ? [...periodSchedules, ...periodEvents, ...periodTasks] : [...selectedSchedules, ...selectedEvents, ...selectedTasks];
     return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
   }, [isDatabaseView, periodEvents, periodSchedules, periodTasks, selectedEvents, selectedSchedules, selectedTasks]);
-  const selectedDbTotal = (isDatabaseView ? periodTimelineItems : selectedTimelineItems).length;
   const dbAxisCounts = useMemo(
     () => ({
       activity: periodExternalItems.filter((item) => item.type === "activity").length,
@@ -220,6 +219,21 @@ export function CalendarView({
       records: periodExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
     }),
     [periodExternalItems, periodTimelineItems],
+  );
+  const dbPeopleNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [...periodSchedules, ...periodEvents, ...periodTasks]
+            .flatMap((item) => parseCompanionNames(item.companions))
+            .filter(Boolean),
+        ),
+      ),
+    [periodEvents, periodSchedules, periodTasks],
+  );
+  const periodDaySummaries = useMemo(
+    () => buildPeriodDaySummaries(periodBounds.start, periodBounds.end, periodSchedules, periodEvents, periodTasks, periodExternalItems),
+    [periodBounds.end, periodBounds.start, periodEvents, periodExternalItems, periodSchedules, periodTasks],
   );
   const visibleTimelineItems = useMemo(() => {
     if (!isDatabaseView) return selectedTimelineItems;
@@ -507,7 +521,7 @@ export function CalendarView({
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>
-        <div className="header-actions">
+        {!isDatabaseView ? <div className="header-actions">
           <div className="add-menu">
             <button className="header-action" aria-expanded={isAddMenuOpen} onClick={() => setIsAddMenuOpen((current) => !current)} type="button">
               <Plus aria-hidden size={18} />
@@ -534,7 +548,7 @@ export function CalendarView({
               </div>
             ) : null}
           </div>
-        </div>
+        </div> : null}
       </header>
 
       <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""}`}>
@@ -651,55 +665,99 @@ export function CalendarView({
 
                   <div className="life-calendar-db-summary" aria-label="기록 축">
                     {([
-                      ["all", "전체 기록", selectedDbTotal],
                       ["activity", "활동", dbAxisCounts.activity],
                       ["places", "장소축", dbAxisCounts.places],
                       ["records", "기록 사진", dbAxisCounts.records],
                       ["expense", "지출", dbAxisCounts.expense],
                       ["health", "건강", dbAxisCounts.health],
                     ] as const).map(([axis, label, count]) => (
-                      <button className={dbAxis === axis ? "life-calendar-db-summary__card life-calendar-db-summary__card--active" : "life-calendar-db-summary__card"} key={axis} onClick={() => setDbAxis(axis)} type="button">
+                      <button
+                        className={dbAxis === axis ? "life-calendar-db-summary__card life-calendar-db-summary__card--active" : "life-calendar-db-summary__card"}
+                        key={axis}
+                        onClick={() => setDbAxis((current) => (current === axis ? "all" : axis))}
+                        type="button"
+                      >
                         <span>{label}</span>
                         <strong>{count}</strong>
                       </button>
                     ))}
                   </div>
+
+                  <div className="life-calendar-db-overview">
+                    <article>
+                      <span>계획</span>
+                      <strong>{periodSchedules.length + periodEvents.length + periodTasks.length}</strong>
+                      <p>일정 · 이벤트 · 할 일</p>
+                    </article>
+                    <article>
+                      <span>선택 축 기록</span>
+                      <strong>{visibleTimelineItems.length}</strong>
+                      <p>{getAxisDescription(dbAxis)}</p>
+                    </article>
+                    <article>
+                      <span>장소</span>
+                      <strong>{selectedPlanPlaces.length}</strong>
+                      <p>기간 안에서 남은 동선</p>
+                    </article>
+                    <article>
+                      <span>함께한 사람</span>
+                      <strong>{dbPeopleNames.length}</strong>
+                      <p>계획과 활동에 함께 남은 이름</p>
+                    </article>
+                  </div>
                 </div>
               ) : null}
 
               <div className="date-event-list">
-                <DayTimelineSection
-                  countsByCategory={countsByCategory}
-                  deletingPlan={deletingPlan}
-                  draggingItem={draggingItem}
-                  dropTarget={dropTarget}
-                  externalCount={isDatabaseView ? periodExternalItems.length : selectedExternalItems.length}
-                  isConvertingToActivity={convertingToActivity}
-                  isLoading={isLoading}
-                  items={visibleTimelineItems}
-                  onClearDrag={clearDragState}
-                  onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
-                  onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
-                  onDeleteEvent={deleteEvent}
-                  onDeleteTask={deleteTask}
-                  onDragOverItem={handleDragOverItem}
-                  onEditEvent={(event) => {
-                    setEditingEvent(event);
-                    setSheetDefaultType(event.type as CalendarCategory);
-                    setIsEventSheetOpen(true);
-                  }}
-                  onEditTask={(target) => {
-                    setEditingTask(target);
-                    setIsTaskSheetOpen(true);
-                  }}
-                  onReorderEvent={reorderEvent}
-                  onReorderTask={reorderTask}
-                  onResolveDropPlacement={getDropPlacement}
-                  onSetDragging={setDraggingItem}
-                  onToggleDone={toggleTaskDone}
-                  readOnly={isDatabaseView}
-                  visibleCategories={isDatabaseView ? ["schedule", "todo", "event"] : detailSections.map((section) => section.type)}
-                />
+                {isDatabaseView ? (
+                  <LifeCalendarDatabasePanel
+                    axis={dbAxis}
+                    currentMonth={currentMonth}
+                    daySummaries={periodDaySummaries}
+                    isLoading={isLoading}
+                    items={visibleTimelineItems}
+                    onJumpToDate={(date) => {
+                      setSelectedDate(date);
+                      setCurrentMonth(new Date(`${date}T00:00:00`));
+                    }}
+                    peopleNames={dbPeopleNames}
+                    places={selectedPlanPlaces}
+                    scope={dbScope}
+                  />
+                ) : (
+                  <DayTimelineSection
+                    countsByCategory={countsByCategory}
+                    deletingPlan={deletingPlan}
+                    draggingItem={draggingItem}
+                    dropTarget={dropTarget}
+                    externalCount={selectedExternalItems.length}
+                    isConvertingToActivity={convertingToActivity}
+                    isLoading={isLoading}
+                    items={visibleTimelineItems}
+                    onClearDrag={clearDragState}
+                    onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
+                    onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
+                    onDeleteEvent={deleteEvent}
+                    onDeleteTask={deleteTask}
+                    onDragOverItem={handleDragOverItem}
+                    onEditEvent={(event) => {
+                      setEditingEvent(event);
+                      setSheetDefaultType(event.type as CalendarCategory);
+                      setIsEventSheetOpen(true);
+                    }}
+                    onEditTask={(target) => {
+                      setEditingTask(target);
+                      setIsTaskSheetOpen(true);
+                    }}
+                    onReorderEvent={reorderEvent}
+                    onReorderTask={reorderTask}
+                    onResolveDropPlacement={getDropPlacement}
+                    onSetDragging={setDraggingItem}
+                    onToggleDone={toggleTaskDone}
+                    readOnly={false}
+                    visibleCategories={detailSections.map((section) => section.type)}
+                  />
+                )}
                 {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
               </div>
 
@@ -1319,6 +1377,177 @@ export function MonthPickerSheet({
   );
 }
 
+type PeriodDaySummary = {
+  activityCount: number;
+  date: string;
+  expenseCount: number;
+  healthCount: number;
+  items: DayTimelineItem[];
+  placeCount: number;
+  planCount: number;
+  recordCount: number;
+  totalCount: number;
+};
+
+function LifeCalendarDatabasePanel({
+  axis,
+  currentMonth,
+  daySummaries,
+  isLoading,
+  items,
+  onJumpToDate,
+  peopleNames,
+  places,
+  scope,
+}: {
+  axis: LifeCalendarAxis;
+  currentMonth: Date;
+  daySummaries: PeriodDaySummary[];
+  isLoading: boolean;
+  items: DayTimelineItem[];
+  onJumpToDate: (date: string) => void;
+  peopleNames: string[];
+  places: PlanPlace[];
+  scope: LifeCalendarScope;
+}) {
+  const busyDays = [...daySummaries].sort((left, right) => right.totalCount - left.totalCount || left.date.localeCompare(right.date)).slice(0, scope === "week" ? 7 : 10);
+
+  if (scope === "day") {
+    return (
+      <div className="life-calendar-db-content">
+        <section className="life-calendar-db-section">
+          <div className="life-calendar-db-section__head">
+            <div>
+              <p className="eyebrow">Day Summary</p>
+              <h3>하루 요약</h3>
+            </div>
+          </div>
+          <div className="life-calendar-db-day-grid">
+            <article>
+              <span>활동</span>
+              <strong>{daySummaries[0]?.activityCount ?? 0}</strong>
+            </article>
+            <article>
+              <span>기록·사진</span>
+              <strong>{daySummaries[0]?.recordCount ?? 0}</strong>
+            </article>
+            <article>
+              <span>지출·건강</span>
+              <strong>{(daySummaries[0]?.expenseCount ?? 0) + (daySummaries[0]?.healthCount ?? 0)}</strong>
+            </article>
+            <article>
+              <span>장소</span>
+              <strong>{daySummaries[0]?.placeCount ?? 0}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className="life-calendar-db-section">
+          <div className="life-calendar-db-section__head">
+            <div>
+              <p className="eyebrow">Highlights</p>
+              <h3>함께한 사람과 장소</h3>
+            </div>
+          </div>
+          <div className="life-calendar-db-meta">
+            <article>
+              <span>함께한 사람</span>
+              <div>{peopleNames.length > 0 ? peopleNames.slice(0, 10).map((name) => <b key={name}>{name}</b>) : <p>이 날짜에 함께한 사람 기록이 아직 없어요.</p>}</div>
+            </article>
+            <article>
+              <span>남은 장소</span>
+              <div>{places.length > 0 ? places.slice(0, 8).map((place) => <b key={getPlanPlaceKey(place)}>{place.name}</b>) : <p>연결된 장소 기록이 아직 없어요.</p>}</div>
+            </article>
+          </div>
+        </section>
+
+        <section className="life-calendar-db-section">
+          <div className="life-calendar-db-section__head">
+            <div>
+              <p className="eyebrow">Timeline</p>
+              <h3>{getAxisTitle(axis)} 타임라인</h3>
+            </div>
+          </div>
+          <ReadonlyTimeline items={items} isLoading={isLoading} />
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="life-calendar-db-content">
+      <section className="life-calendar-db-section">
+        <div className="life-calendar-db-section__head">
+          <div>
+            <p className="eyebrow">{scope === "week" ? "Week Pattern" : scope === "month" ? "Month Pattern" : "Range Pattern"}</p>
+            <h3>{scope === "week" ? "날짜별 흐름" : scope === "month" ? `${currentMonth.getMonth() + 1}월 기록 흐름` : "기간별 기록 흐름"}</h3>
+          </div>
+        </div>
+        <div className={scope === "week" ? "life-calendar-db-period-grid life-calendar-db-period-grid--week" : "life-calendar-db-period-grid"}>
+          {daySummaries.map((summary) => (
+            <button className="life-calendar-db-period-card" key={summary.date} onClick={() => onJumpToDate(summary.date)} type="button">
+              <span>{formatSelectedDate(summary.date)}</span>
+              <strong>{summary.totalCount}개 기록</strong>
+              <p>
+                계획 {summary.planCount} · 활동 {summary.activityCount} · 기록 {summary.recordCount}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="life-calendar-db-section">
+        <div className="life-calendar-db-section__head">
+          <div>
+            <p className="eyebrow">Highlights</p>
+            <h3>가장 밀도 있던 날</h3>
+          </div>
+        </div>
+        <div className="life-calendar-db-busy-list">
+          {busyDays.map((summary) => (
+            <button className="life-calendar-db-busy-item" key={summary.date} onClick={() => onJumpToDate(summary.date)} type="button">
+              <strong>{formatSelectedDate(summary.date)}</strong>
+              <span>{summary.totalCount}개 기록 · 장소 {summary.placeCount} · 건강 {summary.healthCount}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="life-calendar-db-section">
+        <div className="life-calendar-db-section__head">
+          <div>
+            <p className="eyebrow">Filtered Records</p>
+            <h3>{getAxisTitle(axis)} 기록</h3>
+          </div>
+        </div>
+        <ReadonlyTimeline items={items} isLoading={isLoading} />
+      </section>
+    </div>
+  );
+}
+
+function ReadonlyTimeline({ isLoading, items }: { isLoading: boolean; items: DayTimelineItem[] }) {
+  return (
+    <div className="life-calendar-db-timeline">
+      {items.length > 0 ? (
+        items.map((item) => (
+          <article className="life-calendar-db-timeline__item" key={item.id}>
+            <span className="life-calendar-db-timeline__time">
+              {"event" in item ? item.event.date : "task" in item ? item.task.scheduledDate : item.external.date}
+              {" · "}
+              {item.timeLabel}
+            </span>
+            <strong>{getTimelineItemTitle(item)}</strong>
+            <p>{getTimelineItemDescription(item)}</p>
+          </article>
+        ))
+      ) : (
+        <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "선택한 축에 해당하는 기록이 아직 없어요."}</div>
+      )}
+    </div>
+  );
+}
+
 function parseCompanionNames(value?: string) {
   if (!value) return [];
   return value
@@ -1362,6 +1591,93 @@ function hasTimelinePlace(item: DayTimelineItem) {
   if ("event" in item) return Boolean(item.event.place?.name || item.event.place?.address);
   if ("task" in item) return Boolean(item.task.place?.name || item.task.place?.address);
   return Boolean(item.external.placeName || item.external.placeAddress);
+}
+
+function getAxisTitle(axis: LifeCalendarAxis) {
+  if (axis === "activity") return "활동";
+  if (axis === "places") return "장소축";
+  if (axis === "records") return "기록·사진";
+  if (axis === "expense") return "지출";
+  if (axis === "health") return "건강";
+  return "전체";
+}
+
+function getAxisDescription(axis: LifeCalendarAxis) {
+  if (axis === "activity") return "실제로 남긴 활동 기록";
+  if (axis === "places") return "장소가 연결된 기록";
+  if (axis === "records") return "하루기록과 사진";
+  if (axis === "expense") return "지출로 남은 기록";
+  if (axis === "health") return "운동과 몸무게";
+  return "전체 흐름";
+}
+
+function getTimelineItemTitle(item: DayTimelineItem) {
+  if ("event" in item) return item.event.title;
+  if ("task" in item) return item.task.title;
+  return item.external.title;
+}
+
+function getTimelineItemDescription(item: DayTimelineItem) {
+  if ("event" in item) {
+    return [item.event.place?.name, item.event.companions ? `함께 · ${item.event.companions}` : null, item.event.meta].filter(Boolean).join(" · ") || "계획 기록";
+  }
+  if ("task" in item) {
+    return [item.task.place?.name, item.task.companions ? `함께 · ${item.task.companions}` : null, item.task.memo].filter(Boolean).join(" · ") || "할 일 기록";
+  }
+  return [item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || getCalendarSummaryLabel(item.external.type);
+}
+
+function buildPeriodDaySummaries(
+  start: string,
+  end: string,
+  schedules: CalendarEvent[],
+  events: CalendarEvent[],
+  tasks: TaskItem[],
+  externalItems: ExternalCalendarItem[],
+) {
+  const allDates = enumerateDates(start, end);
+  return allDates
+    .map((date) => {
+      const daySchedules = schedules.filter((item) => isDateInRange(date, item.date, item.endDate));
+      const dayEvents = events.filter((item) => isDateInRange(date, item.date, item.endDate));
+      const dayTasks = tasks.filter((item) => isDateInRange(date, item.scheduledDate, item.dueDate));
+      const dayExternalItems = externalItems.filter((item) => item.date === date);
+      const items = [
+        ...daySchedules.map((item) => createEventTimelineItem(item)),
+        ...dayTasks.map((item) => createTaskTimelineItem(item)),
+        ...dayEvents.map((item) => createEventTimelineItem(item)),
+        ...dayExternalItems.map((item) => createExternalTimelineItem(item)),
+      ];
+      const places = uniquePlanPlaces(
+        [...daySchedules, ...dayEvents, ...dayTasks]
+          .map((item) => item.place)
+          .filter((place): place is PlanPlace => Boolean(place)),
+      );
+
+      return {
+        activityCount: dayExternalItems.filter((item) => item.type === "activity").length,
+        date,
+        expenseCount: dayExternalItems.filter((item) => item.type === "expense").length,
+        healthCount: dayExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
+        items,
+        placeCount: places.length,
+        planCount: daySchedules.length + dayEvents.length + dayTasks.length,
+        recordCount: dayExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
+        totalCount: items.length,
+      } satisfies PeriodDaySummary;
+    })
+    .filter((summary) => summary.totalCount > 0);
+}
+
+function enumerateDates(start: string, end: string) {
+  const dates: string[] = [];
+  const cursor = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  while (cursor <= endDate) {
+    dates.push(formatDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
 }
 
 function getScopeTitle(scope: LifeCalendarScope, start: string, end: string, currentMonth: Date) {

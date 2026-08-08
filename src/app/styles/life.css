@@ -141,6 +141,158 @@
   font-weight: 950;
 }
 
+.life-calendar-db-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-calendar-db-overview article,
+.life-calendar-db-day-grid article {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-calendar-db-overview span,
+.life-calendar-db-day-grid span,
+.life-calendar-db-meta article > span,
+.life-calendar-db-section__head .eyebrow {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-calendar-db-overview strong,
+.life-calendar-db-day-grid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.life-calendar-db-overview p,
+.life-calendar-db-period-card p,
+.life-calendar-db-timeline__item p,
+.life-calendar-db-busy-item span,
+.life-calendar-db-meta p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.life-calendar-db-content {
+  display: grid;
+  gap: 16px;
+}
+
+.life-calendar-db-section {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+}
+
+.life-calendar-db-section__head h3 {
+  margin: 2px 0 0;
+  font-size: 1.04rem;
+}
+
+.life-calendar-db-day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-calendar-db-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-calendar-db-meta article {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-calendar-db-meta article div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-calendar-db-meta article b {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.12);
+  padding: 0 11px;
+  font-size: 0.8rem;
+}
+
+.life-calendar-db-period-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.life-calendar-db-period-grid--week {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-calendar-db-period-card,
+.life-calendar-db-busy-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font: inherit;
+  padding: 14px;
+  text-align: left;
+}
+
+.life-calendar-db-period-card strong,
+.life-calendar-db-busy-item strong {
+  font-size: 0.98rem;
+}
+
+.life-calendar-db-busy-list,
+.life-calendar-db-timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.life-calendar-db-timeline__item {
+  display: grid;
+  gap: 4px;
+  border-left: 2px solid rgba(201, 184, 255, 0.32);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 0 10px 12px;
+}
+
+.life-calendar-db-timeline__time {
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 760;
+}
+
+.life-calendar-db-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  color: var(--muted);
+  padding: 18px 14px;
+  text-align: center;
+}
+
 .life-report-place-axis {
   display: grid;
   gap: 12px;
