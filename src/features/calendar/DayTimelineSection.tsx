@@ -1,6 +1,7 @@
 "use client";
 
 import type { DragEvent } from "react";
+import { useMemo, useState } from "react";
 import { Activity, Check, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
@@ -10,8 +11,10 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
 
 type ActivityConversionState = { id: string; type: "event" | "task" } | null;
+type TimelineFilter = "event" | "schedule" | "todo";
 
 export function DayTimelineSection({
+  countsByCategory,
   deletingPlan,
   draggingItem,
   dropTarget,
@@ -55,20 +58,57 @@ export function DayTimelineSection({
   onSetDragging: (item: { id: string; type: "schedule" | "event" | "todo" }) => void;
   onToggleDone: (task: TaskItem) => void;
   readOnly?: boolean;
-  visibleCategories?: Array<"schedule" | "event" | "todo">;
 }) {
+  const [activeFilters, setActiveFilters] = useState<TimelineFilter[]>([]);
+
+  const filteredItems = useMemo(
+    () =>
+      activeFilters.length === 0
+        ? items
+        : items.filter((item) => {
+            if ("task" in item) return activeFilters.includes("todo");
+            if ("event" in item) return activeFilters.includes(item.event.type as "event" | "schedule");
+            return true;
+          }),
+    [activeFilters, items],
+  );
+
+  const toggleFilter = (filter: TimelineFilter) => {
+    setActiveFilters((current) => (current.includes(filter) ? current.filter((item) => item !== filter) : [...current, filter]));
+  };
+
   return (
     <section className="day-timeline" aria-label="하루 타임라인">
       <div className="day-timeline__summary">
-        <div>
+        <div className="day-timeline__summary-copy">
           <span>하루 타임라인</span>
-          <strong>{items.length}개 기록</strong>
+          <strong>{filteredItems.length}개 기록</strong>
         </div>
+        {countsByCategory ? (
+          <div className="day-timeline__filters" aria-label="타임라인 필터">
+            {([
+              ["schedule", "일정", countsByCategory.schedule],
+              ["todo", "할 일", countsByCategory.todo],
+              ["event", "이벤트", countsByCategory.event],
+            ] as const).map(([type, label, count]) => (
+              <button
+                className={`calendar-filter calendar-filter--${type} ${activeFilters.includes(type) ? "calendar-filter--active" : ""} ${activeFilters.length > 0 && !activeFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+                key={type}
+                onClick={() => toggleFilter(type)}
+                type="button"
+              >
+                <span className={`calendar-dot calendar-dot--${type}`} />
+                {label}
+                <b>{count}</b>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      {items.length > 0 ? (
+      {filteredItems.length > 0 ? (
         <div className="day-timeline__items">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <div className={`day-timeline__row day-timeline__row--${item.type}`} key={item.id}>
               <div className="day-timeline__time">
                 <span>{item.timeLabel}</span>
@@ -190,17 +230,19 @@ function EventDateItem({
         {event.expenseAmount !== undefined ? <ExpenseLine amount={event.expenseAmount} /> : null}
         {event.meta ? <p>{event.meta}</p> : null}
       </div>
-      {!readOnly ? <div className="date-event__actions">
-        <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 계획을 실제 활동으로 기록" type="button">
-          <Activity aria-hidden size={15} />
-        </button>
-        <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(event)} type="button">
-          <Pencil aria-hidden size={15} />
-        </button>
-        <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
-          <Trash2 aria-hidden size={15} />
-        </button>
-      </div> : null}
+      {!readOnly ? (
+        <div className="date-event__actions">
+          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 항목을 실제 활동으로 기록" type="button">
+            <Activity aria-hidden size={15} />
+          </button>
+          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(event)} type="button">
+            <Pencil aria-hidden size={15} />
+          </button>
+          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
+            <Trash2 aria-hidden size={15} />
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -267,17 +309,19 @@ function TaskDateItem({
         {task.expenseAmount !== undefined ? <ExpenseLine amount={task.expenseAmount} /> : null}
         {task.memo ? <p>{task.memo}</p> : null}
       </div>
-      {!readOnly ? <div className="date-event__actions">
-        <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
-          <Activity aria-hidden size={15} />
-        </button>
-        <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(task)} type="button">
-          <Pencil aria-hidden size={15} />
-        </button>
-        <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
-          <Trash2 aria-hidden size={15} />
-        </button>
-      </div> : null}
+      {!readOnly ? (
+        <div className="date-event__actions">
+          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
+            <Activity aria-hidden size={15} />
+          </button>
+          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(task)} type="button">
+            <Pencil aria-hidden size={15} />
+          </button>
+          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
+            <Trash2 aria-hidden size={15} />
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }

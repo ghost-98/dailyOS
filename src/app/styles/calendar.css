@@ -742,11 +742,36 @@
 
 .day-timeline__summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 2px 2px 16px;
+}
+
+.day-timeline__summary-copy {
+  min-width: 0;
+}
+
+.day-timeline__filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.day-timeline__filters .calendar-filter b {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 0 6px;
 }
 
 .day-timeline__summary span {

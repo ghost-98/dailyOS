@@ -30,7 +30,7 @@ import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
 import { formatDateKey, formatSelectedDate, formatShortDate, getMonthDays, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
-import { categoryDisplayOrder, categoryLabels, getCalendarSummaryLabel } from "@/features/calendar/presentation";
+import { categoryDisplayOrder, categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "./data";
 type CalendarViewProps = {
@@ -220,16 +220,6 @@ export function CalendarView({
       }),
     [periodEvents, periodExternalItems, periodSchedules, periodTasks],
   );
-  const detailSections = useMemo(
-    () =>
-      [
-        { type: "schedule" as const, events: selectedSchedules },
-        { type: "todo" as const, tasks: selectedTasks },
-        { type: "event" as const, events: selectedEvents },
-      ].filter((section) => categories.includes(section.type)),
-    [categories, selectedEvents, selectedSchedules, selectedTasks],
-  );
-
   const countsByCategory = useMemo(() => {
     if (isDatabaseView) {
       return {
@@ -744,8 +734,6 @@ export function CalendarView({
                 </div>
               ) : null}
 
-              {!isDatabaseView ? <ManageCalendarOverview counts={countsByCategory} items={selectedTimelineItems} selectedDate={selectedDate ?? detailAnchorDate} /> : null}
-
               <div className="date-event-list">
                 {isDatabaseView ? (
                   <LifeCalendarDatabasePanel
@@ -794,7 +782,6 @@ export function CalendarView({
                     onSetDragging={setDraggingItem}
                     onToggleDone={toggleTaskDone}
                     readOnly={false}
-                    visibleCategories={detailSections.map((section) => section.type)}
                   />
                 )}
                 {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
@@ -2235,65 +2222,6 @@ function getDatabaseEyebrow(scope: LifeCalendarScope) {
   return "선택 기간 요약";
 }
 
-function ManageCalendarOverview({
-  counts,
-  items,
-  selectedDate,
-}: {
-  counts: { event: number; schedule: number; todo: number };
-  items: DayTimelineItem[];
-  selectedDate: string;
-}) {
-  const cards = [
-    {
-      count: counts.schedule,
-      description: counts.schedule > 0 ? "움직여야 할 일정 흐름이 잡혀 있어요." : "아직 등록된 일정이 없어요.",
-      label: "일정",
-      type: "schedule" as const,
-    },
-    {
-      count: counts.todo,
-      description: counts.todo > 0 ? "해야 할 일의 우선순위를 바로 정리할 수 있어요." : "이 날짜에 묶인 할 일이 없어요.",
-      label: "할 일",
-      type: "todo" as const,
-    },
-    {
-      count: counts.event,
-      description: counts.event > 0 ? "놓치면 아쉬운 이벤트가 잡혀 있어요." : "특별 이벤트는 아직 비어 있어요.",
-      label: "이벤트",
-      type: "event" as const,
-    },
-  ];
-  const topItems = items.filter((item) => !("external" in item)).slice(0, 3);
-
-  return (
-    <section className="manage-calendar-overview" aria-label="선택 날짜 요약">
-      <div className="manage-calendar-overview__cards">
-        {cards.map((card) => (
-          <article className={`manage-calendar-overview__card manage-calendar-overview__card--${card.type}`} key={card.type}>
-            <div>
-              <span>{card.label}</span>
-              <strong>{card.count}</strong>
-            </div>
-            <p>{card.description}</p>
-          </article>
-        ))}
-      </div>
-      <div className="manage-calendar-overview__focus">
-        <div>
-          <span>{formatSelectedDate(selectedDate)}</span>
-          <strong>{topItems.length > 0 ? "이 날짜의 핵심 계획" : "계획을 추가할 준비가 되어 있어요"}</strong>
-        </div>
-        <div className="manage-calendar-overview__chips">
-          {topItems.length > 0 ? topItems.map((item) => (
-            <b key={item.id}>{getCalendarSummaryLabel(item.type)} · {getTimelineItemTitle(item)}</b>
-          )) : <p>일정, 할 일, 이벤트를 추가하면 이 날의 흐름이 여기서 바로 살아납니다.</p>}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function getTopValues(values: string[]) {
   const counts = new Map<string, number>();
   values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
@@ -2489,12 +2417,6 @@ function getAxisDescription(axis: LifeCalendarAxis) {
   if (axis === "finance") return "수입과 지출로 남은 자금 흐름";
   if (axis === "health") return "운동과 몸무게";
   return "전체 흐름";
-}
-
-function getTimelineItemTitle(item: DayTimelineItem) {
-  if ("event" in item) return item.event.title;
-  if ("task" in item) return item.task.title;
-  return item.external.title;
 }
 
 function buildPeriodDaySummaries(
