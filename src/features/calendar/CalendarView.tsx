@@ -654,14 +654,14 @@ export function CalendarView({
             <SectionCard className="date-detail-card">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">{isDatabaseView ? "라이프 캘린더" : "선택한 날짜"}</p>
+                  <p className="eyebrow">{isDatabaseView ? getDatabaseEyebrow(dbScope) : "선택한 날짜"}</p>
                   <h2>{isDatabaseView ? getScopeTitle(dbScope, periodBounds.start, periodBounds.end, currentMonth) : formatSelectedDate(selectedDate ?? detailAnchorDate)}</h2>
                 </div>
               </div>
 
               {!isDatabaseView && showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
-              {isDatabaseView ? (
+              {isDatabaseView && dbScope !== "day" ? (
                 <div className="life-calendar-db-panel">
                   <div className="life-calendar-db-summary" aria-label="기록 축">
                     {([
@@ -707,6 +707,8 @@ export function CalendarView({
                   </div>
                 </div>
               ) : null}
+
+              {!isDatabaseView ? <ManageCalendarOverview counts={countsByCategory} items={selectedTimelineItems} selectedDate={selectedDate ?? detailAnchorDate} /> : null}
 
               <div className="date-event-list">
                 {isDatabaseView ? (
@@ -1417,6 +1419,9 @@ function LifeCalendarDatabasePanel({
   const topPlaces = getTopValues(places.map((place) => place.name)).slice(0, 4);
   const topHighlights = getDayHighlights(items).slice(0, 5);
   const topPatterns = getPatternHighlights(daySummaries).slice(0, 5);
+  const dayRhythm = buildDayRhythm(items);
+  const headlineItem = topHighlights[0];
+  const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
 
   if (scope === "day") {
     return (
@@ -1425,9 +1430,13 @@ function LifeCalendarDatabasePanel({
           <div className="life-calendar-db-section__head">
             <div>
               <p className="eyebrow">Day Brief</p>
-              <h3>이 날은 이렇게 흘렀어요</h3>
+              <h3>{headlineItem ? `${headlineItem.title}이 남은 날` : "이 날은 이렇게 흘렀어요"}</h3>
             </div>
           </div>
+          <article className="life-calendar-db-story">
+            <span>한 줄 요약</span>
+            <strong>{narrative}</strong>
+          </article>
           <div className="life-calendar-db-hero">
             <article>
               <span>실제 활동</span>
@@ -1449,6 +1458,24 @@ function LifeCalendarDatabasePanel({
               <strong>{summary?.placeCount ?? 0}</strong>
               <p>장소와 건강 기록까지 포함한 하루 밀도</p>
             </article>
+          </div>
+        </section>
+
+        <section className="life-calendar-db-section">
+          <div className="life-calendar-db-section__head">
+            <div>
+              <p className="eyebrow">Rhythm</p>
+              <h3>시간대별 리듬</h3>
+            </div>
+          </div>
+          <div className="life-calendar-db-rhythm">
+            {dayRhythm.length > 0 ? dayRhythm.map((bucket) => (
+              <article className="life-calendar-db-rhythm__card" key={bucket.key}>
+                <span>{bucket.label}</span>
+                <strong>{bucket.count}개 기록</strong>
+                <p>{bucket.lead}</p>
+              </article>
+            )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "시간 흐름을 읽을 수 있는 기록이 아직 없어요."}</div>}
           </div>
         </section>
 
@@ -1577,6 +1604,72 @@ function getFinanceTotals(items: DayTimelineItem[]) {
   );
 }
 
+function getDatabaseEyebrow(scope: LifeCalendarScope) {
+  if (scope === "day") return "일간 요약";
+  if (scope === "week") return "주간 요약";
+  if (scope === "month") return "월간 요약";
+  return "선택 기간 요약";
+}
+
+function ManageCalendarOverview({
+  counts,
+  items,
+  selectedDate,
+}: {
+  counts: { event: number; schedule: number; todo: number };
+  items: DayTimelineItem[];
+  selectedDate: string;
+}) {
+  const cards = [
+    {
+      count: counts.schedule,
+      description: counts.schedule > 0 ? "움직여야 할 일정 흐름이 잡혀 있어요." : "아직 등록된 일정이 없어요.",
+      label: "일정",
+      type: "schedule" as const,
+    },
+    {
+      count: counts.todo,
+      description: counts.todo > 0 ? "해야 할 일의 우선순위를 바로 정리할 수 있어요." : "이 날짜에 묶인 할 일이 없어요.",
+      label: "할 일",
+      type: "todo" as const,
+    },
+    {
+      count: counts.event,
+      description: counts.event > 0 ? "놓치면 아쉬운 이벤트가 잡혀 있어요." : "특별 이벤트는 아직 비어 있어요.",
+      label: "이벤트",
+      type: "event" as const,
+    },
+  ];
+  const topItems = items.filter((item) => !("external" in item)).slice(0, 3);
+
+  return (
+    <section className="manage-calendar-overview" aria-label="선택 날짜 요약">
+      <div className="manage-calendar-overview__cards">
+        {cards.map((card) => (
+          <article className={`manage-calendar-overview__card manage-calendar-overview__card--${card.type}`} key={card.type}>
+            <div>
+              <span>{card.label}</span>
+              <strong>{card.count}</strong>
+            </div>
+            <p>{card.description}</p>
+          </article>
+        ))}
+      </div>
+      <div className="manage-calendar-overview__focus">
+        <div>
+          <span>{formatSelectedDate(selectedDate)}</span>
+          <strong>{topItems.length > 0 ? "이 날짜의 핵심 계획" : "계획을 추가할 준비가 되어 있어요"}</strong>
+        </div>
+        <div className="manage-calendar-overview__chips">
+          {topItems.length > 0 ? topItems.map((item) => (
+            <b key={item.id}>{getCalendarSummaryLabel(item.type)} · {getTimelineItemTitle(item)}</b>
+          )) : <p>일정, 할 일, 이벤트를 추가하면 이 날의 흐름이 여기서 바로 살아납니다.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function getTopValues(values: string[]) {
   const counts = new Map<string, number>();
   values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1));
@@ -1594,6 +1687,43 @@ function getDayHighlights(items: DayTimelineItem[]) {
     }))
     .sort((left, right) => right.priority - left.priority)
     .filter((item, index, array) => array.findIndex((candidate) => candidate.title === item.title && candidate.label === item.label) === index);
+}
+
+function getDayNarrative(summary: PeriodDaySummary | undefined, finance: { expense: number; income: number; net: number }, topCompanions: Array<{ count: number; value: string }>, topPlaces: Array<{ count: number; value: string }>) {
+  if (!summary) return "아직 남은 기록이 적어서 이 날의 결을 읽기 어려워요.";
+  const density =
+    summary.totalCount >= 8 ? "기록 밀도가 높은 날" :
+    summary.totalCount >= 4 ? "중간 이상으로 흔적이 남은 날" :
+    "조용하게 지나간 날";
+  const people = topCompanions[0] ? `${topCompanions[0].value}와 함께한 흐름이 가장 또렷하고` : "혼자 보낸 흐름이 중심이고";
+  const place = topPlaces[0] ? `${topPlaces[0].value} 축의 흔적이 남아 있어요.` : "특정 장소 축은 아직 옅어요.";
+  const financeTone =
+    finance.net > 0 ? `자금 흐름은 ${formatNumberWithUnit(finance.net, " 순증")}` :
+    finance.net < 0 ? `자금 흐름은 ${formatNumberWithUnit(finance.net, " 순지출")}` :
+    "자금 흐름은 거의 균형이에요";
+  return `${density}. ${people} ${place} ${financeTone}.`;
+}
+
+function buildDayRhythm(items: DayTimelineItem[]) {
+  const buckets = [
+    { end: 12 * 60, key: "morning", label: "오전" },
+    { end: 18 * 60, key: "afternoon", label: "오후" },
+    { end: 22 * 60, key: "evening", label: "저녁" },
+    { end: Number.POSITIVE_INFINITY, key: "night", label: "밤" },
+  ] as const;
+
+  return buckets
+    .map((bucket, index) => {
+      const start = index === 0 ? 0 : buckets[index - 1].end;
+      const bucketItems = items.filter((item) => item.sortMinutes >= start && item.sortMinutes < bucket.end);
+      return {
+        count: bucketItems.length,
+        key: bucket.key,
+        label: bucket.label,
+        lead: bucketItems[0] ? getTimelineItemTitle(bucketItems[0]) : "",
+      };
+    })
+    .filter((bucket) => bucket.count > 0);
 }
 
 function getPatternHighlights(daySummaries: PeriodDaySummary[]) {
