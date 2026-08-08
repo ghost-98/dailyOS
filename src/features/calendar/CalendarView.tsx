@@ -1493,9 +1493,9 @@ function LifeCalendarDatabasePanel({
 
         <section className="life-calendar-db-section">
           <div className="life-calendar-db-section__head">
-            <div>
-              <p className="eyebrow">Day Canvas</p>
-              <h3>지도, 활동, 사진으로 보는 하루</h3>
+            <div className="life-calendar-db-section__head life-calendar-db-section__head--canvas">
+              <h3>기록으로 보는 하루</h3>
+              <p className="eyebrow">DAY CANVAS</p>
             </div>
           </div>
           <LifeCalendarDayPanel isLoading={isLoading} items={items} />
@@ -1616,9 +1616,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
         <div className="life-calendar-day-panel__layout">
           <section className="life-calendar-day-card life-calendar-day-card--timeline">
             <div className="life-calendar-day-card__head">
-              <div>
-                <span>활동 타임라인</span>
-              </div>
+              <span>활동 타임라인</span>
               <b>{activityItems.length}건</b>
             </div>
             <div className="life-calendar-day-timeline">
@@ -1627,28 +1625,14 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                   <div className="life-calendar-day-timeline__time">
                     <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
                     <div className="life-calendar-day-timeline__tags">
-                      {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag) => <b key={`${item.id}-${tag}`}>{tag}</b>)}
+                      {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
                     </div>
                   </div>
                   <div className="life-calendar-day-timeline__body">
-                    <div className="life-calendar-day-timeline__detail-grid life-calendar-day-timeline__detail-grid--four">
-                      <div className="life-calendar-day-timeline__detail life-calendar-day-timeline__detail--wide">
-                        <em>활동</em>
-                        <strong>{item.external.title}</strong>
-                      </div>
-                      <div className="life-calendar-day-timeline__detail">
-                        <em>장소</em>
-                        <span>{item.external.placeName || "-"}</span>
-                      </div>
-                      <div className="life-calendar-day-timeline__detail">
-                        <em>함께한 사람</em>
-                        <span>{item.external.companions || "-"}</span>
-                      </div>
-                      <div className="life-calendar-day-timeline__detail">
-                        <em>소비지출</em>
-                        <span>{item.external.amount ? formatNumberWithUnit(item.external.amount, "원") : "-"}</span>
-                      </div>
-                    </div>
+                    <strong>{item.external.title}</strong>
+                    {item.external.placeName ? <p>at {item.external.placeName}</p> : null}
+                    {item.external.companions ? <p>with {item.external.companions}</p> : null}
+                    {item.external.amount ? <p>{formatExpenseAmount(item.external.amount)}</p> : null}
                   </div>
                 </article>
               )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
@@ -1657,11 +1641,8 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
 
           <button className="life-calendar-day-card life-calendar-day-card--map" onClick={() => setDetailView("map")} type="button">
             <div className="life-calendar-day-card__head">
-              <div>
-                <span>동선 지도</span>
-                <strong>{routeStops.length > 0 ? `${routeStops.length}곳 흐름` : "장소 흐름 없음"}</strong>
-              </div>
-              <b>자세히 보기</b>
+              <span>동선 지도</span>
+              <b>{routeStops.length}건</b>
             </div>
             <DayRouteMap compact stops={routeStops} />
             <p>{routeStops.length > 1 ? "그날 남은 장소를 순서대로 지도 위에 연결했어요." : "좌표가 남은 장소가 아직 부족해서 흐름선은 짧게 보여요."}</p>
@@ -1669,10 +1650,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
 
           <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => setDetailView("photos")} type="button">
             <div className="life-calendar-day-card__head">
-              <div>
-                <span>사진 기억</span>
-                <strong>{photoItems.length}개 사진</strong>
-              </div>
+              <span>사진 기억</span>
               <b>{photoItems.length > 3 ? "모두 보기" : "갤러리 보기"}</b>
             </div>
             <div className="life-calendar-day-photo-preview">
@@ -1700,10 +1678,8 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
 
           <section className="life-calendar-day-card life-calendar-day-card--companions">
             <div className="life-calendar-day-card__head">
-              <div>
-                <span>함께한 사람</span>
-                <strong>{companionCounts.length}명 흐름</strong>
-              </div>
+              <span>함께한 사람</span>
+              <b>{companionCounts.length}명</b>
             </div>
             <div className="life-calendar-day-card__chips">
               {companionCounts.length > 0 ? companionCounts.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>이 날 함께한 사람 기록이 아직 없어요.</p>}
@@ -1712,10 +1688,8 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
 
           <section className="life-calendar-day-card life-calendar-day-card--finance">
             <div className="life-calendar-day-card__head">
-              <div>
-                <span>총 수입·지출</span>
-                <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
-              </div>
+              <span>총 수입·지출</span>
+              <b>{formatNumberWithUnit(finance.net, "원")}</b>
             </div>
             <div className="life-calendar-day-finance">
               <article>
@@ -2386,6 +2360,10 @@ function getTimelineTimeLabel(time?: string, isAllDay = true) {
 function formatTimelineRange(startLabel: string, endTime?: string) {
   if (!endTime || startLabel === "하루종일" || startLabel === "기록" || startLabel === "시간 미정") return startLabel;
   return `${startLabel} ~ ${endTime}`;
+}
+
+function formatExpenseAmount(amount: number) {
+  return `-${new Intl.NumberFormat("ko-KR").format(amount)}원`;
 }
 
 function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory) {

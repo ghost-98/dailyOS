@@ -236,7 +236,7 @@
     "timeline photos"
     "timeline companions"
     "timeline finance";
-  grid-template-rows: minmax(168px, 1fr) minmax(158px, 0.94fr) minmax(118px, 0.7fr) minmax(118px, 0.7fr);
+  grid-template-rows: minmax(220px, 1.2fr) minmax(150px, 0.92fr) minmax(92px, 0.56fr) minmax(92px, 0.56fr);
   gap: 10px;
   height: 720px;
   min-height: 720px;
@@ -281,12 +281,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-}
-
-.life-calendar-day-card__head > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
 }
 
 .life-calendar-day-card__head span,
@@ -352,7 +346,8 @@
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
   padding: 0 10px;
 }
 
@@ -395,51 +390,32 @@
   padding-top: 2px;
 }
 
+.life-calendar-day-timeline__time span {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
 .life-calendar-day-timeline__body {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.035);
   padding: 12px;
 }
 
-.life-calendar-day-timeline__detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.life-calendar-day-timeline__detail {
-  display: grid;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 9px 10px;
-}
-
-.life-calendar-day-timeline__detail-grid--four .life-calendar-day-timeline__detail--wide {
-  grid-column: 1 / -1;
-}
-
-.life-calendar-day-timeline__detail em {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.life-calendar-day-timeline__detail strong {
+.life-calendar-day-timeline__body strong {
   color: var(--text);
   font-size: 0.95rem;
 }
 
-.life-calendar-day-timeline__detail span,
+.life-calendar-day-timeline__body p,
 .life-calendar-day-timeline__tags b,
 .life-calendar-day-card > p,
 .life-calendar-day-stop-list__item p,
 .life-calendar-day-photo-gallery__item figcaption span {
+  margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -450,7 +426,27 @@
   min-height: 28px;
   align-items: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 0 10px;
+}
+
+.life-calendar-day-tag--0 {
+  background: rgba(201, 184, 255, 0.18);
+  color: rgb(229, 220, 255);
+}
+
+.life-calendar-day-tag--1 {
+  background: rgba(110, 231, 183, 0.18);
+  color: rgb(167, 243, 208);
+}
+
+.life-calendar-day-tag--2 {
+  background: rgba(251, 191, 36, 0.18);
+  color: rgb(253, 230, 138);
+}
+
+.life-calendar-day-timeline__time .life-calendar-day-timeline__tags b {
+  min-height: 24px;
+  font-size: 0.72rem;
   padding: 0 10px;
 }
 
@@ -462,12 +458,6 @@
 
 .life-calendar-day-timeline__time .life-calendar-day-timeline__tags {
   gap: 4px;
-}
-
-.life-calendar-day-timeline__time .life-calendar-day-timeline__tags b {
-  min-height: 24px;
-  font-size: 0.72rem;
-  padding: 0 8px;
 }
 
 .life-calendar-day-events {
@@ -612,6 +602,12 @@
 .life-calendar-day-drawer__map {
   overflow: hidden;
   border-radius: 18px;
+  min-height: 380px;
+}
+
+.life-calendar-day-drawer__map .life-calendar-day-map {
+  min-height: 380px;
+  height: 380px;
 }
 
 .life-calendar-day-photo-gallery {
@@ -620,11 +616,17 @@
   gap: 10px;
 }
 
+.life-calendar-day-photo-gallery__item {
+  display: grid;
+}
+
 .life-calendar-day-photo-gallery__item img,
 .life-calendar-day-photo-gallery__item video,
 .life-calendar-day-photo-gallery__item > div {
+  display: block;
   width: 100%;
   aspect-ratio: 1;
+  min-height: 220px;
   object-fit: cover;
 }
 
@@ -652,6 +654,17 @@
 .life-calendar-db-section__head h3 {
   margin: 2px 0 0;
   font-size: 1.04rem;
+}
+
+.life-calendar-db-section__head--canvas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-calendar-db-section__head--canvas h3 {
+  margin: 0;
 }
 
 .life-calendar-db-day-grid {
