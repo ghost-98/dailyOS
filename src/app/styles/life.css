@@ -233,13 +233,15 @@
   grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
   grid-template-areas:
     "timeline map"
+    "timeline map"
     "timeline photos"
     "timeline companions"
-    "timeline finance";
-  grid-template-rows: minmax(220px, 1.2fr) minmax(150px, 0.92fr) minmax(92px, 0.56fr) minmax(92px, 0.56fr);
+    "timeline finance"
+    "timeline logs";
+  grid-template-rows: minmax(170px, 0.9fr) minmax(170px, 0.9fr) minmax(136px, 0.72fr) minmax(84px, 0.44fr) minmax(84px, 0.44fr) minmax(96px, 0.5fr);
   gap: 10px;
-  height: 720px;
-  min-height: 720px;
+  height: 860px;
+  min-height: 860px;
 }
 
 .life-calendar-day-card {
@@ -276,9 +278,13 @@
   grid-area: finance;
 }
 
+.life-calendar-day-card--logs {
+  grid-area: logs;
+}
+
 .life-calendar-day-card__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
 }
@@ -301,7 +307,6 @@
 
 .life-calendar-day-card__head b {
   flex: 0 0 auto;
-  align-self: flex-start;
   display: inline-flex;
   min-height: 28px;
   align-items: center;
@@ -311,6 +316,20 @@
   font-size: 0.76rem;
   line-height: 1;
   padding: 0 10px;
+}
+
+.life-calendar-day-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.life-calendar-day-card__meta small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+  white-space: nowrap;
 }
 
 .life-calendar-day-finance article {
@@ -408,6 +427,17 @@
 .life-calendar-day-timeline__body strong {
   color: var(--text);
   font-size: 0.95rem;
+}
+
+.life-calendar-day-timeline__body p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-calendar-day-timeline__body p svg {
+  flex: 0 0 auto;
+  color: rgba(201, 184, 255, 0.92);
 }
 
 .life-calendar-day-timeline__body p,
@@ -514,6 +544,7 @@
 
 .life-calendar-day-map--compact {
   min-height: 100%;
+  aspect-ratio: 1 / 1;
 }
 
 .life-calendar-day-map--empty {
@@ -640,6 +671,33 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.life-calendar-day-logs {
+  display: grid;
+  gap: 8px;
+}
+
+.life-calendar-day-logs article {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 10px 12px;
+}
+
+.life-calendar-day-logs span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 820;
+}
+
+.life-calendar-day-logs p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .life-calendar-db-section {

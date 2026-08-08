@@ -373,9 +373,10 @@
     grid-template-areas:
       "timeline"
       "map"
+      "photos"
       "companions"
       "finance"
-      "photos";
+      "logs";
   }
 
   .life-calendar-day-events,

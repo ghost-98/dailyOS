@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Clock3,
   ListChecks,
+  MapPin,
   Plus,
   UsersRound,
   WalletCards,
@@ -1580,6 +1581,7 @@ function LifeCalendarDatabasePanel({
 type DayDetailView = "activities" | "map" | "photos" | null;
 type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "activity" };
 type DayEventPreview = { id: string; meta: string; title: string; type: "event" | "schedule" | "todo" };
+type DayLogItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "daily_log" };
 type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
 type DayRouteStop = {
   address?: string;
@@ -1600,6 +1602,10 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
   );
   const photoItems = useMemo(
     () => items.filter((item): item is DayPhotoItem => "external" in item && item.external.type === "photo"),
+    [items],
+  );
+  const logItems = useMemo(
+    () => items.filter((item): item is DayLogItem => "external" in item && item.external.type === "daily_log"),
     [items],
   );
   const routeStops = useMemo(() => buildDayRouteStops(items), [items]);
@@ -1630,8 +1636,8 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                   </div>
                   <div className="life-calendar-day-timeline__body">
                     <strong>{item.external.title}</strong>
-                    {item.external.placeName ? <p>at {item.external.placeName}</p> : null}
-                    {item.external.companions ? <p>with {item.external.companions}</p> : null}
+                    {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
+                    {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
                     {item.external.amount ? <p>{formatExpenseAmount(item.external.amount)}</p> : null}
                   </div>
                 </article>
@@ -1642,10 +1648,12 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
           <button className="life-calendar-day-card life-calendar-day-card--map" onClick={() => setDetailView("map")} type="button">
             <div className="life-calendar-day-card__head">
               <span>동선 지도</span>
-              <b>{routeStops.length}건</b>
+              <div className="life-calendar-day-card__meta">
+                <b>{routeStops.length}건</b>
+                <small>자세히 보기</small>
+              </div>
             </div>
             <DayRouteMap compact stops={routeStops} />
-            <p>{routeStops.length > 1 ? "그날 남은 장소를 순서대로 지도 위에 연결했어요." : "좌표가 남은 장소가 아직 부족해서 흐름선은 짧게 보여요."}</p>
           </button>
 
           <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => setDetailView("photos")} type="button">
@@ -1700,6 +1708,21 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                 <span>지출</span>
                 <strong>{formatNumberWithUnit(finance.expense, "원")}</strong>
               </article>
+            </div>
+          </section>
+
+          <section className="life-calendar-day-card life-calendar-day-card--logs">
+            <div className="life-calendar-day-card__head">
+              <span>하루 기록</span>
+              <b>{logItems.length}건</b>
+            </div>
+            <div className="life-calendar-day-logs">
+              {logItems.length > 0 ? logItems.slice(0, 2).map((item) => (
+                <article key={item.id}>
+                  <span>{item.timeLabel}</span>
+                  <p>{item.external.meta || item.external.title}</p>
+                </article>
+              )) : <p>남은 하루 기록이 없어요.</p>}
             </div>
           </section>
         </div>

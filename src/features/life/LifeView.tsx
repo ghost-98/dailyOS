@@ -99,7 +99,7 @@ async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot
       fetchIncomeRecordsFromDb(),
       fetchLifeActivitiesFromDb(),
       fetchDailyLogsFromDb(),
-      fetchLifePhotoMetadataFromDb(),
+      fetchLifePhotosFromDb(),
       fetchWeightRecordsFromDb(),
       fetchWorkoutSessionsFromDb(),
     ]);
