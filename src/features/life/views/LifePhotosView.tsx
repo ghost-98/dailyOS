@@ -2,16 +2,23 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, MapPin } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatDateKey, formatFullDate, parseTimeToMinutes } from "@/features/life/dateTime";
+import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features/life/linkTargets";
 import type { LifeLinkedTarget, LifeLinkedTargetOption } from "@/features/life/linkTargets";
-import { createLifeMediaPreview, formatMediaMeta, formatStoredMediaMeta, getMediaFigureStyle } from "@/features/life/media";
+import {
+  createLifeMediaPreview,
+  formatGeoMetadata,
+  formatMediaMetaLines,
+  formatStoredMediaMetaLines,
+  getMediaFigureStyle,
+  hasGeoMetadata,
+} from "@/features/life/media";
 import type { LifeMediaPreview } from "@/features/life/media";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { getLifePhotoErrorDebugInfo, getLifePhotoUploadErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, TaskItem } from "@/types/domain";
@@ -37,6 +44,7 @@ export function LifePhotosView({
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
+
   const selectedPhotos = photos.filter((photo) => photo.date === date);
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
   const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
@@ -82,13 +90,18 @@ export function LifePhotosView({
     setIsUploading(true);
     setMessage("");
     try {
-      await onUploadPhotos(date, previews, caption.trim() || undefined, linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined);
+      await onUploadPhotos(
+        date,
+        previews,
+        caption.trim() || undefined,
+        linkedTarget ? { id: linkedTarget.id, title: linkedTarget.title, type: linkedTarget.type } : undefined,
+      );
       previews.forEach((preview) => URL.revokeObjectURL(preview.objectUrl));
       setPreviews([]);
       setCaption("");
       setLinkedTargetKey("");
       setUploadError(null);
-      setMessage("사진/영상을 업로드했어요.");
+      setMessage("사진/영상 업로드를 완료했어요.");
     } catch (error) {
       console.error("Failed to upload life photos", getLifePhotoErrorDebugInfo(error));
       setUploadError(getLifePhotoUploadErrorMessage(error));
@@ -114,17 +127,22 @@ export function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="사진" description="사진과 영상은 활동을 증명하는 기억 조각입니다. 촬영 시간과 기록 시간을 바탕으로 활동/일정/할 일에 연결해 라이프 캘린더와 검색에서 함께 조회합니다." />
+      <LifeTabHeading
+        title="사진"
+        description="사진과 영상은 활동의 증거이자 기억의 조각이에요. 촬영 시각과 위치 메타데이터가 있으면 더 정확하게 읽을 수 있게 구성합니다."
+      />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
             <ImagePlus aria-hidden size={17} />
             <span>사진/영상 업로드</span>
           </div>
+
           <label className="life-capture-date">
             <span>기록 날짜</span>
             <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </label>
+
           <label className="life-photo-link-field">
             <span>연결할 활동/계획</span>
             <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
@@ -136,39 +154,56 @@ export function LifePhotosView({
               ))}
             </select>
           </label>
+
           {suggestedTarget ? (
             <button className="life-capture-secondary" onClick={() => setLinkedTargetKey(suggestedTarget.key)} type="button">
               추천 연결: {suggestedTarget.label} · {suggestedTarget.title}
             </button>
           ) : null}
+
           <label className="life-photo-dropzone">
             <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
             <ImagePlus aria-hidden size={24} />
             <strong>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
-            <span>선택한 파일의 크기, 비율, 촬영 추정 시간을 미리 확인합니다.</span>
+            <span>파일 비율, 크기, 촬영 시각, GPS 메타데이터까지 미리 확인합니다.</span>
           </label>
+
           {previews.length > 0 ? (
             <div className="life-media-preview-grid">
               {previews.map((preview) => (
                 <figure key={preview.id} style={getMediaFigureStyle(preview)}>
-                  {preview.mimeType.startsWith("video/") ? (
-                    <video muted playsInline src={preview.objectUrl} />
-                  ) : (
-                    <Image alt={preview.name} height={preview.height ?? 180} src={preview.objectUrl} unoptimized width={preview.width ?? 180} />
-                  )}
+                  <div className="life-photo-media-frame" style={getMediaFigureStyle(preview)}>
+                    {preview.mimeType.startsWith("video/") ? (
+                      <video muted playsInline src={preview.objectUrl} />
+                    ) : (
+                      <Image alt={preview.name} height={preview.height ?? 180} src={preview.objectUrl} unoptimized width={preview.width ?? 180} />
+                    )}
+                  </div>
                   <figcaption>
                     <strong>{preview.name}</strong>
-                    <span>{formatMediaMeta(preview)}</span>
+                    <div className="life-photo-meta-lines">
+                      {formatMediaMetaLines(preview).map((line) => (
+                        <span key={`${preview.id}-${line}`}>{line}</span>
+                      ))}
+                      {hasGeoMetadata(preview) ? (
+                        <b className="life-photo-geo-badge">
+                          <MapPin aria-hidden size={12} />
+                          위치 메타데이터 있음
+                        </b>
+                      ) : null}
+                      {formatGeoMetadata(preview) ? <small>{formatGeoMetadata(preview)}</small> : null}
+                    </div>
                   </figcaption>
                 </figure>
               ))}
             </div>
           ) : null}
+
           <input className="life-photo-caption-input" placeholder="사진 메모" value={caption} onChange={(event) => setCaption(event.target.value)} />
           {uploadError ? <p className="life-photo-upload-error">{uploadError}</p> : null}
           {message ? <p className="life-health-message">{message}</p> : null}
           <button className="life-capture-primary" disabled={previews.length === 0 || isUploading} onClick={uploadPhotos} type="button">
-            {isUploading ? "업로드 중" : "업로드"}
+            {isUploading ? "업로드 중..." : "업로드"}
           </button>
         </SectionCard>
 
@@ -180,25 +215,39 @@ export function LifePhotosView({
             </div>
             <strong className="life-places-count">{selectedPhotos.length}개</strong>
           </div>
+
           {selectedPhotos.length > 0 ? (
             <div className="life-photo-gallery">
               {selectedPhotos.map((photo) => (
                 <figure key={photo.id} style={getMediaFigureStyle(photo)}>
-                  {photo.fileUrl ? (
-                    photo.mimeType?.startsWith("video/") ? (
-                      <video controls src={photo.fileUrl} />
+                  <div className="life-photo-media-frame" style={getMediaFigureStyle(photo)}>
+                    {photo.fileUrl ? (
+                      photo.mimeType?.startsWith("video/") ? (
+                        <video controls src={photo.fileUrl} />
+                      ) : (
+                        <Image alt={photo.caption || photo.fileName} height={photo.height ?? 220} src={photo.fileUrl} unoptimized width={photo.width ?? 220} />
+                      )
                     ) : (
-                      <Image alt={photo.caption || photo.fileName} height={photo.height ?? 220} src={photo.fileUrl} unoptimized width={photo.width ?? 220} />
-                    )
-                  ) : (
-                    <div>{photo.fileName}</div>
-                  )}
+                      <div>{photo.fileName}</div>
+                    )}
+                  </div>
                   <figcaption>
                     {photo.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(photo.linkedTargetType)} · {photo.linkedTargetTitle}</b> : null}
                     {photo.caption ? <strong>{photo.caption}</strong> : null}
-                    <span>{formatStoredMediaMeta(photo)}</span>
+                    <div className="life-photo-meta-lines">
+                      {formatStoredMediaMetaLines(photo).map((line) => (
+                        <span key={`${photo.id}-${line}`}>{line}</span>
+                      ))}
+                      {hasGeoMetadata(photo) ? (
+                        <b className="life-photo-geo-badge">
+                          <MapPin aria-hidden size={12} />
+                          위치 메타데이터 있음
+                        </b>
+                      ) : null}
+                      {formatGeoMetadata(photo) ? <small>{formatGeoMetadata(photo)}</small> : null}
+                    </div>
                     <button disabled={deletingPhotoId === photo.id} onClick={() => void deletePhoto(photo)} type="button">
-                      {deletingPhotoId === photo.id ? "삭제 중" : "삭제"}
+                      {deletingPhotoId === photo.id ? "삭제 중..." : "삭제"}
                     </button>
                   </figcaption>
                 </figure>
@@ -207,8 +256,8 @@ export function LifePhotosView({
           ) : (
             <div className="life-map-empty life-map-empty--compact">
               <ImagePlus aria-hidden size={28} />
-              <strong>이 날짜에 업로드한 사진이 없습니다.</strong>
-              <p>왼쪽에서 사진이나 영상을 선택하면 이곳에서 조회할 수 있습니다.</p>
+              <strong>이 날짜에 업로드한 사진이 아직 없어요.</strong>
+              <p>왼쪽에서 사진이나 영상을 선택하면 날짜별로 바로 모아 볼 수 있어요.</p>
             </div>
           )}
         </SectionCard>

@@ -57,6 +57,38 @@ export function formatStoredMediaMeta(media: LifePhotoRecord) {
   return [media.mimeType, dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" 쨌 ");
 }
 
+export function formatMediaMetaLines(
+  media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "takenAt" | "width">,
+) {
+  const takenAtSource = media.takenAt ?? new Date(media.lastModified).toISOString();
+  return [
+    media.mimeType || "이미지",
+    media.width && media.height ? `${media.width} × ${media.height}` : null,
+    typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null,
+    typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null,
+    new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(takenAtSource)),
+  ].filter(Boolean);
+}
+
+export function formatStoredMediaMetaLines(media: LifePhotoRecord) {
+  return [
+    media.mimeType || "이미지",
+    media.width && media.height ? `${media.width} × ${media.height}` : null,
+    typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null,
+    typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null,
+    media.takenAt ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(media.takenAt)) : null,
+  ].filter(Boolean);
+}
+
+export function hasGeoMetadata(media: Pick<LifePhotoRecord, "latitude" | "longitude"> | Pick<LifeMediaPreview, "latitude" | "longitude">) {
+  return typeof media.latitude === "number" && Number.isFinite(media.latitude) && typeof media.longitude === "number" && Number.isFinite(media.longitude);
+}
+
+export function formatGeoMetadata(media: Pick<LifePhotoRecord, "latitude" | "longitude"> | Pick<LifeMediaPreview, "latitude" | "longitude">) {
+  if (!hasGeoMetadata(media)) return null;
+  return `GPS ${media.latitude!.toFixed(5)}, ${media.longitude!.toFixed(5)}`;
+}
+
 export function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes}B`;
   if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)}KB`;
