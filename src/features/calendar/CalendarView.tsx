@@ -2447,7 +2447,7 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
           label: "사진",
           latitude: item.external.placeLatitude,
           longitude: item.external.placeLongitude,
-          name: item.external.placeName || item.external.caption || "사진 위치",
+          name: getPhotoStopName(item.external),
           sortMinutes: item.sortMinutes,
           timeLabel: formatPhotoTimeLabel(item.external),
         });
@@ -2464,7 +2464,7 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
         label: "사진",
         latitude: linkedPlace.latitude,
         longitude: linkedPlace.longitude,
-        name: linkedPlace.name,
+        name: `${formatPhotoTimeLabel(item.external)} 사진`,
         sortMinutes: item.sortMinutes,
         timeLabel: formatPhotoTimeLabel(item.external),
       });
@@ -2595,6 +2595,12 @@ function getStandalonePhotoGroupSummary(group: DayStandalonePhotoGroup) {
   if (!firstPhoto) return "이 시간대에 남은 사진 기록";
   if (group.items.length === 1) return firstPhoto.external.caption || firstPhoto.external.meta || "이 시간대에 남은 사진 기록";
   return `${firstPhoto.external.caption || firstPhoto.external.meta || "사진 기록"} 외 ${group.items.length - 1}장`;
+}
+
+function getPhotoStopName(photo: ExternalCalendarItem) {
+  const timeLabel = formatPhotoTimeLabel(photo);
+  const subject = photo.placeName || photo.caption || "사진";
+  return `${timeLabel} ${subject}`;
 }
 
 function getLinkedTargetTypeLabel(type?: "schedule" | "todo" | "event" | "activity") {
