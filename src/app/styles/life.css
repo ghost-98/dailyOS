@@ -3554,11 +3554,45 @@ button:disabled {
 
 .life-places-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   margin-bottom: 18px;
   padding: 14px;
   align-items: stretch;
+}
+
+.life-places-mode-switch,
+.life-places-view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.life-places-mode-switch__button,
+.life-places-view-switch__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.life-places-mode-switch__button--active,
+.life-places-view-switch__button--active {
+  background: rgba(126, 105, 255, 0.14);
+  color: var(--text-strong);
 }
 
 .life-places-search {
@@ -3635,7 +3669,31 @@ button:disabled {
   justify-content: center;
 }
 
-.life-places-toggle b {
+.life-places-record-controls {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.life-places-period-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(126, 105, 255, 0.12);
+  color: var(--violet-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.life-places-period--disabled {
+  justify-content: center;
+}
+
+.life-places-period--disabled span {
   color: var(--text-strong);
 }
 
@@ -3658,6 +3716,12 @@ button:disabled {
   display: grid;
   gap: 14px;
   align-content: start;
+}
+
+.life-places-map-panel--bleed {
+  gap: 0;
+  overflow: hidden;
+  padding: 0 !important;
 }
 
 .life-places-side {
@@ -3736,15 +3800,15 @@ button:disabled {
 .life-places-map-shell {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 0;
   background: linear-gradient(180deg, rgba(95, 114, 189, 0.12), rgba(126, 105, 255, 0.06));
-  min-height: 620px;
+  min-height: 760px;
 }
 
 .life-places-map {
   width: 100%;
   height: 100%;
-  min-height: 620px;
+  min-height: 760px;
 }
 
 .life-places-map--hidden {
@@ -3767,44 +3831,9 @@ button:disabled {
   font-size: 16px;
 }
 
-.life-places-search-results {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.life-places-search-results article {
-  display: grid;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--line);
-}
-
-.life-places-search-results article div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.life-places-search-results strong {
-  color: var(--text-strong);
-  font-size: 13px;
-}
-
-.life-places-search-results span {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.life-places-search-results article button {
-  justify-self: start;
-}
-
-.life-places-search-results button,
-.life-places-manager__actions button,
-.life-places-manager__buttons button {
+.life-places-manager__buttons button,
+.schedule-place-search button,
+.schedule-place-results button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3819,6 +3848,10 @@ button:disabled {
   padding: 10px 12px;
 }
 
+.life-places-manager__buttons button {
+  min-width: 112px;
+}
+
 .life-places-place-list,
 .life-places-record-list {
   display: grid;
@@ -3826,11 +3859,6 @@ button:disabled {
   max-height: 320px;
   overflow: auto;
   padding-right: 4px;
-}
-
-.life-places-manager__actions {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .life-places-manager__body {
@@ -3857,6 +3885,10 @@ button:disabled {
   align-content: start;
 }
 
+.life-places-manager__list--compact {
+  gap: 8px;
+}
+
 .life-places-manager__place {
   display: grid;
   gap: 6px;
@@ -3867,6 +3899,18 @@ button:disabled {
   cursor: pointer;
   padding: 12px 14px;
   align-content: start;
+}
+
+.life-places-manager__place--compact {
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.life-places-manager__place--compact span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .life-places-manager__place--active {
@@ -3972,6 +4016,31 @@ button:disabled {
   align-content: start;
 }
 
+.schedule-place-results {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.schedule-place-results button {
+  justify-content: flex-start;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-strong);
+}
+
+.schedule-place-results button strong,
+.schedule-place-results button span {
+  display: block;
+}
+
+.schedule-place-results button span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .life-places-manager__mapped strong {
   color: var(--text-strong);
   font-size: 14px;
@@ -4013,6 +4082,11 @@ button:disabled {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.16);
   color: #b91c1c;
+}
+
+.life-places-icon-button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .life-places-empty-inline--compact {
@@ -4166,6 +4240,10 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .life-places-record-controls {
+    flex-wrap: wrap;
+  }
+
   .life-places-side__bottom,
   .life-places-manager__body,
   .life-places-manager__form-grid {
@@ -4174,6 +4252,10 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
+  .life-places-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .life-places-panel-head {
     flex-direction: column;
     align-items: stretch;
@@ -4194,6 +4276,22 @@ button:disabled {
     justify-content: center;
   }
 
+  .life-places-record-controls,
+  .life-places-mode-switch,
+  .life-places-view-switch {
+    width: 100%;
+  }
+
+  .life-places-mode-switch__button,
+  .life-places-view-switch__button {
+    flex: 1 1 0;
+  }
+
+  .life-places-period-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
   .life-places-period {
     flex-wrap: wrap;
     justify-content: flex-start;
@@ -4207,6 +4305,11 @@ button:disabled {
   .life-places-map-shell,
   .life-places-map {
     min-height: 420px;
+  }
+
+  .life-places-manager__place--compact {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }
 
