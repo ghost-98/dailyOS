@@ -455,10 +455,6 @@
     grid-template-columns: 1fr;
   }
 
-  .life-sleepwake-grid {
-    grid-template-columns: 1fr;
-  }
-
   .life-activity-day-summary {
     grid-template-columns: 1fr;
   }

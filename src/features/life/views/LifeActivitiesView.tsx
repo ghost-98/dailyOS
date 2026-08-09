@@ -417,7 +417,6 @@ export function LifeActivitiesView({
               <div className="life-activity-form-card">
                 <div className="schedule-form-section-title life-activity-form-card__title">
                   <strong>활동 유형</strong>
-                  <span>기본 태그는 한 번만 보이고, 필요한 경우 직접 추가할 수 있어요.</span>
                 </div>
                 <div className="life-activity-tag-row">
                   {categories.map((item) => {
@@ -449,7 +448,6 @@ export function LifeActivitiesView({
               <div className="life-activity-form-card">
                 <div className="schedule-form-section-title life-activity-form-card__title">
                   <strong>날짜와 시간</strong>
-                  <span>날짜는 오른쪽 달력과 연결되고, 종료 시간은 필요할 때만 붙여요.</span>
                 </div>
                 <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
                   <label className="event-form-row event-form-row--field schedule-field">
@@ -504,7 +502,6 @@ export function LifeActivitiesView({
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>이동 정보</strong>
-                    <span>이동은 출발지, 도착지, 이동 수단이 같이 남아야 하루 흐름이 정확해져요.</span>
                   </div>
                   <div className="life-activity-form-grid">
                     <div className="life-activity-form-card life-activity-form-card--inner">
@@ -531,7 +528,6 @@ export function LifeActivitiesView({
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>장소</strong>
-                    <span>활동이 실제로 일어난 위치를 기록해요.</span>
                   </div>
                   <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
                 </div>
@@ -541,7 +537,6 @@ export function LifeActivitiesView({
                 <div className="life-activity-form-card life-activity-form-card--wide">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>함께한 사람</strong>
-                    <span>누구와 함께했는지 남겨요.</span>
                   </div>
                   <div className="event-form-row event-form-row--field schedule-field schedule-field--stack">
                     <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
@@ -552,7 +547,6 @@ export function LifeActivitiesView({
                   <div className="life-activity-form-card">
                     <div className="schedule-form-section-title life-activity-form-card__title">
                       <strong>식사 메모</strong>
-                      <span>`식사` 태그일 때만 먹은 내용을 따로 적어요.</span>
                     </div>
                     <label className="event-form-row event-form-row--field schedule-field">
                       <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
@@ -565,7 +559,6 @@ export function LifeActivitiesView({
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>금액</strong>
-                    <span>비용이 생긴 활동이면 금액만 간단히 남겨두세요.</span>
                   </div>
                   <label className="event-form-row event-form-row--field schedule-field">
                     <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
@@ -575,7 +568,6 @@ export function LifeActivitiesView({
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>메모</strong>
-                    <span>짧은 맥락만 적어도 나중에 하루를 복원할 때 크게 도움이 돼요.</span>
                   </div>
                   <label className="event-form-row event-form-row--field schedule-field">
                     <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
@@ -600,10 +592,9 @@ export function LifeActivitiesView({
                   <button className={sleepDateMode === "next" ? "life-activity-date-mode life-activity-date-mode--active" : "life-activity-date-mode"} onClick={() => setSleepDateMode("next")} type="button">
                     {nextDate} 새벽
                   </button>
-                  <p>취침이 자정을 넘기면 `다음날 새벽`으로 저장해서 실제 시간 흐름과 달력 날짜를 같이 맞출 수 있어요.</p>
                 </div>
               ) : (
-                <p className="life-activity-quick-panel__hint">{date}의 하루 시작 기록으로 저장돼요.</p>
+                null
               )}
               <div className="life-activity-quick-panel__grid">
                 <label className="event-form-row event-form-row--field schedule-field">
