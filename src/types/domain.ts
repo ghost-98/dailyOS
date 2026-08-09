@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career" | "expense";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense" | "income";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -22,9 +22,14 @@ export type TaskItem = {
   priority: TaskPriority;
   scheduledDate: string;
   dueDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
   completedAt?: string;
   deferredCount: number;
   memo?: string;
+  expenseAmount?: number;
+  companions?: string;
   place?: PlanPlace;
 };
 
@@ -48,6 +53,8 @@ export type WorkoutSession = {
   type: WorkoutType;
   condition: WorkoutCondition;
   durationMinutes: number;
+  durationSeconds?: number;
+  distanceKm?: number;
   memo?: string;
 };
 
@@ -60,6 +67,85 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
+  targetType: "schedule" | "todo" | "event" | "activity";
+  targetId: string;
+};
+
+export type IncomeCategory = "salary" | "business" | "investment" | "gift" | "refund" | "side" | "etc";
+
+export type IncomeRecord = {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: IncomeCategory;
+  memo?: string;
+};
+
+export type LifeActivityRecord = {
+  id: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
+  title: string;
+  memo?: string;
+  category?: string;
+  food?: string;
+  expenseAmount?: number;
+  companions?: string;
+  placeName?: string;
+  placeAddress?: string;
+  startPlaceName?: string;
+  startPlaceAddress?: string;
+  endPlaceName?: string;
+  endPlaceAddress?: string;
+  transportMode?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  sourceType?: "schedule" | "todo" | "event";
+  createdAt?: string;
+};
+
+export type DailyLogRecord = {
+  id: string;
+  date: string;
+  content: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  createdAt?: string;
+};
+
+export type LifePhotoRecord = {
+  id: string;
+  date: string;
+  fileName: string;
+  filePath: string;
+  fileUrl?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  caption?: string;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  takenAt?: string;
+  latitude?: number;
+  longitude?: number;
+  createdAt?: string;
+};
+
+export type LifeMediaUploadInput = {
+  file: File;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+  takenAt?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type PlaceProvider = "naver" | "manual";
@@ -87,5 +173,25 @@ export type PlaceRecord = {
   category?: string;
   url?: string;
   isFavorite?: boolean;
+  memo?: string;
+};
+
+export type PersonalPlaceRecord = {
+  id: string;
+  label: string;
+  mappedName?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  providerPlaceId?: string;
+  phone?: string;
+  category?: string;
+  url?: string;
+  memo?: string;
+};
+
+export type PersonRecord = {
+  id: string;
+  name: string;
   memo?: string;
 };

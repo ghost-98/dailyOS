@@ -1,50 +1,12 @@
 "use client";
 
-import {
-  Activity,
-  BriefcaseBusiness,
-  CalendarDays,
-  ChevronDown,
-  Grid2X2,
-  Layers3,
-  LogOut,
-  Map,
-  MapPinned,
-  Settings,
-} from "lucide-react";
+import { Activity, ChevronDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { AuthGate, signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
-
-const lifeChildren = [
-  { label: "캘린더", href: "/life/calendar", key: "life-calendar" },
-  { label: "지도", href: "/life/map", key: "life-map" },
-];
-
-const careerChildren = [
-  { label: "지원한 기업", href: "/career/applied", key: "applied" },
-  { label: "지원 예정", href: "/career/planned", key: "planned" },
-  { label: "자격증", href: "/career/certificates", key: "certificates" },
-];
-
-const primaryNav = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "라이프", href: "/life/calendar", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "장소", href: "/places", key: "places", icon: MapPinned },
-  { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness, children: careerChildren },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
-];
-
-const mobileNav = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
-  { label: "캘린더", href: "/life/calendar", key: "life", icon: CalendarDays },
-  { label: "라이프 지도", href: "/life/map", key: "life-map", icon: Map },
-  { label: "장소", href: "/places", key: "places", icon: MapPinned },
-  { label: "취업", href: "/career/applied", key: "career", icon: BriefcaseBusiness },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
-];
+import { mobileNav, primaryNav } from "@/components/layout/navigation";
 
 type AppShellProps = {
   activeKey?: string;
@@ -61,10 +23,17 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
 
 function AppShellContent({ activeKey = "today", children }: AppShellProps) {
   const pathname = usePathname();
-  const [isLifeOpen, setIsLifeOpen] = useState(activeKey === "life");
-  const [isCareerOpen, setIsCareerOpen] = useState(activeKey === "career");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    capture: activeKey === "capture" || activeKey === "life-activities",
+    life: activeKey === "life" || activeKey === "life-ask" || activeKey === "ledger",
+    places: activeKey === "places",
+  });
   const { displayName, user } = useDailyOSUser();
   const avatarInitial = displayName.trim().slice(0, 1).toUpperCase() || "D";
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   return (
     <div className="app-shell">
@@ -74,41 +43,26 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
             <span className="brand__mark">d</span>
             <div>
               <span className="brand__name">dailyOS</span>
-              <span className="brand__subtitle">개인 관리</span>
+              <span className="brand__subtitle">Life Database OS</span>
             </div>
           </Link>
 
           <nav className="sidebar__nav">
             {primaryNav.map((item) => {
               const Icon = item.icon;
-              const isActive = item.key === activeKey;
+              const isActive = isPrimaryNavActive(item.key, item.href, pathname, activeKey);
 
-              if (item.key === "life") {
+              if (item.children) {
                 return (
                   <NavGroup
                     icon={<Icon aria-hidden size={22} />}
                     isActive={isActive}
-                    isOpen={isLifeOpen}
-                    items={lifeChildren}
+                    isOpen={Boolean(openGroups[item.key])}
+                    items={item.children}
                     key={item.key}
                     label={item.label}
                     pathname={pathname}
-                    setIsOpen={setIsLifeOpen}
-                  />
-                );
-              }
-
-              if (item.key === "career") {
-                return (
-                  <NavGroup
-                    icon={<Icon aria-hidden size={22} />}
-                    isActive={isActive}
-                    isOpen={isCareerOpen}
-                    items={careerChildren}
-                    key={item.key}
-                    label={item.label}
-                    pathname={pathname}
-                    setIsOpen={setIsCareerOpen}
+                    setIsOpen={() => toggleGroup(item.key)}
                   />
                 );
               }
@@ -145,8 +99,7 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            item.key === "life-map" ? pathname === "/life/map" : item.key === "life" ? activeKey === "life" && pathname !== "/life/map" : item.key === activeKey;
+          const isActive = isMobileNavActive(item.key, item.href, pathname, activeKey);
           return (
             <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
               <Icon aria-hidden size={20} />
@@ -157,6 +110,22 @@ function AppShellContent({ activeKey = "today", children }: AppShellProps) {
       </nav>
     </div>
   );
+}
+
+function isPrimaryNavActive(key: string, href: string, pathname: string, activeKey?: string) {
+  if (key === "capture") return ["/life/activities", "/life/plans", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
+  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/places", "/life/ask", "/ledger"].includes(pathname);
+  if (key === "places") return pathname === "/places";
+  if (key.startsWith("life-")) return pathname === href;
+  return key === activeKey || pathname === href;
+}
+
+function isMobileNavActive(key: string, href: string, pathname: string, activeKey?: string) {
+  if (key === "life") return pathname === "/life" || ["/life/calendar", "/life/search", "/life/people", "/life/places", "/life/ask", "/ledger"].includes(pathname);
+  if (key === "life-activities") return ["/life/activities", "/life/plans", "/life/logs", "/life/photos", "/life/health"].includes(pathname);
+  if (key === "places") return pathname === "/places";
+  if (key.startsWith("life-")) return pathname === href;
+  return key === activeKey || pathname === href;
 }
 
 function NavGroup({
@@ -174,14 +143,14 @@ function NavGroup({
   items: Array<{ href: string; key: string; label: string }>;
   label: string;
   pathname: string;
-  setIsOpen: (updater: (current: boolean) => boolean) => void;
+  setIsOpen: () => void;
 }) {
   return (
     <div className={`nav-group ${isOpen ? "nav-group--open" : ""}`}>
       <button
         aria-expanded={isOpen}
         className={`nav-item nav-item--button ${isActive ? "nav-item--active nav-item--group-active" : ""}`}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={setIsOpen}
         type="button"
       >
         {icon}

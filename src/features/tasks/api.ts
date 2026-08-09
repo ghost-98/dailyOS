@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 
@@ -8,9 +9,14 @@ type TaskRow = {
   priority: TaskPriority;
   scheduled_date: string;
   due_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean | null;
   completed_at: string | null;
   deferred_count: number;
   memo: string | null;
+  expense_amount: number | string | null;
+  companions: string | null;
   place_name: string | null;
   place_address: string | null;
   place_latitude: number | string | null;
@@ -27,14 +33,8 @@ type TaskInsert = Omit<TaskRow, "id"> & {
 
 type TaskUpdate = Partial<Omit<TaskInsert, "user_id">>;
 
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
-
-const taskColumns = "id,title,status,priority,scheduled_date,due_date,completed_at,deferred_count,memo,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
+const taskColumns =
+  "id,title,status,priority,scheduled_date,due_date,start_time,end_time,is_all_day,completed_at,deferred_count,memo,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
 
 function mapRowPlace(row: TaskRow) {
   const latitude = row.place_latitude === null ? null : Number(row.place_latitude);
@@ -61,9 +61,14 @@ function mapRowToTask(row: TaskRow): TaskItem {
     priority: row.priority,
     scheduledDate: row.scheduled_date,
     dueDate: row.due_date ?? undefined,
+    startTime: row.start_time?.slice(0, 5) || undefined,
+    endTime: row.end_time?.slice(0, 5) || undefined,
+    isAllDay: row.is_all_day ?? true,
     completedAt: row.completed_at ?? undefined,
     deferredCount: row.deferred_count,
     memo: row.memo ?? undefined,
+    expenseAmount: row.expense_amount === null ? undefined : Number(row.expense_amount),
+    companions: row.companions ?? undefined,
     place: mapRowPlace(row),
   };
 }
@@ -76,9 +81,14 @@ function mapTaskToInsert(task: TaskItem, userId: string): TaskInsert {
     priority: task.priority,
     scheduled_date: task.scheduledDate,
     due_date: task.dueDate ?? null,
+    start_time: task.isAllDay ? null : task.startTime ?? null,
+    end_time: task.isAllDay ? null : task.endTime ?? null,
+    is_all_day: task.isAllDay ?? true,
     completed_at: task.completedAt ?? null,
     deferred_count: task.deferredCount,
     memo: task.memo ?? null,
+    expense_amount: task.expenseAmount ?? null,
+    companions: task.companions ?? null,
     place_name: task.place?.name ?? null,
     place_address: task.place?.address ?? null,
     place_latitude: task.place?.latitude ?? null,
@@ -97,9 +107,14 @@ function mapTaskToUpdate(task: TaskItem): TaskUpdate {
     priority: task.priority,
     scheduled_date: task.scheduledDate,
     due_date: task.dueDate ?? null,
+    start_time: task.isAllDay ? null : task.startTime ?? null,
+    end_time: task.isAllDay ? null : task.endTime ?? null,
+    is_all_day: task.isAllDay ?? true,
     completed_at: task.completedAt ?? null,
     deferred_count: task.deferredCount,
     memo: task.memo ?? null,
+    expense_amount: task.expenseAmount ?? null,
+    companions: task.companions ?? null,
     place_name: task.place?.name ?? null,
     place_address: task.place?.address ?? null,
     place_latitude: task.place?.latitude ?? null,
@@ -113,7 +128,7 @@ function mapTaskToUpdate(task: TaskItem): TaskUpdate {
 
 export async function fetchTasksFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
@@ -128,7 +143,7 @@ export async function fetchTasksFromDb() {
 
 export async function createTaskInDb(task: TaskItem) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase

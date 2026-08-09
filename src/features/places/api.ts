@@ -1,3 +1,4 @@
+import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { PlaceFolder, PlaceProvider, PlaceRecord } from "@/types/domain";
 
@@ -44,13 +45,6 @@ type SupabaseErrorLike = {
 const placeColumns = "id,folder_id,name,address,latitude,longitude,provider,provider_place_id,phone,category,url,is_favorite,memo";
 const folderColumns = "id,name,color,icon,sort_order";
 const folderLinkColumns = "place_id,folder_id";
-
-async function getUserId() {
-  if (!supabase) return null;
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user.id;
-}
 
 function mapPlaceRow(row: PlaceRow, folderIds: string[] = []): PlaceRecord {
   const mergedFolderIds = [...new Set([row.folder_id, ...folderIds].filter((folderId): folderId is string => Boolean(folderId)))];
@@ -106,7 +100,7 @@ function isMissingRelationError(error: SupabaseErrorLike | null | undefined) {
 
 export async function fetchPlaceFoldersFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase.from("place_folders").select(folderColumns).order("sort_order", { ascending: true });
@@ -116,7 +110,7 @@ export async function fetchPlaceFoldersFromDb() {
 
 export async function fetchPlacesFromDb() {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const [{ data, error }, { data: linkData, error: linkError }] = await Promise.all([
@@ -138,7 +132,7 @@ export async function fetchPlacesFromDb() {
 
 export async function createPlaceInDb(place: PlaceRecord) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase.from("places").insert(mapPlaceInsert(place, userId)).select(placeColumns).single();
@@ -148,7 +142,7 @@ export async function createPlaceInDb(place: PlaceRecord) {
 
 export async function setPlaceFolderLinksInDb(placeId: string, folderIds: string[]) {
   if (!supabase) return false;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return false;
 
   const { error: deleteError } = await supabase.from("place_folder_links").delete().eq("place_id", placeId);
@@ -172,7 +166,7 @@ export async function setPlaceFolderLinksInDb(placeId: string, folderIds: string
 
 export async function createPlaceFolderInDb(folder: Omit<PlaceFolder, "id">) {
   if (!supabase) return null;
-  const userId = await getUserId();
+  const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const row: PlaceFolderInsert = {

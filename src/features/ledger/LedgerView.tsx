@@ -1,55 +1,75 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import type { ExpenseCategory, ExpenseRecord } from "@/types/domain";
-import { createExpenseRecordInDb, deleteExpenseRecordFromDb, fetchExpenseRecordsFromDb, updateExpenseRecordInDb } from "./api";
+import { MonthPickerSheet } from "@/features/calendar/CalendarView";
+import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
+import type { ExpenseCategory, ExpenseRecord, IncomeCategory, IncomeRecord } from "@/types/domain";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 
-const categoryLabels: Record<ExpenseCategory, string> = {
-  food: "식비",
-  transport: "교통",
-  shopping: "쇼핑",
-  housing: "주거",
-  health: "건강",
+const expenseCategoryLabels: Record<ExpenseCategory, string> = {
   culture: "문화",
   education: "교육",
   etc: "기타",
+  food: "식비",
+  health: "건강",
+  housing: "주거",
+  shopping: "쇼핑",
+  transport: "교통",
 };
 
-const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({ label, value: value as ExpenseCategory }));
-
-const categoryTones: Record<ExpenseCategory, "violet" | "green" | "pink" | "amber" | "muted"> = {
-  food: "amber",
-  transport: "violet",
-  shopping: "pink",
-  housing: "violet",
-  health: "green",
-  culture: "pink",
-  education: "green",
-  etc: "muted",
+const incomeCategoryLabels: Record<IncomeCategory, string> = {
+  business: "사업",
+  etc: "기타",
+  gift: "선물",
+  investment: "투자",
+  refund: "환급",
+  salary: "급여",
+  side: "부수입",
 };
 
-export function LedgerView() {
-  const [records, setRecords] = useState<ExpenseRecord[]>([]);
+const targetTypeLabels: Record<NonNullable<ExpenseRecord["targetType"]>, string> = {
+  activity: "활동",
+  event: "이벤트",
+  schedule: "일정",
+  todo: "할 일",
+};
+
+type LedgerViewProps = {
+  variant?: "page" | "tab";
+};
+
+export function LedgerView({ variant = "page" }: LedgerViewProps) {
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
+  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
-  const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [incomeTitle, setIncomeTitle] = useState("");
+  const [incomeAmount, setIncomeAmount] = useState("");
+  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory>("salary");
+  const [incomeMemo, setIncomeMemo] = useState("");
+  const [isSavingIncome, setIsSavingIncome] = useState(false);
+  const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
+  const [isIncomeCaptureExpanded, setIsIncomeCaptureExpanded] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    fetchExpenseRecordsFromDb()
-      .then((dbRecords) => {
-        if (isMounted) setRecords(dbRecords ?? []);
+    Promise.all([fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()])
+      .then(([nextExpenses, nextIncomes]) => {
+        if (!isMounted) return;
+        setExpenses(nextExpenses ?? []);
+        setIncomes(nextIncomes ?? []);
       })
-      .catch((error) => console.error("Failed to load expense records from Supabase", error))
+      .catch((error) => console.error("Failed to load ledger records", error))
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
@@ -61,17 +81,23 @@ export function LedgerView() {
 
   const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}`;
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
-  const monthRecords = useMemo(() => records.filter((record) => record.date.startsWith(monthKey)), [monthKey, records]);
-  const selectedRecords = useMemo(
-    () => records.filter((record) => record.date === selectedDate).sort((a, b) => b.amount - a.amount),
-    [records, selectedDate],
-  );
-  const recordsByDate = useMemo(() => groupRecordsByDate(monthRecords), [monthRecords]);
-  const monthTotal = sumRecords(monthRecords);
-  const selectedTotal = sumRecords(selectedRecords);
-  const spendingDays = new Set(monthRecords.map((record) => record.date)).size;
-  const dailyAverage = spendingDays > 0 ? Math.round(monthTotal / spendingDays) : 0;
-  const topCategory = getTopCategory(monthRecords);
+  const monthExpenses = useMemo(() => expenses.filter((record) => record.date.startsWith(monthKey)), [expenses, monthKey]);
+  const monthIncomes = useMemo(() => incomes.filter((record) => record.date.startsWith(monthKey)), [incomes, monthKey]);
+  const selectedExpenses = useMemo(() => expenses.filter((record) => record.date === selectedDate).sort((a, b) => b.amount - a.amount), [expenses, selectedDate]);
+  const selectedIncomes = useMemo(() => incomes.filter((record) => record.date === selectedDate).sort((a, b) => b.amount - a.amount), [incomes, selectedDate]);
+  const expensesByDate = useMemo(() => groupRecordsByDate(monthExpenses), [monthExpenses]);
+  const incomesByDate = useMemo(() => groupRecordsByDate(monthIncomes), [monthIncomes]);
+
+  const monthExpenseTotal = sumRecords(monthExpenses);
+  const monthIncomeTotal = sumRecords(monthIncomes);
+  const monthNet = monthIncomeTotal - monthExpenseTotal;
+  const selectedExpenseTotal = sumRecords(selectedExpenses);
+  const selectedIncomeTotal = sumRecords(selectedIncomes);
+  const selectedNet = selectedIncomeTotal - selectedExpenseTotal;
+  const activeDays = new Set([...monthExpenses.map((record) => record.date), ...monthIncomes.map((record) => record.date)]).size;
+  const dailyNetAverage = activeDays > 0 ? Math.round(monthNet / activeDays) : 0;
+  const topExpenseCategory = getTopCategory<ExpenseCategory, ExpenseRecord>(monthExpenses, (category) => expenseCategoryLabels[category]);
+  const topIncomeCategory = getTopCategory<IncomeCategory, IncomeRecord>(monthIncomes, (category) => incomeCategoryLabels[category]);
 
   const moveMonth = (direction: -1 | 1) => {
     const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
@@ -79,62 +105,72 @@ export function LedgerView() {
     setSelectedDate(formatDateKey(nextMonth));
   };
 
-  const openCreateSheet = (date = selectedDate) => {
-    setEditingRecord({
-      id: `expense-${Date.now()}`,
-      date,
-      title: "",
-      amount: 0,
-      category: "food",
-      memo: "",
-    });
-    setIsSheetOpen(true);
+  const createIncome = async () => {
+    const trimmedTitle = incomeTitle.trim();
+    const amount = Number(incomeAmount);
+    if (!trimmedTitle || !Number.isFinite(amount) || amount <= 0 || isSavingIncome) return;
+
+    setIsSavingIncome(true);
+    try {
+      const saved = await createIncomeRecordInDb({
+        amount,
+        category: incomeCategory,
+        date: selectedDate,
+        id: `income-${Date.now()}`,
+        memo: incomeMemo.trim() || undefined,
+        title: trimmedTitle,
+      });
+      if (saved) {
+        setIncomes((current) => [saved, ...current]);
+        setIncomeTitle("");
+        setIncomeAmount("");
+        setIncomeMemo("");
+        setIncomeCategory("salary");
+      }
+    } finally {
+      setIsSavingIncome(false);
+    }
   };
 
-  const saveRecord = async (record: ExpenseRecord) => {
-    const exists = records.some((item) => item.id === record.id);
-    const savedRecord = exists ? await updateExpenseRecordInDb(record) : await createExpenseRecordInDb(record);
-    const nextRecord = savedRecord ?? record;
-
-    setRecords((current) => (exists ? current.map((item) => (item.id === record.id ? nextRecord : item)) : [nextRecord, ...current]));
-    setCurrentMonth(new Date(`${nextRecord.date}T00:00:00`));
-    setSelectedDate(nextRecord.date);
-    setIsSheetOpen(false);
-    setEditingRecord(null);
-  };
-
-  const deleteRecord = async (id: string) => {
-    await deleteExpenseRecordFromDb(id);
-    setRecords((current) => current.filter((record) => record.id !== id));
+  const removeIncome = async (id: string) => {
+    setDeletingIncomeId(id);
+    try {
+      await deleteIncomeRecordFromDb(id);
+      setIncomes((current) => current.filter((record) => record.id !== id));
+    } finally {
+      setDeletingIncomeId(null);
+    }
   };
 
   return (
     <div className="ledger-page">
-      <header className="page-header ledger-header">
+      <header className={variant === "tab" ? "life-tab-heading ledger-header" : "page-header ledger-header"}>
         <div>
           <h1>가계부</h1>
+          <p className="ledger-header__note">지출은 일정·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
         </div>
-        <button className="header-action" onClick={() => openCreateSheet()} type="button">
-          <Plus aria-hidden size={18} />
-          지출 추가
-        </button>
       </header>
 
       <section className="ledger-summary-grid" aria-label="가계부 요약">
         <SectionCard className="ledger-metric ledger-metric--main">
+          <span>이번 달 순흐름</span>
+          <strong>{formatCurrency(monthNet)}</strong>
+          <p>{activeDays > 0 ? `${activeDays}일 동안 자금 흐름이 남아 있어요.` : "이번 달에는 아직 자금 흐름이 없어요."}</p>
+        </SectionCard>
+        <SectionCard className="ledger-metric">
+          <span>이번 달 수입</span>
+          <strong>{formatCurrency(monthIncomeTotal)}</strong>
+          <p>{topIncomeCategory ? `가장 큰 수입 축 · ${topIncomeCategory}` : "아직 수입 기록 없음"}</p>
+        </SectionCard>
+        <SectionCard className="ledger-metric">
           <span>이번 달 지출</span>
-          <strong>{formatCurrency(monthTotal)}</strong>
-          <p>{spendingDays > 0 ? `${spendingDays}일 동안 기록됨` : "이번 달 기록이 없습니다."}</p>
+          <strong>{formatExpenseCurrency(monthExpenseTotal)}</strong>
+          <p>{topExpenseCategory ? `가장 큰 지출 축 · ${topExpenseCategory}` : "아직 지출 기록 없음"}</p>
         </SectionCard>
         <SectionCard className="ledger-metric">
-          <span>선택한 날짜</span>
-          <strong>{formatCurrency(selectedTotal)}</strong>
-          <p>{formatFullDate(selectedDate)}</p>
-        </SectionCard>
-        <SectionCard className="ledger-metric">
-          <span>하루 평균</span>
-          <strong>{formatCurrency(dailyAverage)}</strong>
-          <p>{topCategory ? `가장 큰 항목: ${categoryLabels[topCategory]}` : "카테고리 없음"}</p>
+          <span>하루 평균 순흐름</span>
+          <strong>{formatCurrency(dailyNetAverage)}</strong>
+          <p>{formatFullMonth(currentMonth)}</p>
         </SectionCard>
       </section>
 
@@ -144,10 +180,10 @@ export function LedgerView() {
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
             </button>
-            <div className="calendar-month-trigger ledger-month-label">
+            <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
-            </div>
+            </button>
             <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
               <ChevronRight aria-hidden size={20} />
             </button>
@@ -161,8 +197,11 @@ export function LedgerView() {
 
           <div className="calendar-grid ledger-calendar-grid">
             {monthDays.map((cell) => {
-              const dayRecords = cell.date ? recordsByDate.get(cell.date) ?? [] : [];
-              const dayTotal = sumRecords(dayRecords);
+              const dayExpenses = cell.date ? expensesByDate.get(cell.date) ?? [] : [];
+              const dayIncomes = cell.date ? incomesByDate.get(cell.date) ?? [] : [];
+              const expenseTotal = sumRecords(dayExpenses);
+              const incomeTotal = sumRecords(dayIncomes);
+              const net = incomeTotal - expenseTotal;
               const isSelected = cell.date === selectedDate;
               const isToday = cell.date === formatDateKey(new Date());
 
@@ -175,8 +214,11 @@ export function LedgerView() {
                   type="button"
                 >
                   {cell.day ? <span className="calendar-day__number">{cell.day}</span> : null}
-                  {dayTotal > 0 ? <span className="ledger-day__amount">{formatCompactCurrency(dayTotal)}</span> : <span className="ledger-day__empty" />}
-                  {dayRecords.length > 0 ? <em>{dayRecords.length}건</em> : null}
+                  <div className="ledger-day__stack">
+                    {incomeTotal > 0 ? <span className="ledger-day__income">+{formatCompactCurrency(incomeTotal)}</span> : <span className="ledger-day__empty" />}
+                    {expenseTotal > 0 ? <span className="ledger-day__expense">-{formatCompactCurrency(expenseTotal)}</span> : <span className="ledger-day__empty" />}
+                  </div>
+                  {(dayExpenses.length > 0 || dayIncomes.length > 0) ? <em>{net >= 0 ? "흑자" : "지출 우세"}</em> : null}
                 </button>
               );
             })}
@@ -187,166 +229,162 @@ export function LedgerView() {
           <SectionCard className="date-detail-card">
             <div className="section-heading ledger-detail-heading">
               <div>
-                <p className="eyebrow">일간 지출</p>
+                <p className="eyebrow">선택 날짜 자금 흐름</p>
                 <h2>{formatFullDate(selectedDate)}</h2>
               </div>
-              <button className="event-sheet__icon-button" aria-label="선택 날짜 지출 추가" onClick={() => openCreateSheet(selectedDate)} type="button">
-                <Plus aria-hidden size={17} />
-              </button>
             </div>
 
-            <div className="ledger-daily-total">
-              <span>합계</span>
-              <strong>{formatCurrency(selectedTotal)}</strong>
+            <div className="ledger-tab-summary" aria-label="하루 요약">
+              <div>
+                <span>수입</span>
+                <strong>{formatCurrency(selectedIncomeTotal)}</strong>
+              </div>
+              <div>
+                <span>지출</span>
+                <strong>{formatExpenseCurrency(selectedExpenseTotal)}</strong>
+              </div>
+              <div>
+                <span>순흐름</span>
+                <strong>{formatCurrency(selectedNet)}</strong>
+              </div>
+            </div>
+
+            <div className={`ledger-capture-panel${isIncomeCaptureExpanded ? "" : " ledger-capture-panel--collapsed"}`}>
+              <div className="section-heading ledger-capture-panel__heading">
+                <div>
+                  <p className="eyebrow">Income Capture</p>
+                  <h3>수입 추가</h3>
+                </div>
+                <IconButton
+                  label={isIncomeCaptureExpanded ? "수입 입력 접기" : "수입 입력 열기"}
+                  onClick={() => setIsIncomeCaptureExpanded((current) => !current)}
+                  size="sm"
+                  tone="ghost"
+                >
+                  {isIncomeCaptureExpanded ? <X aria-hidden size={17} /> : <Plus aria-hidden size={17} />}
+                </IconButton>
+              </div>
+
+              {isIncomeCaptureExpanded ? (
+              <div className="ledger-income-form">
+                <label>
+                  <span>제목</span>
+                  <input placeholder="예: 월급, 환급, 사이드 프로젝트" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} />
+                </label>
+                <label>
+                  <span>금액</span>
+                  <input inputMode="numeric" placeholder="0" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value.replace(/[^\d]/g, ""))} />
+                </label>
+                <label>
+                  <span>카테고리</span>
+                  <select value={incomeCategory} onChange={(event) => setIncomeCategory(event.target.value as IncomeCategory)}>
+                    {Object.entries(incomeCategoryLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>메모</span>
+                  <textarea placeholder="입금 경로나 설명" rows={3} value={incomeMemo} onChange={(event) => setIncomeMemo(event.target.value)} />
+                </label>
+                <ActionButton disabled={isSavingIncome || !incomeTitle.trim() || !incomeAmount} onClick={() => void createIncome()}>
+                  {isSavingIncome ? "저장 중..." : "수입 저장"}
+                </ActionButton>
+              </div>
+              ) : null}
             </div>
 
             <div className="ledger-record-list">
-              {selectedRecords.length > 0 ? (
-                selectedRecords.map((record) => (
-                  <article className="ledger-record" key={record.id}>
+              {selectedIncomes.length > 0 ? (
+                selectedIncomes.map((record) => (
+                  <article className="ledger-record ledger-record--income" key={record.id}>
                     <div>
-                      <Badge tone={categoryTones[record.category]}>{categoryLabels[record.category]}</Badge>
+                      <div className="ledger-record__badges">
+                        <Badge tone="green">{incomeCategoryLabels[record.category]}</Badge>
+                        <Badge tone="amber">수입</Badge>
+                      </div>
                       <strong>{record.title}</strong>
                       {record.memo ? <p>{record.memo}</p> : null}
                     </div>
                     <div className="ledger-record__side">
-                      <b>{formatCurrency(record.amount)}</b>
+                      <b>{formatIncomeCurrency(record.amount)}</b>
                       <div>
-                        <button
-                          aria-label="지출 수정"
-                          onClick={() => {
-                            setEditingRecord(record);
-                            setIsSheetOpen(true);
-                          }}
-                          type="button"
-                        >
-                          <Pencil aria-hidden size={14} />
-                        </button>
-                        <button aria-label="지출 삭제" onClick={() => void deleteRecord(record.id)} type="button">
+                        <button aria-label="수입 삭제" disabled={deletingIncomeId === record.id} onClick={() => void removeIncome(record.id)} type="button">
                           <Trash2 aria-hidden size={14} />
                         </button>
                       </div>
                     </div>
                   </article>
                 ))
-              ) : (
+              ) : null}
+
+              {selectedExpenses.length > 0 ? (
+                selectedExpenses.map((record) => (
+                  <article className="ledger-record" key={record.id}>
+                    <div>
+                      <div className="ledger-record__badges">
+                        <Badge tone="violet">{expenseCategoryLabels[record.category]}</Badge>
+                        <Badge tone="pink">{targetTypeLabels[record.targetType]}</Badge>
+                      </div>
+                      <strong>{record.title}</strong>
+                      {record.memo ? <p>{record.memo}</p> : null}
+                    </div>
+                    <div className="ledger-record__side">
+                      <b>{formatExpenseCurrency(record.amount)}</b>
+                      <span>원본 기록에서 수정</span>
+                    </div>
+                  </article>
+                ))
+              ) : null}
+
+              {selectedIncomes.length === 0 && selectedExpenses.length === 0 ? (
                 <div className="health-empty health-empty--compact">
                   <ReceiptText aria-hidden size={30} />
-                  <strong>{isLoading ? "지출을 불러오는 중입니다." : "기록된 지출이 없습니다."}</strong>
-                  <p>오늘 쓴 돈을 하나씩 남기면 월간 흐름을 캘린더에서 볼 수 있습니다.</p>
-                  <button className="event-sheet__primary-button" onClick={() => openCreateSheet(selectedDate)} type="button">
-                    지출 추가
-                  </button>
+                  <strong>{isLoading ? "가계부를 불러오는 중입니다." : "이 날짜에는 자금 흐름이 없어요."}</strong>
+                  <p>지출은 일정·할 일·활동에서 연결되고, 수입은 여기서 직접 남길 수 있습니다.</p>
                 </div>
-              )}
+              ) : null}
             </div>
           </SectionCard>
         </aside>
       </div>
 
-      {isSheetOpen && editingRecord ? (
-        <ExpenseSheet
-          record={editingRecord}
-          onClose={() => {
-            setEditingRecord(null);
-            setIsSheetOpen(false);
+      {isMonthPickerOpen ? (
+        <MonthPickerSheet
+          currentMonth={currentMonth}
+          onClose={() => setIsMonthPickerOpen(false)}
+          onSelect={(nextMonth) => {
+            setCurrentMonth(nextMonth);
+            setSelectedDate(formatDateKey(nextMonth));
+            setIsMonthPickerOpen(false);
           }}
-          onSave={saveRecord}
         />
       ) : null}
     </div>
   );
 }
 
-function ExpenseSheet({
-  onClose,
-  onSave,
-  record,
-}: {
-  onClose: () => void;
-  onSave: (record: ExpenseRecord) => Promise<void> | void;
-  record: ExpenseRecord;
-}) {
-  const [form, setForm] = useState(record);
-  const canSave = form.title.trim().length > 0 && form.amount > 0 && Boolean(form.date);
-
-  const updateField = <Key extends keyof ExpenseRecord>(key: Key, value: ExpenseRecord[Key]) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
-
-  return (
-    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="expense-sheet-title" aria-modal="true" className="event-sheet ledger-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header">
-          <div>
-            <h2 id="expense-sheet-title">지출 기록</h2>
-          </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
-            <X aria-hidden size={18} />
-          </button>
-        </header>
-
-        <div className="event-sheet__body ledger-sheet__body">
-          <label className="event-form-row event-form-row--field">
-            <span>날짜</span>
-            <input type="date" value={form.date} onChange={(event) => updateField("date", event.target.value)} />
-          </label>
-          <label className="event-form-row event-form-row--field">
-            <span>항목</span>
-            <input placeholder="점심, 커피, 지하철" value={form.title} onChange={(event) => updateField("title", event.target.value)} />
-          </label>
-          <label className="event-form-row event-form-row--field">
-            <span>금액</span>
-            <input min={0} inputMode="numeric" type="number" value={form.amount || ""} onChange={(event) => updateField("amount", Number(event.target.value))} />
-          </label>
-          <label className="event-form-row event-form-row--select">
-            <span>카테고리</span>
-            <select value={form.category} onChange={(event) => updateField("category", event.target.value as ExpenseCategory)}>
-              {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="event-form-row event-form-row--field">
-            <span>메모</span>
-            <textarea rows={3} placeholder="필요하면 짧게 기록" value={form.memo ?? ""} onChange={(event) => updateField("memo", event.target.value)} />
-          </label>
-        </div>
-
-        <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
-            취소
-          </button>
-          <button className="event-sheet__primary-button" disabled={!canSave} onClick={() => void onSave({ ...form, title: form.title.trim() })} type="button">
-            저장
-          </button>
-        </footer>
-      </section>
-    </div>
-  );
-}
-
-function groupRecordsByDate(records: ExpenseRecord[]) {
-  const grouped = new Map<string, ExpenseRecord[]>();
+function groupRecordsByDate<T extends { amount: number; date: string }>(records: T[]) {
+  const grouped = new Map<string, T[]>();
   for (const record of records) {
     grouped.set(record.date, [...(grouped.get(record.date) ?? []), record]);
   }
   return grouped;
 }
 
-function sumRecords(records: ExpenseRecord[]) {
+function sumRecords<T extends { amount: number }>(records: T[]) {
   return records.reduce((total, record) => total + record.amount, 0);
 }
 
-function getTopCategory(records: ExpenseRecord[]) {
-  const totals = new Map<ExpenseCategory, number>();
+function getTopCategory<TCategory extends string, TRecord extends { amount: number; category: TCategory }>(records: TRecord[], labelOf: (category: TCategory) => string) {
+  const totals = new Map<TCategory, number>();
   for (const record of records) {
     totals.set(record.category, (totals.get(record.category) ?? 0) + record.amount);
   }
-  return [...totals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const top = [...totals.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
+  return top ? labelOf(top) : null;
 }
 
 function getMonthDays(year: number, month: number) {
@@ -359,8 +397,8 @@ function getMonthDays(year: number, month: number) {
   }
 
   for (let day = 1; day <= lastDay.getDate(); day += 1) {
-    const date = new Date(year, month, day);
-    cells.push({ date: formatDateKey(date), day, key: formatDateKey(date) });
+    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    cells.push({ date, day, key: date });
   }
 
   while (cells.length % 7 !== 0) {
@@ -371,31 +409,35 @@ function getMonthDays(year: number, month: number) {
 }
 
 function formatDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatFullDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
     day: "numeric",
+    month: "long",
     weekday: "long",
-  }).format(date);
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function formatFullMonth(date: Date) {
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 }
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    currency: "KRW",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
+  const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
+}
+
+function formatIncomeCurrency(value: number) {
+  return `+${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
+}
+
+function formatExpenseCurrency(value: number) {
+  return `-${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
 }
 
 function formatCompactCurrency(value: number) {
-  if (value >= 10000) return `${Math.round(value / 1000) / 10}만`;
-  return new Intl.NumberFormat("ko-KR").format(value);
+  if (value >= 10000) return `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
+  return value.toLocaleString("ko-KR");
 }

@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/layout/AppShell";
+import { LedgerView } from "@/features/ledger/LedgerView";
 
 export default function LedgerPage() {
-  redirect("/life/calendar");
+  return (
+    <AppShell activeKey="ledger">
+      <LedgerView />
+    </AppShell>
+  );
 }
