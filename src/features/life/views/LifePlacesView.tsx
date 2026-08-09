@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarRange, MapPin, Plus, Save, Search, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import {
+  CalendarRange,
+  Check,
+  MapPin,
+  Plus,
+  Search,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  X,
+} from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
@@ -12,7 +22,13 @@ import {
   fetchPersonalPlacesFromDb,
   updatePersonalPlaceInDb,
 } from "@/features/personalPlaces/api";
-import type { DailyLogRecord, LifeActivityRecord, LifePhotoRecord, PersonalPlaceRecord, PlaceRecord } from "@/types/domain";
+import type {
+  DailyLogRecord,
+  LifeActivityRecord,
+  LifePhotoRecord,
+  PersonalPlaceRecord,
+  PlaceRecord,
+} from "@/types/domain";
 
 type LifePlacesViewProps = {
   activities: LifeActivityRecord[];
@@ -74,13 +90,20 @@ type ResolvedVisitedPlace = {
   name: string;
 };
 
-const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+const naverMapClientId =
+  process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 const defaultCenter = { latitude: 37.5666103, longitude: 126.9783882 };
 const placeGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
 export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesViewProps) {
-  const datedActivities = useMemo(() => activities.filter((activity) => Boolean(activity.placeName?.trim())), [activities]);
-  const sortedDates = useMemo(() => datedActivities.map((activity) => activity.date).sort((left, right) => left.localeCompare(right)), [datedActivities]);
+  const datedActivities = useMemo(
+    () => activities.filter((activity) => Boolean(activity.placeName?.trim())),
+    [activities],
+  );
+  const sortedDates = useMemo(
+    () => datedActivities.map((activity) => activity.date).sort((left, right) => left.localeCompare(right)),
+    [datedActivities],
+  );
   const defaultStartDate = sortedDates[0] ?? "";
   const defaultEndDate = sortedDates.at(-1) ?? "";
 
@@ -125,9 +148,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         if (!isMounted) return;
         setPersonalPlaces(records ?? []);
       })
-      .catch((error) => {
-        console.error("Failed to load personal places", error);
-      });
+      .catch((error) => console.error("Failed to load personal places", error));
 
     return () => {
       isMounted = false;
@@ -155,7 +176,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     const script = document.createElement("script");
     script.async = true;
     script.dataset.dailyosNaverMap = "true";
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(
+      naverMapClientId,
+    )}`;
     script.onload = () => setMapStatus("ready");
     script.onerror = () => setMapStatus("error");
     document.head.appendChild(script);
@@ -180,12 +203,20 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       url: selectedPersonalPlace.url,
     });
     setMappingQuery(selectedPersonalPlace.address);
+    setMappingResults([]);
+    setPersonalPlaceMessage("");
   }, [selectedPersonalPlace]);
 
   const personalPlacesFiltered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return personalPlaces;
-    return personalPlaces.filter((place) => [place.label, place.address, place.mappedName ?? "", place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery));
+
+    return personalPlaces.filter((place) =>
+      [place.label, place.address, place.mappedName ?? "", place.memo ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
   }, [personalPlaces, query]);
 
   const periodActivities = useMemo(
@@ -220,16 +251,17 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
   const unresolvedPlaceBases = useMemo(() => {
     const places = new Map<string, { address?: string; key: string; name: string }>();
+
     periodActivities.forEach((activity) => {
       const key = getVisitedPlaceKey(activity.placeName ?? "", activity.placeAddress);
-      if (!places.has(key)) {
-        places.set(key, {
-          address: activity.placeAddress?.trim() || undefined,
-          key,
-          name: activity.placeName?.trim() || "",
-        });
-      }
+      if (places.has(key)) return;
+      places.set(key, {
+        address: activity.placeAddress?.trim() || undefined,
+        key,
+        name: activity.placeName?.trim() || "",
+      });
     });
+
     return [...places.values()];
   }, [periodActivities]);
 
@@ -243,7 +275,10 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         pendingPlaces.map(async (place) => {
           const coordinates = await resolvePlaceCoordinates(place.name, place.address);
           if (!coordinates) return null;
-          return [place.key, { ...place, latitude: coordinates.latitude, longitude: coordinates.longitude }] as const;
+          return [
+            place.key,
+            { ...place, latitude: coordinates.latitude, longitude: coordinates.longitude },
+          ] as const;
         }),
       );
 
@@ -310,7 +345,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       people.forEach((person) => {
         if (!existing.people.includes(person)) existing.people.push(person);
       });
-      if (activity.category && !existing.categories.includes(activity.category)) existing.categories.push(activity.category);
+      if (activity.category && !existing.categories.includes(activity.category)) {
+        existing.categories.push(activity.category);
+      }
     });
 
     return [...grouped.values()]
@@ -322,12 +359,17 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         }),
         visitDates: [...new Set(place.visitDates)].sort((left, right) => left.localeCompare(right)),
       }))
-      .sort((left, right) => right.visitCount - left.visitCount || right.visitDates.at(-1)!.localeCompare(left.visitDates.at(-1)!));
+      .sort(
+        (left, right) =>
+          right.visitCount - left.visitCount ||
+          (right.visitDates.at(-1) ?? "").localeCompare(left.visitDates.at(-1) ?? ""),
+      );
   }, [periodActivities, periodLogsByDate, periodPhotosByDate, resolvedPlaces]);
 
   const filteredVisitedPlaces = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return visitedPlaces;
+
     return visitedPlaces.filter((place) =>
       [place.name, place.address ?? "", place.people.join(" "), place.categories.join(" ")]
         .join(" ")
@@ -341,7 +383,20 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     setSelectedPlaceKey(filteredVisitedPlaces[0]?.key ?? "");
   }, [filteredVisitedPlaces, selectedPlaceKey]);
 
-  const selectedVisitedPlace = filteredVisitedPlaces.find((place) => place.key === selectedPlaceKey) ?? null;
+  const selectedVisitedPlace =
+    filteredVisitedPlaces.find((place) => place.key === selectedPlaceKey) ?? null;
+
+  const personalPlaceDirty = Boolean(
+    mappedPlace &&
+      (selectedPersonalPlace
+        ? placeLabel.trim() !== selectedPersonalPlace.label.trim() ||
+          (placeMemo.trim() || "") !== (selectedPersonalPlace.memo?.trim() || "") ||
+          mappedPlace.address !== selectedPersonalPlace.address ||
+          mappedPlace.latitude !== selectedPersonalPlace.latitude ||
+          mappedPlace.longitude !== selectedPersonalPlace.longitude ||
+          (mappedPlace.name || "") !== (selectedPersonalPlace.mappedName || selectedPersonalPlace.address)
+        : Boolean(placeLabel.trim()) || Boolean(placeMemo.trim()) || Boolean(mappingQuery.trim())),
+  );
 
   const runPlaceSearch = async () => {
     const trimmedQuery = query.trim();
@@ -356,6 +411,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     try {
       const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
       const payload = (await response.json()) as SearchResponse;
+
       if (!response.ok) {
         setSearchResults([]);
         setSearchMessage(payload.error ?? "장소 검색에 실패했습니다.");
@@ -363,7 +419,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       }
 
       setSearchResults(payload.places);
-      if (payload.places.length === 0) setSearchMessage("검색 결과가 없습니다. 다른 키워드로 다시 찾아보세요.");
+      if (payload.places.length === 0) {
+        setSearchMessage("검색 결과가 없어요. 다른 키워드로 다시 찾아보세요.");
+      }
     } catch (error) {
       console.error("Failed to search places", error);
       setSearchResults([]);
@@ -381,9 +439,11 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     }
 
     setIsMappingSearchLoading(true);
+    setPersonalPlaceMessage("");
     try {
       const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
       const payload = (await response.json()) as SearchResponse;
+
       if (!response.ok) {
         setMappingResults([]);
         setPersonalPlaceMessage(payload.error ?? "위치 검색에 실패했습니다.");
@@ -412,14 +472,21 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       }
 
       if (placesToRender.length === 1) {
-        mapRef.current.setCenter(new window.naver.maps.LatLng(placesToRender[0].latitude, placesToRender[0].longitude));
+        mapRef.current.setCenter(
+          new window.naver.maps.LatLng(placesToRender[0].latitude, placesToRender[0].longitude),
+        );
         mapRef.current.setZoom(15);
         return;
       }
 
       const bounds = new window.naver.maps.LatLngBounds();
-      placesToRender.forEach((place) => bounds.extend(new window.naver!.maps.LatLng(place.latitude, place.longitude)));
-      (window.naver.maps.Event as { trigger?: (target: unknown, eventName: string) => void }).trigger?.(mapRef.current, "resize");
+      placesToRender.forEach((place) =>
+        bounds.extend(new window.naver!.maps.LatLng(place.latitude, place.longitude)),
+      );
+      (window.naver.maps.Event as { trigger?: (target: unknown, eventName: string) => void }).trigger?.(
+        mapRef.current,
+        "resize",
+      );
       mapRef.current.fitBounds(bounds, { bottom: 60, left: 60, right: 60, top: 60 });
       const center = (bounds as NaverLatLngBounds & { getCenter?: () => NaverLatLng }).getCenter?.();
       if (center) mapRef.current.setCenter(center);
@@ -427,13 +494,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     [],
   );
 
-  const visibleVisitedMarkers = useMemo(() => (showVisitedMarkers ? filteredVisitedPlaces : []), [filteredVisitedPlaces, showVisitedMarkers]);
+  const visibleVisitedMarkers = useMemo(
+    () => (showVisitedMarkers ? filteredVisitedPlaces : []),
+    [filteredVisitedPlaces, showVisitedMarkers],
+  );
 
   const renderMarkers = useCallback(() => {
     if (!mapRef.current || !window.naver?.maps) return;
 
     markersRef.current.forEach((marker) => marker.setMap(null));
-
     const nextMarkers: NaverMarker[] = [];
 
     visibleVisitedMarkers.forEach((place) => {
@@ -480,7 +549,10 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     markersRef.current = nextMarkers;
     fitVisibleMarkers([
       ...visibleVisitedMarkers,
-      ...personalPlacesFiltered.map((place) => ({ latitude: place.latitude, longitude: place.longitude })),
+      ...personalPlacesFiltered.map((place) => ({
+        latitude: place.latitude,
+        longitude: place.longitude,
+      })),
       ...searchResults,
     ]);
   }, [fitVisibleMarkers, personalPlacesFiltered, searchResults, visibleVisitedMarkers]);
@@ -517,6 +589,14 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
   const savePersonalPlace = async () => {
     if (!placeLabel.trim() || !mappedPlace || isSavingPersonalPlace) return;
+    if (selectedPersonalPlace && !personalPlaceDirty) return;
+
+    const confirmed = window.confirm(
+      selectedPersonalPlace
+        ? `"${selectedPersonalPlace.label}" 장소 정보를 저장할까요?`
+        : `"${placeLabel.trim()}" 내 장소를 추가할까요?`,
+    );
+    if (!confirmed) return;
 
     setIsSavingPersonalPlace(true);
     setPersonalPlaceMessage("");
@@ -543,7 +623,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         return;
       }
 
-      const duplicate = personalPlaces.find((place) => place.label === placeLabel.trim());
+      const duplicate = personalPlaces.find((place) => place.label.trim() === placeLabel.trim());
       if (duplicate) {
         setSelectedPersonalPlaceId(duplicate.id);
         setPersonalPlaceMessage("같은 이름의 내 장소가 이미 있어요.");
@@ -574,6 +654,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
   const deletePersonalPlace = async () => {
     if (!selectedPersonalPlace || isDeletingPersonalPlace) return;
 
+    const confirmed = window.confirm(`"${selectedPersonalPlace.label}" 내 장소를 삭제할까요?`);
+    if (!confirmed) return;
+
     setIsDeletingPersonalPlace(true);
     try {
       await deletePersonalPlaceFromDb(selectedPersonalPlace.id);
@@ -585,13 +668,17 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     }
   };
 
-  const selectedPeriodLabel = startDate && endDate ? (startDate === endDate ? startDate : `${startDate} ~ ${endDate}`) : "전체 기간";
+  const selectedPeriodLabel =
+    startDate && endDate ? (startDate === endDate ? startDate : `${startDate} ~ ${endDate}`) : "전체 기간";
   const totalPlaceVisits = filteredVisitedPlaces.reduce((sum, place) => sum + place.visitCount, 0);
   const totalPlaceExpense = filteredVisitedPlaces.reduce((sum, place) => sum + place.totalExpense, 0);
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="장소" description="방문한 장소 흐름을 보고, 별도의 내 장소 사전을 만들어 기록 입력에서 반복 재사용할 수 있게 정리합니다." />
+      <LifeTabHeading
+        title="장소"
+        description="방문한 장소 흐름과 내 장소 사전을 한 화면에서 관리하고, 기간별 방문 기록을 안정적으로 살펴봅니다."
+      />
 
       <SectionCard className="life-places-toolbar">
         <label className="life-places-search">
@@ -619,7 +706,11 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
         </div>
 
-        <button className="life-places-toggle" onClick={() => setShowVisitedMarkers((current) => !current)} type="button">
+        <button
+          className="life-places-toggle"
+          onClick={() => setShowVisitedMarkers((current) => !current)}
+          type="button"
+        >
           {showVisitedMarkers ? <ToggleRight aria-hidden size={18} /> : <ToggleLeft aria-hidden size={18} />}
           <span>방문 마커 {showVisitedMarkers ? "ON" : "OFF"}</span>
           <b>{filteredVisitedPlaces.length}곳</b>
@@ -636,22 +727,32 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <span>Place Map</span>
               <strong>{selectedPeriodLabel}</strong>
             </div>
-            <p>{filteredVisitedPlaces.length}곳 · {totalPlaceVisits}건 방문 · {totalPlaceExpense > 0 ? formatWon(totalPlaceExpense) : "지출 연결 없음"}</p>
+            <p>
+              {filteredVisitedPlaces.length}곳 · {totalPlaceVisits}건 방문 ·{" "}
+              {totalPlaceExpense > 0 ? formatWon(totalPlaceExpense) : "지출 연결 없음"}
+            </p>
           </div>
 
           <div className="life-places-map-shell">
-            <div className={`life-places-map ${mapStatus !== "ready" ? "life-places-map--hidden" : ""}`} ref={mapElementRef} />
+            <div
+              className={`life-places-map ${mapStatus !== "ready" ? "life-places-map--hidden" : ""}`}
+              ref={mapElementRef}
+            />
             {mapStatus !== "ready" ? (
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
-                <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 준비하는 중입니다."}</strong>
-                <p>방문 장소와 내 장소를 한 지도 위에서 같이 볼 수 있게 불러오고 있어요.</p>
+                <strong>
+                  {mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 준비하는 중입니다."}
+                </strong>
+                <p>방문 장소와 내 장소를 한 지도 위에서 함께 볼 수 있게 불러오고 있어요.</p>
               </div>
-            ) : filteredVisitedPlaces.length === 0 && personalPlacesFiltered.length === 0 && searchResults.length === 0 ? (
+            ) : filteredVisitedPlaces.length === 0 &&
+              personalPlacesFiltered.length === 0 &&
+              searchResults.length === 0 ? (
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
-                <strong>표시할 장소가 아직 없습니다.</strong>
-                <p>활동에 장소를 더 붙이거나, 오른쪽에서 내 장소를 먼저 등록해둘 수 있어요.</p>
+                <strong>표시할 장소가 아직 없어요.</strong>
+                <p>활동에 장소를 연결하거나, 내 장소를 먼저 등록해 두면 여기에서 함께 보여요.</p>
               </div>
             ) : null}
           </div>
@@ -665,7 +766,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     <span>{place.address}</span>
                   </div>
                   <button onClick={() => chooseMappingPlace(place)} type="button">
-                    이 위치로 매핑
+                    내 장소로 매핑
                   </button>
                 </article>
               ))}
@@ -680,199 +781,280 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <span>My Places</span>
                 <strong>내 장소 {personalPlaces.length}곳</strong>
               </div>
-              <p>장소 보관함과 분리된, 내가 이름을 붙여 관리하는 장소 사전</p>
+              <p>장소 보관함과는 별개로, 내가 붙인 이름으로 계속 재사용하는 장소 사전입니다.</p>
             </div>
 
-            <div className="life-places-manager__actions">
-              <button onClick={startCreatingPersonalPlace} type="button">
-                <Plus aria-hidden size={15} />
-                새 내 장소
-              </button>
-            </div>
-
-            <div className="life-places-manager__list">
-              {personalPlacesFiltered.length > 0 ? (
-                personalPlacesFiltered.map((place) => (
-                  <button
-                    className={selectedPersonalPlaceId === place.id ? "life-places-manager__place life-places-manager__place--active" : "life-places-manager__place"}
-                    key={place.id}
-                    onClick={() => setSelectedPersonalPlaceId(place.id)}
-                    type="button"
-                  >
-                    <strong>{place.label}</strong>
-                    <span>{place.address}</span>
+            <div className="life-places-manager__body">
+              <div className="life-places-manager__directory">
+                <div className="life-places-manager__actions">
+                  <button onClick={startCreatingPersonalPlace} type="button">
+                    <Plus aria-hidden size={15} />
+                    새 장소
                   </button>
-                ))
-              ) : (
-                <div className="life-places-empty-inline">
-                  <strong>아직 등록된 내 장소가 없습니다.</strong>
-                  <p>예: 내 집, 본가, 회사, 단골 카페처럼 내가 직접 이름을 붙여 저장할 수 있어요.</p>
                 </div>
-              )}
-            </div>
 
-            <div className="life-places-manager__form">
-              <div className="life-places-manager__form-head">
-                <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
-                {mappedPlace ? <span>{mappedPlace.name}</span> : null}
+                <div className="life-places-manager__list">
+                  {personalPlacesFiltered.length > 0 ? (
+                    personalPlacesFiltered.map((place) => (
+                      <button
+                        className={
+                          selectedPersonalPlaceId === place.id
+                            ? "life-places-manager__place life-places-manager__place--active"
+                            : "life-places-manager__place"
+                        }
+                        key={place.id}
+                        onClick={() => setSelectedPersonalPlaceId(place.id)}
+                        type="button"
+                      >
+                        <strong>{place.label}</strong>
+                        <span>{place.address}</span>
+                        <em>{place.mappedName ?? "매핑 이름 없음"}</em>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="life-places-empty-inline">
+                      <strong>아직 등록한 내 장소가 없어요.</strong>
+                      <p>내 집, 회사, 단골 카페처럼 계속 쓰는 장소를 먼저 정리해 둘 수 있어요.</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <label>
-                <span>내 장소 이름</span>
-                <input placeholder="예: 내 집, 부산 집, 회사" value={placeLabel} onChange={(event) => setPlaceLabel(event.target.value)} />
-              </label>
-
-              <label>
-                <span>위치 매핑 검색</span>
-                <div className="schedule-place-search">
-                  <MapPin aria-hidden size={18} />
-                  <input
-                    placeholder="예: 부산광역시 ... 아파트"
-                    value={mappingQuery}
-                    onChange={(event) => setMappingQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void runMappingSearch();
-                      }
-                    }}
-                  />
-                  <button disabled={isMappingSearchLoading || mappingQuery.trim().length === 0} onClick={() => void runMappingSearch()} type="button">
-                    {isMappingSearchLoading ? "검색 중" : "검색"}
-                  </button>
+              <div className="life-places-manager__form">
+                <div className="life-places-manager__form-head">
+                  <div>
+                    <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
+                    {mappedPlace ? <span>{mappedPlace.name}</span> : <span>실제 위치를 먼저 매핑해 주세요.</span>}
+                  </div>
+                  {selectedPersonalPlace ? (
+                    <div className="life-places-manager__form-tools">
+                      <button
+                        className="life-places-icon-button"
+                        disabled={!personalPlaceDirty || isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
+                        onClick={() => void savePersonalPlace()}
+                        type="button"
+                      >
+                        <Check aria-hidden size={16} />
+                      </button>
+                      <button
+                        className="life-places-icon-button life-places-icon-button--danger"
+                        disabled={isDeletingPersonalPlace}
+                        onClick={() => void deletePersonalPlace()}
+                        type="button"
+                      >
+                        <Trash2 aria-hidden size={16} />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              </label>
 
-              {mappedPlace ? (
-                <div className="life-places-manager__mapped">
-                  <strong>{mappedPlace.name}</strong>
-                  <span>{mappedPlace.address}</span>
+                <div className="life-places-manager__form-grid">
+                  <label>
+                    <span>내 장소 이름</span>
+                    <input
+                      placeholder="예: 내 집, 부산 집, 회사"
+                      value={placeLabel}
+                      onChange={(event) => setPlaceLabel(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    <span>위치 매핑 검색</span>
+                    <div className="schedule-place-search">
+                      <MapPin aria-hidden size={18} />
+                      <input
+                        placeholder="예: 부산광역시 ... 아파트"
+                        value={mappingQuery}
+                        onChange={(event) => setMappingQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void runMappingSearch();
+                          }
+                        }}
+                      />
+                      <button
+                        disabled={isMappingSearchLoading || mappingQuery.trim().length === 0}
+                        onClick={() => void runMappingSearch()}
+                        type="button"
+                      >
+                        {isMappingSearchLoading ? "검색 중..." : "검색"}
+                      </button>
+                    </div>
+                  </label>
                 </div>
-              ) : (
-                <div className="life-places-empty-inline life-places-empty-inline--compact">
-                  <strong>먼저 매핑할 실제 위치를 골라주세요.</strong>
-                </div>
-              )}
 
-              {mappingResults.length > 0 ? (
-                <div className="schedule-place-results">
-                  {mappingResults.map((place) => (
-                    <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMappingPlace(place)} type="button">
-                      <strong>{place.name}</strong>
-                      <span>{place.address || place.category || "주소 정보 없음"}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+                {mappedPlace ? (
+                  <div className="life-places-manager__mapped">
+                    <strong>{mappedPlace.name}</strong>
+                    <span>{mappedPlace.address}</span>
+                  </div>
+                ) : (
+                  <div className="life-places-empty-inline life-places-empty-inline--compact">
+                    <strong>먼저 매핑할 실제 위치를 골라 주세요.</strong>
+                  </div>
+                )}
 
-              <label>
-                <span>메모</span>
-                <textarea placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요." rows={3} value={placeMemo} onChange={(event) => setPlaceMemo(event.target.value)} />
-              </label>
-
-              <div className="life-places-manager__buttons">
-                <button disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace} onClick={() => void savePersonalPlace()} type="button">
-                  <Save aria-hidden size={15} />
-                  {selectedPersonalPlace ? "수정 저장" : "내 장소 저장"}
-                </button>
-                {selectedPersonalPlace ? (
-                  <button className="life-places-manager__delete" disabled={isDeletingPersonalPlace} onClick={() => void deletePersonalPlace()} type="button">
-                    <Trash2 aria-hidden size={15} />
-                    삭제
-                  </button>
+                {mappingResults.length > 0 ? (
+                  <div className="schedule-place-results">
+                    {mappingResults.map((place) => (
+                      <button
+                        key={`${place.providerPlaceId ?? place.id}-${place.name}`}
+                        onClick={() => chooseMappingPlace(place)}
+                        type="button"
+                      >
+                        <strong>{place.name}</strong>
+                        <span>{place.address || place.category || "주소 정보 없음"}</span>
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
+
+                <label>
+                  <span>메모</span>
+                  <textarea
+                    placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요."
+                    rows={3}
+                    value={placeMemo}
+                    onChange={(event) => setPlaceMemo(event.target.value)}
+                  />
+                </label>
+
+                <div className="life-places-manager__buttons">
+                  {!selectedPersonalPlace ? (
+                    <button
+                      disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
+                      onClick={() => void savePersonalPlace()}
+                      type="button"
+                    >
+                      <Plus aria-hidden size={15} />
+                      내 장소 저장
+                    </button>
+                  ) : (
+                    <button className="life-places-manager__ghost" onClick={startCreatingPersonalPlace} type="button">
+                      <X aria-hidden size={15} />
+                      새로 입력
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </SectionCard>
 
-          <SectionCard className="life-places-summary">
-            <div className="life-places-panel-head">
-              <div>
-                <span>Visited Places</span>
-                <strong>{filteredVisitedPlaces.length}곳</strong>
+          <div className="life-places-side__bottom">
+            <SectionCard className="life-places-summary">
+              <div className="life-places-panel-head">
+                <div>
+                  <span>Visited Places</span>
+                  <strong>{filteredVisitedPlaces.length}곳</strong>
+                </div>
+                <p>현재 기간 안에서 실제 활동 기록으로 집계된 방문 장소입니다.</p>
               </div>
-              <p>현재 기간 안에서 실제 방문 기록이 남은 장소</p>
-            </div>
 
-            <div className="life-places-place-list">
-              {filteredVisitedPlaces.length > 0 ? (
-                filteredVisitedPlaces.map((place) => (
-                  <button
-                    className={selectedVisitedPlace?.key === place.key ? "life-places-place-button life-places-place-button--active" : "life-places-place-button"}
-                    key={place.key}
-                    onClick={() => setSelectedPlaceKey(place.key)}
-                    type="button"
-                  >
-                    <strong>{place.name}</strong>
-                    <span>{place.address || "주소 없음"}</span>
-                    <em>{place.visitCount}회 · {place.visitDates.length}일</em>
-                  </button>
-                ))
+              <div className="life-places-place-list">
+                {filteredVisitedPlaces.length > 0 ? (
+                  filteredVisitedPlaces.map((place) => (
+                    <button
+                      className={
+                        selectedVisitedPlace?.key === place.key
+                          ? "life-places-place-button life-places-place-button--active"
+                          : "life-places-place-button"
+                      }
+                      key={place.key}
+                      onClick={() => setSelectedPlaceKey(place.key)}
+                      type="button"
+                    >
+                      <strong>{place.name}</strong>
+                      <span>{place.address || "주소 없음"}</span>
+                      <em>
+                        {place.visitCount}건 · {place.visitDates.length}일
+                      </em>
+                    </button>
+                  ))
+                ) : (
+                  <div className="life-places-empty-inline">
+                    <strong>해당 기간의 방문 장소가 없어요.</strong>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="life-places-detail">
+              <div className="life-places-panel-head">
+                <div>
+                  <span>Place Records</span>
+                  <strong>{selectedVisitedPlace?.name ?? "장소를 선택해 주세요"}</strong>
+                </div>
+                <p>
+                  {selectedVisitedPlace
+                    ? `${selectedVisitedPlace.visitCount}건 방문 기록`
+                    : "방문 장소를 누르면 오른쪽에 기록이 열립니다."}
+                </p>
+              </div>
+
+              {selectedVisitedPlace ? (
+                <>
+                  <div className="life-places-detail-metrics">
+                    <article>
+                      <span>방문</span>
+                      <strong>{selectedVisitedPlace.visitCount}건</strong>
+                    </article>
+                    <article>
+                      <span>방문일</span>
+                      <strong>{selectedVisitedPlace.visitDates.length}일</strong>
+                    </article>
+                    <article>
+                      <span>지출</span>
+                      <strong>
+                        {selectedVisitedPlace.totalExpense > 0
+                          ? formatWon(selectedVisitedPlace.totalExpense)
+                          : "-"}
+                      </strong>
+                    </article>
+                  </div>
+
+                  <div className="life-places-detail-meta">
+                    {selectedVisitedPlace.address ? <p>{selectedVisitedPlace.address}</p> : null}
+                    {selectedVisitedPlace.people.length > 0 ? (
+                      <p>함께한 사람 · {selectedVisitedPlace.people.join(", ")}</p>
+                    ) : null}
+                    {selectedVisitedPlace.categories.length > 0 ? (
+                      <p>주요 활동 · {selectedVisitedPlace.categories.join(" · ")}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="life-places-record-list">
+                    {selectedVisitedPlace.records.map((record) => (
+                      <article key={record.id}>
+                        <div className="life-places-record-head">
+                          <span>{record.date}</span>
+                          <Link href={`/life/calendar?date=${record.date}`}>그날 보기</Link>
+                        </div>
+                        <strong>
+                          {formatActivityTime(record.startTime, record.endTime)} {record.title}
+                        </strong>
+                        <div className="life-places-record-meta">
+                          {record.people.length > 0 ? <p>with {record.people.join(", ")}</p> : null}
+                          {typeof record.expenseAmount === "number" ? <p>{formatWon(record.expenseAmount)}</p> : null}
+                          {record.logCount > 0 || record.photoCount > 0 ? (
+                            <p>
+                              하루기록 {record.logCount} · 사진 {record.photoCount}
+                            </p>
+                          ) : null}
+                        </div>
+                        {record.memo ? <p className="life-places-record-note">{record.memo}</p> : null}
+                      </article>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="life-places-empty-inline">
-                  <strong>해당 기간에 방문 장소가 없습니다.</strong>
+                  <strong>장소를 선택하면 여기에 기록이 열립니다.</strong>
+                  <p>방문 장소를 눌러, 그 장소에서 어떤 하루와 활동이 쌓였는지 바로 읽을 수 있어요.</p>
                 </div>
               )}
-            </div>
-          </SectionCard>
-
-          <SectionCard className="life-places-detail">
-            <div className="life-places-panel-head">
-              <div>
-                <span>Place Records</span>
-                <strong>{selectedVisitedPlace?.name ?? "장소를 선택하세요"}</strong>
-              </div>
-              <p>{selectedVisitedPlace ? `${selectedVisitedPlace.visitCount}건 방문 기록` : "방문 장소를 누르면 오른쪽에 기록이 열립니다."}</p>
-            </div>
-
-            {selectedVisitedPlace ? (
-              <>
-                <div className="life-places-detail-metrics">
-                  <article>
-                    <span>방문</span>
-                    <strong>{selectedVisitedPlace.visitCount}건</strong>
-                  </article>
-                  <article>
-                    <span>방문일</span>
-                    <strong>{selectedVisitedPlace.visitDates.length}일</strong>
-                  </article>
-                  <article>
-                    <span>지출</span>
-                    <strong>{selectedVisitedPlace.totalExpense > 0 ? formatWon(selectedVisitedPlace.totalExpense) : "-"}</strong>
-                  </article>
-                </div>
-
-                <div className="life-places-detail-meta">
-                  {selectedVisitedPlace.address ? <p>{selectedVisitedPlace.address}</p> : null}
-                  {selectedVisitedPlace.people.length > 0 ? <p>함께한 사람 · {selectedVisitedPlace.people.join(", ")}</p> : null}
-                  {selectedVisitedPlace.categories.length > 0 ? <p>주요 활동 · {selectedVisitedPlace.categories.join(" · ")}</p> : null}
-                </div>
-
-                <div className="life-places-record-list">
-                  {selectedVisitedPlace.records.map((record) => (
-                    <article key={record.id}>
-                      <div className="life-places-record-head">
-                        <span>{record.date}</span>
-                        <Link href={`/life/calendar?date=${record.date}`}>그날 보기</Link>
-                      </div>
-                      <strong>{formatActivityTime(record.startTime, record.endTime)} {record.title}</strong>
-                      <div className="life-places-record-meta">
-                        {record.people.length > 0 ? <p>with {record.people.join(", ")}</p> : null}
-                        {record.expenseAmount ? <p>{formatWon(record.expenseAmount)}</p> : null}
-                        {record.logCount > 0 || record.photoCount > 0 ? <p>하루기록 {record.logCount} · 사진 {record.photoCount}</p> : null}
-                      </div>
-                      {record.memo ? <p className="life-places-record-note">{record.memo}</p> : null}
-                    </article>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="life-places-empty-inline">
-                <strong>장소를 선택하면 여기서 기록이 열립니다.</strong>
-                <p>방문 장소를 눌러, 그 장소에서 어떤 하루와 활동이 쌓였는지 바로 읽을 수 있어요.</p>
-              </div>
-            )}
-          </SectionCard>
+            </SectionCard>
+          </div>
         </div>
       </div>
     </div>

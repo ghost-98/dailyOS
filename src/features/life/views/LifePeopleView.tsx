@@ -430,16 +430,6 @@ export function LifePeopleView({
                     onChange={(event) => setDetailMemo(event.target.value)}
                   />
                 </label>
-                <div className="life-people-form__actions">
-                  <button
-                    className="life-people-save-button"
-                    disabled={!detailDirty || isSavingDetail || !detailName.trim()}
-                    onClick={() => void handleUpdatePerson()}
-                    type="button"
-                  >
-                    {isSavingDetail ? "저장 중..." : "상세 저장"}
-                  </button>
-                </div>
               </div>
 
               <div className="life-people-metrics">
