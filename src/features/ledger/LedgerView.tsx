@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MonthPickerSheet } from "@/features/calendar/CalendarView";
@@ -56,6 +56,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const [incomeMemo, setIncomeMemo] = useState("");
   const [isSavingIncome, setIsSavingIncome] = useState(false);
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
+  const [isIncomeCaptureExpanded, setIsIncomeCaptureExpanded] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -161,7 +162,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         </SectionCard>
         <SectionCard className="ledger-metric">
           <span>이번 달 지출</span>
-          <strong>{formatCurrency(monthExpenseTotal)}</strong>
+          <strong>{formatExpenseCurrency(monthExpenseTotal)}</strong>
           <p>{topExpenseCategory ? `가장 큰 지출 축 · ${topExpenseCategory}` : "아직 지출 기록 없음"}</p>
         </SectionCard>
         <SectionCard className="ledger-metric">
@@ -238,7 +239,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
               </div>
               <div>
                 <span>지출</span>
-                <strong>{formatCurrency(selectedExpenseTotal)}</strong>
+                <strong>{formatExpenseCurrency(selectedExpenseTotal)}</strong>
               </div>
               <div>
                 <span>순흐름</span>
@@ -246,18 +247,23 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
               </div>
             </div>
 
-            <div className="ledger-capture-panel">
-              <div className="section-heading">
+            <div className={`ledger-capture-panel${isIncomeCaptureExpanded ? "" : " ledger-capture-panel--collapsed"}`}>
+              <div className="section-heading ledger-capture-panel__heading">
                 <div>
                   <p className="eyebrow">Income Capture</p>
                   <h3>수입 추가</h3>
                 </div>
-                <span className="ledger-inline-badge">
-                  <Plus aria-hidden size={14} />
-                  직접 입력
-                </span>
+                <button
+                  aria-label={isIncomeCaptureExpanded ? "수입 입력 접기" : "수입 입력 열기"}
+                  className="ledger-head-toggle"
+                  onClick={() => setIsIncomeCaptureExpanded((current) => !current)}
+                  type="button"
+                >
+                  {isIncomeCaptureExpanded ? <X aria-hidden size={17} /> : <Plus aria-hidden size={17} />}
+                </button>
               </div>
 
+              {isIncomeCaptureExpanded ? (
               <div className="ledger-income-form">
                 <label>
                   <span>제목</span>
@@ -285,6 +291,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                   {isSavingIncome ? "저장 중..." : "수입 저장"}
                 </button>
               </div>
+              ) : null}
             </div>
 
             <div className="ledger-record-list">
@@ -300,7 +307,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                       {record.memo ? <p>{record.memo}</p> : null}
                     </div>
                     <div className="ledger-record__side">
-                      <b>{formatCurrency(record.amount)}</b>
+                      <b>{formatIncomeCurrency(record.amount)}</b>
                       <div>
                         <button aria-label="수입 삭제" disabled={deletingIncomeId === record.id} onClick={() => void removeIncome(record.id)} type="button">
                           <Trash2 aria-hidden size={14} />
@@ -323,7 +330,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                       {record.memo ? <p>{record.memo}</p> : null}
                     </div>
                     <div className="ledger-record__side">
-                      <b>{formatCurrency(record.amount)}</b>
+                      <b>{formatExpenseCurrency(record.amount)}</b>
                       <span>원본 기록에서 수정</span>
                     </div>
                   </article>
@@ -418,6 +425,14 @@ function formatFullMonth(date: Date) {
 function formatCurrency(value: number) {
   const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
+}
+
+function formatIncomeCurrency(value: number) {
+  return `+${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
+}
+
+function formatExpenseCurrency(value: number) {
+  return `-${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}원`;
 }
 
 function formatCompactCurrency(value: number) {

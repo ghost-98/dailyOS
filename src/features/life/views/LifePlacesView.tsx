@@ -771,26 +771,29 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         </SectionCard>
 
         <div className="life-places-side">
-          <SectionCard className="life-places-manager">
+          <SectionCard className={`life-places-manager${isMyPlacesExpanded ? "" : " life-places-manager--collapsed"}`}>
+            <div className="life-places-panel-head">
+              <div>
+                <span>My Places</span>
+                <strong>
+                  내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
+                </strong>
+              </div>
+              <div className="life-places-panel-head__actions">
+                {isMyPlacesExpanded ? (
+                  <button className="life-places-head-toggle" onClick={() => setIsMyPlacesExpanded(false)} type="button">
+                    <X aria-hidden size={17} />
+                  </button>
+                ) : (
+                  <button className="life-places-head-toggle" onClick={startCreatingPersonalPlace} type="button">
+                    <Plus aria-hidden size={17} />
+                  </button>
+                )}
+              </div>
+            </div>
+
             {isMyPlacesExpanded ? (
               <>
-                <div className="life-places-panel-head">
-                  <div>
-                    <span>My Places</span>
-                    <strong>
-                      내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
-                    </strong>
-                  </div>
-                  <div className="life-places-panel-head__actions">
-                    <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
-                      <Plus aria-hidden size={16} />
-                    </button>
-                    <button className="life-places-icon-button" onClick={() => setIsMyPlacesExpanded(false)} type="button">
-                      <X aria-hidden size={16} />
-                    </button>
-                  </div>
-                </div>
-
               <div className="life-places-manager__body">
                 <div className="life-places-manager__directory">
                   <div className="life-places-manager__list">
@@ -938,19 +941,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 </div>
               </div>
               </>
-            ) : (
-              <div className="life-places-manager__collapsed life-places-manager__collapsed--summary">
-                <div className="life-places-manager__collapsed-copy">
-                  <strong>My Places</strong>
-                  <span>
-                    내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
-                  </span>
-                </div>
-                <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
-                  <Plus aria-hidden size={16} />
-                </button>
-              </div>
-            )}
+            ) : null}
           </SectionCard>
 
           <div className="life-places-side__bottom">
