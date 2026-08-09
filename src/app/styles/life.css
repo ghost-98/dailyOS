@@ -3539,8 +3539,7 @@ button:disabled {
   align-items: stretch;
 }
 
-.life-places-mode-switch,
-.life-places-view-switch {
+.life-places-mode-switch {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3550,8 +3549,7 @@ button:disabled {
   background: rgba(255, 255, 255, 0.55);
 }
 
-.life-places-mode-switch__button,
-.life-places-view-switch__button {
+.life-places-mode-switch__button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3567,8 +3565,7 @@ button:disabled {
   padding: 0 12px;
 }
 
-.life-places-mode-switch__button--active,
-.life-places-view-switch__button--active {
+.life-places-mode-switch__button--active {
   background: rgba(126, 105, 255, 0.14);
   color: var(--text-strong);
 }
@@ -3700,6 +3697,11 @@ button:disabled {
   padding: 22px !important;
 }
 
+.life-places-summary,
+.life-places-detail {
+  padding: 22px !important;
+}
+
 .life-places-map-panel--bleed {
   gap: 0;
   overflow: hidden;
@@ -3772,6 +3774,12 @@ button:disabled {
   line-height: 1.2;
 }
 
+.life-places-count-accent {
+  color: var(--violet-strong);
+  font-style: normal;
+  font-weight: 900;
+}
+
 .life-places-panel-head p {
   margin: 0;
   color: var(--text-muted);
@@ -3837,10 +3845,10 @@ button:disabled {
 .life-places-place-list,
 .life-places-record-list {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   max-height: 320px;
   overflow: auto;
-  padding-right: 4px;
+  padding: 4px 6px 4px 2px;
 }
 
 .life-places-manager__body {
@@ -3871,10 +3879,6 @@ button:disabled {
   align-content: start;
 }
 
-.life-places-manager__list--compact {
-  gap: 8px;
-}
-
 .life-places-manager__place {
   display: grid;
   gap: 6px;
@@ -3885,18 +3889,6 @@ button:disabled {
   cursor: pointer;
   padding: 14px 16px;
   align-content: start;
-}
-
-.life-places-manager__place--compact {
-  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-}
-
-.life-places-manager__place--compact span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .life-places-manager__place--active {
@@ -4107,15 +4099,40 @@ button:disabled {
   background: rgba(255, 255, 255, 0.38);
 }
 
+.life-places-manager__collapsed--summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+}
+
+.life-places-manager__collapsed-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.life-places-manager__collapsed--summary strong {
+  color: var(--text-strong);
+  font-size: 15px;
+}
+
+.life-places-manager__collapsed--summary span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .life-places-place-button {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   text-align: left;
   border: 1px solid rgba(126, 105, 255, 0.08);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  padding: 14px;
+  padding: 16px;
   align-content: start;
 }
 
@@ -4149,10 +4166,10 @@ button:disabled {
 
 .life-places-detail-metrics article {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   border-radius: 14px;
   background: rgba(126, 105, 255, 0.07);
-  padding: 14px;
+  padding: 16px;
 }
 
 .life-places-detail-metrics span {
@@ -4167,15 +4184,15 @@ button:disabled {
 
 .life-places-detail-meta {
   display: grid;
-  gap: 8px;
-  padding: 2px 0 4px;
+  gap: 10px;
+  padding: 6px 0 8px;
 }
 
 .life-places-record-list article {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   border-top: 1px solid rgba(15, 23, 42, 0.06);
-  padding-top: 14px;
+  padding-top: 16px;
   align-content: start;
 }
 
@@ -4290,13 +4307,11 @@ button:disabled {
   }
 
   .life-places-record-controls,
-  .life-places-mode-switch,
-  .life-places-view-switch {
+  .life-places-mode-switch {
     width: 100%;
   }
 
-  .life-places-mode-switch__button,
-  .life-places-view-switch__button {
+  .life-places-mode-switch__button {
     flex: 1 1 0;
   }
 
@@ -4318,11 +4333,6 @@ button:disabled {
   .life-places-map-shell,
   .life-places-map {
     min-height: 420px;
-  }
-
-  .life-places-manager__place--compact {
-    grid-template-columns: 1fr;
-    gap: 6px;
   }
 }
 

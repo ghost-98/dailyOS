@@ -27,8 +27,6 @@ type LifePlacesViewProps = {
 };
 
 type SearchMode = "place" | "records";
-type MyPlacesViewMode = "stack" | "compact";
-
 type SearchResponse = {
   error?: string;
   places: PlaceRecord[];
@@ -112,7 +110,6 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
   const [searchMessage, setSearchMessage] = useState("");
 
   const [personalPlaces, setPersonalPlaces] = useState<PersonalPlaceRecord[]>([]);
-  const [myPlacesViewMode, setMyPlacesViewMode] = useState<MyPlacesViewMode>("stack");
   const [isMyPlacesExpanded, setIsMyPlacesExpanded] = useState(true);
   const [selectedPersonalPlaceId, setSelectedPersonalPlaceId] = useState("");
   const [placeLabel, setPlaceLabel] = useState("");
@@ -775,63 +772,35 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
         <div className="life-places-side">
           <SectionCard className="life-places-manager">
-            <div className="life-places-panel-head">
-              <div>
-                <span>My Places</span>
-                <strong>내 장소 {allPersonalPlaces.length}곳</strong>
-              </div>
-              <div className="life-places-panel-head__actions">
-                {isMyPlacesExpanded ? (
-                  <>
-                    <div className="life-places-view-switch">
-                      <button
-                        className={myPlacesViewMode === "stack" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
-                        onClick={() => setMyPlacesViewMode("stack")}
-                        type="button"
-                      >
-                        세로
-                      </button>
-                      <button
-                        className={myPlacesViewMode === "compact" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
-                        onClick={() => setMyPlacesViewMode("compact")}
-                        type="button"
-                      >
-                        한줄
-                      </button>
-                    </div>
+            {isMyPlacesExpanded ? (
+              <>
+                <div className="life-places-panel-head">
+                  <div>
+                    <span>My Places</span>
+                    <strong>
+                      내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
+                    </strong>
+                  </div>
+                  <div className="life-places-panel-head__actions">
+                    <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
+                      <Plus aria-hidden size={16} />
+                    </button>
                     <button className="life-places-icon-button" onClick={() => setIsMyPlacesExpanded(false)} type="button">
                       <X aria-hidden size={16} />
                     </button>
-                  </>
-                ) : (
-                  <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
-                    <Plus aria-hidden size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            {isMyPlacesExpanded ? (
               <div className="life-places-manager__body">
                 <div className="life-places-manager__directory">
-                  <div
-                    className={
-                      myPlacesViewMode === "compact"
-                        ? "life-places-manager__list life-places-manager__list--compact"
-                        : "life-places-manager__list"
-                    }
-                  >
+                  <div className="life-places-manager__list">
                     {allPersonalPlaces.length > 0 ? (
                       allPersonalPlaces.map((place) => (
                         <button
                           className={
                             selectedPersonalPlaceId === place.id
-                              ? myPlacesViewMode === "compact"
-                                ? "life-places-manager__place life-places-manager__place--active life-places-manager__place--compact"
-                                : "life-places-manager__place life-places-manager__place--active"
-                              : myPlacesViewMode === "compact"
-                                ? "life-places-manager__place life-places-manager__place--compact"
-                                : "life-places-manager__place"
+                              ? "life-places-manager__place life-places-manager__place--active"
+                              : "life-places-manager__place"
                           }
                           key={place.id}
                           onClick={() => {
@@ -842,7 +811,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                         >
                           <strong>{place.label}</strong>
                           <span>{place.address}</span>
-                          {myPlacesViewMode === "stack" ? <em>{place.mappedName ?? "매핑 이름 없음"}</em> : null}
+                          <em>{place.mappedName ?? "매핑 이름 없음"}</em>
                         </button>
                       ))
                     ) : (
@@ -968,41 +937,18 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   </div>
                 </div>
               </div>
+              </>
             ) : (
-              <div className="life-places-manager__collapsed">
-                <div
-                  className={
-                    myPlacesViewMode === "compact"
-                      ? "life-places-manager__list life-places-manager__list--compact"
-                      : "life-places-manager__list"
-                  }
-                >
-                  {allPersonalPlaces.length > 0 ? (
-                    allPersonalPlaces.map((place) => (
-                      <button
-                        className={
-                          myPlacesViewMode === "compact"
-                            ? "life-places-manager__place life-places-manager__place--compact"
-                            : "life-places-manager__place"
-                        }
-                        key={place.id}
-                        onClick={() => {
-                          setSelectedPersonalPlaceId(place.id);
-                          setIsMyPlacesExpanded(true);
-                        }}
-                        type="button"
-                      >
-                        <strong>{place.label}</strong>
-                        <span>{place.address}</span>
-                        {myPlacesViewMode === "stack" ? <em>{place.mappedName ?? "매핑 이름 없음"}</em> : null}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="life-places-empty-inline">
-                      <strong>아직 등록한 내 장소가 없어요.</strong>
-                    </div>
-                  )}
+              <div className="life-places-manager__collapsed life-places-manager__collapsed--summary">
+                <div className="life-places-manager__collapsed-copy">
+                  <strong>My Places</strong>
+                  <span>
+                    내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
+                  </span>
                 </div>
+                <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
+                  <Plus aria-hidden size={16} />
+                </button>
               </div>
             )}
           </SectionCard>
@@ -1012,7 +958,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <div className="life-places-panel-head">
                 <div>
                   <span>Visited Places</span>
-                  <strong>{filteredVisitedPlaces.length}곳</strong>
+                  <strong>
+                    방문 장소 <em className="life-places-count-accent">{filteredVisitedPlaces.length}곳</em>
+                  </strong>
                 </div>
                 <div className="life-places-panel-head__meta">
                   <b>{totalPlaceVisits}건</b>
@@ -1034,9 +982,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     >
                       <strong>{place.name}</strong>
                       <span>{place.address || "주소 없음"}</span>
-                      <em>
-                        {place.visitCount}건 · {place.visitDates.length}일
-                      </em>
+                      <em>{place.visitCount}건 · {place.visitDates.length}일</em>
                     </button>
                   ))
                 ) : (
@@ -1051,7 +997,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <div className="life-places-panel-head">
                 <div>
                   <span>Place Records</span>
-                  <strong>{selectedVisitedPlace?.name ?? "장소를 선택해 주세요"}</strong>
+                  <strong>{selectedVisitedPlace?.name ?? "기록 장소를 선택해 주세요"}</strong>
                 </div>
                 {selectedVisitedPlace ? (
                   <div className="life-places-panel-head__meta">
