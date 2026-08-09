@@ -1,21 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import { MapPin, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { MapPin, Search, Star } from "lucide-react";
 import { PlaceLine } from "@/features/calendar/components";
-import type { PlanPlace, PlaceRecord } from "@/types/domain";
+import { fetchPersonalPlacesFromDb } from "@/features/personalPlaces/api";
+import type { PersonalPlaceRecord, PlanPlace, PlaceRecord } from "@/types/domain";
+
+type SearchMode = "saved" | "map";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
+  const [searchMode, setSearchMode] = useState<SearchMode>("saved");
+  const [savedPlaces, setSavedPlaces] = useState<PersonalPlaceRecord[]>([]);
   const [results, setResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(true);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchPersonalPlacesFromDb()
+      .then((records) => {
+        if (!isMounted) return;
+        setSavedPlaces(records ?? []);
+      })
+      .catch((error) => {
+        console.error("Failed to load personal places", error);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingSaved(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredSavedPlaces = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return savedPlaces.slice(0, 12);
+    return savedPlaces
+      .filter((place) => [place.label, place.address, place.mappedName ?? "", place.memo ?? ""].join(" ").toLowerCase().includes(normalizedQuery))
+      .slice(0, 12);
+  }, [query, savedPlaces]);
 
   const searchPlaces = async () => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
 
     setIsSearching(true);
+    setSearchMode("map");
     setMessage("");
 
     try {
@@ -31,18 +66,31 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       setResults(nextResults);
       if (nextResults.length === 0) setMessage("검색 결과가 없습니다.");
     } catch (error) {
-      console.error("Failed to search plan place", error);
+      console.error("Failed to search place", error);
       setMessage("장소 검색 중 문제가 발생했습니다.");
     } finally {
       setIsSearching(false);
     }
   };
 
-  const choosePlace = (place: PlaceRecord) => {
+  const choosePersonalPlace = (place: PersonalPlaceRecord) => {
+    onSelect(convertPersonalPlaceToPlanPlace(place));
+    setQuery(place.label);
+    setMessage("");
+  };
+
+  const chooseMapPlace = (place: PlaceRecord) => {
     onSelect(convertPlaceRecordToPlanPlace(place));
     setQuery(place.name);
+    setMessage("");
+  };
+
+  const clearPlace = () => {
+    onSelect(undefined);
+    setQuery("");
     setResults([]);
     setMessage("");
+    setSearchMode("saved");
   };
 
   return (
@@ -50,38 +98,70 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       <div className="schedule-place-card__header">
         <div>
           <span>장소</span>
-          <strong>{selectedPlace ? selectedPlace.name : "장소 검색"}</strong>
+          <strong>{selectedPlace ? selectedPlace.name : "장소 선택"}</strong>
         </div>
         {selectedPlace ? (
-          <button onClick={() => onSelect(undefined)} type="button">
+          <button onClick={clearPlace} type="button">
             선택 해제
           </button>
         ) : null}
       </div>
+
+      <div className="schedule-place-mode">
+        <button className={searchMode === "saved" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("saved")} type="button">
+          <Star aria-hidden size={14} />
+          내 장소
+          <b>{savedPlaces.length}</b>
+        </button>
+        <button className={searchMode === "map" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("map")} type="button">
+          <MapPin aria-hidden size={14} />
+          지도 검색
+        </button>
+      </div>
+
       <div className="schedule-place-search">
         <MapPin aria-hidden size={18} />
         <input
-          placeholder="장소명이나 주소 검색"
+          placeholder={searchMode === "saved" ? "내 장소 이름이나 주소 찾기" : "장소명이나 주소 검색"}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              void searchPlaces();
+              if (searchMode === "map") void searchPlaces();
             }
           }}
         />
-        <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
-          <Search aria-hidden size={16} />
-          {isSearching ? "검색 중" : "검색"}
-        </button>
+        {searchMode === "map" ? (
+          <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
+            <Search aria-hidden size={16} />
+            {isSearching ? "검색 중" : "검색"}
+          </button>
+        ) : null}
       </div>
+
       {selectedPlace ? <PlaceLine place={selectedPlace} /> : null}
       {message ? <p className="schedule-place-message">{message}</p> : null}
-      {results.length > 0 ? (
+
+      {searchMode === "saved" ? (
+        <div className="schedule-place-results">
+          {filteredSavedPlaces.length > 0 ? (
+            filteredSavedPlaces.map((place) => (
+              <button key={place.id} onClick={() => choosePersonalPlace(place)} type="button">
+                <strong>{place.label}</strong>
+                <span>{place.address}</span>
+              </button>
+            ))
+          ) : (
+            <p className="schedule-place-message">
+              {isLoadingSaved ? "내 장소 불러오는 중..." : "저장된 내 장소가 없어요. DB의 장소 탭에서 먼저 만들어둘 수 있어요."}
+            </p>
+          )}
+        </div>
+      ) : results.length > 0 ? (
         <div className="schedule-place-results">
           {results.map((place) => (
-            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => choosePlace(place)} type="button">
+            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMapPlace(place)} type="button">
               <strong>{place.name}</strong>
               <span>{place.address || place.category || "주소 정보 없음"}</span>
             </button>
@@ -103,6 +183,19 @@ async function readPlaceSearchResponse(response: Response): Promise<{ places?: P
   } catch {
     return { error: "장소 검색 응답을 읽지 못했습니다.", places: [] };
   }
+}
+
+function convertPersonalPlaceToPlanPlace(place: PersonalPlaceRecord): PlanPlace {
+  return {
+    name: place.label,
+    address: place.address,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    providerPlaceId: place.providerPlaceId,
+    phone: place.phone,
+    category: place.category,
+    url: place.url,
+  };
 }
 
 function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {

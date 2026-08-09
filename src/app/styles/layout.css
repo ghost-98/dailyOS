@@ -255,9 +255,9 @@
 
 
 .eyebrow {
-  margin: 0 0 13px;
+  margin: 0 0 var(--eyebrow-gap);
   color: var(--violet);
-  font-size: 12px;
+  font-size: var(--eyebrow-size);
   font-weight: 850;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -357,8 +357,8 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
+  border-radius: var(--radius-lg);
+  background: var(--panel-elevated);
   box-shadow: var(--shadow);
 }
 
@@ -536,7 +536,6 @@
 
 .schedule-card,
 .todo-card,
-.career-card,
 .system-log {
   padding: 24px;
 }
@@ -545,8 +544,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 22px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .section-heading button {
@@ -556,16 +555,29 @@
   font-weight: 800;
 }
 
+.section-heading > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.section-heading h2,
+.section-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 820;
+  line-height: 1.2;
+}
+
 .schedule-list,
-.todo-list,
-.career-list {
+.todo-list {
   display: grid;
   gap: 14px;
 }
 
 .schedule-item,
-.todo-item,
-.career-item {
+.todo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -579,8 +591,7 @@
   border-left: 4px solid var(--violet-deep);
 }
 
-.schedule-item span,
-.career-item span {
+.schedule-item span {
   color: var(--violet);
   font-family: "Courier New", monospace;
   font-size: 12px;
@@ -589,16 +600,14 @@
 }
 
 .schedule-item h3,
-.todo-item h3,
-.career-item h3 {
+.todo-item h3 {
   margin: 6px 0 4px;
   font-size: 21px;
   line-height: 1.25;
 }
 
 .schedule-item p,
-.todo-item p,
-.career-item p {
+.todo-item p {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
@@ -690,31 +699,6 @@
 }
 
 .badge--muted {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--muted);
-}
-
-.career-card {
-  background: var(--panel);
-}
-
-.career-item {
-  border-left: 4px solid var(--amber);
-}
-
-.career-item strong {
-  border-radius: 999px;
-  background: rgba(246, 173, 69, 0.18);
-  color: #ffd99f;
-  padding: 7px 13px;
-  white-space: nowrap;
-}
-
-.career-item--muted {
-  border-left-color: var(--muted-dark);
-}
-
-.career-item--muted strong {
   background: rgba(255, 255, 255, 0.1);
   color: var(--muted);
 }

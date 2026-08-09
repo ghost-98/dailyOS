@@ -1,20 +1,18 @@
 export type LifeViewMode =
   | "home"
   | "calendar"
-  | "report"
-  | "monthly"
+  | "plans"
   | "search"
   | "people"
-  | "ask"
   | "places"
+  | "ask"
   | "activities"
   | "logs"
   | "photos"
-  | "health"
-  | "map";
+  | "health";
 
-export type LifeDataMode = Exclude<LifeViewMode, "home" | "map">;
+export type LifeDataMode = Exclude<LifeViewMode, "home">;
 
-export const lifeInputModes: LifeViewMode[] = ["calendar", "activities", "logs", "photos", "health"];
+export const lifeInputModes: LifeViewMode[] = ["activities", "plans", "logs", "photos", "health"];
 
-export const lifeInsightModes: LifeViewMode[] = ["report", "monthly", "search", "people", "ask"];
+export const lifeInsightModes: LifeViewMode[] = ["calendar", "search", "people", "places", "ask"];

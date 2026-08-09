@@ -5,6 +5,7 @@ const exportTables = [
   { name: "profiles", conflict: "user_id" },
   { name: "place_folders", conflict: "id" },
   { name: "places", conflict: "id" },
+  { name: "personal_places", conflict: "id" },
   { name: "tasks", conflict: "id" },
   { name: "calendar_events", conflict: "id" },
   { name: "daily_logs", conflict: "id" },
@@ -14,14 +15,6 @@ const exportTables = [
   { name: "expense_records", conflict: "id" },
   { name: "place_folder_links", conflict: "id" },
   { name: "place_links", conflict: "id" },
-  { name: "career_records", conflict: "id" },
-  { name: "application_events", conflict: "id" },
-  { name: "job_applications", conflict: "id" },
-  { name: "job_application_steps", conflict: "id" },
-  { name: "job_application_requirements", conflict: "id" },
-  { name: "job_application_check_items", conflict: "id" },
-  { name: "job_application_files", conflict: "id" },
-  { name: "ai_extraction_drafts", conflict: "id" },
 ] as const;
 
 const deleteTables = [...exportTables].reverse();

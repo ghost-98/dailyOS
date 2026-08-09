@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { LifeView } from "@/features/life/LifeView";
 
-export default function LifePlacesFlowPage() {
+export default function LifePlacesPage() {
   return (
-    <AppShell activeKey="places">
+    <AppShell activeKey="life">
       <LifeView mode="places" />
     </AppShell>
   );

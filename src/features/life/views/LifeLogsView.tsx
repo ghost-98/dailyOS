@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { NotebookPen } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
+import type { CalendarEvent } from "@/features/calendar/data";
+import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
 import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features/life/linkTargets";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { CalendarEvent } from "@/features/calendar/data";
 import type { DailyLogRecord, LifeActivityRecord, TaskItem } from "@/types/domain";
 
 export function LifeLogsView({
@@ -80,10 +80,10 @@ export function LifeLogsView({
       setContent("");
       setLinkedTargetKey("");
       setEditingLogId(null);
-      setMessage(editingLogId ? "하루기록을 수정했어요." : "하루기록을 저장했어요.");
+      setMessage(editingLogId ? "하루 기록을 수정했어요." : "하루 기록을 저장했어요.");
     } catch (error) {
       console.error("Failed to save daily log", error);
-      setFormError(getLifeActionErrorMessage(error, "하루기록을 저장하지 못했습니다."));
+      setFormError(getLifeActionErrorMessage(error, "하루 기록을 저장하지 못했습니다."));
     } finally {
       setIsSaving(false);
     }
@@ -107,10 +107,10 @@ export function LifeLogsView({
         setContent("");
         setLinkedTargetKey("");
       }
-      setMessage("하루기록을 삭제했어요.");
+      setMessage("하루 기록을 삭제했어요.");
     } catch (error) {
       console.error("Failed to delete daily log", error);
-      setFormError(getLifeActionErrorMessage(error, "하루기록을 삭제하지 못했습니다."));
+      setFormError(getLifeActionErrorMessage(error, "하루 기록을 삭제하지 못했습니다."));
     } finally {
       setDeletingLogId(null);
     }
@@ -118,12 +118,12 @@ export function LifeLogsView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="하루기록" description="가능하면 활동에 연결하고, 아직 활동이 없다면 날짜나 계획에 붙여두세요. 하루 리포트와 해당 날짜 타임라인에서 함께 조회됩니다." />
+      <LifeTabHeading title="하루 기록" description="하루 전체의 감정, 맥락, 짧은 회고를 날짜 중심으로 남겨두는 공간이에요." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
             <NotebookPen aria-hidden size={17} />
-            <span>짧은 하루 기록</span>
+            <span>오늘의 하루 기록</span>
           </div>
           <label className="life-capture-date">
             <span>기록 날짜</span>
@@ -140,7 +140,7 @@ export function LifeLogsView({
               ))}
             </select>
           </label>
-          <textarea placeholder="오늘 기억하고 싶은 것 한두 문장을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+          <textarea placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
           {editingLogId ? (
             <button
               className="life-capture-secondary"
@@ -155,7 +155,7 @@ export function LifeLogsView({
             </button>
           ) : null}
           <button className="life-capture-primary" disabled={!content.trim() || isSaving} onClick={saveLog} type="button">
-            {isSaving ? "저장 중" : editingLogId ? "기록 수정" : "기록 저장"}
+            {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
           </button>
           {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
           {message ? <p className="life-health-message">{message}</p> : null}
@@ -177,11 +177,9 @@ export function LifeLogsView({
                   <span>하루 기록</span>
                   <p>{log.content}</p>
                   <div className="life-record-actions">
-                    <button onClick={() => editLog(log)} type="button">
-                      수정
-                    </button>
+                    <button onClick={() => editLog(log)} type="button">수정</button>
                     <button disabled={deletingLogId === log.id} onClick={() => void deleteLog(log.id)} type="button">
-                      {deletingLogId === log.id ? "삭제 중" : "삭제"}
+                      {deletingLogId === log.id ? "삭제 중..." : "삭제"}
                     </button>
                   </div>
                 </article>
@@ -190,8 +188,8 @@ export function LifeLogsView({
           ) : (
             <div className="life-map-empty life-map-empty--compact">
               <NotebookPen aria-hidden size={28} />
-              <strong>이날 남긴 기록이 없습니다.</strong>
-              <p>왼쪽에서 짧은 하루 기록을 추가하면 이곳에 모입니다.</p>
+              <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
+              <p>왼쪽에서 하루 기록을 남기면 여기에 바로 쌓여요.</p>
             </div>
           )}
         </SectionCard>

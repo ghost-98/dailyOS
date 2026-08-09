@@ -45,13 +45,10 @@ export function formatPlanDateTime(startDate: string, endDate?: string, startTim
   return dateLabel;
 }
 
-export function isExternalTimelineType(type: CalendarCategory | ExternalCalendarCategory): type is ExternalCalendarCategory {
-  return type === "activity" || type === "expense" || type === "workout" || type === "weight" || type === "daily_log" || type === "photo";
-}
-
 export function getCalendarSummaryLabel(type: CalendarCategory | ExternalCalendarCategory) {
   if (type === "activity") return "활동";
   if (type === "expense") return "지출";
+  if (type === "income") return "수입";
   if (type === "workout") return "운동";
   if (type === "weight") return "몸무게";
   if (type === "daily_log") return "기록";

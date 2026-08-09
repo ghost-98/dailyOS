@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
 import {
@@ -618,9 +620,9 @@ function FolderManagerSheet({
           <div>
             <h2 id="folder-manager-title">폴더 관리</h2>
           </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+          <IconButton label="닫기" onClick={onClose} tone="outline">
             <X aria-hidden size={18} />
-          </button>
+          </IconButton>
         </header>
 
         <div className="places-folder-manager">
@@ -652,29 +654,29 @@ function FolderManagerSheet({
                 <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
               </label>
               <footer>
-                <button className="event-sheet__secondary-button" disabled={isSaving} onClick={() => setEditingFolder(null)} type="button">
+                <ActionButton disabled={isSaving} onClick={() => setEditingFolder(null)} variant="secondary">
                   취소
-                </button>
-                <button className="event-sheet__primary-button" disabled={isSaving || editingFolder.name.trim().length === 0} onClick={() => void save()} type="button">
+                </ActionButton>
+                <ActionButton disabled={isSaving || editingFolder.name.trim().length === 0} onClick={() => void save()}>
                   {isSaving ? "저장 중" : "확인"}
-                </button>
+                </ActionButton>
               </footer>
             </div>
           ) : (
-            <button className="places-folder-add" onClick={startCreate} type="button">
+            <ActionButton onClick={startCreate}>
               <Plus aria-hidden size={15} />
               새 폴더 추가
-            </button>
+            </ActionButton>
           )}
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" disabled={isSaving || Boolean(deletingFolderId)} onClick={onClose} type="button">
+          <ActionButton disabled={isSaving || Boolean(deletingFolderId)} onClick={onClose} variant="secondary">
             닫기
-          </button>
-          <button className="event-sheet__primary-button" disabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)} onClick={() => void confirm()} type="button">
+          </ActionButton>
+          <ActionButton disabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)} onClick={() => void confirm()}>
             {isSaving ? "저장 중" : "확인"}
-          </button>
+          </ActionButton>
         </footer>
       </section>
     </div>
@@ -710,9 +712,9 @@ function SavePlaceSheet({
           <div>
             <h2 id="save-place-title">장소 저장</h2>
           </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+          <IconButton label="닫기" onClick={onClose} tone="outline">
             <X aria-hidden size={18} />
-          </button>
+          </IconButton>
         </header>
 
         <div className="places-save-target">
@@ -735,12 +737,12 @@ function SavePlaceSheet({
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" onClick={onClose} type="button">
+          <ActionButton onClick={onClose} variant="secondary">
             취소
-          </button>
-          <button className="event-sheet__primary-button" onClick={() => onSave(checkedFolderIds)} type="button">
+          </ActionButton>
+          <ActionButton onClick={() => onSave(checkedFolderIds)}>
             적용
-          </button>
+          </ActionButton>
         </footer>
       </section>
     </div>

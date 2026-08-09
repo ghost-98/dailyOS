@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "career" | "expense";
+export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense" | "income";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -71,6 +71,17 @@ export type ExpenseRecord = {
   targetId: string;
 };
 
+export type IncomeCategory = "salary" | "business" | "investment" | "gift" | "refund" | "side" | "etc";
+
+export type IncomeRecord = {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  category: IncomeCategory;
+  memo?: string;
+};
+
 export type LifeActivityRecord = {
   id: string;
   date: string;
@@ -85,6 +96,11 @@ export type LifeActivityRecord = {
   companions?: string;
   placeName?: string;
   placeAddress?: string;
+  startPlaceName?: string;
+  startPlaceAddress?: string;
+  endPlaceName?: string;
+  endPlaceAddress?: string;
+  transportMode?: string;
   sourceId?: string;
   sourceTitle?: string;
   sourceType?: "schedule" | "todo" | "event";
@@ -152,5 +168,25 @@ export type PlaceRecord = {
   category?: string;
   url?: string;
   isFavorite?: boolean;
+  memo?: string;
+};
+
+export type PersonalPlaceRecord = {
+  id: string;
+  label: string;
+  mappedName?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  providerPlaceId?: string;
+  phone?: string;
+  category?: string;
+  url?: string;
+  memo?: string;
+};
+
+export type PersonRecord = {
+  id: string;
+  name: string;
   memo?: string;
 };

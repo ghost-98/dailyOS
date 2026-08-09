@@ -3,14 +3,6 @@
     grid-template-columns: 240px minmax(0, 1fr);
   }
 
-  .schedule-map-modal-backdrop {
-    padding-left: 264px;
-  }
-
-  .schedule-map-modal__content {
-    grid-template-columns: minmax(0, 1fr) 280px;
-  }
-
   .sidebar {
     padding: 28px 22px;
   }
@@ -18,9 +10,12 @@
   .today-summary-grid,
   .today-work-grid,
   .today-support-grid,
-  .today-quick-actions,
   .life-health-view {
     grid-template-columns: 1fr;
+  }
+
+  .today-quick-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .calendar-layout {
@@ -29,6 +24,14 @@
 
   .calendar-layout--detail-open {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .life-activity-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .life-activity-quick-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .calendar-detail {
@@ -69,39 +72,6 @@
     padding: 28px 16px 34px;
   }
 
-  .schedule-map-modal-backdrop {
-    padding: 10px;
-  }
-
-  .schedule-map-modal {
-    height: calc(100vh - 20px);
-    border-radius: 16px;
-  }
-
-  .schedule-map-modal__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .schedule-map-modal__actions {
-    justify-content: flex-end;
-  }
-
-  .schedule-map-modal__actions button {
-    flex: 0 0 auto;
-  }
-
-  .schedule-map-modal__content {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(160px, 32vh);
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .schedule-map-modal__canvas {
-    min-height: 320px;
-  }
-
   .today__header {
     align-items: stretch;
     flex-direction: column;
@@ -114,6 +84,10 @@
   .today-mode-tabs__item {
     flex: 1;
     justify-content: center;
+  }
+
+  .today-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .page-header {
@@ -158,7 +132,6 @@
 
   .schedule-card,
   .todo-card,
-  .career-card,
   .system-log,
   .vitals-card,
   .calendar-board,
@@ -175,109 +148,6 @@
 
   .health-daily-grid {
     grid-template-columns: 1fr;
-  }
-
-  .certificate-browser {
-    grid-template-columns: 1fr;
-  }
-
-  .certificate-index-panel {
-    position: static;
-    max-height: none;
-  }
-
-  .career-ai-uploader,
-  .company-process-rail {
-    grid-template-columns: 1fr;
-  }
-
-  .job-command-panel,
-  .job-command-panel__actions {
-    grid-template-columns: 1fr;
-  }
-
-  .career-ai-uploader__actions {
-    grid-template-columns: 1fr;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .career-ai-uploader__fields {
-    grid-template-columns: 1fr;
-  }
-
-  .job-posting-sheet .career-sheet__body {
-    max-height: calc(100vh - 138px);
-    padding: 16px;
-  }
-
-  .ai-draft-review__header {
-    grid-template-columns: 1fr;
-  }
-
-  .job-detail-panel {
-    inset: auto 0 0;
-    width: 100%;
-    max-height: 88vh;
-    border-radius: 22px 22px 0 0;
-  }
-
-  .job-detail-meta-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ai-draft-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ai-draft-basic-grid,
-  .job-template-row,
-  .job-template-row--step,
-  .job-template-row--requirement,
-  .job-template-row--check {
-    grid-template-columns: 1fr;
-  }
-
-  .job-template-section__header {
-    display: grid;
-  }
-
-  .job-template-section__header button,
-  .job-template-row > button {
-    width: 100%;
-  }
-
-  .career-ai-file-button,
-  .career-ai-uploader__actions button {
-    width: 100%;
-  }
-
-  .certificate-index-list {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(150px, 1fr);
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
-  .certificate-index-list > span,
-  .certificate-index-list p {
-    grid-column: 1 / -1;
-  }
-
-  .career-record-card {
-    flex-direction: column;
-  }
-
-  .certificate-detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .application-event-row {
-    grid-template-columns: 1fr;
-  }
-
-  .application-event-row button {
-    width: 100%;
   }
 
   .settings-grid {
@@ -325,8 +195,7 @@
   }
 
   .todo-item,
-  .schedule-item,
-  .career-item {
+  .schedule-item {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -490,6 +359,38 @@
     min-height: 58px;
   }
 
+  .manage-calendar-overview__cards,
+  .life-calendar-day-panel__layout,
+  .life-calendar-week-overview,
+  .life-calendar-week-days,
+  .life-calendar-week-layout,
+  .life-calendar-week-metrics,
+  .life-calendar-db-rhythm,
+  .life-calendar-db-meta,
+  .life-calendar-db-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .life-calendar-day-panel__layout {
+    height: auto;
+    min-height: 0;
+    grid-template-areas:
+      "timeline"
+      "map"
+      "photos"
+      "companions"
+      "finance"
+      "logs";
+  }
+
+  .life-calendar-day-events,
+  .life-calendar-day-finance,
+  .life-calendar-day-timeline__detail-grid,
+  .life-calendar-day-photo-preview,
+  .life-calendar-day-photo-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .calendar-day__number {
     font-size: 13px;
   }
@@ -518,16 +419,53 @@
     grid-template-columns: 1fr;
   }
 
+  .life-activity-form,
+  .life-activity-list {
+    padding: 16px;
+  }
+
+  .life-activity-form .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .life-activity-form .life-record-actions,
+  .life-activity-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .life-activity-form .life-record-actions button {
+    flex: 1 1 auto;
+  }
+
+  .life-activity-form__actions,
+  .life-activity-quick-panel__actions,
+  .life-activity-tag-editor {
+    flex-direction: column;
+  }
+
+  .life-activity-action-group {
+    width: 100%;
+  }
+
+  .life-activity-quick-panel__grid,
+  .life-activity-form-grid,
+  .life-activity-form-grid--people-meal {
+    grid-template-columns: 1fr;
+  }
+
+  .life-activity-day-summary {
+    grid-template-columns: 1fr;
+  }
+
   .progress-meter {
     width: 120px;
   }
 }
 
 @media (max-width: 820px) {
-  .life-axis-summary,
-  .life-map-coverage,
-  .life-places-view,
-  .life-place-grid {
+  .life-axis-summary {
     grid-template-columns: 1fr;
   }
 }

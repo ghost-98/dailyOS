@@ -32,8 +32,16 @@ export function buildDayReconstructionItems(
   workouts: WorkoutSession[],
   weights: WeightRecord[],
 ): LifeDayReconstructionItem[] {
+  const linkedActivitySourceKeys = new Set(
+    activities
+      .filter((activity) => activity.sourceId && activity.sourceType)
+      .map((activity) => `${activity.sourceType}:${activity.sourceId}`),
+  );
+  const visibleEvents = events.filter((event) => !linkedActivitySourceKeys.has(`${event.type === "event" ? "event" : "schedule"}:${event.id}`));
+  const visibleTasks = tasks.filter((task) => !linkedActivitySourceKeys.has(`todo:${task.id}`));
+
   return [
-    ...events.map((event) => ({
+    ...visibleEvents.map((event) => ({
       description: [event.meta, event.place?.name, event.companions ? `함께 · ${event.companions}` : null, event.expenseAmount ? formatWon(event.expenseAmount) : null].filter(Boolean).join(" · "),
       endMinutes: parseTimeToMinutes(event.endTime),
       id: `event-${event.id}`,
@@ -43,7 +51,7 @@ export function buildDayReconstructionItems(
       title: event.title,
       tone: "plan" as const,
     })),
-    ...tasks.map((task) => ({
+    ...visibleTasks.map((task) => ({
       description: [task.memo, task.place?.name, task.companions ? `함께 · ${task.companions}` : null, task.expenseAmount ? formatWon(task.expenseAmount) : null].filter(Boolean).join(" · "),
       endMinutes: parseTimeToMinutes(task.endTime),
       id: `task-${task.id}`,
