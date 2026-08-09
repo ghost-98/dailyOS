@@ -447,7 +447,7 @@ export function TodayDashboard() {
 
       <div className="today-support-grid">
         <SectionCard className="schedule-card today-command-card">
-          <DashboardHeader href="/life/places-flow" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
+          <DashboardHeader href="/life/calendar" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
           <div className="today-place-list">
             {places.length > 0 ? (
               places.slice(0, 5).map((place) => (
@@ -457,7 +457,7 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/places-flow" text={text.noPlaces} />
+              <EmptyBlock href="/life/calendar" text={text.noPlaces} />
             )}
           </div>
         </SectionCard>

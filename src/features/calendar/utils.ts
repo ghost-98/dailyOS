@@ -4,8 +4,7 @@ export function getMonthDays(year: number, monthIndex: number) {
   const firstDay = new Date(year, monthIndex, 1);
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const leadingEmptyDays = firstDay.getDay();
-
-  return [
+  const cells = [
     ...Array.from({ length: leadingEmptyDays }, (_, index) => ({ key: `empty-${index}`, day: null, date: null })),
     ...Array.from({ length: daysInMonth }, (_, index) => {
       const day = index + 1;
@@ -13,6 +12,12 @@ export function getMonthDays(year: number, monthIndex: number) {
       return { key: date, day, date };
     }),
   ];
+
+  while (cells.length % 7 !== 0) {
+    cells.push({ key: `empty-end-${cells.length}`, day: null, date: null });
+  }
+
+  return cells;
 }
 
 export function formatDateKey(date: Date) {
