@@ -96,6 +96,11 @@ export type LifeActivityRecord = {
   companions?: string;
   placeName?: string;
   placeAddress?: string;
+  startPlaceName?: string;
+  startPlaceAddress?: string;
+  endPlaceName?: string;
+  endPlaceAddress?: string;
+  transportMode?: string;
   sourceId?: string;
   sourceTitle?: string;
   sourceType?: "schedule" | "todo" | "event";
