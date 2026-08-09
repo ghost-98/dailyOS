@@ -4821,7 +4821,21 @@ button:disabled {
   align-items: start;
 }
 
+.life-photo-gallery--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.life-photo-gallery--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-photo-gallery--grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .life-photo-gallery figure {
+  display: grid;
+  align-content: start;
   overflow: clip;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
@@ -4844,6 +4858,7 @@ button:disabled {
   place-items: center;
   color: var(--muted);
   font-size: 0.75rem;
+  min-height: 220px;
   padding: 12px;
   text-align: center;
 }
@@ -4882,4 +4897,16 @@ button:disabled {
 .life-photo-gallery figcaption strong {
   color: var(--text);
   font-size: 0.82rem;
+}
+
+.life-photo-gallery--single .life-photo-media-frame {
+  min-height: 360px;
+}
+
+.life-photo-gallery--pair .life-photo-media-frame {
+  min-height: 260px;
+}
+
+.life-photo-gallery--grid .life-photo-media-frame {
+  min-height: 220px;
 }

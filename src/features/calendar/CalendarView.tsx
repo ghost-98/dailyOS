@@ -2337,18 +2337,30 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
       return;
     }
 
-    if ("external" in item && item.external.type === "activity" && item.external.placeName) {
-      stops.push({
-        address: item.external.placeAddress,
-        id: item.id,
-        label: "활동",
-        latitude: item.external.placeLatitude,
-        longitude: item.external.placeLongitude,
-        name: item.external.placeName,
-        timeLabel: item.timeLabel,
-      });
-    }
-  });
+      if ("external" in item && item.external.type === "activity" && item.external.placeName) {
+        stops.push({
+          address: item.external.placeAddress,
+          id: item.id,
+          label: "활동",
+          latitude: item.external.placeLatitude,
+          longitude: item.external.placeLongitude,
+          name: item.external.placeName,
+          timeLabel: item.timeLabel,
+        });
+        return;
+      }
+
+      if ("external" in item && item.external.type === "photo" && typeof item.external.placeLatitude === "number" && typeof item.external.placeLongitude === "number") {
+        stops.push({
+          id: item.id,
+          label: "사진",
+          latitude: item.external.placeLatitude,
+          longitude: item.external.placeLongitude,
+          name: item.external.placeName || item.external.caption || "사진 위치",
+          timeLabel: item.timeLabel,
+        });
+      }
+    });
 
   return stops.filter((stop, index, array) => {
     const previous = array[index - 1];

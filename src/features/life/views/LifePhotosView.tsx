@@ -101,7 +101,7 @@ export function LifePhotosView({
       setCaption("");
       setLinkedTargetKey("");
       setUploadError(null);
-      setMessage("사진/영상 업로드를 완료했어요.");
+      setMessage("사진과 영상을 업로드했어요.");
     } catch (error) {
       console.error("Failed to upload life photos", getLifePhotoErrorDebugInfo(error));
       setUploadError(getLifePhotoUploadErrorMessage(error));
@@ -116,7 +116,7 @@ export function LifePhotosView({
     setUploadError(null);
     try {
       await onDeletePhoto(photo);
-      setMessage("사진/영상을 삭제했어요.");
+      setMessage("사진을 삭제했어요.");
     } catch (error) {
       console.error("Failed to delete life photo", getLifePhotoErrorDebugInfo(error));
       setUploadError(getLifePhotoUploadErrorMessage(error));
@@ -127,15 +127,12 @@ export function LifePhotosView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading
-        title="사진"
-        description="사진과 영상은 활동의 증거이자 기억의 조각이에요. 촬영 시각과 위치 메타데이터가 있으면 더 정확하게 읽을 수 있게 구성합니다."
-      />
+      <LifeTabHeading title="사진" description="날짜별 사진과 영상을 모아 보고, EXIF 시간·위치 정보가 있으면 함께 정리합니다." />
       <div className="life-capture-page">
         <SectionCard className="life-capture-editor">
           <div className="life-capture-card__title">
             <ImagePlus aria-hidden size={17} />
-            <span>사진/영상 업로드</span>
+            <span>사진 · 영상 업로드</span>
           </div>
 
           <label className="life-capture-date">
@@ -144,9 +141,9 @@ export function LifePhotosView({
           </label>
 
           <label className="life-photo-link-field">
-            <span>연결할 활동/계획</span>
+            <span>연결할 기록</span>
             <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
-              <option value="">날짜에만 연결</option>
+              <option value="">날짜만 연결</option>
               {linkedTargetOptions.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label} · {option.title}
@@ -164,8 +161,8 @@ export function LifePhotosView({
           <label className="life-photo-dropzone">
             <input accept="image/*,video/*" multiple type="file" onChange={(event) => void selectFiles(Array.from(event.target.files ?? []))} />
             <ImagePlus aria-hidden size={24} />
-            <strong>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진/영상을 선택하세요"}</strong>
-            <span>파일 비율, 크기, 촬영 시각, GPS 메타데이터까지 미리 확인합니다.</span>
+            <strong>{previews.length > 0 ? `${previews.length}개 선택됨` : "사진이나 영상을 선택하세요"}</strong>
+            <span>비율, 용량, 촬영 시각, GPS 메타데이터를 업로드 전에 확인할 수 있어요.</span>
           </label>
 
           {previews.length > 0 ? (
@@ -176,23 +173,12 @@ export function LifePhotosView({
                     {preview.mimeType.startsWith("video/") ? (
                       <video muted playsInline src={preview.objectUrl} />
                     ) : (
-                      <Image alt={preview.name} height={preview.height ?? 180} src={preview.objectUrl} unoptimized width={preview.width ?? 180} />
+                      <Image alt={preview.name} height={preview.height ?? 220} src={preview.objectUrl} unoptimized width={preview.width ?? 220} />
                     )}
                   </div>
                   <figcaption>
                     <strong>{preview.name}</strong>
-                    <div className="life-photo-meta-lines">
-                      {formatMediaMetaLines(preview).map((line) => (
-                        <span key={`${preview.id}-${line}`}>{line}</span>
-                      ))}
-                      {hasGeoMetadata(preview) ? (
-                        <b className="life-photo-geo-badge">
-                          <MapPin aria-hidden size={12} />
-                          위치 메타데이터 있음
-                        </b>
-                      ) : null}
-                      {formatGeoMetadata(preview) ? <small>{formatGeoMetadata(preview)}</small> : null}
-                    </div>
+                    <div className="life-photo-meta-lines">{renderPreviewMeta(preview)}</div>
                   </figcaption>
                 </figure>
               ))}
@@ -217,7 +203,7 @@ export function LifePhotosView({
           </div>
 
           {selectedPhotos.length > 0 ? (
-            <div className="life-photo-gallery">
+            <div className={getPhotoGalleryClassName(selectedPhotos.length)}>
               {selectedPhotos.map((photo) => (
                 <figure key={photo.id} style={getMediaFigureStyle(photo)}>
                   <div className="life-photo-media-frame" style={getMediaFigureStyle(photo)}>
@@ -225,7 +211,7 @@ export function LifePhotosView({
                       photo.mimeType?.startsWith("video/") ? (
                         <video controls src={photo.fileUrl} />
                       ) : (
-                        <Image alt={photo.caption || photo.fileName} height={photo.height ?? 220} src={photo.fileUrl} unoptimized width={photo.width ?? 220} />
+                        <Image alt={photo.caption || photo.fileName} height={photo.height ?? 420} src={photo.fileUrl} unoptimized width={photo.width ?? 420} />
                       )
                     ) : (
                       <div>{photo.fileName}</div>
@@ -233,19 +219,8 @@ export function LifePhotosView({
                   </div>
                   <figcaption>
                     {photo.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(photo.linkedTargetType)} · {photo.linkedTargetTitle}</b> : null}
-                    {photo.caption ? <strong>{photo.caption}</strong> : null}
-                    <div className="life-photo-meta-lines">
-                      {formatStoredMediaMetaLines(photo).map((line) => (
-                        <span key={`${photo.id}-${line}`}>{line}</span>
-                      ))}
-                      {hasGeoMetadata(photo) ? (
-                        <b className="life-photo-geo-badge">
-                          <MapPin aria-hidden size={12} />
-                          위치 메타데이터 있음
-                        </b>
-                      ) : null}
-                      {formatGeoMetadata(photo) ? <small>{formatGeoMetadata(photo)}</small> : null}
-                    </div>
+                    {photo.caption ? <strong>{photo.caption}</strong> : <strong>{photo.fileName}</strong>}
+                    <div className="life-photo-meta-lines">{renderStoredMeta(photo)}</div>
                     <button disabled={deletingPhotoId === photo.id} onClick={() => void deletePhoto(photo)} type="button">
                       {deletingPhotoId === photo.id ? "삭제 중..." : "삭제"}
                     </button>
@@ -257,13 +232,65 @@ export function LifePhotosView({
             <div className="life-map-empty life-map-empty--compact">
               <ImagePlus aria-hidden size={28} />
               <strong>이 날짜에 업로드한 사진이 아직 없어요.</strong>
-              <p>왼쪽에서 사진이나 영상을 선택하면 날짜별로 바로 모아 볼 수 있어요.</p>
+              <p>왼쪽에서 사진이나 영상을 올리면 날짜별로 바로 모아 볼 수 있어요.</p>
             </div>
           )}
         </SectionCard>
       </div>
     </div>
   );
+}
+
+function renderPreviewMeta(preview: LifeMediaPreview) {
+  const lines = formatMediaMetaLines(preview);
+  const gps = formatGeoMetadata(preview);
+
+  return (
+    <>
+      {lines.map((line) => (
+        <span key={`${preview.id}-${line}`}>{line}</span>
+      ))}
+      {hasGeoMetadata(preview) ? (
+        <>
+          <b className="life-photo-geo-badge">
+            <MapPin aria-hidden size={12} />
+            위치 메타데이터 있음
+          </b>
+          {gps ? <small>{gps}</small> : null}
+        </>
+      ) : (
+        <small>GPS 없음</small>
+      )}
+    </>
+  );
+}
+
+function renderStoredMeta(photo: LifePhotoRecord) {
+  const lines = formatStoredMediaMetaLines(photo);
+  const gps = formatGeoMetadata(photo);
+
+  return (
+    <>
+      {lines.length > 0 ? lines.map((line) => <span key={`${photo.id}-${line}`}>{line}</span>) : <span>표시할 메타데이터가 없어요.</span>}
+      {hasGeoMetadata(photo) ? (
+        <>
+          <b className="life-photo-geo-badge">
+            <MapPin aria-hidden size={12} />
+            위치 메타데이터 있음
+          </b>
+          {gps ? <small>{gps}</small> : null}
+        </>
+      ) : (
+        <small>GPS 없음</small>
+      )}
+    </>
+  );
+}
+
+function getPhotoGalleryClassName(photoCount: number) {
+  if (photoCount <= 1) return "life-photo-gallery life-photo-gallery--single";
+  if (photoCount === 2) return "life-photo-gallery life-photo-gallery--pair";
+  return "life-photo-gallery life-photo-gallery--grid";
 }
 
 function getSuggestedPhotoTarget(
