@@ -250,6 +250,8 @@ create table if not exists public.life_photos (
   linked_target_id uuid,
   linked_target_title text,
   taken_at timestamptz,
+  latitude numeric(10, 7),
+  longitude numeric(10, 7),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, file_path)
@@ -265,7 +267,9 @@ alter table public.life_photos
   add column if not exists linked_target_type text check (linked_target_type is null or linked_target_type in ('schedule', 'todo', 'event', 'activity')),
   add column if not exists linked_target_id uuid,
   add column if not exists linked_target_title text,
-  add column if not exists taken_at timestamptz;
+  add column if not exists taken_at timestamptz,
+  add column if not exists latitude numeric(10, 7),
+  add column if not exists longitude numeric(10, 7);
 
 create table if not exists public.expense_records (
   id uuid primary key default gen_random_uuid(),

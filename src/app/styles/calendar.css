@@ -356,27 +356,27 @@
   display: grid;
   align-content: start;
   min-width: 0;
-  min-height: 18px;
-  gap: 6px;
+  min-height: 22px;
+  gap: 7px;
 }
 
 .calendar-day__signal-stack {
   display: grid;
-  gap: 4px;
+  gap: 5px;
 }
 
 .calendar-day__signal {
   display: inline-flex;
   width: fit-content;
-  min-height: 18px;
+  min-height: 20px;
   align-items: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 850;
   line-height: 1;
-  padding: 0 7px;
+  padding: 0 8px;
 }
 
 .calendar-day__signal--plan {
@@ -391,7 +391,7 @@
 
 .calendar-day__event-count {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 850;
   line-height: 1;
 }

@@ -227,7 +227,7 @@ function getSuggestedPhotoTarget(
 ) {
   const mediaMinutes = previews
     .map((preview) => {
-      const takenAt = new Date(preview.lastModified);
+      const takenAt = new Date(preview.takenAt ?? preview.lastModified);
       if (formatDateKey(takenAt) !== date) return undefined;
       return takenAt.getHours() * 60 + takenAt.getMinutes();
     })

@@ -133,6 +133,8 @@ export type LifePhotoRecord = {
   linkedTargetTitle?: string;
   linkedTargetType?: "schedule" | "todo" | "event" | "activity";
   takenAt?: string;
+  latitude?: number;
+  longitude?: number;
   createdAt?: string;
 };
 
@@ -141,6 +143,9 @@ export type LifeMediaUploadInput = {
   width?: number;
   height?: number;
   durationSeconds?: number;
+  takenAt?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type PlaceProvider = "naver" | "manual";

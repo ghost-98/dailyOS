@@ -53,12 +53,14 @@ type LifePhotoRow = {
   linked_target_title: string | null;
   linked_target_type: "schedule" | "todo" | "event" | "activity" | null;
   taken_at: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
   created_at: string;
 };
 
 const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,start_place_name,start_place_address,end_place_name,end_place_address,transport_mode,source_type,source_id,source_title,created_at";
 const dailyLogColumns = "id,log_date,content,linked_target_id,linked_target_title,linked_target_type,created_at";
-const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,created_at";
+const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,latitude,longitude,created_at";
 
 type SupabaseErrorLike = {
   code?: unknown;
@@ -196,6 +198,8 @@ function mapLifePhotoMetadataRow(row: LifePhotoRow): LifePhotoRecord {
     linkedTargetTitle: row.linked_target_title ?? undefined,
     linkedTargetType: row.linked_target_type ?? undefined,
     takenAt: row.taken_at ?? undefined,
+    latitude: row.latitude === null ? undefined : Number(row.latitude),
+    longitude: row.longitude === null ? undefined : Number(row.longitude),
     createdAt: row.created_at,
   };
 }
@@ -469,7 +473,9 @@ export async function uploadLifePhotosToDb(
         linked_target_id: linkedTarget?.id ?? null,
         linked_target_title: linkedTarget?.title ?? null,
         linked_target_type: linkedTarget?.type ?? null,
-        taken_at: file.lastModified ? new Date(file.lastModified).toISOString() : null,
+        taken_at: upload.takenAt ?? (file.lastModified ? new Date(file.lastModified).toISOString() : null),
+        latitude: upload.latitude ?? null,
+        longitude: upload.longitude ?? null,
       })
       .select(lifePhotoColumns)
       .single();

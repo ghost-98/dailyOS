@@ -9,6 +9,8 @@ export type LifeMediaPreview = LifeMediaUploadInput & {
   sizeBytes: number;
 };
 
+type ExifValue = number | number[] | string;
+
 export async function createLifeMediaPreview(file: File): Promise<LifeMediaPreview> {
   const objectUrl = URL.createObjectURL(file);
   const basePreview = {
@@ -22,8 +24,8 @@ export async function createLifeMediaPreview(file: File): Promise<LifeMediaPrevi
   };
 
   if (file.type.startsWith("image/")) {
-    const dimensions = await readImageDimensions(objectUrl);
-    return { ...basePreview, ...dimensions };
+    const [dimensions, exifMetadata] = await Promise.all([readImageDimensions(objectUrl), readImageExifMetadata(file)]);
+    return { ...basePreview, ...dimensions, ...exifMetadata };
   }
 
   if (file.type.startsWith("video/")) {
@@ -38,18 +40,21 @@ export function getMediaFigureStyle(media: Pick<LifePhotoRecord, "height" | "wid
   return media.width && media.height ? { aspectRatio: `${media.width} / ${media.height}` } : undefined;
 }
 
-export function formatMediaMeta(media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "width">) {
-  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
+export function formatMediaMeta(
+  media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "takenAt" | "width">,
+) {
+  const dimensions = media.width && media.height ? `${media.width}횞${media.height}` : null;
   const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
-  const takenAt = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(media.lastModified));
-  return [media.mimeType, dimensions, duration, formatFileSize(media.sizeBytes), takenAt].filter(Boolean).join(" · ");
+  const takenAtSource = media.takenAt ?? new Date(media.lastModified).toISOString();
+  const takenAt = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(takenAtSource));
+  return [media.mimeType, dimensions, duration, formatFileSize(media.sizeBytes), takenAt].filter(Boolean).join(" 쨌 ");
 }
 
 export function formatStoredMediaMeta(media: LifePhotoRecord) {
-  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
+  const dimensions = media.width && media.height ? `${media.width}횞${media.height}` : null;
   const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
   const takenAt = media.takenAt ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(media.takenAt)) : null;
-  return [media.mimeType, dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" · ");
+  return [media.mimeType, dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" 쨌 ");
 }
 
 export function formatFileSize(sizeBytes: number) {
@@ -81,4 +86,187 @@ function readVideoMetadata(objectUrl: string) {
     video.onerror = reject;
     video.src = objectUrl;
   });
+}
+
+async function readImageExifMetadata(file: File): Promise<Pick<LifeMediaPreview, "latitude" | "longitude" | "takenAt">> {
+  if (file.type !== "image/jpeg" && file.type !== "image/jpg") return {};
+
+  try {
+    const buffer = await file.arrayBuffer();
+    return parseJpegExif(buffer);
+  } catch (error) {
+    console.error("Failed to parse image EXIF metadata", error);
+    return {};
+  }
+}
+
+function parseJpegExif(buffer: ArrayBuffer): Pick<LifeMediaPreview, "latitude" | "longitude" | "takenAt"> {
+  const view = new DataView(buffer);
+  if (view.byteLength < 4 || view.getUint16(0, false) !== 0xffd8) return {};
+
+  let offset = 2;
+  while (offset + 4 <= view.byteLength) {
+    if (view.getUint8(offset) !== 0xff) break;
+    const marker = view.getUint8(offset + 1);
+    if (marker === 0xda || marker === 0xd9) break;
+
+    const segmentLength = view.getUint16(offset + 2, false);
+    if (segmentLength < 2) break;
+
+    if (marker === 0xe1 && offset + 2 + segmentLength <= view.byteLength) {
+      const exifStart = offset + 4;
+      if (readAscii(view, exifStart, 4) === "Exif") {
+        return parseExifPayload(view, exifStart + 6);
+      }
+    }
+
+    offset += segmentLength + 2;
+  }
+
+  return {};
+}
+
+function parseExifPayload(view: DataView, tiffStart: number): Pick<LifeMediaPreview, "latitude" | "longitude" | "takenAt"> {
+  if (tiffStart + 8 > view.byteLength) return {};
+
+  const byteOrder = readAscii(view, tiffStart, 2);
+  const isLittleEndian = byteOrder === "II";
+  if (!isLittleEndian && byteOrder !== "MM") return {};
+  if (view.getUint16(tiffStart + 2, isLittleEndian) !== 42) return {};
+
+  const ifd0Offset = view.getUint32(tiffStart + 4, isLittleEndian);
+  const ifd0 = parseIfd(view, tiffStart, tiffStart + ifd0Offset, isLittleEndian);
+  const exifIfdOffset = getSingleNumber(ifd0.get(0x8769));
+  const gpsIfdOffset = getSingleNumber(ifd0.get(0x8825));
+
+  const exifIfd = exifIfdOffset ? parseIfd(view, tiffStart, tiffStart + exifIfdOffset, isLittleEndian) : new Map<number, ExifValue>();
+  const gpsIfd = gpsIfdOffset ? parseIfd(view, tiffStart, tiffStart + gpsIfdOffset, isLittleEndian) : new Map<number, ExifValue>();
+
+  const takenAt =
+    parseExifDate(getStringValue(exifIfd.get(0x9003))) ??
+    parseExifDate(getStringValue(exifIfd.get(0x9004))) ??
+    parseExifDate(getStringValue(ifd0.get(0x0132)));
+
+  const latitude = parseGpsCoordinate(gpsIfd.get(0x0001), gpsIfd.get(0x0002));
+  const longitude = parseGpsCoordinate(gpsIfd.get(0x0003), gpsIfd.get(0x0004));
+
+  return { latitude, longitude, takenAt };
+}
+
+function parseIfd(view: DataView, tiffStart: number, ifdOffset: number, isLittleEndian: boolean) {
+  const entries = new Map<number, ExifValue>();
+  if (ifdOffset + 2 > view.byteLength) return entries;
+
+  const entryCount = view.getUint16(ifdOffset, isLittleEndian);
+  for (let index = 0; index < entryCount; index += 1) {
+    const entryOffset = ifdOffset + 2 + index * 12;
+    if (entryOffset + 12 > view.byteLength) break;
+
+    const tag = view.getUint16(entryOffset, isLittleEndian);
+    const type = view.getUint16(entryOffset + 2, isLittleEndian);
+    const count = view.getUint32(entryOffset + 4, isLittleEndian);
+    const value = readExifValue(view, tiffStart, entryOffset + 8, type, count, isLittleEndian);
+    if (value !== undefined) entries.set(tag, value);
+  }
+
+  return entries;
+}
+
+function readExifValue(
+  view: DataView,
+  tiffStart: number,
+  valueOffset: number,
+  type: number,
+  count: number,
+  isLittleEndian: boolean,
+): ExifValue | undefined {
+  const typeSize = getExifTypeSize(type);
+  if (!typeSize || count <= 0) return undefined;
+
+  const totalSize = typeSize * count;
+  const dataOffset = totalSize <= 4 ? valueOffset : tiffStart + view.getUint32(valueOffset, isLittleEndian);
+  if (dataOffset < 0 || dataOffset + totalSize > view.byteLength) return undefined;
+
+  switch (type) {
+    case 2:
+      return readAscii(view, dataOffset, count).replace(/\0+$/, "").trim();
+    case 3:
+      return readNumberArray(count, (index) => view.getUint16(dataOffset + index * 2, isLittleEndian));
+    case 4:
+      return readNumberArray(count, (index) => view.getUint32(dataOffset + index * 4, isLittleEndian));
+    case 5:
+      return readNumberArray(count, (index) => {
+        const numerator = view.getUint32(dataOffset + index * 8, isLittleEndian);
+        const denominator = view.getUint32(dataOffset + index * 8 + 4, isLittleEndian);
+        return denominator === 0 ? 0 : numerator / denominator;
+      });
+    default:
+      return undefined;
+  }
+}
+
+function getExifTypeSize(type: number) {
+  switch (type) {
+    case 2:
+      return 1;
+    case 3:
+      return 2;
+    case 4:
+      return 4;
+    case 5:
+      return 8;
+    default:
+      return 0;
+  }
+}
+
+function readNumberArray(count: number, reader: (index: number) => number) {
+  const values = Array.from({ length: count }, (_, index) => reader(index));
+  return values.length === 1 ? values[0] : values;
+}
+
+function parseExifDate(value?: string) {
+  if (!value) return undefined;
+  const match = value.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+  if (!match) return undefined;
+
+  const [, year, month, day, hours, minutes, seconds] = match;
+  const date = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hours),
+    Number(minutes),
+    Number(seconds),
+  );
+
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function parseGpsCoordinate(referenceValue?: ExifValue, coordinateValue?: ExifValue) {
+  const reference = getStringValue(referenceValue);
+  const coordinates = Array.isArray(coordinateValue) ? coordinateValue : typeof coordinateValue === "number" ? [coordinateValue] : [];
+  if (!reference || coordinates.length < 3) return undefined;
+
+  const [degrees, minutes, seconds] = coordinates;
+  const decimal = degrees + minutes / 60 + seconds / 3600;
+  return reference === "S" || reference === "W" ? -decimal : decimal;
+}
+
+function getStringValue(value?: ExifValue) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function getSingleNumber(value?: ExifValue) {
+  if (typeof value === "number") return value;
+  if (Array.isArray(value) && typeof value[0] === "number") return value[0];
+  return undefined;
+}
+
+function readAscii(view: DataView, start: number, length: number) {
+  let result = "";
+  for (let index = 0; index < length && start + index < view.byteLength; index += 1) {
+    result += String.fromCharCode(view.getUint8(start + index));
+  }
+  return result;
 }
