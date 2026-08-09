@@ -1,24 +1,24 @@
 .places-page {
   display: grid;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .places-header {
   border-bottom: 1px solid var(--line);
-  padding-bottom: 18px;
+  padding-bottom: var(--space-5);
 }
 
 .places-layout {
   display: grid;
   grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
-  gap: 18px;
+  gap: var(--space-4);
   align-items: flex-start;
 }
 
 .places-panel {
   display: grid;
-  gap: 22px;
-  padding: 22px;
+  gap: var(--space-5);
+  padding: var(--card-padding-lg);
 }
 
 .places-search label {
@@ -63,7 +63,7 @@
   justify-content: center;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgba(157, 178, 255, 0.12);
+  background: var(--surface-accent);
   color: var(--text);
   font-weight: 800;
 }
@@ -93,8 +93,8 @@
   align-items: center;
   max-width: 180px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
   color: var(--muted);
   padding: 8px 11px 8px 8px;
   white-space: nowrap;
@@ -184,10 +184,10 @@
 
 .places-selected-panel {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--surface-strong);
   padding: var(--space-4);
 }
 
@@ -215,7 +215,7 @@
   width: 38px;
   height: 38px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   color: #111216;
 }
 
@@ -227,7 +227,7 @@
 
 .places-selected-panel__actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -237,8 +237,8 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
-  border-radius: 11px;
-  background: rgba(157, 178, 255, 0.13);
+  border-radius: var(--radius-md);
+  background: var(--surface-accent);
   color: var(--text);
   font-weight: 900;
 }
@@ -266,8 +266,8 @@
   height: 34px;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
   color: var(--text);
 }
 
@@ -281,7 +281,7 @@
 
 .places-list {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .place-item {
@@ -289,8 +289,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   border: 1px solid var(--line);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
   padding: 8px;
 }
 
@@ -360,17 +360,17 @@
   gap: 8px;
   place-items: center;
   border: 1px dashed var(--line);
-  border-radius: 13px;
+  border-radius: var(--radius-md);
   color: var(--muted);
-  padding: 22px;
+  padding: var(--card-padding-lg);
   text-align: center;
 }
 
 .places-map-card {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   min-height: 710px;
-  padding: 22px;
+  padding: var(--card-padding-lg);
 }
 
 .places-map-card--full {
@@ -382,7 +382,7 @@
   position: relative;
   min-height: 590px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     linear-gradient(135deg, rgba(157, 178, 255, 0.08), rgba(101, 201, 164, 0.08)),
     rgba(255, 255, 255, 0.035);
@@ -412,7 +412,7 @@
 
 .places-map-commandbar {
   display: flex;
-  gap: 10px;
+  gap: var(--toolbar-gap);
   align-items: flex-start;
   max-width: 100%;
   overflow-x: auto;
@@ -469,10 +469,10 @@
   left: 16px;
   display: grid;
   max-height: 178px;
-  gap: 10px;
+  gap: var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  padding: var(--card-padding);
 }
 
 .places-map-list {
@@ -504,9 +504,9 @@
 
 .places-selected {
   border: 1px solid var(--line);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: var(--card-padding);
 }
 
 .places-selected p {
@@ -540,8 +540,8 @@
   gap: 10px;
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
+  border-radius: var(--radius-md);
+  background: var(--field-bg-strong);
   padding: 14px;
 }
 
@@ -558,7 +558,7 @@
 .places-save-folder-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .places-save-folder {
@@ -567,8 +567,8 @@
   gap: 10px;
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
   color: var(--text);
   padding: 12px;
   text-align: left;

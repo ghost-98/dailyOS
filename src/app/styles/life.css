@@ -1,7 +1,7 @@
 .life-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .life-header {
@@ -11,25 +11,25 @@
 .life-axis-view {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .life-axis-view .calendar-page,
 .life-axis-view .ledger-page {
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .life-tab-panel,
 .life-axis-view .calendar-page,
 .life-axis-view .ledger-page {
   display: grid;
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .life-axis-view .calendar-layout--detail-open,
 .life-axis-view .ledger-layout {
   align-items: flex-start;
-  gap: 18px;
+  gap: var(--space-4);
   grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
 }
 
@@ -41,9 +41,8 @@
 .life-axis-view .ledger-calendar-card,
 .life-axis-view .date-detail-card {
   border: 1px solid rgba(255, 255, 255, 0.11);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
-    var(--surface);
+  border-radius: var(--radius-xl);
+  background: var(--panel-elevated);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
 }
 
@@ -61,20 +60,20 @@
 .life-calendar-db-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .life-calendar-db-panel {
   display: grid;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .life-calendar-db-scopes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .life-calendar-db-chip,
@@ -85,10 +84,10 @@
 }
 
 .life-calendar-db-chip {
-  min-height: 36px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 0 14px;
+  min-height: var(--chip-height);
+  border-radius: var(--radius-pill);
+  background: var(--field-bg-strong);
+  padding: 0 var(--chip-padding-x);
 }
 
 .life-calendar-db-chip--active {
@@ -99,7 +98,7 @@
 .life-calendar-db-range {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .life-calendar-db-range label {
@@ -115,10 +114,10 @@
 
 .life-calendar-db-summary__card {
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background:
     radial-gradient(circle at top left, rgba(201, 184, 255, 0.11), transparent 34%),
-    rgba(255, 255, 255, 0.04);
+    var(--surface-soft);
   padding: 12px;
   text-align: left;
 }
@@ -148,7 +147,7 @@
 .life-calendar-db-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .life-calendar-db-overview article,
@@ -156,8 +155,8 @@
 .life-calendar-db-hero article,
 .life-calendar-db-brief-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: var(--radius-lg);
+  background: var(--panel-frost);
   padding: 14px;
 }
 
@@ -195,19 +194,19 @@
 
 .life-calendar-db-content {
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
   min-height: 620px;
 }
 
 .life-calendar-db-story {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
   border: 1px solid rgba(201, 184, 255, 0.16);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(circle at top left, rgba(201, 184, 255, 0.12), transparent 38%),
-    rgba(255, 255, 255, 0.045);
-  padding: 16px;
+    var(--field-bg-strong);
+  padding: var(--card-padding);
 }
 
 .life-calendar-db-story span,
@@ -225,7 +224,7 @@
 
 .life-calendar-day-panel {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .life-calendar-day-panel__layout {
@@ -239,17 +238,17 @@
     "timeline finance"
     "timeline logs";
   grid-template-rows: minmax(148px, 0.7fr) minmax(108px, 0.46fr) minmax(176px, 0.9fr) minmax(176px, 0.9fr) minmax(136px, 0.62fr) minmax(108px, 0.46fr);
-  gap: 10px;
+  gap: var(--space-3);
   height: 920px;
   min-height: 920px;
 }
 
 .life-calendar-day-card {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: var(--radius-lg);
+  background: var(--panel-frost);
   color: inherit;
   font: inherit;
   min-height: 0;
