@@ -2,6 +2,8 @@
 
 import { ArrowUpDown, Check, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
@@ -247,14 +249,13 @@ export function LifePeopleView({
               <p className="eyebrow">People Directory</p>
               <h2>{people.length}명</h2>
             </div>
-            <button
-              aria-label="사람 추가"
-              className="life-people-icon-button"
+            <IconButton
+              label="사람 추가"
               onClick={() => (isCreateMode ? closeCreateMode() : openCreateMode())}
-              type="button"
+              tone="soft"
             >
               {isCreateMode ? <X aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
-            </button>
+            </IconButton>
           </div>
 
           {isCreateMode ? (
@@ -285,14 +286,9 @@ export function LifePeopleView({
                   />
                 </label>
                 <div className="life-people-form__actions">
-                  <button
-                    className="life-people-save-button"
-                    disabled={isSavingCreate || !createName.trim()}
-                    onClick={() => void handleCreatePerson()}
-                    type="button"
-                  >
+                  <ActionButton disabled={isSavingCreate || !createName.trim()} onClick={() => void handleCreatePerson()}>
                     {isSavingCreate ? "추가 중..." : "사람 추가"}
-                  </button>
+                  </ActionButton>
                 </div>
               </div>
 
@@ -355,17 +351,18 @@ export function LifePeopleView({
                         </button>
 
                         <div className="life-person-card__actions">
-                          <button aria-label={`${person.name} 선택`} onClick={() => setSelectedId(person.id)} type="button">
+                          <IconButton label={`${person.name} 선택`} onClick={() => setSelectedId(person.id)} size="sm" tone="soft">
                             <Pencil aria-hidden size={14} />
-                          </button>
-                          <button
-                            aria-label={`${person.name} 삭제`}
+                          </IconButton>
+                          <IconButton
                             disabled={isDeletingId === person.id}
+                            label={`${person.name} 삭제`}
                             onClick={() => void handleDeletePerson(person)}
-                            type="button"
+                            size="sm"
+                            tone="danger"
                           >
                             <Trash2 aria-hidden size={14} />
-                          </button>
+                          </IconButton>
                         </div>
                       </div>
                     );
@@ -390,22 +387,22 @@ export function LifePeopleView({
             </div>
             {selectedPerson ? (
               <div className="life-people-detail__actions">
-                <button
-                  className="life-people-icon-button"
+                <IconButton
                   disabled={!detailDirty || isSavingDetail || !detailName.trim()}
+                  label="사람 정보 저장"
                   onClick={() => void handleUpdatePerson()}
-                  type="button"
+                  tone="soft"
                 >
                   <Check aria-hidden size={16} />
-                </button>
-                <button
-                  className="life-people-icon-button life-people-icon-button--danger"
+                </IconButton>
+                <IconButton
                   disabled={isDeletingId === selectedPerson.id}
+                  label="사람 삭제"
                   onClick={() => void handleDeletePerson(selectedPerson)}
-                  type="button"
+                  tone="danger"
                 >
                   <Trash2 aria-hidden size={16} />
-                </button>
+                </IconButton>
               </div>
             ) : null}
           </div>

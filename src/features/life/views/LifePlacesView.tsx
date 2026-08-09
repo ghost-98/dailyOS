@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarRange, Check, MapPin, Plus, Search, ToggleLeft, ToggleRight, Trash2, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
@@ -781,13 +783,13 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               </div>
               <div className="life-places-panel-head__actions">
                 {isMyPlacesExpanded ? (
-                  <button className="life-places-head-toggle" onClick={() => setIsMyPlacesExpanded(false)} type="button">
+                  <IconButton label="내 장소 접기" onClick={() => setIsMyPlacesExpanded(false)} size="sm" tone="ghost">
                     <X aria-hidden size={17} />
-                  </button>
+                  </IconButton>
                 ) : (
-                  <button className="life-places-head-toggle" onClick={startCreatingPersonalPlace} type="button">
+                  <IconButton label="내 장소 추가" onClick={startCreatingPersonalPlace} size="sm" tone="ghost">
                     <Plus aria-hidden size={17} />
-                  </button>
+                  </IconButton>
                 )}
               </div>
             </div>
@@ -833,22 +835,22 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     </div>
                     {selectedPersonalPlace ? (
                       <div className="life-places-manager__form-tools">
-                        <button
-                          className="life-places-icon-button"
+                        <IconButton
                           disabled={!personalPlaceDirty || isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
+                          label="내 장소 저장"
                           onClick={() => void savePersonalPlace()}
-                          type="button"
+                          tone="soft"
                         >
                           <Check aria-hidden size={16} />
-                        </button>
-                        <button
-                          className="life-places-icon-button life-places-icon-button--danger"
+                        </IconButton>
+                        <IconButton
                           disabled={isDeletingPersonalPlace}
+                          label="내 장소 삭제"
                           onClick={() => void deletePersonalPlace()}
-                          type="button"
+                          tone="danger"
                         >
                           <Trash2 aria-hidden size={16} />
-                        </button>
+                        </IconButton>
                       </div>
                     ) : null}
                   </div>
@@ -923,19 +925,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
                   <div className="life-places-manager__buttons">
                     {!selectedPersonalPlace ? (
-                      <button
-                        disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
-                        onClick={() => void savePersonalPlace()}
-                        type="button"
-                      >
+                      <ActionButton disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace} onClick={() => void savePersonalPlace()}>
                         <Plus aria-hidden size={15} />
                         내 장소 저장
-                      </button>
+                      </ActionButton>
                     ) : (
-                      <button className="life-places-manager__ghost" onClick={startCreatingPersonalPlace} type="button">
+                      <ActionButton onClick={startCreatingPersonalPlace} variant="secondary">
                         <X aria-hidden size={15} />
                         새로 입력
-                      </button>
+                      </ActionButton>
                     )}
                   </div>
                 </div>

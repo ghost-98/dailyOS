@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MonthPickerSheet } from "@/features/calendar/CalendarView";
@@ -253,14 +255,14 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                   <p className="eyebrow">Income Capture</p>
                   <h3>수입 추가</h3>
                 </div>
-                <button
-                  aria-label={isIncomeCaptureExpanded ? "수입 입력 접기" : "수입 입력 열기"}
-                  className="ledger-head-toggle"
+                <IconButton
+                  label={isIncomeCaptureExpanded ? "수입 입력 접기" : "수입 입력 열기"}
                   onClick={() => setIsIncomeCaptureExpanded((current) => !current)}
-                  type="button"
+                  size="sm"
+                  tone="ghost"
                 >
                   {isIncomeCaptureExpanded ? <X aria-hidden size={17} /> : <Plus aria-hidden size={17} />}
-                </button>
+                </IconButton>
               </div>
 
               {isIncomeCaptureExpanded ? (
@@ -287,9 +289,9 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                   <span>메모</span>
                   <textarea placeholder="입금 경로나 설명" rows={3} value={incomeMemo} onChange={(event) => setIncomeMemo(event.target.value)} />
                 </label>
-                <button className="life-people-save-button" disabled={isSavingIncome || !incomeTitle.trim() || !incomeAmount} onClick={() => void createIncome()} type="button">
+                <ActionButton disabled={isSavingIncome || !incomeTitle.trim() || !incomeAmount} onClick={() => void createIncome()}>
                   {isSavingIncome ? "저장 중..." : "수입 저장"}
-                </button>
+                </ActionButton>
               </div>
               ) : null}
             </div>

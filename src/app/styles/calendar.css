@@ -1254,9 +1254,7 @@
 .event-sheet__text-button,
 .event-sheet__done-button,
 .event-sheet__floating-close,
-.event-sheet__icon-button,
-.event-sheet__secondary-button,
-.event-sheet__primary-button {
+.event-sheet__footer .ui-action-button {
   border: 0;
 }
 
@@ -1285,18 +1283,6 @@
   padding: 22px 26px 24px;
 }
 
-.event-sheet__icon-button {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.045);
-  color: var(--muted);
-}
-
 .event-sheet__footer {
   display: flex;
   flex: 0 0 auto;
@@ -1305,28 +1291,6 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(24, 25, 29, 0.98);
   padding: 16px 24px 20px;
-}
-
-.event-sheet__secondary-button,
-.event-sheet__primary-button {
-  display: inline-flex;
-  min-height: 40px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  font-weight: 850;
-  padding: 0 16px;
-}
-
-.event-sheet__secondary-button {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.045);
-  color: var(--text);
-}
-
-.event-sheet__primary-button {
-  background: var(--violet);
-  color: #111216;
 }
 
 .event-form-card {

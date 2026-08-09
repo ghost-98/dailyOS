@@ -720,19 +720,6 @@
   gap: 8px;
 }
 
-.places-folder-add {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(157, 178, 255, 0.12);
-  color: var(--text);
-  padding: 12px;
-  font-weight: 900;
-}
-
 @media (max-width: 1180px) {
   .ledger-summary-grid,
   .ledger-layout,

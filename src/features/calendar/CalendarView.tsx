@@ -17,6 +17,8 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { EventType, PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
@@ -905,9 +907,9 @@ function EventCreateSheet({
             <h2 id="event-sheet-title">{event ? "항목 수정" : `${categoryLabels[type]} 추가`}</h2>
             <p>{event ? "등록된 내용을 수정합니다." : "날짜와 종류를 정해 계획에 추가합니다."}</p>
           </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+          <IconButton label="닫기" onClick={onClose} tone="outline">
             <X aria-hidden size={18} />
-          </button>
+          </IconButton>
         </header>
 
         <div className="event-sheet__body schedule-sheet__body">
@@ -1077,12 +1079,12 @@ function EventCreateSheet({
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" disabled={isSaving} onClick={onClose} type="button">
+          <ActionButton disabled={isSaving} onClick={onClose} variant="secondary">
             취소
-          </button>
-          <button className="event-sheet__primary-button" disabled={isSaving} onClick={saveCurrentEvent} type="button">
+          </ActionButton>
+          <ActionButton disabled={isSaving} onClick={saveCurrentEvent}>
             {isSaving ? "저장 중..." : "저장"}
-          </button>
+          </ActionButton>
         </footer>
       </section>
     </div>
@@ -1153,9 +1155,9 @@ function TaskCreateSheet({
             <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
             <p>{task ? "상태와 날짜를 조정합니다." : "예정일 기준으로 할 일을 추가합니다."}</p>
           </div>
-          <button className="event-sheet__icon-button" aria-label="닫기" onClick={onClose} type="button">
+          <IconButton label="닫기" onClick={onClose} tone="outline">
             <X aria-hidden size={18} />
-          </button>
+          </IconButton>
         </header>
 
         <div className="event-sheet__body schedule-sheet__body">
@@ -1335,12 +1337,12 @@ function TaskCreateSheet({
         </div>
 
         <footer className="event-sheet__footer">
-          <button className="event-sheet__secondary-button" disabled={isSaving} onClick={onClose} type="button">
+          <ActionButton disabled={isSaving} onClick={onClose} variant="secondary">
             취소
-          </button>
-          <button className="event-sheet__primary-button" disabled={isSaving} onClick={saveTask} type="button">
+          </ActionButton>
+          <ActionButton disabled={isSaving} onClick={saveTask}>
             {isSaving ? "저장 중..." : "저장"}
-          </button>
+          </ActionButton>
         </footer>
       </section>
     </div>

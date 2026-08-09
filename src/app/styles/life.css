@@ -2510,7 +2510,6 @@
   gap: 9px;
 }
 
-.life-people-save-button,
 .life-people-suggestions button {
   display: inline-flex;
   align-items: center;
@@ -2523,7 +2522,6 @@
   padding: 0 14px;
 }
 
-.life-people-save-button,
 .life-people-suggestions button {
   border: 1px solid rgba(201, 184, 255, 0.28);
   background: rgba(201, 184, 255, 0.12);
@@ -2552,28 +2550,6 @@
 
 .ledger-capture-panel__heading {
   align-items: flex-start;
-}
-
-.ledger-head-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: transparent;
-  color: var(--violet);
-  cursor: pointer;
-  padding: 0;
-}
-
-.ledger-head-toggle:hover:not(:disabled) {
-  color: var(--text);
-}
-
-.ledger-head-toggle:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 .ledger-income-form {
@@ -2693,35 +2669,6 @@
   padding: 0 12px;
 }
 
-.life-people-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.life-people-icon-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.life-people-icon-button:hover:not(:disabled) {
-  border-color: rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.1);
-}
-
-.life-people-icon-button--danger:hover:not(:disabled) {
-  border-color: rgba(244, 114, 182, 0.26);
-  background: rgba(244, 114, 182, 0.1);
-  color: #f9a8d4;
-}
-
 .life-person-buttons--scroll {
   max-height: 620px;
   overflow-y: auto;
@@ -2777,29 +2724,6 @@
   display: grid;
   align-content: start;
   gap: 8px;
-}
-
-.life-person-card__actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.life-person-card__actions button:hover:not(:disabled) {
-  border-color: rgba(201, 184, 255, 0.28);
-  color: var(--text);
-}
-
-.life-person-card__actions button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .life-people-inline-create {
@@ -3208,9 +3132,7 @@
   padding: 8px 11px;
 }
 
-button:disabled,
-.event-sheet__primary-button:disabled,
-.event-sheet__secondary-button:disabled {
+button:disabled {
   cursor: default;
   opacity: 0.58;
 }
@@ -4072,39 +3994,6 @@ button:disabled {
   font-size: 12px;
 }
 
-.life-places-manager__ghost {
-  background: rgba(15, 23, 42, 0.06) !important;
-  color: var(--text-strong) !important;
-}
-
-.life-places-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(126, 105, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(126, 105, 255, 0.12);
-  color: var(--violet-strong);
-  cursor: pointer;
-}
-
-.life-places-icon-button:hover:not(:disabled) {
-  background: rgba(126, 105, 255, 0.18);
-}
-
-.life-places-icon-button--danger {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.16);
-  color: #b91c1c;
-}
-
-.life-places-icon-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 .life-places-empty-inline--compact {
   min-height: 0;
   padding: 10px 12px;
@@ -4118,28 +4007,6 @@ button:disabled {
 
 .life-places-manager--collapsed .life-places-panel-head {
   margin-bottom: 0;
-}
-
-.life-places-head-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  background: transparent;
-  color: var(--violet-strong);
-  cursor: pointer;
-  padding: 0;
-}
-
-.life-places-head-toggle:hover:not(:disabled) {
-  color: var(--text-strong);
-}
-
-.life-places-head-toggle:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 .life-places-place-button {
