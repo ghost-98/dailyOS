@@ -43,18 +43,18 @@ export function getMediaFigureStyle(media: Pick<LifePhotoRecord, "height" | "wid
 export function formatMediaMeta(
   media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "takenAt" | "width">,
 ) {
-  const dimensions = media.width && media.height ? `${media.width}횞${media.height}` : null;
+  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
   const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
   const takenAtSource = media.takenAt ?? new Date(media.lastModified).toISOString();
   const takenAt = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(takenAtSource));
-  return [media.mimeType, dimensions, duration, formatFileSize(media.sizeBytes), takenAt].filter(Boolean).join(" 쨌 ");
+  return [formatMediaTypeLabel(media.mimeType), dimensions, duration, formatFileSize(media.sizeBytes), takenAt].filter(Boolean).join(" · ");
 }
 
 export function formatStoredMediaMeta(media: LifePhotoRecord) {
-  const dimensions = media.width && media.height ? `${media.width}횞${media.height}` : null;
+  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
   const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
   const takenAt = media.takenAt ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(media.takenAt)) : null;
-  return [media.mimeType, dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" 쨌 ");
+  return [formatMediaTypeLabel(media.mimeType), dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" · ");
 }
 
 export function formatMediaMetaLines(
@@ -62,7 +62,7 @@ export function formatMediaMetaLines(
 ) {
   const takenAtSource = media.takenAt ?? new Date(media.lastModified).toISOString();
   return [
-    media.mimeType || "이미지",
+    formatMediaTypeLabel(media.mimeType),
     media.width && media.height ? `${media.width} × ${media.height}` : null,
     typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null,
     typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null,
@@ -72,7 +72,7 @@ export function formatMediaMetaLines(
 
 export function formatStoredMediaMetaLines(media: LifePhotoRecord) {
   return [
-    media.mimeType || "이미지",
+    formatMediaTypeLabel(media.mimeType),
     media.width && media.height ? `${media.width} × ${media.height}` : null,
     typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null,
     typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null,
@@ -93,6 +93,26 @@ export function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes}B`;
   if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)}KB`;
   return `${(sizeBytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function formatMediaTypeLabel(mimeType?: string) {
+  if (!mimeType) return "이미지";
+
+  const normalizedType = mimeType.toLowerCase();
+
+  if (normalizedType === "image/jpeg" || normalizedType === "image/jpg") return "JPEG 사진";
+  if (normalizedType === "image/png") return "PNG 이미지";
+  if (normalizedType === "image/webp") return "WEBP 이미지";
+  if (normalizedType === "image/heic" || normalizedType === "image/heif") return "HEIC 이미지";
+  if (normalizedType === "image/gif") return "GIF 이미지";
+  if (normalizedType === "video/mp4") return "MP4 영상";
+  if (normalizedType === "video/quicktime") return "MOV 영상";
+  if (normalizedType === "video/webm") return "WEBM 영상";
+
+  if (normalizedType.startsWith("image/")) return "이미지";
+  if (normalizedType.startsWith("video/")) return "영상";
+
+  return mimeType;
 }
 
 function formatDuration(durationSeconds: number) {
@@ -263,14 +283,7 @@ function parseExifDate(value?: string) {
   if (!match) return undefined;
 
   const [, year, month, day, hours, minutes, seconds] = match;
-  const date = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hours),
-    Number(minutes),
-    Number(seconds),
-  );
+  const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes), Number(seconds));
 
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
