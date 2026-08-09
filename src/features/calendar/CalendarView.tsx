@@ -1619,6 +1619,7 @@ type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem
 type DayEventPreview = { id: string; meta: string; title: string; type: "event" | "schedule" | "todo" };
 type DayLogItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "daily_log" };
 type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
+type DayStandalonePhotoGroup = { id: string; items: DayPhotoItem[]; sortMinutes: number; timeLabel: string };
 type DayRouteStop = {
   address?: string;
   id: string;
@@ -1626,12 +1627,14 @@ type DayRouteStop = {
   latitude?: number;
   longitude?: number;
   name: string;
+  sortMinutes?: number;
   timeLabel: string;
 };
 type DayResolvedRouteStop = DayRouteStop & { latitude: number; longitude: number };
 
 function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items: DayTimelineItem[] }) {
   const [detailView, setDetailView] = useState<DayDetailView>(null);
+  const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const activityItems = useMemo(
     () => items.filter((item): item is DayActivityItem => "external" in item && item.external.type === "activity"),
     [items],
@@ -1648,10 +1651,30 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
   const previewPhotos = photoItems.slice(0, 3);
   const finance = useMemo(() => getFinanceTotals(items), [items]);
   const linkedPhotosByActivityId = useMemo(() => buildLinkedPhotoMap(photoItems), [photoItems]);
+  const standalonePhotoGroups = useMemo(() => buildStandalonePhotoGroups(photoItems), [photoItems]);
+  const timelineRows = useMemo(
+    () =>
+      [
+        ...activityItems.map((item) => ({ id: item.id, item, kind: "activity" as const, sortMinutes: item.sortMinutes })),
+        ...standalonePhotoGroups.map((group) => ({ group, id: group.id, kind: "photo" as const, sortMinutes: group.sortMinutes })),
+      ].sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id)),
+    [activityItems, standalonePhotoGroups],
+  );
   const companionCounts = useMemo(
     () => getTopValues(activityItems.flatMap((item) => parseCompanionNames(item.external.companions))).slice(0, 8),
     [activityItems],
   );
+  const visiblePhotoItems = photoViewer?.items ?? photoItems;
+
+  const openPhotoViewer = (nextItems: DayPhotoItem[], title: string) => {
+    setPhotoViewer({ items: nextItems, title });
+    setDetailView("photos");
+  };
+
+  const closeDetail = () => {
+    setDetailView(null);
+    setPhotoViewer(null);
+  };
 
   return (
     <>
@@ -1663,30 +1686,53 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
               <b>{activityItems.length}건</b>
             </div>
             <div className="life-calendar-day-timeline">
-              {activityItems.length > 0 ? activityItems.map((item) => (
-                <article className="life-calendar-day-timeline__item" key={item.id}>
-                  <div className="life-calendar-day-timeline__time">
-                    <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
-                    <div className="life-calendar-day-timeline__tags">
-                      {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
-                    </div>
-                  </div>
-                  <div className="life-calendar-day-timeline__body">
-                    <strong>{item.external.title}</strong>
-                    {linkedPhotosByActivityId.get(item.external.id)?.length ? (
-                      <div className="life-calendar-day-timeline__linked">
-                        <b>
-                          <Camera aria-hidden size={12} />
-                          사진 {linkedPhotosByActivityId.get(item.external.id)!.length}장
-                        </b>
+              {timelineRows.length > 0 ? timelineRows.map((row) => {
+                if (row.kind === "activity") {
+                  const item = row.item;
+                  const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
+                  return (
+                    <article className="life-calendar-day-timeline__item" key={item.id}>
+                      <div className="life-calendar-day-timeline__time">
+                        <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
+                        <div className="life-calendar-day-timeline__tags">
+                          {linkedPhotos.length > 0 ? (
+                            <button className="life-calendar-day-photo-badge" onClick={() => openPhotoViewer(linkedPhotos, item.external.title)} type="button">
+                              <Camera aria-hidden size={12} />
+                              {linkedPhotos.length}
+                            </button>
+                          ) : null}
+                          {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
+                        </div>
                       </div>
-                    ) : null}
-                    {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
-                    {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
-                    {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
-                  </div>
-                </article>
-              )) : <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
+                      <div className="life-calendar-day-timeline__body">
+                        <strong>{item.external.title}</strong>
+                        {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
+                        {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
+                        {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
+                      </div>
+                    </article>
+                  );
+                }
+
+                const group = row.group;
+                return (
+                  <article className="life-calendar-day-timeline__item life-calendar-day-timeline__item--photo" key={group.id}>
+                    <div className="life-calendar-day-timeline__time">
+                      <span>{group.timeLabel}</span>
+                      <div className="life-calendar-day-timeline__tags">
+                        <button className="life-calendar-day-photo-badge" onClick={() => openPhotoViewer(group.items, `${group.timeLabel} 사진`)} type="button">
+                          <Camera aria-hidden size={12} />
+                          {group.items.length}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="life-calendar-day-timeline__body">
+                      <strong>날짜에 연결된 사진</strong>
+                      <p>{getStandalonePhotoGroupSummary(group)}</p>
+                    </div>
+                  </article>
+                );
+              }) : <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
             </div>
           </section>
 
@@ -1701,7 +1747,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             <DayRouteMap compact stops={routeStops} />
           </button>
 
-          <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => setDetailView("photos")} type="button">
+          <button className="life-calendar-day-card life-calendar-day-card--photos" onClick={() => openPhotoViewer(photoItems, "사진 갤러리")} type="button">
             <div className="life-calendar-day-card__head">
               <span>사진 기억</span>
               <b>{photoItems.length > 3 ? "모두 보기" : "갤러리 보기"}</b>
@@ -1780,21 +1826,21 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
       </div>
 
       {detailView ? (
-        <div className="life-detail-overlay" onClick={() => setDetailView(null)}>
+        <div className="life-detail-overlay" onClick={closeDetail}>
           <section className="life-detail-drawer life-calendar-day-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
             <div className="life-detail-drawer__head">
               <div>
-                <span>{detailView === "map" ? "동선 지도" : detailView === "activities" ? "활동 기록" : "사진 갤러리"}</span>
+                <span>{detailView === "map" ? "동선 지도" : detailView === "activities" ? "활동 기록" : photoViewer?.title || "사진 갤러리"}</span>
                 <h2>{detailView === "map" ? "이 날 방문한 장소 흐름" : detailView === "activities" ? "시간 순 활동 기록" : "사진으로 남은 장면"}</h2>
                 <p>
                   {detailView === "map"
                     ? "좌표가 있는 장소는 바로 그리고, 없는 장소는 검색 API로 보강해 동선을 구성합니다."
                     : detailView === "activities"
                       ? "활동 기록만 시간대 순으로 보여줘서 이 날의 실제 움직임이 눈에 잘 들어오게 했어요."
-                      : "사진은 짧은 썸네일로 압축하고, 여기서 전체를 한 번에 볼 수 있게 했어요."}
+                      : "시간, 연결된 기록, 장소 문맥을 함께 보면서 사진 흐름을 확인할 수 있어요."}
                 </p>
               </div>
-              <button aria-label="닫기" onClick={() => setDetailView(null)} type="button">
+              <button aria-label="닫기" onClick={closeDetail} type="button">
                 <X aria-hidden size={18} />
               </button>
             </div>
@@ -1832,7 +1878,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
 
             {detailView === "photos" ? (
               <div className="life-calendar-day-photo-gallery">
-                {photoItems.length > 0 ? photoItems.map((item) => (
+                {visiblePhotoItems.length > 0 ? visiblePhotoItems.map((item) => (
                   <figure className="life-calendar-day-photo-gallery__item" key={item.id}>
                     {item.external.fileUrl ? (
                       item.external.mimeType?.startsWith("video/") ? (
@@ -1849,12 +1895,12 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                     ) : (
                       <div>{item.external.caption || item.external.title}</div>
                     )}
-                    <figcaption>
-                      <strong>{getPhotoCardTitle(item)}</strong>
-                      <span>{getPhotoCardMeta(item)}</span>
-                      {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
-                    </figcaption>
-                  </figure>
+                      <figcaption>
+                        <strong>{getPhotoCardTitle(item)}</strong>
+                        <span>{getPhotoCardMeta(item)}</span>
+                        {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
+                      </figcaption>
+                    </figure>
                 )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
               </div>
             ) : null}
@@ -2327,6 +2373,8 @@ function buildDayEventGroups(items: DayTimelineItem[]) {
 function buildDayRouteStops(items: DayTimelineItem[]) {
   const stops: DayRouteStop[] = [];
   const targetPlaces = buildLinkedTargetPlaceMap(items);
+  const photoItems = items.filter((item): item is DayPhotoItem => "external" in item && item.external.type === "photo");
+  const linkedPhotosByActivityId = buildLinkedPhotoMap(photoItems);
 
   items.forEach((item) => {
     if ("event" in item && item.event.place) {
@@ -2337,6 +2385,7 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
       });
       return;
@@ -2350,12 +2399,14 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
       });
       return;
     }
 
-      if ("external" in item && item.external.type === "activity" && item.external.placeName) {
+    if ("external" in item && item.external.type === "activity") {
+      if (item.external.placeName) {
         stops.push({
           address: item.external.placeAddress,
           id: item.id,
@@ -2363,49 +2414,70 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
           latitude: item.external.placeLatitude,
           longitude: item.external.placeLongitude,
           name: item.external.placeName,
+          sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
         });
         return;
       }
 
-      if ("external" in item && item.external.type === "photo" && typeof item.external.placeLatitude === "number" && typeof item.external.placeLongitude === "number") {
-        const linkedPlace = item.external.linkedTargetId && item.external.linkedTargetType
-          ? targetPlaces.get(`${item.external.linkedTargetType}:${item.external.linkedTargetId}`)
-          : undefined;
+      const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
+      const photoSource = linkedPhotos.find((photo) => typeof photo.external.placeLatitude === "number" && typeof photo.external.placeLongitude === "number");
+      if (photoSource) {
         stops.push({
-          address: linkedPlace?.address,
+          id: item.id,
+          label: "활동",
+          latitude: photoSource.external.placeLatitude,
+          longitude: photoSource.external.placeLongitude,
+          name: item.external.title,
+          sortMinutes: item.sortMinutes,
+          timeLabel: item.timeLabel,
+        });
+        return;
+      }
+    }
+
+    if ("external" in item && item.external.type === "photo") {
+      if (item.external.linkedTargetType === "activity" && item.external.linkedTargetId) return;
+
+      if (!item.external.linkedTargetId) {
+        if (typeof item.external.placeLatitude !== "number" || typeof item.external.placeLongitude !== "number") return;
+        stops.push({
+          address: item.external.placeAddress,
           id: item.id,
           label: "사진",
-          latitude: linkedPlace?.latitude ?? item.external.placeLatitude,
-          longitude: linkedPlace?.longitude ?? item.external.placeLongitude,
-          name: linkedPlace?.name ?? item.external.placeName ?? item.external.caption ?? "사진 위치",
+          latitude: item.external.placeLatitude,
+          longitude: item.external.placeLongitude,
+          name: item.external.placeName || item.external.caption || "사진 위치",
+          sortMinutes: item.sortMinutes,
           timeLabel: formatPhotoTimeLabel(item.external),
         });
         return;
       }
 
-      if ("external" in item && item.external.type === "photo") {
-        const linkedPlace = item.external.linkedTargetId && item.external.linkedTargetType
-          ? targetPlaces.get(`${item.external.linkedTargetType}:${item.external.linkedTargetId}`)
-          : undefined;
-        if (!linkedPlace) return;
-        stops.push({
-          address: linkedPlace.address,
-          id: item.id,
-          label: "사진",
-          latitude: linkedPlace.latitude,
-          longitude: linkedPlace.longitude,
-          name: linkedPlace.name,
-          timeLabel: formatPhotoTimeLabel(item.external),
-        });
-      }
-    });
-
-  return stops.filter((stop, index, array) => {
-    const previous = array[index - 1];
-    if (!previous) return true;
-    return `${previous.name}|${previous.address ?? ""}` !== `${stop.name}|${stop.address ?? ""}`;
+      const linkedPlace = item.external.linkedTargetId && item.external.linkedTargetType
+        ? targetPlaces.get(`${item.external.linkedTargetType}:${item.external.linkedTargetId}`)
+        : undefined;
+      if (!linkedPlace) return;
+      stops.push({
+        address: linkedPlace.address,
+        id: item.id,
+        label: "사진",
+        latitude: linkedPlace.latitude,
+        longitude: linkedPlace.longitude,
+        name: linkedPlace.name,
+        sortMinutes: item.sortMinutes,
+        timeLabel: formatPhotoTimeLabel(item.external),
+      });
+    }
   });
+
+  return stops
+    .sort((left, right) => (left.sortMinutes ?? 0) - (right.sortMinutes ?? 0))
+    .filter((stop, index, array) => {
+      const previous = array[index - 1];
+      if (!previous) return true;
+      return `${previous.name}|${previous.address ?? ""}` !== `${stop.name}|${stop.address ?? ""}`;
+    });
 }
 
 function hasCoordinates(stop: DayRouteStop): stop is DayResolvedRouteStop {
@@ -2467,6 +2539,29 @@ function buildLinkedPhotoMap(photoItems: DayPhotoItem[]) {
   return map;
 }
 
+function buildStandalonePhotoGroups(photoItems: DayPhotoItem[]) {
+  const groups = new Map<string, DayStandalonePhotoGroup>();
+
+  photoItems
+    .filter((item) => !item.external.linkedTargetId)
+    .forEach((item) => {
+      const key = `${item.sortMinutes}-${formatPhotoTimeLabel(item.external)}`;
+      const current = groups.get(key);
+      if (current) {
+        current.items.push(item);
+        return;
+      }
+      groups.set(key, {
+        id: `photo-group-${key}`,
+        items: [item],
+        sortMinutes: item.sortMinutes,
+        timeLabel: formatPhotoTimeLabel(item.external),
+      });
+    });
+
+  return [...groups.values()].sort((left, right) => left.sortMinutes - right.sortMinutes);
+}
+
 function formatPhotoTimeLabel(photo: ExternalCalendarItem) {
   if (photo.takenAt) {
     return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" }).format(new Date(photo.takenAt));
@@ -2493,6 +2588,13 @@ function getPhotoContextLines(item: DayPhotoItem) {
     item.external.placeName ? item.external.placeName : null,
     item.external.meta && item.external.meta !== item.external.caption ? item.external.meta : null,
   ].filter(Boolean) as string[];
+}
+
+function getStandalonePhotoGroupSummary(group: DayStandalonePhotoGroup) {
+  const firstPhoto = group.items[0];
+  if (!firstPhoto) return "이 시간대에 남은 사진 기록";
+  if (group.items.length === 1) return firstPhoto.external.caption || firstPhoto.external.meta || "이 시간대에 남은 사진 기록";
+  return `${firstPhoto.external.caption || firstPhoto.external.meta || "사진 기록"} 외 ${group.items.length - 1}장`;
 }
 
 function getLinkedTargetTypeLabel(type?: "schedule" | "todo" | "event" | "activity") {
