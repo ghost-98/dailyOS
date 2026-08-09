@@ -353,27 +353,40 @@
 }
 
 .calendar-day__events {
-  display: flex;
-  align-items: center;
+  display: grid;
+  align-content: start;
   min-width: 0;
-  min-height: 14px;
+  min-height: 18px;
   gap: 6px;
 }
 
-.calendar-day__event-chip {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 6px;
+.calendar-day__signal-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.calendar-day__signal {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 18px;
+  align-items: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+  padding: 0 7px;
 }
 
-.calendar-day__event-chip--plan {
-  background: linear-gradient(90deg, rgba(201, 184, 255, 0.9), rgba(167, 139, 250, 0.82));
+.calendar-day__signal--plan {
+  background: rgba(201, 184, 255, 0.12);
+  color: #ddd3ff;
 }
 
-.calendar-day__event-chip--record {
-  box-shadow: 10px 0 0 rgba(110, 231, 183, 0.75);
+.calendar-day__signal--record {
+  background: rgba(255, 255, 255, 0.07);
+  color: #d4d6de;
 }
 
 .calendar-day__event-count {
