@@ -603,8 +603,9 @@ function LifeAskView({
           <p className="eyebrow">Insight Brief</p>
           <div className="life-ask-brief">
             <article className="life-ask-overview-card">
-              <span>한 줄 해석</span>
+              <span>{analysis.focusTitle}</span>
               <strong>{analysis.overview}</strong>
+              <p>{analysis.focusDescription}</p>
             </article>
 
             <div className="life-ask-metric-grid">
@@ -618,6 +619,14 @@ function LifeAskView({
             </div>
 
             <div className="life-ask-detail-grid">
+              {analysis.breakdowns.map((section) => (
+                <article className="life-ask-detail-card" key={section.title}>
+                  <span>{section.title}</span>
+                  <ul>
+                    {section.items.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </article>
+              ))}
               <article className="life-ask-detail-card">
                 <span>패턴</span>
                 <ul>
