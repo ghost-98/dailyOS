@@ -445,8 +445,13 @@
     flex-direction: column;
   }
 
+  .life-activity-action-group {
+    width: 100%;
+  }
+
   .life-activity-quick-panel__grid,
-  .life-activity-form-grid {
+  .life-activity-form-grid,
+  .life-activity-form-grid--people-meal {
     grid-template-columns: 1fr;
   }
 

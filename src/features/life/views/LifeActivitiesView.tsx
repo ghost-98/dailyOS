@@ -392,11 +392,15 @@ export function LifeActivitiesView({
               <h2>{entryMode === "activity" ? (editing ? "활동 수정" : "활동 추가") : entryMode === "wake" ? "기상 기록" : "취침 기록"}</h2>
             </div>
             <div className="life-record-actions life-activity-form__actions">
-              <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
-              <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
-              <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
-              <button className={entryMode === "sleep" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("sleep")} type="button">취침</button>
-              {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
+              <div className="life-activity-action-group">
+                <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
+                <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
+              </div>
+              <div className="life-activity-action-group life-activity-action-group--accent">
+                <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
+                <button className={entryMode === "sleep" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("sleep")} type="button">취침</button>
+                {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
+              </div>
               {editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
           </div>
@@ -533,8 +537,8 @@ export function LifeActivitiesView({
                 </div>
               )}
 
-              <div className="life-activity-form-grid">
-                <div className="life-activity-form-card">
+              <div className={category === "식사" ? "life-activity-form-grid life-activity-form-grid--people-meal" : "life-activity-form-grid life-activity-form-grid--single-wide"}>
+                <div className="life-activity-form-card life-activity-form-card--wide">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>함께한 사람</strong>
                     <span>누구와 함께했는지 남겨요.</span>
@@ -544,6 +548,20 @@ export function LifeActivitiesView({
                   </div>
                 </div>
 
+                {category === "식사" ? (
+                  <div className="life-activity-form-card">
+                    <div className="schedule-form-section-title life-activity-form-card__title">
+                      <strong>식사 메모</strong>
+                      <span>`식사` 태그일 때만 먹은 내용을 따로 적어요.</span>
+                    </div>
+                    <label className="event-form-row event-form-row--field schedule-field">
+                      <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="life-activity-form-grid">
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
                     <strong>금액</strong>
@@ -553,29 +571,16 @@ export function LifeActivitiesView({
                     <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
                   </label>
                 </div>
-              </div>
 
-              {category === "식사" ? (
                 <div className="life-activity-form-card">
                   <div className="schedule-form-section-title life-activity-form-card__title">
-                    <strong>식사 메모</strong>
-                    <span>`식사` 태그일 때만 먹은 내용을 따로 적어요.</span>
+                    <strong>메모</strong>
+                    <span>짧은 맥락만 적어도 나중에 하루를 복원할 때 크게 도움이 돼요.</span>
                   </div>
                   <label className="event-form-row event-form-row--field schedule-field">
-                    <span>먹은 것</span>
-                    <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
+                    <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
                   </label>
                 </div>
-              ) : null}
-
-              <div className="life-activity-form-card">
-                <div className="schedule-form-section-title life-activity-form-card__title">
-                  <strong>메모</strong>
-                  <span>짧은 맥락만 적어도 나중에 하루를 복원할 때 크게 도움이 돼요.</span>
-                </div>
-                <label className="event-form-row event-form-row--field schedule-field">
-                  <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
-                </label>
               </div>
             </>
           ) : (
