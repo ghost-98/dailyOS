@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
   Bell,
+  Camera,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -1646,6 +1647,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
   const routeStops = useMemo(() => buildDayRouteStops(items), [items]);
   const previewPhotos = photoItems.slice(0, 3);
   const finance = useMemo(() => getFinanceTotals(items), [items]);
+  const linkedPhotosByActivityId = useMemo(() => buildLinkedPhotoMap(photoItems), [photoItems]);
   const companionCounts = useMemo(
     () => getTopValues(activityItems.flatMap((item) => parseCompanionNames(item.external.companions))).slice(0, 8),
     [activityItems],
@@ -1671,6 +1673,14 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                   </div>
                   <div className="life-calendar-day-timeline__body">
                     <strong>{item.external.title}</strong>
+                    {linkedPhotosByActivityId.get(item.external.id)?.length ? (
+                      <div className="life-calendar-day-timeline__linked">
+                        <b>
+                          <Camera aria-hidden size={12} />
+                          사진 {linkedPhotosByActivityId.get(item.external.id)!.length}장
+                        </b>
+                      </div>
+                    ) : null}
                     {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
                     {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
                     {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
@@ -1699,21 +1709,27 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             <div className="life-calendar-day-photo-preview">
               {previewPhotos.length > 0 ? previewPhotos.map((item) => (
                 <figure className="life-calendar-day-photo-preview__item" key={item.id}>
-                  {item.external.fileUrl ? (
-                    item.external.mimeType?.startsWith("video/") ? (
-                      <div>{item.external.caption || "영상 기록"}</div>
+                  <div className="life-calendar-day-photo-preview__media">
+                    {item.external.fileUrl ? (
+                      item.external.mimeType?.startsWith("video/") ? (
+                        <div>{item.external.caption || "영상 기록"}</div>
+                      ) : (
+                        <Image
+                          alt={item.external.caption || item.external.title}
+                          height={item.external.height ?? 160}
+                          src={item.external.fileUrl}
+                          unoptimized
+                          width={item.external.width ?? 160}
+                        />
+                      )
                     ) : (
-                      <Image
-                        alt={item.external.caption || item.external.title}
-                        height={item.external.height ?? 160}
-                        src={item.external.fileUrl}
-                        unoptimized
-                        width={item.external.width ?? 160}
-                      />
-                    )
-                  ) : (
-                    <div>{item.external.caption || item.external.title}</div>
-                  )}
+                      <div>{item.external.caption || item.external.title}</div>
+                    )}
+                  </div>
+                  <figcaption>
+                    <strong>{getPhotoCardTitle(item)}</strong>
+                    <span>{getPhotoCardMeta(item)}</span>
+                  </figcaption>
                 </figure>
               )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "사진이 아직 없어요."}</div>}
             </div>
@@ -1834,8 +1850,9 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                       <div>{item.external.caption || item.external.title}</div>
                     )}
                     <figcaption>
-                      <strong>{item.external.caption || item.external.title}</strong>
-                      <span>{item.external.meta || "사진 기록"}</span>
+                      <strong>{getPhotoCardTitle(item)}</strong>
+                      <span>{getPhotoCardMeta(item)}</span>
+                      {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
                     </figcaption>
                   </figure>
                 )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
@@ -2309,6 +2326,7 @@ function buildDayEventGroups(items: DayTimelineItem[]) {
 
 function buildDayRouteStops(items: DayTimelineItem[]) {
   const stops: DayRouteStop[] = [];
+  const targetPlaces = buildLinkedTargetPlaceMap(items);
 
   items.forEach((item) => {
     if ("event" in item && item.event.place) {
@@ -2351,13 +2369,34 @@ function buildDayRouteStops(items: DayTimelineItem[]) {
       }
 
       if ("external" in item && item.external.type === "photo" && typeof item.external.placeLatitude === "number" && typeof item.external.placeLongitude === "number") {
+        const linkedPlace = item.external.linkedTargetId && item.external.linkedTargetType
+          ? targetPlaces.get(`${item.external.linkedTargetType}:${item.external.linkedTargetId}`)
+          : undefined;
         stops.push({
+          address: linkedPlace?.address,
           id: item.id,
           label: "사진",
-          latitude: item.external.placeLatitude,
-          longitude: item.external.placeLongitude,
-          name: item.external.placeName || item.external.caption || "사진 위치",
-          timeLabel: item.timeLabel,
+          latitude: linkedPlace?.latitude ?? item.external.placeLatitude,
+          longitude: linkedPlace?.longitude ?? item.external.placeLongitude,
+          name: linkedPlace?.name ?? item.external.placeName ?? item.external.caption ?? "사진 위치",
+          timeLabel: formatPhotoTimeLabel(item.external),
+        });
+        return;
+      }
+
+      if ("external" in item && item.external.type === "photo") {
+        const linkedPlace = item.external.linkedTargetId && item.external.linkedTargetType
+          ? targetPlaces.get(`${item.external.linkedTargetType}:${item.external.linkedTargetId}`)
+          : undefined;
+        if (!linkedPlace) return;
+        stops.push({
+          address: linkedPlace.address,
+          id: item.id,
+          label: "사진",
+          latitude: linkedPlace.latitude,
+          longitude: linkedPlace.longitude,
+          name: linkedPlace.name,
+          timeLabel: formatPhotoTimeLabel(item.external),
         });
       }
     });
@@ -2376,6 +2415,92 @@ function hasCoordinates(stop: DayRouteStop): stop is DayResolvedRouteStop {
 function formatNumberWithUnit(value: number, unit: string) {
   const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
+}
+
+function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
+  const placeMap = new Map<string, { address?: string; latitude?: number; longitude?: number; name: string }>();
+
+  items.forEach((item) => {
+    if ("event" in item && item.event.place) {
+      placeMap.set(`${item.event.type}:${item.event.id}`, {
+        address: item.event.place.address,
+        latitude: item.event.place.latitude,
+        longitude: item.event.place.longitude,
+        name: item.event.place.name,
+      });
+      return;
+    }
+
+    if ("task" in item && item.task.place) {
+      placeMap.set(`todo:${item.task.id}`, {
+        address: item.task.place.address,
+        latitude: item.task.place.latitude,
+        longitude: item.task.place.longitude,
+        name: item.task.place.name,
+      });
+      return;
+    }
+
+    if ("external" in item && item.external.type === "activity" && item.external.placeName) {
+      placeMap.set(`activity:${item.external.id}`, {
+        address: item.external.placeAddress,
+        latitude: item.external.placeLatitude,
+        longitude: item.external.placeLongitude,
+        name: item.external.placeName,
+      });
+    }
+  });
+
+  return placeMap;
+}
+
+function buildLinkedPhotoMap(photoItems: DayPhotoItem[]) {
+  const map = new Map<string, DayPhotoItem[]>();
+
+  photoItems.forEach((item) => {
+    if (item.external.linkedTargetType !== "activity" || !item.external.linkedTargetId) return;
+    const existing = map.get(item.external.linkedTargetId) ?? [];
+    existing.push(item);
+    map.set(item.external.linkedTargetId, existing);
+  });
+
+  return map;
+}
+
+function formatPhotoTimeLabel(photo: ExternalCalendarItem) {
+  if (photo.takenAt) {
+    return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit" }).format(new Date(photo.takenAt));
+  }
+  return photo.startTime ? getTimelineTimeLabel(photo.startTime, photo.isAllDay) : "기록";
+}
+
+function getPhotoCardTitle(item: DayPhotoItem) {
+  return item.external.caption || item.external.linkedTargetTitle || "사진 기록";
+}
+
+function getPhotoCardMeta(item: DayPhotoItem) {
+  const values = [
+    formatPhotoTimeLabel(item.external),
+    item.external.linkedTargetTitle ? `${getLinkedTargetTypeLabel(item.external.linkedTargetType)} · ${item.external.linkedTargetTitle}` : null,
+  ].filter(Boolean);
+
+  return values.join(" · ") || "사진 기록";
+}
+
+function getPhotoContextLines(item: DayPhotoItem) {
+  return [
+    item.external.linkedTargetTitle ? `${getLinkedTargetTypeLabel(item.external.linkedTargetType)}에 연결됨` : null,
+    item.external.placeName ? item.external.placeName : null,
+    item.external.meta && item.external.meta !== item.external.caption ? item.external.meta : null,
+  ].filter(Boolean) as string[];
+}
+
+function getLinkedTargetTypeLabel(type?: "schedule" | "todo" | "event" | "activity") {
+  if (type === "schedule") return "일정";
+  if (type === "todo") return "할 일";
+  if (type === "event") return "이벤트";
+  if (type === "activity") return "활동";
+  return "기록";
 }
 
 function formatExpenseValueWithUnit(value: number, unit: string) {

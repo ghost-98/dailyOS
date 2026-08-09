@@ -15,6 +15,9 @@ export type ExternalCalendarItem = {
   height?: number;
   id: string;
   isAllDay?: boolean;
+  linkedTargetId?: string;
+  linkedTargetTitle?: string;
+  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
   meta?: string;
   mimeType?: string;
   placeAddress?: string;
@@ -22,6 +25,7 @@ export type ExternalCalendarItem = {
   placeLongitude?: number;
   placeName?: string;
   startTime?: string;
+  takenAt?: string;
   title: string;
   type: ExternalCalendarCategory;
   width?: number;
