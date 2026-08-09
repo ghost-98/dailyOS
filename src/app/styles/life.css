@@ -3101,6 +3101,106 @@
   line-height: 1.75;
 }
 
+.life-ask-brief {
+  display: grid;
+  gap: 14px;
+}
+
+.life-ask-overview-card,
+.life-ask-metric-grid article,
+.life-ask-detail-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 16px;
+}
+
+.life-ask-overview-card {
+  display: grid;
+  gap: 8px;
+}
+
+.life-ask-overview-card span,
+.life-ask-metric-grid span,
+.life-ask-detail-card span,
+.life-ask-answer-block .eyebrow {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-ask-overview-card strong {
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.life-ask-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-ask-metric-grid article {
+  display: grid;
+  gap: 6px;
+}
+
+.life-ask-metric-grid strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.life-ask-metric-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.life-ask-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-ask-detail-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.life-ask-detail-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.life-ask-detail-card li {
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.life-ask-detail-card li b {
+  color: var(--violet);
+  font-size: 0.74rem;
+}
+
+.life-ask-detail-card li small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.life-ask-answer-block {
+  display: grid;
+  gap: 10px;
+}
+
 .life-activity-layout {
   display: grid;
   grid-template-columns: minmax(420px, 1.1fr) minmax(320px, 0.9fr);

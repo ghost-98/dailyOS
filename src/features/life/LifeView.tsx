@@ -35,6 +35,7 @@ import {
   selectRelevantLifeAskRecords,
 } from "@/features/life/insights";
 import type { LifeSearchItem } from "@/features/life/insights";
+import { buildLifeAskAnalysis } from "@/features/life/askInsights";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 import { LifeHomeView } from "@/features/life/LifeHomeView";
 import { LifeActivitiesView } from "@/features/life/views/LifeActivitiesView";
@@ -518,6 +519,23 @@ function LifeAskView({
   const [question, setQuestion] = useState("나 3월달에 자주 했던 일과 그때의 소비, 사람, 건강 흐름이 어땠어?");
   const records = useMemo(() => buildLifeSearchItems(events, tasks, activities, expenses, incomes, dailyLogs, photos, weights, workouts), [activities, dailyLogs, events, expenses, incomes, photos, tasks, weights, workouts]);
   const scopedRecords = useMemo(() => selectRelevantLifeAskRecords(question, records), [question, records]);
+  const analysis = useMemo(
+    () =>
+      buildLifeAskAnalysis({
+        activities,
+        events,
+        expenses,
+        incomes,
+        logs: dailyLogs,
+        photos,
+        question,
+        scopedRecords,
+        tasks,
+        weights,
+        workouts,
+      }),
+    [activities, dailyLogs, events, expenses, incomes, photos, question, scopedRecords, tasks, weights, workouts],
+  );
 
   const askLifeDb = async () => {
     const trimmedQuestion = question.trim();
@@ -529,6 +547,7 @@ function LifeAskView({
       setAnswer("");
       const response = await fetch("/api/life/ask", {
         body: JSON.stringify({
+          analysis,
           question: trimmedQuestion,
           records: scopedRecords.map((record) => ({
             date: record.date,
@@ -581,16 +600,59 @@ function LifeAskView({
         </SectionCard>
 
         <SectionCard className="life-ask-answer">
-          <p className="eyebrow">Answer</p>
-          {answer ? (
-            <div className="life-ask-answer__body">{answer}</div>
-          ) : (
-            <div className="life-map-empty life-map-empty--compact">
-              <Search aria-hidden size={28} />
-              <strong>아직 질문하지 않았습니다.</strong>
-              <p>AI 답변은 현재 불러온 라이프 DB 기록만 근거로 생성됩니다. 더 정교하게 하려면 다음 단계에서 월별 인덱스와 임베딩 검색을 붙이면 됩니다.</p>
+          <p className="eyebrow">Insight Brief</p>
+          <div className="life-ask-brief">
+            <article className="life-ask-overview-card">
+              <span>한 줄 해석</span>
+              <strong>{analysis.overview}</strong>
+            </article>
+
+            <div className="life-ask-metric-grid">
+              {analysis.cards.map((card) => (
+                <article key={card.label}>
+                  <span>{card.label}</span>
+                  <strong>{card.value}</strong>
+                  {card.meta ? <p>{card.meta}</p> : null}
+                </article>
+              ))}
             </div>
-          )}
+
+            <div className="life-ask-detail-grid">
+              <article className="life-ask-detail-card">
+                <span>패턴</span>
+                <ul>
+                  {analysis.patterns.length > 0 ? analysis.patterns.map((pattern) => <li key={pattern}>{pattern}</li>) : <li>아직 패턴을 읽을 만큼 기록이 충분하지 않아요.</li>}
+                </ul>
+              </article>
+
+              <article className="life-ask-detail-card">
+                <span>근거 기록</span>
+                <ul>
+                  {analysis.evidence.length > 0 ? analysis.evidence.map((item) => <li key={`${item.date}-${item.title}`}><b>{item.date}</b>{item.title}<small>{item.description}</small></li>) : <li>질문과 연결된 근거 기록이 아직 적어요.</li>}
+                </ul>
+              </article>
+
+              <article className="life-ask-detail-card">
+                <span>다음 제안</span>
+                <ul>
+                  {analysis.suggestions.length > 0 ? analysis.suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>) : <li>추가 기록이 쌓이면 더 구체적인 제안을 만들 수 있어요.</li>}
+                </ul>
+              </article>
+            </div>
+
+            <div className="life-ask-answer-block">
+              <p className="eyebrow">AI Answer</p>
+              {answer ? (
+                <div className="life-ask-answer__body">{answer}</div>
+              ) : (
+                <div className="life-map-empty life-map-empty--compact">
+                  <Search aria-hidden size={28} />
+                  <strong>아직 질문하지 않았습니다.</strong>
+                  <p>먼저 해석 카드로 전체 흐름을 보고, AI 답변으로 의미와 맥락을 더 깊게 확장할 수 있어요.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </SectionCard>
       </div>
     </div>
