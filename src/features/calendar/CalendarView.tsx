@@ -2813,11 +2813,25 @@ function createTaskTimelineItem(task: TaskItem): DayTimelineItem {
 }
 
 function createExternalTimelineItem(external: ExternalCalendarItem): DayTimelineItem {
+  const photoTime = external.type === "photo" ? getPhotoTakenTime(external.takenAt) : null;
+  const sortMinutes =
+    photoTime !== null
+      ? photoTime
+      : external.startTime
+        ? getTimelineSortMinutes(external.startTime, external.isAllDay)
+        : 24 * 60 + getTimelineTypeOrder(external.type);
+  const timeLabel =
+    photoTime !== null
+      ? formatMinutesToTimeLabel(photoTime)
+      : external.startTime && !external.isAllDay
+        ? getTimelineTimeLabel(external.startTime, external.isAllDay)
+        : "기록";
+
   return {
     external,
     id: `${external.type}-${external.id}`,
-    sortMinutes: external.startTime ? getTimelineSortMinutes(external.startTime, external.isAllDay) : 24 * 60 + getTimelineTypeOrder(external.type),
-    timeLabel: external.startTime && !external.isAllDay ? getTimelineTimeLabel(external.startTime, external.isAllDay) : "기록",
+    sortMinutes,
+    timeLabel,
     type: external.type,
   };
 }
@@ -2832,6 +2846,19 @@ function getTimelineSortMinutes(time?: string, isAllDay = true) {
 function getTimelineTimeLabel(time?: string, isAllDay = true) {
   if (isAllDay) return "하루종일";
   return time || "시간 미정";
+}
+
+function getPhotoTakenTime(takenAt?: string) {
+  if (!takenAt) return null;
+  const date = new Date(takenAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function formatMinutesToTimeLabel(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 function formatTimelineRange(startLabel: string, endTime?: string) {
