@@ -113,6 +113,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
   const [personalPlaces, setPersonalPlaces] = useState<PersonalPlaceRecord[]>([]);
   const [myPlacesViewMode, setMyPlacesViewMode] = useState<MyPlacesViewMode>("stack");
+  const [isMyPlacesExpanded, setIsMyPlacesExpanded] = useState(true);
   const [selectedPersonalPlaceId, setSelectedPersonalPlaceId] = useState("");
   const [placeLabel, setPlaceLabel] = useState("");
   const [placeMemo, setPlaceMemo] = useState("");
@@ -581,6 +582,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     setMappingResults([]);
     setMappedPlace(null);
     setPersonalPlaceMessage("");
+    setIsMyPlacesExpanded(true);
   };
 
   const chooseMappingPlace = (place: PlaceRecord) => {
@@ -779,30 +781,195 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <strong>내 장소 {allPersonalPlaces.length}곳</strong>
               </div>
               <div className="life-places-panel-head__actions">
-                <div className="life-places-view-switch">
-                  <button
-                    className={myPlacesViewMode === "stack" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
-                    onClick={() => setMyPlacesViewMode("stack")}
-                    type="button"
-                  >
-                    세로
+                {isMyPlacesExpanded ? (
+                  <>
+                    <div className="life-places-view-switch">
+                      <button
+                        className={myPlacesViewMode === "stack" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
+                        onClick={() => setMyPlacesViewMode("stack")}
+                        type="button"
+                      >
+                        세로
+                      </button>
+                      <button
+                        className={myPlacesViewMode === "compact" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
+                        onClick={() => setMyPlacesViewMode("compact")}
+                        type="button"
+                      >
+                        한줄
+                      </button>
+                    </div>
+                    <button className="life-places-icon-button" onClick={() => setIsMyPlacesExpanded(false)} type="button">
+                      <X aria-hidden size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
+                    <Plus aria-hidden size={16} />
                   </button>
-                  <button
-                    className={myPlacesViewMode === "compact" ? "life-places-view-switch__button life-places-view-switch__button--active" : "life-places-view-switch__button"}
-                    onClick={() => setMyPlacesViewMode("compact")}
-                    type="button"
-                  >
-                    한줄
-                  </button>
-                </div>
-                <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
-                  <Plus aria-hidden size={16} />
-                </button>
+                )}
               </div>
             </div>
 
-            <div className="life-places-manager__body">
-              <div className="life-places-manager__directory">
+            {isMyPlacesExpanded ? (
+              <div className="life-places-manager__body">
+                <div className="life-places-manager__directory">
+                  <div
+                    className={
+                      myPlacesViewMode === "compact"
+                        ? "life-places-manager__list life-places-manager__list--compact"
+                        : "life-places-manager__list"
+                    }
+                  >
+                    {allPersonalPlaces.length > 0 ? (
+                      allPersonalPlaces.map((place) => (
+                        <button
+                          className={
+                            selectedPersonalPlaceId === place.id
+                              ? myPlacesViewMode === "compact"
+                                ? "life-places-manager__place life-places-manager__place--active life-places-manager__place--compact"
+                                : "life-places-manager__place life-places-manager__place--active"
+                              : myPlacesViewMode === "compact"
+                                ? "life-places-manager__place life-places-manager__place--compact"
+                                : "life-places-manager__place"
+                          }
+                          key={place.id}
+                          onClick={() => {
+                            setSelectedPersonalPlaceId(place.id);
+                            setIsMyPlacesExpanded(true);
+                          }}
+                          type="button"
+                        >
+                          <strong>{place.label}</strong>
+                          <span>{place.address}</span>
+                          {myPlacesViewMode === "stack" ? <em>{place.mappedName ?? "매핑 이름 없음"}</em> : null}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="life-places-empty-inline">
+                        <strong>아직 등록한 내 장소가 없어요.</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="life-places-manager__form">
+                  <div className="life-places-manager__form-head">
+                    <div>
+                      <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
+                      {mappedPlace ? <span>{mappedPlace.name}</span> : null}
+                    </div>
+                    {selectedPersonalPlace ? (
+                      <div className="life-places-manager__form-tools">
+                        <button
+                          className="life-places-icon-button"
+                          disabled={!personalPlaceDirty || isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
+                          onClick={() => void savePersonalPlace()}
+                          type="button"
+                        >
+                          <Check aria-hidden size={16} />
+                        </button>
+                        <button
+                          className="life-places-icon-button life-places-icon-button--danger"
+                          disabled={isDeletingPersonalPlace}
+                          onClick={() => void deletePersonalPlace()}
+                          type="button"
+                        >
+                          <Trash2 aria-hidden size={16} />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="life-places-manager__form-grid life-places-manager__form-grid--stacked">
+                    <label>
+                      <span>내 장소 이름</span>
+                      <input
+                        placeholder="예: 내 집, 부산 집, 회사"
+                        value={placeLabel}
+                        onChange={(event) => setPlaceLabel(event.target.value)}
+                      />
+                    </label>
+
+                    <label>
+                      <span>위치 매핑 검색</span>
+                      <div className="schedule-place-search">
+                        <MapPin aria-hidden size={18} />
+                        <input
+                          placeholder="예: 부산광역시 ... 아파트"
+                          value={mappingQuery}
+                          onChange={(event) => setMappingQuery(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void runMappingSearch();
+                            }
+                          }}
+                        />
+                        <button
+                          disabled={isMappingSearchLoading || mappingQuery.trim().length === 0}
+                          onClick={() => void runMappingSearch()}
+                          type="button"
+                        >
+                          {isMappingSearchLoading ? "검색 중..." : "검색"}
+                        </button>
+                      </div>
+                    </label>
+                  </div>
+
+                  {mappedPlace ? (
+                    <div className="life-places-manager__mapped">
+                      <strong>{mappedPlace.name}</strong>
+                      <span>{mappedPlace.address}</span>
+                    </div>
+                  ) : null}
+
+                  {mappingResults.length > 0 ? (
+                    <div className="schedule-place-results">
+                      {mappingResults.map((place) => (
+                        <button
+                          key={`${place.providerPlaceId ?? place.id}-${place.name}`}
+                          onClick={() => chooseMappingPlace(place)}
+                          type="button"
+                        >
+                          <strong>{place.name}</strong>
+                          <span>{place.address || place.category || "주소 정보 없음"}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <label>
+                    <span>메모</span>
+                    <textarea
+                      placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요."
+                      rows={3}
+                      value={placeMemo}
+                      onChange={(event) => setPlaceMemo(event.target.value)}
+                    />
+                  </label>
+
+                  <div className="life-places-manager__buttons">
+                    {!selectedPersonalPlace ? (
+                      <button
+                        disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
+                        onClick={() => void savePersonalPlace()}
+                        type="button"
+                      >
+                        <Plus aria-hidden size={15} />
+                        내 장소 저장
+                      </button>
+                    ) : (
+                      <button className="life-places-manager__ghost" onClick={startCreatingPersonalPlace} type="button">
+                        <X aria-hidden size={15} />
+                        새로 입력
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="life-places-manager__collapsed">
                 <div
                   className={
                     myPlacesViewMode === "compact"
@@ -814,16 +981,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     allPersonalPlaces.map((place) => (
                       <button
                         className={
-                          selectedPersonalPlaceId === place.id
-                            ? myPlacesViewMode === "compact"
-                              ? "life-places-manager__place life-places-manager__place--active life-places-manager__place--compact"
-                              : "life-places-manager__place life-places-manager__place--active"
-                            : myPlacesViewMode === "compact"
-                              ? "life-places-manager__place life-places-manager__place--compact"
-                              : "life-places-manager__place"
+                          myPlacesViewMode === "compact"
+                            ? "life-places-manager__place life-places-manager__place--compact"
+                            : "life-places-manager__place"
                         }
                         key={place.id}
-                        onClick={() => setSelectedPersonalPlaceId(place.id)}
+                        onClick={() => {
+                          setSelectedPersonalPlaceId(place.id);
+                          setIsMyPlacesExpanded(true);
+                        }}
                         type="button"
                       >
                         <strong>{place.label}</strong>
@@ -838,126 +1004,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   )}
                 </div>
               </div>
-
-              <div className="life-places-manager__form">
-                <div className="life-places-manager__form-head">
-                  <div>
-                    <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
-                    {mappedPlace ? <span>{mappedPlace.name}</span> : null}
-                  </div>
-                  {selectedPersonalPlace ? (
-                    <div className="life-places-manager__form-tools">
-                      <button
-                        className="life-places-icon-button"
-                        disabled={!personalPlaceDirty || isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
-                        onClick={() => void savePersonalPlace()}
-                        type="button"
-                      >
-                        <Check aria-hidden size={16} />
-                      </button>
-                      <button
-                        className="life-places-icon-button life-places-icon-button--danger"
-                        disabled={isDeletingPersonalPlace}
-                        onClick={() => void deletePersonalPlace()}
-                        type="button"
-                      >
-                        <Trash2 aria-hidden size={16} />
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="life-places-manager__form-grid">
-                  <label>
-                    <span>내 장소 이름</span>
-                    <input
-                      placeholder="예: 내 집, 부산 집, 회사"
-                      value={placeLabel}
-                      onChange={(event) => setPlaceLabel(event.target.value)}
-                    />
-                  </label>
-
-                  <label>
-                    <span>위치 매핑 검색</span>
-                    <div className="schedule-place-search">
-                      <MapPin aria-hidden size={18} />
-                      <input
-                        placeholder="예: 부산광역시 ... 아파트"
-                        value={mappingQuery}
-                        onChange={(event) => setMappingQuery(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            void runMappingSearch();
-                          }
-                        }}
-                      />
-                      <button
-                        disabled={isMappingSearchLoading || mappingQuery.trim().length === 0}
-                        onClick={() => void runMappingSearch()}
-                        type="button"
-                      >
-                        {isMappingSearchLoading ? "검색 중..." : "검색"}
-                      </button>
-                    </div>
-                  </label>
-                </div>
-
-                {mappedPlace ? (
-                  <div className="life-places-manager__mapped">
-                    <strong>{mappedPlace.name}</strong>
-                    <span>{mappedPlace.address}</span>
-                  </div>
-                ) : (
-                  <div className="life-places-empty-inline life-places-empty-inline--compact">
-                    <strong>실제 위치를 먼저 선택해 주세요.</strong>
-                  </div>
-                )}
-
-                {mappingResults.length > 0 ? (
-                  <div className="schedule-place-results">
-                    {mappingResults.map((place) => (
-                      <button
-                        key={`${place.providerPlaceId ?? place.id}-${place.name}`}
-                        onClick={() => chooseMappingPlace(place)}
-                        type="button"
-                      >
-                        <strong>{place.name}</strong>
-                        <span>{place.address || place.category || "주소 정보 없음"}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                <label>
-                  <span>메모</span>
-                  <textarea
-                    placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요."
-                    rows={3}
-                    value={placeMemo}
-                    onChange={(event) => setPlaceMemo(event.target.value)}
-                  />
-                </label>
-
-                <div className="life-places-manager__buttons">
-                  {!selectedPersonalPlace ? (
-                    <button
-                      disabled={isSavingPersonalPlace || !placeLabel.trim() || !mappedPlace}
-                      onClick={() => void savePersonalPlace()}
-                      type="button"
-                    >
-                      <Plus aria-hidden size={15} />
-                      내 장소 저장
-                    </button>
-                  ) : (
-                    <button className="life-places-manager__ghost" onClick={startCreatingPersonalPlace} type="button">
-                      <X aria-hidden size={15} />
-                      새로 입력
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+            )}
           </SectionCard>
 
           <div className="life-places-side__bottom">

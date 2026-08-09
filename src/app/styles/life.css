@@ -3696,6 +3696,10 @@ button:disabled {
   align-content: start;
 }
 
+.life-places-manager {
+  padding: 22px !important;
+}
+
 .life-places-map-panel--bleed {
   gap: 0;
   overflow: hidden;
@@ -3842,16 +3846,20 @@ button:disabled {
 .life-places-manager__body {
   display: grid;
   grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
-  gap: 16px;
+  gap: 18px;
   min-height: 0;
   align-items: start;
 }
 
 .life-places-manager__directory {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   min-height: 0;
   align-content: start;
+  padding: 14px;
+  border: 1px solid rgba(126, 105, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 .life-places-manager__list {
@@ -3859,7 +3867,7 @@ button:disabled {
   gap: 10px;
   max-height: 420px;
   overflow: auto;
-  padding-right: 4px;
+  padding: 2px 6px 2px 2px;
   align-content: start;
 }
 
@@ -3875,7 +3883,7 @@ button:disabled {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  padding: 12px 14px;
+  padding: 14px 16px;
   align-content: start;
 }
 
@@ -3919,9 +3927,11 @@ button:disabled {
   display: grid;
   gap: 14px;
   min-height: 0;
-  border-top: 1px solid rgba(126, 105, 255, 0.12);
-  padding-top: 14px;
   align-content: start;
+  padding: 14px;
+  border: 1px solid rgba(126, 105, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 .life-places-manager__form-head {
@@ -3945,8 +3955,12 @@ button:disabled {
 
 .life-places-manager__form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
+}
+
+.life-places-manager__form-grid--stacked {
+  grid-template-columns: 1fr;
 }
 
 .life-places-manager__form label {
@@ -3977,6 +3991,25 @@ button:disabled {
   resize: vertical;
 }
 
+.schedule-place-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 10px;
+}
+
+.schedule-place-search input {
+  min-width: 0;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
 .life-places-manager__buttons {
   display: flex;
   gap: 10px;
@@ -3999,7 +4032,7 @@ button:disabled {
   gap: 8px;
   max-height: 220px;
   overflow: auto;
-  padding-right: 4px;
+  padding: 2px 4px 2px 2px;
 }
 
 .schedule-place-results button {
@@ -4064,7 +4097,14 @@ button:disabled {
 
 .life-places-empty-inline--compact {
   min-height: 0;
-  padding: 8px 0;
+  padding: 10px 12px;
+}
+
+.life-places-manager__collapsed {
+  padding: 14px;
+  border: 1px solid rgba(126, 105, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 .life-places-place-button {
