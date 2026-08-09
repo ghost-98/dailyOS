@@ -727,10 +727,11 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <span>Place Map</span>
               <strong>{selectedPeriodLabel}</strong>
             </div>
-            <p>
-              {filteredVisitedPlaces.length}곳 · {totalPlaceVisits}건 방문 ·{" "}
-              {totalPlaceExpense > 0 ? formatWon(totalPlaceExpense) : "지출 연결 없음"}
-            </p>
+            <div className="life-places-panel-head__meta">
+              <b>{filteredVisitedPlaces.length}곳</b>
+              <b>{totalPlaceVisits}건</b>
+              <b>{totalPlaceExpense > 0 ? formatWon(totalPlaceExpense) : "지출 없음"}</b>
+            </div>
           </div>
 
           <div className="life-places-map-shell">
@@ -741,10 +742,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
             {mapStatus !== "ready" ? (
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
-                <strong>
-                  {mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 준비하는 중입니다."}
-                </strong>
-                <p>방문 장소와 내 장소를 한 지도 위에서 함께 볼 수 있게 불러오고 있어요.</p>
+                <strong>{mapStatus === "missing-key" ? "네이버 지도 키가 필요합니다." : "지도를 준비하는 중입니다."}</strong>
               </div>
             ) : filteredVisitedPlaces.length === 0 &&
               personalPlacesFiltered.length === 0 &&
@@ -752,7 +750,6 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               <div className="life-places-map-empty">
                 <MapPin aria-hidden size={24} />
                 <strong>표시할 장소가 아직 없어요.</strong>
-                <p>활동에 장소를 연결하거나, 내 장소를 먼저 등록해 두면 여기에서 함께 보여요.</p>
               </div>
             ) : null}
           </div>
@@ -781,18 +778,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <span>My Places</span>
                 <strong>내 장소 {personalPlaces.length}곳</strong>
               </div>
-              <p>장소 보관함과는 별개로, 내가 붙인 이름으로 계속 재사용하는 장소 사전입니다.</p>
+              <div className="life-places-panel-head__actions">
+                <button className="life-places-icon-button" onClick={startCreatingPersonalPlace} type="button">
+                  <Plus aria-hidden size={16} />
+                </button>
+              </div>
             </div>
 
             <div className="life-places-manager__body">
               <div className="life-places-manager__directory">
-                <div className="life-places-manager__actions">
-                  <button onClick={startCreatingPersonalPlace} type="button">
-                    <Plus aria-hidden size={15} />
-                    새 장소
-                  </button>
-                </div>
-
                 <div className="life-places-manager__list">
                   {personalPlacesFiltered.length > 0 ? (
                     personalPlacesFiltered.map((place) => (
@@ -814,7 +808,6 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   ) : (
                     <div className="life-places-empty-inline">
                       <strong>아직 등록한 내 장소가 없어요.</strong>
-                      <p>내 집, 회사, 단골 카페처럼 계속 쓰는 장소를 먼저 정리해 둘 수 있어요.</p>
                     </div>
                   )}
                 </div>
@@ -824,7 +817,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                 <div className="life-places-manager__form-head">
                   <div>
                     <strong>{selectedPersonalPlace ? "내 장소 수정" : "내 장소 추가"}</strong>
-                    {mappedPlace ? <span>{mappedPlace.name}</span> : <span>실제 위치를 먼저 매핑해 주세요.</span>}
+                    {mappedPlace ? <span>{mappedPlace.name}</span> : null}
                   </div>
                   {selectedPersonalPlace ? (
                     <div className="life-places-manager__form-tools">
@@ -891,7 +884,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   </div>
                 ) : (
                   <div className="life-places-empty-inline life-places-empty-inline--compact">
-                    <strong>먼저 매핑할 실제 위치를 골라 주세요.</strong>
+                    <strong>실제 위치를 먼저 선택해 주세요.</strong>
                   </div>
                 )}
 
@@ -948,7 +941,9 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   <span>Visited Places</span>
                   <strong>{filteredVisitedPlaces.length}곳</strong>
                 </div>
-                <p>현재 기간 안에서 실제 활동 기록으로 집계된 방문 장소입니다.</p>
+                <div className="life-places-panel-head__meta">
+                  <b>{totalPlaceVisits}건</b>
+                </div>
               </div>
 
               <div className="life-places-place-list">
@@ -985,11 +980,12 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   <span>Place Records</span>
                   <strong>{selectedVisitedPlace?.name ?? "장소를 선택해 주세요"}</strong>
                 </div>
-                <p>
-                  {selectedVisitedPlace
-                    ? `${selectedVisitedPlace.visitCount}건 방문 기록`
-                    : "방문 장소를 누르면 오른쪽에 기록이 열립니다."}
-                </p>
+                {selectedVisitedPlace ? (
+                  <div className="life-places-panel-head__meta">
+                    <b>{selectedVisitedPlace.visitCount}건</b>
+                    <b>{selectedVisitedPlace.visitDates.length}일</b>
+                  </div>
+                ) : null}
               </div>
 
               {selectedVisitedPlace ? (
@@ -1050,7 +1046,6 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               ) : (
                 <div className="life-places-empty-inline">
                   <strong>장소를 선택하면 여기에 기록이 열립니다.</strong>
-                  <p>방문 장소를 눌러, 그 장소에서 어떤 하루와 활동이 쌓였는지 바로 읽을 수 있어요.</p>
                 </div>
               )}
             </SectionCard>
