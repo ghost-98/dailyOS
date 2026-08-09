@@ -1127,27 +1127,27 @@
 .life-tab-heading {
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: var(--radius-xl);
+  background: var(--panel-frost);
   display: flex;
-  gap: 18px;
+  gap: var(--space-4);
   justify-content: space-between;
-  min-height: 78px;
-  padding: 18px 20px;
+  min-height: var(--heading-card-min-height);
+  padding: var(--heading-card-padding);
 }
 
 .life-tab-heading h1 {
   margin: 0;
   color: var(--text);
-  font-size: 22px;
-  font-weight: 860;
+  font-size: var(--heading-title-size);
+  font-weight: var(--heading-title-weight);
   line-height: 1.18;
 }
 
 .life-tab-heading p {
   margin: 6px 0 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--heading-body-size);
   line-height: 1.5;
 }
 
@@ -1501,7 +1501,6 @@
 
 .ledger-header.life-tab-heading {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 18px 20px;
 }
 
 .ledger-summary-grid {
@@ -2572,24 +2571,25 @@
 .ledger-income-form select,
 .ledger-income-form textarea {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  min-height: var(--field-min-height);
+  border: var(--field-border);
+  border-radius: var(--field-radius);
   outline: 0;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--field-bg);
   color: var(--text);
   font: inherit;
-  padding: 12px 14px;
+  padding: var(--field-padding-y) var(--field-padding-x);
 }
 
 .life-people-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0 14px;
+  min-height: var(--field-min-height);
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
+  padding: 0 var(--field-padding-x);
 }
 
 .life-people-search input,
@@ -2628,10 +2628,10 @@
 
 .life-people-form label input,
 .life-people-form label textarea {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 12px 14px;
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
+  padding: var(--field-padding-y) var(--field-padding-x);
 }
 
 .life-people-form__actions,
@@ -2661,12 +2661,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  min-height: var(--field-min-height);
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
   color: var(--muted);
-  padding: 0 12px;
+  padding: 0 var(--field-padding-x);
 }
 
 .life-person-buttons--scroll {
@@ -3910,12 +3910,12 @@ button:disabled {
 .life-places-manager__form textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--field-radius);
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-strong);
   font: inherit;
   outline: none;
-  padding: 11px 12px;
+  padding: var(--field-padding-y) var(--field-padding-x);
 }
 
 .life-places-manager__form textarea {
@@ -3930,9 +3930,9 @@ button:disabled {
   align-items: center;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--field-radius);
   background: rgba(255, 255, 255, 0.7);
-  padding: 8px 10px;
+  padding: 8px var(--field-padding-x);
 }
 
 .schedule-place-search input {

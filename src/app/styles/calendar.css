@@ -10,24 +10,24 @@
 }
 
 .calendar-header.life-tab-heading {
-  min-height: 78px;
+  min-height: var(--heading-card-min-height);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 18px 20px;
+  padding: var(--heading-card-padding);
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-4);
   min-height: 58px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 18px;
+  padding-bottom: var(--space-4);
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: 25px;
+  font-size: clamp(1.45rem, 1.9vw, 1.68rem);
   font-weight: 820;
   line-height: 1.15;
 }
@@ -1458,7 +1458,7 @@
 .schedule-field input,
 .schedule-field select {
   max-width: none;
-  min-height: 34px;
+  min-height: var(--field-min-height);
   text-align: left;
 }
 
@@ -1532,9 +1532,9 @@
   align-items: center;
   gap: 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 9px 10px;
+  border-radius: var(--field-radius);
+  background: var(--field-bg-strong);
+  padding: 9px var(--field-padding-x);
 }
 
 .schedule-place-mode {
@@ -1583,7 +1583,7 @@
   align-items: center;
   gap: 6px;
   border: 1px solid rgba(157, 178, 255, 0.28);
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: rgba(157, 178, 255, 0.13);
   color: var(--text);
   font-weight: 850;
@@ -1617,10 +1617,10 @@
   display: grid;
   gap: 4px;
   border: 1px solid var(--line);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.045);
+  border-radius: var(--radius-sm);
+  background: var(--field-bg-strong);
   color: var(--text);
-  padding: 11px 12px;
+  padding: 11px var(--field-padding-x);
   text-align: left;
 }
 

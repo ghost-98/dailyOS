@@ -14,6 +14,8 @@
   --bg-deep: #0d0e11;
   --panel: rgba(24, 25, 29, 0.96);
   --panel-soft: rgba(31, 32, 37, 0.82);
+  --panel-elevated: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)), var(--panel);
+  --panel-frost: rgba(255, 255, 255, 0.035);
   --line: rgba(255, 255, 255, 0.1);
   --line-strong: rgba(139, 160, 255, 0.26);
   --text: #f3f3f5;
@@ -27,6 +29,31 @@
   --blue: #8db5ff;
   --shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   --radius: 10px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --heading-card-min-height: 78px;
+  --heading-card-padding: 18px 20px;
+  --heading-title-size: 22px;
+  --heading-title-weight: 860;
+  --heading-body-size: 0.9rem;
+  --eyebrow-size: 12px;
+  --eyebrow-gap: 13px;
+  --field-min-height: 42px;
+  --field-radius: 14px;
+  --field-padding-x: 14px;
+  --field-padding-y: 12px;
+  --field-border: 1px solid rgba(255, 255, 255, 0.09);
+  --field-bg: rgba(255, 255, 255, 0.04);
+  --field-bg-strong: rgba(255, 255, 255, 0.045);
 }
 
 * {

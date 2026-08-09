@@ -255,9 +255,9 @@
 
 
 .eyebrow {
-  margin: 0 0 13px;
+  margin: 0 0 var(--eyebrow-gap);
   color: var(--violet);
-  font-size: 12px;
+  font-size: var(--eyebrow-size);
   font-weight: 850;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -357,8 +357,8 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
+  border-radius: var(--radius-lg);
+  background: var(--panel-elevated);
   box-shadow: var(--shadow);
 }
 
@@ -544,8 +544,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 22px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .section-heading button {
@@ -553,6 +553,21 @@
   background: transparent;
   color: var(--text);
   font-weight: 800;
+}
+
+.section-heading > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.section-heading h2,
+.section-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 820;
+  line-height: 1.2;
 }
 
 .schedule-list,
