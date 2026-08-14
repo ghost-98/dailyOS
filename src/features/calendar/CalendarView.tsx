@@ -21,6 +21,8 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
+import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
 import type { EventType, PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
@@ -41,10 +43,7 @@ type CalendarViewProps = {
   defaultSelectedDate?: string | null;
   description?: string;
   externalItems?: ExternalCalendarItem[];
-  headerVariant?: "page" | "tab";
-  keepDateSelected?: boolean;
   showEventAddButton?: boolean;
-  showSelectedDatePlacesMap?: boolean;
   title?: string;
   viewMode?: "manage" | "database";
 };
@@ -54,53 +53,15 @@ const initialMonth = new Date();
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 type LifeCalendarScope = "day" | "week" | "month" | "range";
 type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "finance" | "health";
-const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
-let naverMapScriptPromise: Promise<void> | null = null;
+const naverMapClientId = getNaverMapClientId();
 const dayRouteGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
-
-type NaverLatLng = unknown;
-type NaverLatLngBounds = {
-  extend: (latLng: NaverLatLng) => void;
-};
-type NaverMap = {
-  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
-  setCenter: (latLng: NaverLatLng) => void;
-  setZoom: (zoom: number) => void;
-};
-type NaverMarker = {
-  setMap: (map: NaverMap | null) => void;
-};
-type NaverPolyline = {
-  setMap: (map: NaverMap | null) => void;
-};
-
-declare global {
-  interface Window {
-    naver?: {
-      maps: {
-        Event: {
-          addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
-        };
-        LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-        LatLngBounds: new () => NaverLatLngBounds;
-        Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
-        Marker: new (options: Record<string, unknown>) => NaverMarker;
-        Point: new (x: number, y: number) => unknown;
-        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
-      };
-    };
-  }
-}
 
 export function CalendarView({
   allowedTypes,
   defaultSelectedDate = null,
   description,
   externalItems = [],
-  headerVariant = "page",
-  keepDateSelected = false,
   showEventAddButton = false,
-  showSelectedDatePlacesMap = true,
   viewMode = "manage",
   title = "일정",
 }: CalendarViewProps) {
@@ -289,17 +250,13 @@ export function CalendarView({
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
       const nextMonth = new Date(month.getFullYear(), month.getMonth() + direction, 1);
-      if (keepDateSelected) {
-        setSelectedDate(formatDateKey(nextMonth));
-      } else {
-        setSelectedDate(null);
-      }
+      setSelectedDate(formatDateKey(nextMonth));
       return nextMonth;
     });
   };
 
   const handleDateClick = (date: string) => {
-    setSelectedDate((current) => (keepDateSelected ? date : current === date ? null : date));
+    setSelectedDate(date);
   };
 
   const toggleCalendarCategoryFilter = (type: CalendarCategory) => {
@@ -549,7 +506,7 @@ export function CalendarView({
 
   return (
     <div className="calendar-page">
-      <header className={headerVariant === "tab" ? "life-tab-heading calendar-header" : "calendar-header page-header"}>
+      <header className="life-tab-heading calendar-header">
         <div>
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
@@ -693,7 +650,7 @@ export function CalendarView({
                 </div>
               </div>
 
-              {!isDatabaseView && showSelectedDatePlacesMap ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
+              {!isDatabaseView ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
               {isDatabaseView && dbScope !== "day" ? (
                 <div className="life-calendar-db-panel">
@@ -2074,31 +2031,12 @@ function DayRouteMap({ compact = false, stops }: { compact?: boolean; stops: Day
       return;
     }
 
-    if (window.naver?.maps) {
+    if (isNaverMapReady()) {
       setMapStatus("ready");
       return;
     }
 
-    if (!naverMapScriptPromise) {
-      naverMapScriptPromise = new Promise<void>((resolve, reject) => {
-        const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
-        if (existingScript) {
-          existingScript.addEventListener("load", () => resolve(), { once: true });
-          existingScript.addEventListener("error", () => reject(new Error("Failed to load Naver Maps script")), { once: true });
-          return;
-        }
-
-        const script = document.createElement("script");
-        script.async = true;
-        script.dataset.dailyosNaverMap = "true";
-        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Failed to load Naver Maps script"));
-        document.head.appendChild(script);
-      });
-    }
-
-    naverMapScriptPromise.then(
+    loadNaverMapScript().then(
       () => setMapStatus("ready"),
       () => setMapStatus("error"),
     );

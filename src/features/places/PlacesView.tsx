@@ -7,6 +7,8 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
+import type { NaverMap, NaverMarker } from "@/lib/naverMap";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
 import {
   createPlaceFolderInDb,
@@ -25,41 +27,7 @@ type SearchResponse = {
 };
 type PlacesViewMode = "folder" | "search" | "none";
 
-type NaverLatLng = unknown;
-type NaverLatLngBounds = {
-  extend: (latLng: NaverLatLng) => void;
-};
-type NaverMap = {
-  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
-  setCenter: (latLng: NaverLatLng) => void;
-  setZoom: (zoom: number) => void;
-};
-type NaverMarker = {
-  setMap: (map: NaverMap | null) => void;
-};
-type NaverPolyline = {
-  setMap: (map: NaverMap | null) => void;
-};
-
-declare global {
-  interface Window {
-    naver?: {
-      maps: {
-        Event: {
-          addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
-        };
-        LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-        LatLngBounds: new () => NaverLatLngBounds;
-        Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
-        Marker: new (options: Record<string, unknown>) => NaverMarker;
-        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
-        Point: new (x: number, y: number) => unknown;
-      };
-    };
-  }
-}
-
-const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+const naverMapClientId = getNaverMapClientId();
 const defaultCenter = { latitude: 37.5666103, longitude: 126.9783882 };
 const allFolderId = "all";
 
@@ -112,25 +80,15 @@ export function PlacesView() {
       return;
     }
 
-    if (window.naver?.maps) {
+    if (isNaverMapReady()) {
       setMapStatus("ready");
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
-    if (existingScript) {
-      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
-      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.dataset.dailyosNaverMap = "true";
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
-    script.onload = () => setMapStatus("ready");
-    script.onerror = () => setMapStatus("error");
-    document.head.appendChild(script);
+    loadNaverMapScript().then(
+      () => setMapStatus("ready"),
+      () => setMapStatus("error"),
+    );
   }, []);
 
   const filteredSavedPlaces = useMemo(

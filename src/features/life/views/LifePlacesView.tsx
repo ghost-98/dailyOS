@@ -8,6 +8,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
+import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
+import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker } from "@/lib/naverMap";
 import {
   createPersonalPlaceInDb,
   deletePersonalPlaceFromDb,
@@ -32,20 +34,6 @@ type SearchMode = "place" | "records";
 type SearchResponse = {
   error?: string;
   places: PlaceRecord[];
-};
-
-type NaverLatLng = unknown;
-type NaverLatLngBounds = {
-  extend: (latLng: NaverLatLng) => void;
-  getCenter?: () => NaverLatLng;
-};
-type NaverMap = {
-  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
-  setCenter: (latLng: NaverLatLng) => void;
-  setZoom: (zoom: number) => void;
-};
-type NaverMarker = {
-  setMap: (map: NaverMap | null) => void;
 };
 
 type PlaceVisitRecord = {
@@ -83,8 +71,7 @@ type ResolvedVisitedPlace = {
   name: string;
 };
 
-const naverMapClientId =
-  process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+const naverMapClientId = getNaverMapClientId();
 const defaultCenter = { latitude: 37.5666103, longitude: 126.9783882 };
 const placeGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
@@ -157,27 +144,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       return;
     }
 
-    if (window.naver?.maps) {
+    if (isNaverMapReady()) {
       setMapStatus("ready");
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
-    if (existingScript) {
-      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
-      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.dataset.dailyosNaverMap = "true";
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(
-      naverMapClientId,
-    )}`;
-    script.onload = () => setMapStatus("ready");
-    script.onerror = () => setMapStatus("error");
-    document.head.appendChild(script);
+    loadNaverMapScript().then(
+      () => setMapStatus("ready"),
+      () => setMapStatus("error"),
+    );
   }, []);
 
   useEffect(() => {

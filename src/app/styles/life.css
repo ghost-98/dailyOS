@@ -3215,10 +3215,6 @@
   align-items: start;
 }
 
-.life-activity-layout--panel-closed {
-  grid-template-columns: minmax(420px, 1fr) minmax(96px, 0.12fr);
-}
-
 .life-report-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.28fr);
@@ -3244,9 +3240,11 @@
 
 .life-activity-form > .section-heading,
 .life-selected-day-panel > .section-heading {
-  min-height: 96px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 104px;
   align-items: flex-start;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .life-activity-form > .section-heading > div:first-child,
@@ -3260,60 +3258,29 @@
   position: sticky;
   top: 18px;
   overflow: hidden;
-  transition:
-    max-width 180ms ease,
-    padding 180ms ease;
 }
 
-.life-selected-day-panel--closed {
-  align-content: start;
-  min-height: 132px;
-  padding: 14px 10px;
+.life-selected-day-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.life-selected-day-panel--closed .section-heading {
-  display: grid;
-  grid-template-columns: 1fr;
-  justify-items: center;
-  text-align: center;
+.life-selected-day-title i {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.life-selected-day-panel--closed .section-heading h2 {
-  writing-mode: vertical-rl;
-  max-height: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.life-selected-day-panel--closed .section-heading .eyebrow {
-  display: none;
-}
-
-.life-selected-day-panel--closed .life-selected-day-toggle {
-  width: 100%;
-  margin-top: 10px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(16, 185, 129, 0.16));
-  color: var(--text);
-}
-
-.life-selected-day-toggle {
-  border: 1px solid rgba(201, 184, 255, 0.24);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.12);
+.life-selected-day-title b {
   color: var(--violet);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 900;
-  padding: 8px 11px;
+  font-weight: 950;
 }
 
 button:disabled {
   cursor: default;
   opacity: 0.58;
-}
-
-button:disabled {
   filter: saturate(0.82);
 }
 
@@ -3367,7 +3334,16 @@ button:disabled {
 }
 
 .life-selected-day-panel__heading {
-  padding-top: 0;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.life-selected-day-panel__heading::after {
+  content: "";
+  display: block;
+  min-width: 190px;
+  height: 46px;
+  visibility: hidden;
 }
 
 .life-activity-quick-toggle--active {
@@ -4550,14 +4526,25 @@ button:disabled {
 }
 
 .life-activity-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   padding: 14px;
+}
+
+.life-activity-item__body {
+  min-width: 0;
+}
+
+.life-record-actions--activity-item {
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  align-self: start;
+  margin-top: 0;
 }
 
 .life-activity-item .life-record-actions button:disabled,

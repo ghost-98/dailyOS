@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
@@ -62,7 +62,6 @@ export function LifeActivitiesView({
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-  const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [sleepDateMode, setSleepDateMode] = useState<SleepDateMode>("selected");
@@ -384,7 +383,7 @@ export function LifeActivitiesView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
-      <div className={isDayPanelOpen ? "life-activity-layout" : "life-activity-layout life-activity-layout--panel-closed"}>
+      <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
           <div className="section-heading life-activity-form__heading">
             <div>
@@ -622,93 +621,92 @@ export function LifeActivitiesView({
               {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
             </button>
           ) : null}
+
         </SectionCard>
 
-        <SectionCard className={isDayPanelOpen ? "life-activity-list life-selected-day-panel" : "life-activity-list life-selected-day-panel life-selected-day-panel--closed"}>
+        <SectionCard className="life-activity-list life-selected-day-panel">
           <div className="section-heading life-selected-day-panel__heading">
             <div>
               <p className="eyebrow">Selected Day</p>
-              <h2>{formatFullDate(date)} 활동 {selectedActivities.length}건</h2>
+              <h2 className="life-selected-day-title">
+                <span>{formatFullDate(date)}</span>
+                <i aria-hidden />
+                <span>활동 <b>{selectedActivities.length}</b>건</span>
+              </h2>
             </div>
-            <button className="life-selected-day-toggle" onClick={() => setIsDayPanelOpen((current) => !current)} type="button">
-              {isDayPanelOpen ? "접기" : "열기"}
-            </button>
           </div>
 
-          {isDayPanelOpen ? (
-            <>
-              <div className="life-activity-calendar">
-                <div className="life-activity-calendar__header">
-                  <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
-                    <ChevronLeft aria-hidden size={16} />
+          <div className="life-activity-calendar">
+            <div className="life-activity-calendar__header">
+              <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+                <ChevronLeft aria-hidden size={16} />
+              </button>
+              <strong>{monthLabel}</strong>
+              <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+                <ChevronRight aria-hidden size={16} />
+              </button>
+            </div>
+            <div className="life-activity-calendar__weekdays">
+              {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
+            </div>
+            <div className="life-activity-calendar__grid">
+              {calendarDays.map((day) => {
+                const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+                return (
+                  <button
+                    aria-pressed={day.date === date}
+                    className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
+                    disabled={!day.date}
+                    key={day.key}
+                    onClick={() => day.date && selectDate(day.date)}
+                    type="button"
+                  >
+                    <span>{day.day}</span>
+                    {count > 0 ? <em>{count}</em> : null}
                   </button>
-                  <strong>{monthLabel}</strong>
-                  <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
-                    <ChevronRight aria-hidden size={16} />
-                  </button>
-                </div>
-                <div className="life-activity-calendar__weekdays">
-                  {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
-                </div>
-                <div className="life-activity-calendar__grid">
-                  {calendarDays.map((day) => {
-                    const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
-                    return (
-                      <button
-                        aria-pressed={day.date === date}
-                        className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
-                        disabled={!day.date}
-                        key={day.key}
-                        onClick={() => day.date && selectDate(day.date)}
-                        type="button"
-                      >
-                        <span>{day.day}</span>
-                        {count > 0 ? <em>{count}</em> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                );
+              })}
+            </div>
+          </div>
 
-              <div className="life-activity-day-summary">
-                <article>
-                  <span>기록 시간</span>
-                  <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
-                </article>
-                <article>
-                  <span>활동 지출</span>
-                  <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
-                </article>
-                <article>
-                  <span>연결 정보</span>
-                  <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
-                </article>
-              </div>
-              {selectedActivities.length > 0 ? (
-                selectedActivities.map((activity) => (
-                  <article className="life-activity-item" key={activity.id}>
-                    <div>
-                      <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
-                      <strong>{activity.title}</strong>
-                      <p>{formatActivitySummary(activity)}</p>
-                    </div>
-                    <div className="life-record-actions">
-                      <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
-                      <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
-                        {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
-                      </button>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="life-map-empty life-map-empty--compact">
-                  <NotebookPen aria-hidden size={28} />
-                  <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
-                  <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
+          <div className="life-activity-day-summary">
+            <article>
+              <span>기록 시간</span>
+              <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
+            </article>
+            <article>
+              <span>활동 지출</span>
+              <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
+            </article>
+            <article>
+              <span>연결 정보</span>
+              <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
+            </article>
+          </div>
+          {selectedActivities.length > 0 ? (
+            selectedActivities.map((activity) => (
+              <article className="life-activity-item" key={activity.id}>
+                <div className="life-activity-item__body">
+                  <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
+                  <strong>{activity.title}</strong>
+                  <p>{formatActivitySummary(activity)}</p>
                 </div>
-              )}
-            </>
-          ) : null}
+                <div className="life-record-actions life-record-actions--activity-item">
+                  <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
+                  <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
+                    {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
+              <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
+            </div>
+          )}
+
         </SectionCard>
       </div>
     </div>
@@ -791,3 +789,4 @@ function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | 
   if ((activity.category ?? "").trim() !== "수면") return false;
   return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
 }
+
