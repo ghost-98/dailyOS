@@ -596,7 +596,7 @@ function LifeAskView({
         </SectionCard>
 
         <SectionCard className="life-ask-answer">
-          <p className="eyebrow">Insight Brief</p>
+          <p className="eyebrow">AI Answer</p>
           <div className="life-ask-brief">
             <article className="life-ask-overview-card">
               <span>{analysis.focusTitle}</span>
@@ -614,46 +614,18 @@ function LifeAskView({
               ))}
             </div>
 
-            <div className="life-ask-detail-grid">
-              {analysis.breakdowns.map((section) => (
-                <article className="life-ask-detail-card" key={section.title}>
-                  <span>{section.title}</span>
-                  <ul>
-                    {section.items.map((item) => <li key={item}>{item}</li>)}
-                  </ul>
-                </article>
-              ))}
-              <article className="life-ask-detail-card">
-                <span>패턴</span>
-                <ul>
-                  {analysis.patterns.length > 0 ? analysis.patterns.map((pattern) => <li key={pattern}>{pattern}</li>) : <li>아직 패턴을 읽을 만큼 기록이 충분하지 않아요.</li>}
-                </ul>
-              </article>
-
-              <article className="life-ask-detail-card">
-                <span>근거 기록</span>
-                <ul>
-                  {analysis.evidence.length > 0 ? analysis.evidence.map((item) => <li key={`${item.date}-${item.title}`}><b>{item.date}</b>{item.title}<small>{item.description}</small></li>) : <li>질문과 연결된 근거 기록이 아직 적어요.</li>}
-                </ul>
-              </article>
-
-              <article className="life-ask-detail-card">
-                <span>다음 제안</span>
-                <ul>
-                  {analysis.suggestions.length > 0 ? analysis.suggestions.map((suggestion) => <li key={suggestion}>{suggestion}</li>) : <li>추가 기록이 쌓이면 더 구체적인 제안을 만들 수 있어요.</li>}
-                </ul>
-              </article>
-            </div>
-
             <div className="life-ask-answer-block">
-              <p className="eyebrow">AI Answer</p>
+              <div className="life-ask-answer-block__head">
+                <p className="eyebrow">답변</p>
+                <span>{scopedRecords.length}건 기준</span>
+              </div>
               {answer ? (
                 <div className="life-ask-answer__body">{answer}</div>
               ) : (
                 <div className="life-map-empty life-map-empty--compact">
                   <Search aria-hidden size={28} />
                   <strong>아직 질문하지 않았습니다.</strong>
-                  <p>먼저 해석 카드로 전체 흐름을 보고, AI 답변으로 의미와 맥락을 더 깊게 확장할 수 있어요.</p>
+                  <p>질문을 입력하고 답변 생성을 누르면 이 영역에 길이 제한 없이 답변이 표시됩니다.</p>
                 </div>
               )}
             </div>
