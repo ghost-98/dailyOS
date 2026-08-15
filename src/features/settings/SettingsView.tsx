@@ -5,6 +5,7 @@ import { Bell, Database, Download, LogOut, Mail, Save, Settings, ShieldCheck, Tr
 import { useEffect, useRef, useState } from "react";
 import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { supabase } from "@/lib/supabase";
@@ -132,10 +133,9 @@ export function SettingsView() {
             <UserRound aria-hidden size={20} />
             <span>로그인 계정</span>
           </div>
-          <label>
-            <span>이름</span>
+          <FormField label="이름">
             <input placeholder="표시 이름" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-          </label>
+          </FormField>
           {saveMessage ? <p className="settings-message">{saveMessage}</p> : null}
           <div className="settings-account-row">
             <Mail aria-hidden size={17} />

@@ -16,25 +16,10 @@
   padding: 24px;
 }
 
-.settings-card label {
-  display: grid;
-  gap: 8px;
-}
-
-.settings-card label > span,
 .settings-toggle > span {
   color: var(--muted);
   font-size: 14px;
   font-weight: 750;
-}
-
-.settings-card input {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  padding: 12px;
 }
 
 .settings-account-row {
@@ -45,6 +30,10 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   padding: 13px;
+}
+
+.settings-card .ui-form-field > input {
+  min-height: 46px;
 }
 
 .settings-account-row svg {

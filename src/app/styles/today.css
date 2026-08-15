@@ -326,6 +326,7 @@
 }
 
 .today-command-card {
+  gap: 18px;
   padding: var(--card-padding-lg);
 }
 
@@ -402,7 +403,7 @@
 .today-place-item {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--surface-soft);
+  background: var(--panel-frost);
   padding: 15px;
 }
 
@@ -444,7 +445,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--field-bg-strong);
+  background: var(--panel-frost);
   color: var(--muted);
 }
 
