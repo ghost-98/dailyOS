@@ -6,10 +6,6 @@
   flex: 0 0 auto;
 }
 
-.calendar-dot--schedule {
-  background: var(--violet);
-}
-
 .calendar-dot--todo {
   background: var(--green);
 }

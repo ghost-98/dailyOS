@@ -872,7 +872,7 @@ function findPersonAnchorDate(name: string, filtered: FilteredLifeData): LifeAsk
     return {
       date: event.date,
       label: name,
-      meta: event.title || "일정 기록",
+      meta: event.title || "이벤트 기록",
     };
   }
 
@@ -903,7 +903,7 @@ function findPlaceAnchorDate(name: string, filtered: FilteredLifeData): LifeAskL
     return {
       date: event.date,
       label: name,
-      meta: event.title || "일정 기록",
+      meta: event.title || "이벤트 기록",
     };
   }
 

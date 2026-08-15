@@ -261,10 +261,6 @@
   line-height: 1.5;
 }
 
-.manage-calendar-overview__card--schedule {
-  background: radial-gradient(circle at top left, rgba(201, 184, 255, 0.14), transparent 38%), rgba(255, 255, 255, 0.04);
-}
-
 .manage-calendar-overview__card--todo {
   background: radial-gradient(circle at top left, rgba(110, 231, 183, 0.14), transparent 38%), rgba(255, 255, 255, 0.04);
 }
@@ -782,10 +778,6 @@
   color: var(--muted);
   text-decoration: line-through;
   text-decoration-thickness: 2px;
-}
-
-.date-event--schedule {
-  border-left-color: var(--violet);
 }
 
 .date-event--todo {

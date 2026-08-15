@@ -4241,14 +4241,15 @@ button:disabled {
 
 .life-activity-calendar__month-picker {
   position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
 }
 
 .life-activity-calendar__month-button {
-  display: flex;
-  width: 100%;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
   border: 0 !important;
   background: transparent !important;
   color: var(--text) !important;
@@ -4259,6 +4260,10 @@ button:disabled {
   line-height: 1.2;
   letter-spacing: -0.02em;
   text-align: center;
+  white-space: nowrap;
+  margin: 0 auto;
+  min-height: 34px;
+  padding: 0 8px;
 }
 
 .life-activity-calendar__month-popover {

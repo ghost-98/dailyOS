@@ -139,7 +139,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
       <header className={variant === "tab" ? "life-tab-heading ledger-header ui-toolbar-panel" : "page-header ledger-header ui-toolbar-panel"}>
         <div>
           <h1>가계부</h1>
-          <p className="ledger-header__note">지출은 일정·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
+          <p className="ledger-header__note">지출은 이벤트·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
         </div>
       </header>
 
@@ -335,7 +335,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                 <div className="health-empty health-empty--compact">
                   <ReceiptText aria-hidden size={30} />
                   <strong>{isLoading ? "가계부를 불러오는 중입니다." : "이 날짜에는 자금 흐름이 없어요."}</strong>
-                  <p>지출은 일정·할 일·활동에서 연결되고, 수입은 여기서 직접 남길 수 있습니다.</p>
+                  <p>지출은 이벤트·할 일·활동에서 연결되고, 수입은 여기서 직접 남길 수 있습니다.</p>
                 </div>
               ) : null}
             </div>

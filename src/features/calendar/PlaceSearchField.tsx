@@ -6,11 +6,11 @@ import { PlaceLine } from "@/features/calendar/components";
 import { fetchPersonalPlacesFromDb } from "@/features/personalPlaces/api";
 import type { PersonalPlaceRecord, PlanPlace, PlaceRecord } from "@/types/domain";
 
-type SearchMode = "saved" | "map";
+type SearchMode = "map" | "saved";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
-  const [searchMode, setSearchMode] = useState<SearchMode>("saved");
+  const [searchMode, setSearchMode] = useState<SearchMode>("map");
   const [savedPlaces, setSavedPlaces] = useState<PersonalPlaceRecord[]>([]);
   const [results, setResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -90,7 +90,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     setQuery("");
     setResults([]);
     setMessage("");
-    setSearchMode("saved");
+    setSearchMode("map");
   };
 
   return (
@@ -107,14 +107,14 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       </div>
 
       <div className="schedule-place-mode">
+        <button className={searchMode === "map" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("map")} type="button">
+          <MapPin aria-hidden size={14} />
+          장소 선택
+        </button>
         <button className={searchMode === "saved" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("saved")} type="button">
           <Star aria-hidden size={14} />
           내 장소
           <b>{savedPlaces.length}</b>
-        </button>
-        <button className={searchMode === "map" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("map")} type="button">
-          <MapPin aria-hidden size={14} />
-          지도 검색
         </button>
       </div>
 

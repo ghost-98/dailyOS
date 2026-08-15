@@ -156,11 +156,6 @@
   color: var(--text);
 }
 
-.calendar-filter--schedule.calendar-filter--active {
-  border-color: rgba(201, 184, 255, 0.34);
-  background: rgba(201, 184, 255, 0.14);
-}
-
 .calendar-filter--todo.calendar-filter--active {
   border-color: rgba(110, 231, 183, 0.3);
   background: rgba(110, 231, 183, 0.12);
