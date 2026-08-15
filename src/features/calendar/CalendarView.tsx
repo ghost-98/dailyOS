@@ -520,12 +520,11 @@ export function CalendarView({
             </IconButton>
           </div>
 
-          {!(isDatabaseView && dbScope === "day") ? (
-            <div className="calendar-filters" aria-label="표시 항목">
-              {filterTypes.map((type) => {
-                const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
-                const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
-                return (
+          <div className="calendar-filters" aria-label="표시 항목">
+            {filterTypes.map((type) => {
+              const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
+              const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
+              return (
                 <button
                   className={`calendar-filter calendar-filter--${type} ${isFilterActive ? "calendar-filter--active" : ""} ${isFilterMuted ? "calendar-filter--muted" : ""}`}
                   key={type}
@@ -535,10 +534,9 @@ export function CalendarView({
                   <span className={`calendar-dot calendar-dot--${type}`} />
                   {type === "record" ? "기록" : categoryLabels[type]}
                 </button>
-                );
-              })}
-            </div>
-          ) : null}
+              );
+            })}
+          </div>
 
           <div className="calendar-weekdays">
             {weekdays.map((weekday, index) => (

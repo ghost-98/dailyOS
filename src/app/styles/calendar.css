@@ -138,27 +138,25 @@
 
 .calendar-day__signal {
   display: inline-flex;
-  width: 34px;
   align-self: start;
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 0;
+  min-height: 24px;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
+  gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.045);
   color: var(--muted);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 850;
   line-height: 1;
-  padding: 0 8px;
+  padding: 0 6px 0 8px;
 }
 
 .calendar-day__signal-dot {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   flex: 0 0 auto;
   border-radius: 999px;
   background: currentColor;
@@ -170,14 +168,14 @@
 
 .calendar-day__signal b {
   display: inline-flex;
-  min-width: 20px;
-  height: 20px;
+  min-width: 18px;
+  height: 18px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 900;
   padding: 0 5px;
 }
