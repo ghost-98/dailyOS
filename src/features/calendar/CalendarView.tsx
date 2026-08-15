@@ -14,6 +14,7 @@ import {
   ListChecks,
   MapPin,
   Plus,
+  UtensilsCrossed,
   UsersRound,
   WalletCards,
   X,
@@ -1550,13 +1551,14 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                               {linkedPhotos.length}
                             </button>
                           ) : null}
-                          {[item.external.category, item.external.food].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
+                          {[item.external.category].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
                         </div>
                       </div>
                       <div className="life-calendar-day-timeline__body">
                         <strong>{item.external.title}</strong>
                         {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
                         {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
+                        {item.external.food ? <p><UtensilsCrossed aria-hidden size={14} /> {item.external.food}</p> : null}
                         {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
                       </div>
                     </article>
