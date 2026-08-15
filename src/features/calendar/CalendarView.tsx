@@ -35,7 +35,7 @@ import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
 import { useCalendarResources } from "@/features/calendar/useCalendarResources";
-import { formatDateKey, formatSelectedDate, formatShortDate, getMonthDays, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
+import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "./api";
 import { categoryDisplayOrder, categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
@@ -676,7 +676,6 @@ export function CalendarView({
                       setSelectedDate(date);
                       setCurrentMonth(new Date(`${date}T00:00:00`));
                     }}
-                    peopleNames={dbPeopleNames}
                     places={selectedPlanPlaces}
                     scope={dbScope}
                     startDate={periodBounds.start}
@@ -1295,7 +1294,6 @@ function LifeCalendarDatabasePanel({
   isLoading,
   items,
   onJumpToDate,
-  peopleNames,
   places,
   scope,
   startDate,
@@ -1306,7 +1304,6 @@ function LifeCalendarDatabasePanel({
   isLoading: boolean;
   items: DayTimelineItem[];
   onJumpToDate: (date: string) => void;
-  peopleNames: string[];
   places: PlanPlace[];
   scope: LifeCalendarScope;
   startDate: string;
@@ -1369,78 +1366,48 @@ function LifeCalendarDatabasePanel({
     );
   }
 
-  if (scope === "week") {
-    return (
-      <div className="life-calendar-db-content">
-        <section className="life-calendar-db-section">
-          <article className="life-calendar-db-story">
-            <span>주간 한 줄 요약</span>
-            <strong>{getWeekNarrative(daySummaries, finance, topCompanions, topPlaces)}</strong>
-          </article>
-          <LifeCalendarWeekPanel
-            busyDays={busyDays}
-            daySummaries={daySummaries}
-            endDate={endDate}
-            finance={finance}
-            isLoading={isLoading}
-            onJumpToDate={onJumpToDate}
-            startDate={startDate}
-            topCompanions={topCompanions}
-            topPlaces={topPlaces}
-          />
-        </section>
-      </div>
-    );
-  }
+  const periodLength = enumerateDates(startDate, endDate).length;
+  const totalActivities = daySummaries.reduce((sum, item) => sum + item.activityCount, 0);
+  const totalPlans = daySummaries.reduce((sum, item) => sum + item.planCount, 0);
+  const totalRecords = daySummaries.reduce((sum, item) => sum + item.recordCount, 0);
+  const totalHealth = daySummaries.reduce((sum, item) => sum + item.healthCount, 0);
+  const activeRate = periodLength > 0 ? Math.round((daySummaries.length / periodLength) * 100) : 0;
+  const topWeekday = getTopWeekday(daySummaries);
+  const peakDay = busyDays[0];
+  const peakActivityDay = getPeakDayBy(daySummaries, (item) => item.activityCount);
+  const peakRecordDay = getPeakDayBy(daySummaries, (item) => item.recordCount);
+  const peakExpenseDay = getPeakExpenseDay(daySummaries);
+  const scopeNarrative = getPeriodNarrative(scope, daySummaries, finance, topCompanions, topPlaces);
+  const focusCards = buildPeriodFocusCards(peakDay, peakActivityDay, peakRecordDay, peakExpenseDay);
 
   return (
     <div className="life-calendar-db-content">
       <section className="life-calendar-db-section">
-        <div className="life-calendar-db-section__head">
-          <div>
-            <p className="eyebrow">{scope === "month" ? "Month Brief" : "Range Brief"}</p>
-            <h3>{scope === "month" ? `${currentMonth.getMonth() + 1}월 핵심 요약` : "선택 기간 핵심 요약"}</h3>
-          </div>
-        </div>
+        <article className="life-calendar-db-story">
+          <span>{scope === "week" ? "주간 한 줄 요약" : scope === "month" ? "월간 한 줄 요약" : "기간 한 줄 요약"}</span>
+          <strong>{scopeNarrative}</strong>
+        </article>
         <div className="life-calendar-db-hero">
           <article>
-            <span>기록 남긴 날</span>
-            <strong>{daySummaries.length}</strong>
-            <p>빈 날보다 실제 흔적이 남은 날 중심</p>
+            <span>흔적 남긴 날</span>
+            <strong>{daySummaries.length}일</strong>
+            <p>전체 {periodLength}일 중 {activeRate}%에 기록이 남았어요.</p>
           </article>
           <article>
-            <span>가장 밀도 높은 날</span>
-            <strong>{busyDays[0] ? `${busyDays[0].totalCount}개` : "0개"}</strong>
-            <p>{busyDays[0] ? formatSelectedDate(busyDays[0].date) : "아직 기록 없음"}</p>
+            <span>가장 진한 날</span>
+            <strong>{peakDay ? `${peakDay.totalCount}건` : "0건"}</strong>
+            <p>{peakDay ? formatSelectedDate(peakDay.date) : "아직 눈에 띄는 날짜가 없어요."}</p>
+          </article>
+          <article>
+            <span>가장 자주 쓰인 요일</span>
+            <strong>{topWeekday ? `${topWeekday.value}요일` : "-"}</strong>
+            <p>{topWeekday ? `${topWeekday.count}번 반복됐어요.` : "아직 반복 패턴이 약해요."}</p>
           </article>
           <article>
             <span>자금 흐름</span>
             <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
-            <p>수입 {formatNumberWithUnit(finance.income, "원")} · 지출 {formatNumberWithUnit(finance.expense, "원")}</p>
+            <p>수입 {formatNumberWithUnit(finance.income, "원")} · 지출 {formatExpenseValueWithUnit(finance.expense, "원")}</p>
           </article>
-          <article>
-            <span>관계·장소 축</span>
-            <strong>{peopleNames.length + places.length}</strong>
-            <p>사람 {peopleNames.length} · 장소 {places.length}</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="life-calendar-db-section">
-        <div className="life-calendar-db-section__head">
-          <div>
-            <p className="eyebrow">Focus Days</p>
-            <h3>밀도 높은 날짜</h3>
-          </div>
-        </div>
-        <div className="life-calendar-db-period-grid">
-          {busyDays.length > 0 ? busyDays.map((summaryItem) => (
-            <button className="life-calendar-db-period-card" key={summaryItem.date} onClick={() => onJumpToDate(summaryItem.date)} type="button">
-              <span>{formatSelectedDate(summaryItem.date)}</span>
-              <strong>{summaryItem.totalCount}개 기록</strong>
-              <p>계획 {summaryItem.planCount} · 활동 {summaryItem.activityCount} · 수입 {summaryItem.incomeCount} · 지출 {summaryItem.expenseCount}</p>
-            </button>
-          )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "밀도 높은 날짜가 아직 없어요."}</div>}
         </div>
       </section>
 
@@ -1448,30 +1415,48 @@ function LifeCalendarDatabasePanel({
         <div className="life-calendar-db-section__head">
           <div>
             <p className="eyebrow">Core Signals</p>
-            <h3>이 기간에 남은 핵심 축</h3>
+            <h3>{scope === "week" ? "이번 주를 만든 핵심 축" : scope === "month" ? `${currentMonth.getMonth() + 1}월을 만든 핵심 축` : "이 기간을 만든 핵심 축"}</h3>
           </div>
         </div>
         <div className="life-calendar-db-period-grid life-calendar-db-period-grid--signals">
           <article className="life-calendar-db-brief-item">
-            <span>함께한 사람</span>
-            <strong>{topCompanions[0] ? `${topCompanions[0].value} 중심` : "기록 없음"}</strong>
-            <p>{topCompanions.length > 0 ? topCompanions.slice(0, 4).map((item) => `${item.value} ${item.count}회`).join(" · ") : "관계 흐름이 아직 옅어요."}</p>
+            <span>시간 사용</span>
+            <strong>{getDominantAxisLabel(totalActivities, totalPlans, totalRecords, totalHealth)}</strong>
+            <p>활동 {totalActivities} · 계획 {totalPlans} · 기록 {totalRecords} · 건강 {totalHealth}</p>
           </article>
           <article className="life-calendar-db-brief-item">
-            <span>장소</span>
-            <strong>{topPlaces[0] ? `${topPlaces[0].value} 중심` : "기록 없음"}</strong>
-            <p>{topPlaces.length > 0 ? topPlaces.slice(0, 4).map((item) => `${item.value} ${item.count}회`).join(" · ") : "장소 흐름이 아직 옅어요."}</p>
+            <span>관계 흐름</span>
+            <strong>{topCompanions[0] ? topCompanions[0].value : "혼자 움직인 흐름"}</strong>
+            <p>{topCompanions.length > 0 ? topCompanions.slice(0, 4).map((item) => `${item.value} ${item.count}회`).join(" · ") : "함께한 사람 기록이 아직 옅어요."}</p>
           </article>
           <article className="life-calendar-db-brief-item">
-            <span>자금 흐름</span>
-            <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
-            <p>수입 {formatNumberWithUnit(finance.income, "원")} · 지출 {formatExpenseValueWithUnit(finance.expense, "원")}</p>
+            <span>장소 축</span>
+            <strong>{topPlaces[0] ? topPlaces[0].value : "특정 거점 없음"}</strong>
+            <p>{topPlaces.length > 0 ? topPlaces.slice(0, 4).map((item) => `${item.value} ${item.count}회`).join(" · ") : "장소 흐름이 아직 흩어져 있어요."}</p>
           </article>
           <article className="life-calendar-db-brief-item">
-            <span>기록 밀도</span>
-            <strong>{daySummaries.length}일</strong>
-            <p>{daySummaries.length > 0 ? `${busyDays[0]?.totalCount ?? 0}건까지 쌓인 날이 있어요.` : "아직 기간 기록이 충분하지 않아요."}</p>
+            <span>계획 대비 실제</span>
+            <strong>{getExecutionBalanceLabel(totalActivities, totalPlans)}</strong>
+            <p>{getExecutionBalanceDescription(totalActivities, totalPlans)}</p>
           </article>
+        </div>
+      </section>
+
+      <section className="life-calendar-db-section">
+        <div className="life-calendar-db-section__head">
+          <div>
+            <p className="eyebrow">Focus Dates</p>
+            <h3>바로 열어볼 날짜</h3>
+          </div>
+        </div>
+        <div className="life-calendar-db-period-grid">
+          {focusCards.length > 0 ? focusCards.map((focus) => (
+            <button className="life-calendar-db-period-card" key={`${focus.label}-${focus.date}`} onClick={() => onJumpToDate(focus.date)} type="button">
+              <span>{focus.label}</span>
+              <strong>{formatSelectedDate(focus.date)}</strong>
+              <p>{focus.description}</p>
+            </button>
+          )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "바로 열어볼 핵심 날짜가 아직 없어요."}</div>}
         </div>
       </section>
     </div>
@@ -1772,154 +1757,6 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
         </div>
       ) : null}
     </>
-  );
-}
-
-function LifeCalendarWeekPanel({
-  busyDays,
-  daySummaries,
-  endDate,
-  finance,
-  isLoading,
-  onJumpToDate,
-  startDate,
-  topCompanions,
-  topPlaces,
-}: {
-  busyDays: PeriodDaySummary[];
-  daySummaries: PeriodDaySummary[];
-  endDate: string;
-  finance: ReturnType<typeof getFinanceTotals>;
-  isLoading: boolean;
-  onJumpToDate: (date: string) => void;
-  startDate: string;
-  topCompanions: Array<{ count: number; value: string }>;
-  topPlaces: Array<{ count: number; value: string }>;
-}) {
-  const orderedDays = useMemo(() => {
-    const byDate = new Map(daySummaries.map((summary) => [summary.date, summary]));
-    return enumerateDates(startDate, endDate).map((date) => (
-      byDate.get(date) ?? {
-        activityCount: 0,
-        date,
-        expenseCount: 0,
-        incomeCount: 0,
-        healthCount: 0,
-        items: [],
-        placeCount: 0,
-        planCount: 0,
-        recordCount: 0,
-        totalCount: 0,
-      }
-    ));
-  }, [daySummaries, endDate, startDate]);
-  const totalActivities = orderedDays.reduce((sum, item) => sum + item.activityCount, 0);
-  const totalPlans = orderedDays.reduce((sum, item) => sum + item.planCount, 0);
-  const totalRecords = orderedDays.reduce((sum, item) => sum + item.recordCount, 0);
-  const totalFinance = orderedDays.reduce((sum, item) => sum + item.expenseCount + item.incomeCount, 0);
-  const peakDay = [...orderedDays].sort((left, right) => right.totalCount - left.totalCount)[0];
-  const photoCount = orderedDays.reduce((sum, item) => sum + item.items.filter((timelineItem) => "external" in timelineItem && timelineItem.external.type === "photo").length, 0);
-
-  return (
-    <div className="life-calendar-week-panel">
-      <div className="life-calendar-week-overview">
-        <article>
-          <span>활동</span>
-          <strong>{totalActivities}건</strong>
-          <p>실제로 움직인 기록 중심</p>
-        </article>
-        <article>
-          <span>계획</span>
-          <strong>{totalPlans}건</strong>
-          <p>일정 · 할 일 · 이벤트</p>
-        </article>
-        <article>
-          <span>기억</span>
-          <strong>{totalRecords + photoCount}건</strong>
-          <p>하루 기록과 사진</p>
-        </article>
-        <article>
-          <span>가장 진한 날</span>
-          <strong>{peakDay ? formatWeekdayLabel(peakDay.date) : "-"}</strong>
-          <p>{peakDay ? `${peakDay.totalCount}건의 흔적` : "아직 기록이 적어요"}</p>
-        </article>
-      </div>
-
-      <div className="life-calendar-week-days">
-        {orderedDays.length > 0 ? orderedDays.map((summary) => (
-          <button className="life-calendar-week-day" key={summary.date} onClick={() => onJumpToDate(summary.date)} type="button">
-            <div className="life-calendar-week-day__head">
-              <span>{formatWeekdayLabel(summary.date)}</span>
-              <b>{summary.totalCount}건</b>
-            </div>
-            <strong>{formatShortDate(summary.date)}</strong>
-            <p>활동 {summary.activityCount} · 계획 {summary.planCount} · 기록 {summary.recordCount}</p>
-          </button>
-        )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 주에는 아직 남은 기록이 없어요."}</div>}
-      </div>
-
-      <div className="life-calendar-week-layout">
-        <section className="life-calendar-week-card life-calendar-week-card--focus">
-          <div className="life-calendar-day-card__head">
-            <span>이번 주 핵심 날짜</span>
-            <b>{busyDays.slice(0, 4).length}일</b>
-          </div>
-          <div className="life-calendar-db-period-grid life-calendar-db-period-grid--week">
-            {busyDays.slice(0, 4).map((summary) => (
-              <button className="life-calendar-db-period-card" key={summary.date} onClick={() => onJumpToDate(summary.date)} type="button">
-                <span>{formatSelectedDate(summary.date)}</span>
-                <strong>{summary.totalCount}건 기록</strong>
-                <p>활동 {summary.activityCount} · 계획 {summary.planCount} · 기록 {summary.recordCount}</p>
-              </button>
-            ))}
-            {busyDays.length === 0 ? <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이번 주에 눈에 띄는 날짜가 아직 없어요."}</div> : null}
-          </div>
-        </section>
-
-        <div className="life-calendar-week-side">
-          <section className="life-calendar-week-card">
-            <div className="life-calendar-day-card__head">
-              <span>함께한 사람</span>
-              <b>{topCompanions.length}명</b>
-            </div>
-            <div className="life-calendar-day-card__chips">
-              {topCompanions.length > 0 ? topCompanions.slice(0, 6).map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>함께한 사람 기록이 아직 없어요.</p>}
-            </div>
-          </section>
-
-          <section className="life-calendar-week-card">
-            <div className="life-calendar-day-card__head">
-              <span>장소 흐름</span>
-              <b>{topPlaces.length}곳</b>
-            </div>
-            <div className="life-calendar-day-card__chips">
-              {topPlaces.length > 0 ? topPlaces.slice(0, 6).map((item) => <b key={item.value}>{item.value} · {item.count}회</b>) : <p>장소 기록이 아직 옅어요.</p>}
-            </div>
-          </section>
-
-          <section className="life-calendar-week-card">
-            <div className="life-calendar-day-card__head">
-              <span>주간 흐름</span>
-              <b>{formatNumberWithUnit(finance.net, "원")}</b>
-            </div>
-            <div className="life-calendar-week-metrics">
-              <article>
-                <span>하루 기록</span>
-                <strong>{totalRecords}건</strong>
-              </article>
-              <article>
-                <span>사진</span>
-                <strong>{photoCount}장</strong>
-              </article>
-              <article>
-                <span>자금 기록</span>
-                <strong>{totalFinance}건</strong>
-              </article>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -2583,22 +2420,104 @@ function formatWeekdayLabel(dateKey: string) {
   return ["일", "월", "화", "수", "목", "금", "토"][weekday];
 }
 
-function getWeekNarrative(
+function getPeriodNarrative(
+  scope: LifeCalendarScope,
   daySummaries: PeriodDaySummary[],
   finance: { expense: number; income: number; net: number },
   topCompanions: Array<{ count: number; value: string }>,
   topPlaces: Array<{ count: number; value: string }>,
 ) {
-  const activeDays = daySummaries.length;
-  const busiest = [...daySummaries].sort((left, right) => right.totalCount - left.totalCount)[0];
-  const people = topCompanions[0] ? `${topCompanions[0].value}와의 흐름이 가장 자주 보이고` : "혼자 움직인 흐름이 중심이고";
-  const place = topPlaces[0] ? `${topPlaces[0].value} 축이 가장 많이 반복됐어요.` : "특정 장소 축은 아직 약해요.";
+  const busiest = [...daySummaries].sort((left, right) => right.totalCount - left.totalCount || left.date.localeCompare(right.date))[0];
+  const scopeLabel = scope === "week" ? "이번 주" : scope === "month" ? "이번 달" : "이 기간";
+  if (!busiest) return `${scopeLabel}은 아직 기록이 옅어서 뚜렷한 흐름을 읽기 어려워요.`;
+  const people = topCompanions[0] ? `${topCompanions[0].value}와의 흐름이 가장 자주 보였고` : "혼자 보낸 흐름이 중심이었고";
+  const place = topPlaces[0] ? `${topPlaces[0].value} 축이 가장 많이 반복됐어요.` : "특정 장소 거점은 아직 약해요.";
   const financeTone =
-    finance.net > 0 ? `${formatNumberWithUnit(finance.net, "원")} 순증` :
-    finance.net < 0 ? `${formatNumberWithUnit(finance.net, "원")} 순지출` :
-    "자금 흐름은 거의 균형이에요";
-  if (!busiest) return "이번 주 기록은 아직 많지 않지만, 주간 흐름을 쌓아갈 준비는 되어 있어요.";
-  return `${activeDays}일에 흔적이 남았고, ${formatSelectedDate(busiest.date)}가 가장 진했어요. ${people} ${place} 자금은 ${financeTone}.`;
+    finance.net > 0 ? `${formatNumberWithUnit(finance.net, "원")} 순증이 남았어요.` :
+    finance.net < 0 ? `${formatExpenseValueWithUnit(finance.expense, "원")} 지출이 누적됐어요.` :
+    "자금 흐름은 거의 균형이었어요.";
+  return `${scopeLabel}은 ${formatSelectedDate(busiest.date)}에 가장 밀도가 높았어요. ${people} ${place} ${financeTone}`;
+}
+
+function getTopWeekday(daySummaries: PeriodDaySummary[]) {
+  return getTopValues(daySummaries.map((summary) => formatWeekdayLabel(summary.date)))[0];
+}
+
+function getPeakDayBy(daySummaries: PeriodDaySummary[], selector: (summary: PeriodDaySummary) => number) {
+  return [...daySummaries]
+    .filter((summary) => selector(summary) > 0)
+    .sort((left, right) => selector(right) - selector(left) || left.date.localeCompare(right.date))[0];
+}
+
+function getPeakExpenseDay(daySummaries: PeriodDaySummary[]) {
+  return [...daySummaries]
+    .map((summary) => ({ amount: getFinanceTotals(summary.items).expense, summary }))
+    .filter((item) => item.amount > 0)
+    .sort((left, right) => right.amount - left.amount || left.summary.date.localeCompare(right.summary.date))[0];
+}
+
+function getDominantAxisLabel(totalActivities: number, totalPlans: number, totalRecords: number, totalHealth: number) {
+  const entries = [
+    { count: totalActivities, label: "활동 중심" },
+    { count: totalPlans, label: "계획 중심" },
+    { count: totalRecords, label: "기억 보강 중심" },
+    { count: totalHealth, label: "건강 관리 중심" },
+  ].sort((left, right) => right.count - left.count);
+  return entries[0]?.count ? entries[0].label : "아직 흐름이 옅음";
+}
+
+function getExecutionBalanceLabel(totalActivities: number, totalPlans: number) {
+  if (totalActivities === 0 && totalPlans === 0) return "비교할 흐름 없음";
+  if (totalActivities >= totalPlans * 1.2) return "실제 활동이 더 강함";
+  if (totalPlans >= totalActivities * 1.2) return "계획 비중이 더 큼";
+  return "계획과 실제가 비슷함";
+}
+
+function getExecutionBalanceDescription(totalActivities: number, totalPlans: number) {
+  if (totalActivities === 0 && totalPlans === 0) return "계획과 활동 기록이 아직 충분하지 않아요.";
+  if (totalPlans === 0) return `활동 ${totalActivities}건이 남았고, 따로 잡힌 계획은 없었어요.`;
+  if (totalActivities === 0) return `계획 ${totalPlans}건은 있었지만 실제 활동 기록은 아직 없어요.`;
+  return `계획 ${totalPlans}건 대비 활동 ${totalActivities}건이 남아 있어요.`;
+}
+
+function buildPeriodFocusCards(
+  peakDay: PeriodDaySummary | undefined,
+  peakActivityDay: PeriodDaySummary | undefined,
+  peakRecordDay: PeriodDaySummary | undefined,
+  peakExpenseDay: { amount: number; summary: PeriodDaySummary } | undefined,
+) {
+  const cards = [
+    peakDay
+      ? {
+          date: peakDay.date,
+          description: `총 ${peakDay.totalCount}건으로 가장 밀도가 높았어요.`,
+          label: "가장 진한 날",
+        }
+      : null,
+    peakActivityDay
+      ? {
+          date: peakActivityDay.date,
+          description: `활동 기록 ${peakActivityDay.activityCount}건이 남았어요.`,
+          label: "활동이 많은 날",
+        }
+      : null,
+    peakRecordDay
+      ? {
+          date: peakRecordDay.date,
+          description: `하루기록·사진 ${peakRecordDay.recordCount}건으로 기억이 가장 많이 남았어요.`,
+          label: "기억이 많은 날",
+        }
+      : null,
+    peakExpenseDay
+      ? {
+          date: peakExpenseDay.summary.date,
+          description: `지출 ${formatExpenseValueWithUnit(peakExpenseDay.amount, "원")}이 기록됐어요.`,
+          label: "지출이 큰 날",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ date: string; description: string; label: string }>;
+
+  return cards.filter((card, index, array) => array.findIndex((target) => target.date === card.date && target.label === card.label) === index);
 }
 
 function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {

@@ -387,7 +387,7 @@ export function LifeActivitiesView({
         <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading life-activity-form__heading ui-panel-heading">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">Core Life Block</p>
+              <p className="eyebrow">활동 입력</p>
               <h2>{entryMode === "activity" ? (editing ? "활동 수정" : "활동 추가") : entryMode === "wake" ? "기상 기록" : "취침 기록"}</h2>
             </div>
             <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
@@ -627,7 +627,7 @@ export function LifeActivitiesView({
         <SectionCard className="life-activity-list life-selected-day-panel ui-workspace-panel ui-workspace-panel--tall ui-sticky-side-panel">
           <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">Selected Day</p>
+              <p className="eyebrow">선택한 날짜</p>
               <h2 className="life-selected-day-title">
                 <span>{formatFullDate(date)}</span>
                 <i aria-hidden />

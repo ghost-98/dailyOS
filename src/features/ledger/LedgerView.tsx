@@ -85,7 +85,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const selectedIncomeTotal = sumRecords(selectedIncomes);
   const selectedNet = selectedIncomeTotal - selectedExpenseTotal;
   const activeDays = new Set([...monthExpenses.map((record) => record.date), ...monthIncomes.map((record) => record.date)]).size;
-  const dailyNetAverage = activeDays > 0 ? Math.round(monthNet / activeDays) : 0;
+  const dailyExpenseAverage = activeDays > 0 ? Math.round(monthExpenseTotal / activeDays) : 0;
   const topExpenseCategory = getTopCategory<ExpenseCategory, ExpenseRecord>(monthExpenses, (category) => expenseCategoryLabels[category]);
   const topIncomeCategory = getTopCategory<IncomeCategory, IncomeRecord>(monthIncomes, (category) => incomeCategoryLabels[category]);
 
@@ -158,8 +158,8 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
           <p>{topExpenseCategory ? `가장 큰 지출 축 · ${topExpenseCategory}` : "아직 지출 기록 없음"}</p>
         </SectionCard>
         <SectionCard className="ledger-metric">
-          <span>하루 평균 순흐름</span>
-          <strong>{formatCurrency(dailyNetAverage)}</strong>
+          <span>하루 평균 지출</span>
+          <strong>{formatExpenseCurrency(dailyExpenseAverage)}</strong>
           <p>{formatFullMonth(currentMonth)}</p>
         </SectionCard>
       </section>
