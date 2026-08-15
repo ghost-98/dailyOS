@@ -618,7 +618,7 @@ export function CalendarView({
 
               {!isDatabaseView ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
-              {isDatabaseView && dbScope !== "day" ? (
+              {isDatabaseView && dbScope === "range" ? (
                 <div className="life-calendar-db-panel">
                   <div className="life-calendar-db-summary" aria-label="기록 축">
                     {([
