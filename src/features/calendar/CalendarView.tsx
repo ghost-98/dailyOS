@@ -551,13 +551,20 @@ export function CalendarView({
                   {cell.day ? <span className={`calendar-day__number ${cell.date?.endsWith(`-${String(cell.day).padStart(2, "0")}`) && new Date(`${cell.date}T00:00:00`).getDay() === 0 ? "calendar-day__number--sunday" : ""}`}>{cell.day}</span> : null}
                   <div className="calendar-day__events">
                     {eventSummary.totalCount > 0 ? (
-                      <>
-                        <div className="calendar-day__signal-stack">
-                          {eventSummary.planCount > 0 ? <span className="calendar-day__signal calendar-day__signal--plan">계획 {eventSummary.planCount}</span> : null}
-                          {eventSummary.recordCount > 0 ? <span className="calendar-day__signal calendar-day__signal--record">기록 {eventSummary.recordCount}</span> : null}
-                        </div>
-                        <span className="calendar-day__event-count">{eventSummary.totalCount}건</span>
-                      </>
+                      <div className="calendar-day__signal-stack">
+                        {eventSummary.planCount > 0 ? (
+                          <span className="calendar-day__signal calendar-day__signal--plan">
+                            <b>계획</b>
+                            <strong>{eventSummary.planCount}</strong>
+                          </span>
+                        ) : null}
+                        {eventSummary.recordCount > 0 ? (
+                          <span className="calendar-day__signal calendar-day__signal--record">
+                            <b>기록</b>
+                            <strong>{eventSummary.recordCount}</strong>
+                          </span>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </button>
