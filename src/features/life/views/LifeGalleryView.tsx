@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, MapPin, Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatFullDate } from "@/features/life/dateTime";
@@ -108,17 +111,15 @@ export function LifeGalleryView({
           </div>
 
           <div className="life-gallery-toolbar__filters life-gallery-toolbar__filters--compact">
-            <label className="life-capture-date">
-              <span>시작일</span>
+            <FormField label="시작일">
               <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-            </label>
-            <label className="life-capture-date">
-              <span>종료일</span>
+            </FormField>
+            <FormField label="종료일">
               <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-            </label>
-            <button className="life-capture-secondary" onClick={resetPeriod} type="button">
+            </FormField>
+            <ActionButton onClick={resetPeriod} variant="secondary">
               전체 보기
-            </button>
+            </ActionButton>
           </div>
 
           <div className="life-gallery-toolbar__summary">
@@ -134,17 +135,17 @@ export function LifeGalleryView({
 
         <SectionCard className="life-gallery-panel ui-workspace-panel ui-workspace-panel--tall">
           <div className="life-gallery-pagination">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} type="button">
+            <ActionButton disabled={currentPage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} variant="secondary">
               <ChevronLeft aria-hidden size={16} />
               이전
-            </button>
+            </ActionButton>
             <span>
               {filteredPhotos.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1} - {Math.min(currentPage * PAGE_SIZE, filteredPhotos.length)}
             </span>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} type="button">
+            <ActionButton disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} variant="secondary">
               다음
               <ChevronRight aria-hidden size={16} />
-            </button>
+            </ActionButton>
           </div>
 
           {pagedPhotos.length > 0 ? (
@@ -176,18 +177,18 @@ export function LifeGalleryView({
                       </div>
 
                       <div className="life-gallery-card__actions">
-                        <button
+                        <ActionButton
                           aria-expanded={isInfoOpen}
                           className={`life-gallery-card__toggle${isInfoOpen ? " life-gallery-card__toggle--open" : ""}`}
                           onClick={() => toggleInfo(photo.id)}
-                          type="button"
+                          variant="secondary"
                         >
                           날짜 · 정보
                           <ChevronDown aria-hidden className="life-gallery-card__chevron" size={15} />
-                        </button>
-                        <button disabled={deletingPhotoId === photo.id} onClick={() => void deletePhoto(photo)} type="button">
-                          {deletingPhotoId === photo.id ? "삭제 중..." : "삭제"}
-                        </button>
+                        </ActionButton>
+                        <IconButton disabled={deletingPhotoId === photo.id} label="미디어 삭제" onClick={() => void deletePhoto(photo)} size="sm" tone="danger">
+                          <Trash2 aria-hidden size={14} />
+                        </IconButton>
                       </div>
 
                       {isInfoOpen ? <div className="life-photo-meta-lines">{renderStoredMeta(photo)}</div> : null}

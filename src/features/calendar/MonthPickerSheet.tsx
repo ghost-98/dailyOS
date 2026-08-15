@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FormField } from "@/components/ui/FormField";
 
 const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 
@@ -35,8 +36,7 @@ export function MonthPickerSheet({
             {year}년 {month}월
           </div>
           <div className="date-picker-grid date-picker-grid--month">
-            <label>
-              <span>연도</span>
+            <FormField label="연도">
               <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
                 {yearOptions.map((value) => (
                   <option key={value} value={value}>
@@ -44,9 +44,8 @@ export function MonthPickerSheet({
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              <span>월</span>
+            </FormField>
+            <FormField label="월">
               <select value={month} onChange={(event) => setMonth(Number(event.target.value))}>
                 {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
                   <option key={value} value={value}>
@@ -54,7 +53,7 @@ export function MonthPickerSheet({
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
           </div>
         </div>
       </section>

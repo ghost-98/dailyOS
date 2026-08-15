@@ -2,7 +2,10 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
-import { Activity, Scale } from "lucide-react";
+import { Activity, Pencil, Scale, Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import {
   createWeightRecordInDb,
@@ -187,28 +190,28 @@ export function LifeHealthView({
                   <Activity aria-hidden size={17} />
                   <span>러닝 기록</span>
                 </div>
-                <button className={isRunningEditorOpen ? "life-section-save" : "life-section-edit"} disabled={isRunningEditorOpen && (!distanceKm || (!durationMinutes && !durationSeconds) || isSavingRunning)} onClick={() => (isRunningEditorOpen ? void saveRunning() : setIsRunningEditorOpen(true))} type="button">
+                <ActionButton
+                  disabled={isRunningEditorOpen && (!distanceKm || (!durationMinutes && !durationSeconds) || isSavingRunning)}
+                  onClick={() => (isRunningEditorOpen ? void saveRunning() : setIsRunningEditorOpen(true))}
+                  variant={isRunningEditorOpen ? "primary" : "secondary"}
+                >
                   {isSavingRunning ? "저장 중" : isRunningEditorOpen ? "저장" : selectedRuns.length > 0 ? "추가/수정" : "추가"}
-                </button>
+                </ActionButton>
               </div>
               {isRunningEditorOpen ? (
                 <div className="life-health-editor">
-                  <div className="life-health-fields">
-                    <label>
-                      <span>거리</span>
+                  <div className="ui-form-grid ui-form-grid--columns-3">
+                    <FormField label="거리">
                       <input inputMode="decimal" min="0" placeholder="km" type="number" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} />
-                    </label>
-                    <label>
-                      <span>시간</span>
+                    </FormField>
+                    <FormField label="시간">
                       <input inputMode="numeric" min="0" placeholder="분" type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} />
-                    </label>
-                    <label>
-                      <span>초</span>
+                    </FormField>
+                    <FormField label="초">
                       <input inputMode="numeric" max="59" min="0" placeholder="초" type="number" value={durationSeconds} onChange={(event) => setDurationSeconds(event.target.value)} />
-                    </label>
+                    </FormField>
                   </div>
-                  <button
-                    className="life-capture-secondary"
+                  <ActionButton
                     onClick={() => {
                       setEditingRunId(null);
                       setIsRunningEditorOpen(false);
@@ -216,10 +219,10 @@ export function LifeHealthView({
                       setDurationMinutes("");
                       setDurationSeconds("");
                     }}
-                    type="button"
+                    variant="secondary"
                   >
                     취소
-                  </button>
+                  </ActionButton>
                 </div>
               ) : (
                 <div className="life-health-summary-grid life-health-summary-grid--single">
@@ -239,12 +242,12 @@ export function LifeHealthView({
                         <span>{formatRunDuration(run.durationSeconds ?? run.durationMinutes * 60)}</span>
                       </div>
                       <div className="life-record-actions">
-                        <button onClick={() => editRunning(run)} type="button">
-                          수정
-                        </button>
-                        <button disabled={deletingRunId === run.id} onClick={() => void deleteRunning(run.id)} type="button">
-                          {deletingRunId === run.id ? "삭제 중" : "삭제"}
-                        </button>
+                        <IconButton label="러닝 수정" onClick={() => editRunning(run)} size="sm" tone="soft">
+                          <Pencil aria-hidden size={14} />
+                        </IconButton>
+                        <IconButton disabled={deletingRunId === run.id} label="러닝 삭제" onClick={() => void deleteRunning(run.id)} size="sm" tone="danger">
+                          <Trash2 aria-hidden size={14} />
+                        </IconButton>
                       </div>
                     </article>
                   ))}
@@ -258,26 +261,28 @@ export function LifeHealthView({
                   <Scale aria-hidden size={17} />
                   <span>아침 몸무게</span>
                 </div>
-                <button className={isWeightEditorOpen ? "life-section-save" : "life-section-edit"} disabled={isWeightEditorOpen && (!weightKg || isSavingWeight)} onClick={() => (isWeightEditorOpen ? void saveMorningWeight() : editMorningWeight())} type="button">
+                <ActionButton
+                  disabled={isWeightEditorOpen && (!weightKg || isSavingWeight)}
+                  onClick={() => (isWeightEditorOpen ? void saveMorningWeight() : editMorningWeight())}
+                  variant={isWeightEditorOpen ? "primary" : "secondary"}
+                >
                   {isSavingWeight ? "저장 중" : isWeightEditorOpen ? "저장" : selectedWeight ? "수정" : "추가"}
-                </button>
+                </ActionButton>
               </div>
               {isWeightEditorOpen ? (
                 <div className="life-health-editor">
-                  <label className="life-health-weight-field">
-                    <span>몸무게</span>
+                  <FormField className="life-health-weight-field" label="몸무게">
                     <input inputMode="decimal" min="0" placeholder="kg" type="number" value={weightKg} onChange={(event) => setWeightKg(event.target.value)} />
-                  </label>
-                  <button
-                    className="life-capture-secondary"
+                  </FormField>
+                  <ActionButton
                     onClick={() => {
                       setIsWeightEditorOpen(false);
                       setWeightKg("");
                     }}
-                    type="button"
+                    variant="secondary"
                   >
                     취소
-                  </button>
+                  </ActionButton>
                 </div>
               ) : (
                 <div className="life-health-summary-grid life-health-summary-grid--single">
@@ -290,9 +295,9 @@ export function LifeHealthView({
               )}
               {selectedWeight ? (
                 <div className="life-record-actions life-record-actions--inline">
-                  <button disabled={deletingWeightId === selectedWeight.id} onClick={() => void deleteMorningWeight()} type="button">
-                    {deletingWeightId === selectedWeight.id ? "삭제 중" : "삭제"}
-                  </button>
+                  <IconButton disabled={deletingWeightId === selectedWeight.id} label="체중 삭제" onClick={() => void deleteMorningWeight()} size="sm" tone="danger">
+                    <Trash2 aria-hidden size={14} />
+                  </IconButton>
                 </div>
               ) : null}
             </section>

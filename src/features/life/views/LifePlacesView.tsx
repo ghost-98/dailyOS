@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarRange, Check, MapPin, Plus, Search, ToggleLeft, ToggleRight, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
+import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker } from "@/lib/naverMap";
 import {
@@ -570,7 +572,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
     if (!placeLabel.trim() || !mappedPlace || isSavingPersonalPlace) return;
     if (selectedPersonalPlace && !personalPlaceDirty) return;
 
-    const confirmed = window.confirm(
+    const confirmed = confirmAction(
       selectedPersonalPlace
         ? `"${selectedPersonalPlace.label}" 장소 정보를 저장할까요?`
         : `"${placeLabel.trim()}" 내 장소를 추가할까요?`,
@@ -633,7 +635,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
   const deletePersonalPlace = async () => {
     if (!selectedPersonalPlace || isDeletingPersonalPlace) return;
 
-    const confirmed = window.confirm(`"${selectedPersonalPlace.label}" 내 장소를 삭제할까요?`);
+    const confirmed = confirmAction(`"${selectedPersonalPlace.label}" 내 장소를 삭제할까요?`);
     if (!confirmed) return;
 
     setIsDeletingPersonalPlace(true);
@@ -674,7 +676,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           </button>
         </div>
 
-        <label className="life-places-search">
+        <label className="life-places-search ui-input-shell">
           <Search aria-hidden size={17} />
           <input
             placeholder={searchMode === "place" ? "장소 이름이나 주소 검색" : "기록된 장소, 주소, 함께한 사람 검색"}
@@ -751,7 +753,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           <SectionCard className={`life-places-manager ui-workspace-panel${isMyPlacesExpanded ? "" : " life-places-manager--collapsed"}`}>
             <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
               <div>
-                <span>My Places</span>
+                <span>내 장소</span>
                 <strong>
                   내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
                 </strong>
@@ -831,17 +833,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   </div>
 
                   <div className="life-places-manager__form-grid life-places-manager__form-grid--stacked">
-                    <label>
-                      <span>내 장소 이름</span>
+                    <FormField label="내 장소 이름">
                       <input
                         placeholder="예: 내 집, 부산 집, 회사"
                         value={placeLabel}
                         onChange={(event) => setPlaceLabel(event.target.value)}
                       />
-                    </label>
+                    </FormField>
 
-                    <label>
-                      <span>위치 매핑 검색</span>
+                    <FormField label="위치 매핑 검색">
                       <div className="life-places-mapping-search">
                         <MapPin aria-hidden size={18} />
                         <input
@@ -863,7 +863,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                           {isMappingSearchLoading ? "검색 중..." : "검색"}
                         </button>
                       </div>
-                    </label>
+                    </FormField>
                   </div>
 
                   {mappedPlace ? (
@@ -888,15 +888,14 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                     </div>
                   ) : null}
 
-                  <label>
-                    <span>메모</span>
+                  <FormField label="메모">
                     <textarea
                       placeholder="이 장소를 어떤 맥락으로 쓰는지 적어둘 수 있어요."
                       rows={3}
                       value={placeMemo}
                       onChange={(event) => setPlaceMemo(event.target.value)}
                     />
-                  </label>
+                  </FormField>
 
                   <div className="life-places-manager__buttons">
                     {!selectedPersonalPlace ? (
@@ -921,7 +920,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
             <SectionCard className="life-places-summary ui-workspace-panel">
               <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
                 <div>
-                  <span>Visited Places</span>
+                  <span>방문 장소</span>
                   <strong>
                     방문 장소 <em className="life-places-count-accent">{filteredVisitedPlaces.length}곳</em>
                   </strong>
@@ -960,7 +959,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
             <SectionCard className="life-places-detail ui-workspace-panel">
               <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
                 <div>
-                  <span>Place Records</span>
+                  <span>장소 기록</span>
                   <strong>{selectedVisitedPlace?.name ?? "기록 장소를 선택해 주세요"}</strong>
                 </div>
                 {selectedVisitedPlace ? (

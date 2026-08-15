@@ -75,7 +75,7 @@ export function SettingsView() {
 
   const importData = async (file?: File) => {
     if (!file) return;
-    if (!window.confirm("백업 파일을 현재 계정 데이터로 가져올까요? 같은 ID의 데이터는 덮어씁니다.")) return;
+    if (!confirmAction("백업 파일을 현재 계정 데이터로 가져올까요? 같은 ID의 데이터는 덮어씁니다.")) return;
 
     setIsManagingData(true);
     setDataMessage("");
@@ -92,9 +92,9 @@ export function SettingsView() {
   };
 
   const deleteData = async () => {
-    const firstConfirm = window.confirm("정말 이 계정의 dailyOS 데이터를 삭제할까요? 로그인 계정은 유지되지만 앱 기록은 삭제됩니다.");
+    const firstConfirm = confirmAction("정말 이 계정의 dailyOS 데이터를 삭제할까요? 로그인 계정은 유지되지만 앱 기록은 삭제됩니다.");
     if (!firstConfirm) return;
-    const secondConfirm = window.confirm("마지막 확인입니다. 삭제 전 백업 파일을 내보냈나요?");
+    const secondConfirm = confirmAction("마지막 확인입니다. 삭제 전 백업 파일을 내보냈나요?");
     if (!secondConfirm) return;
 
     setIsManagingData(true);

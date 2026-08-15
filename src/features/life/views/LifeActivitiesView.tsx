@@ -364,7 +364,7 @@ export function LifeActivitiesView({
 
   const deleteActivity = async (activity: LifeActivityRecord) => {
     if (deletingActivityId) return;
-    const confirmed = window.confirm(`"${activity.title}" 활동 기록을 삭제할까요? 연결된 지출도 함께 정리됩니다.`);
+    const confirmed = confirmAction(`"${activity.title}" 활동 기록을 삭제할까요? 연결된 지출도 함께 정리됩니다.`);
     if (!confirmed) return;
 
     setDeletingActivityId(activity.id);

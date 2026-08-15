@@ -69,7 +69,7 @@ export function PeoplePickerField({ onChange, onCreatePerson, people, selectedNa
         )}
       </div>
 
-      <label className="people-picker__search">
+      <label className="people-picker__search ui-input-shell">
         <Search aria-hidden size={15} />
         <input placeholder="사람 검색 또는 새 이름 입력" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>

@@ -3,6 +3,7 @@
 import { ArrowUpDown, Check, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
@@ -10,6 +11,7 @@ import { formatWon } from "@/features/life/formatters";
 import { buildPeopleSummaries } from "@/features/life/insights";
 import { createPersonInDb, deletePersonFromDb, fetchPeopleFromDb, updatePersonInDb } from "@/features/people/api";
 import type { CalendarEvent } from "@/features/calendar/data";
+import { confirmAction } from "@/lib/actionGuards";
 import type {
   DailyLogRecord,
   ExpenseRecord,
@@ -160,7 +162,7 @@ export function LifePeopleView({
     const trimmedName = createName.trim();
     if (!trimmedName || isSavingCreate) return;
 
-    const confirmed = window.confirm(`"${trimmedName}" 사람을 추가할까요?`);
+    const confirmed = confirmAction(`"${trimmedName}" 사람을 추가할까요?`);
     if (!confirmed) return;
 
     setIsSavingCreate(true);
@@ -190,7 +192,7 @@ export function LifePeopleView({
     const trimmedName = detailName.trim();
     if (!trimmedName) return;
 
-    const confirmed = window.confirm(`"${selectedPerson.name}" 정보를 저장할까요?`);
+    const confirmed = confirmAction(`"${selectedPerson.name}" 정보를 저장할까요?`);
     if (!confirmed) return;
 
     setIsSavingDetail(true);
@@ -220,7 +222,7 @@ export function LifePeopleView({
   const handleDeletePerson = async (person: PersonRecord) => {
     if (isDeletingId) return;
 
-    const confirmed = window.confirm(
+    const confirmed = confirmAction(
       `"${person.name}" 사람을 삭제할까요?\n연결된 기록의 함께한 사람 텍스트는 그대로 남아 있을 수 있어요.`,
     );
     if (!confirmed) return;
@@ -246,7 +248,7 @@ export function LifePeopleView({
         <SectionCard className="life-people-list ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">People Directory</p>
+              <p className="eyebrow">사람 목록</p>
               <h2>{people.length}명</h2>
             </div>
             <IconButton
@@ -268,23 +270,21 @@ export function LifePeopleView({
               </div>
 
               <div className="life-people-form">
-                <label>
-                  <span>이름</span>
+                <FormField label="이름">
                   <input
                     placeholder="사람 이름"
                     value={createName}
                     onChange={(event) => setCreateName(event.target.value)}
                   />
-                </label>
-                <label>
-                  <span>메모</span>
+                </FormField>
+                <FormField label="메모">
                   <textarea
                     placeholder="관계, 특징, 기억할 메모"
                     rows={4}
                     value={createMemo}
                     onChange={(event) => setCreateMemo(event.target.value)}
                   />
-                </label>
+                </FormField>
                 <div className="life-people-form__actions">
                   <ActionButton disabled={isSavingCreate || !createName.trim()} onClick={() => void handleCreatePerson()}>
                     {isSavingCreate ? "추가 중..." : "사람 추가"}
@@ -308,7 +308,7 @@ export function LifePeopleView({
           ) : (
             <>
               <div className="life-people-toolbar">
-                <label className="life-people-search">
+                <label className="life-people-search ui-input-shell">
                   <Search aria-hidden size={16} />
                   <input
                     placeholder="이름 또는 메모 검색"
@@ -317,7 +317,7 @@ export function LifePeopleView({
                   />
                 </label>
 
-                <label className="life-people-sort">
+                <label className="life-people-sort ui-input-shell">
                   <ArrowUpDown aria-hidden size={14} />
                   <select value={sortMode} onChange={(event) => setSortMode(event.target.value as PeopleSortMode)}>
                     <option value="recent">최근 만남순</option>
@@ -382,7 +382,7 @@ export function LifePeopleView({
         <SectionCard className="life-people-detail ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">Person Detail</p>
+              <p className="eyebrow">사람 상세</p>
               <h2>{selectedPerson?.name ?? "사람을 선택해 주세요"}</h2>
             </div>
             {selectedPerson ? (
@@ -410,23 +410,21 @@ export function LifePeopleView({
           {selectedPerson ? (
             <>
               <div className="life-people-form">
-                <label>
-                  <span>이름</span>
+                <FormField label="이름">
                   <input
                     placeholder="사람 이름"
                     value={detailName}
                     onChange={(event) => setDetailName(event.target.value)}
                   />
-                </label>
-                <label>
-                  <span>메모</span>
+                </FormField>
+                <FormField label="메모">
                   <textarea
                     placeholder="관계, 특징, 기억할 메모"
                     rows={4}
                     value={detailMemo}
                     onChange={(event) => setDetailMemo(event.target.value)}
                   />
-                </label>
+                </FormField>
               </div>
 
               <div className="life-people-metrics">

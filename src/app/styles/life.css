@@ -1647,33 +1647,6 @@
   padding: 0 11px;
 }
 
-.life-capture-date {
-  display: grid;
-  gap: 8px;
-}
-
-.life-capture-date span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.life-capture-primary {
-  min-height: 44px;
-  border: 1px solid rgba(201, 184, 255, 0.25);
-  border-radius: 13px;
-  background: rgba(201, 184, 255, 0.13);
-  color: var(--violet);
-  cursor: pointer;
-  font-weight: 900;
-}
-
-.life-capture-primary:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.life-capture-secondary,
 .life-record-actions button {
   min-height: var(--planner-toggle-height);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1686,7 +1659,6 @@
   padding: 0 var(--planner-toggle-padding-x);
 }
 
-.life-capture-secondary:hover,
 .life-record-actions button:hover {
   border-color: rgba(201, 184, 255, 0.28);
   color: var(--text);
@@ -2422,57 +2394,15 @@
   padding: var(--field-padding-y) var(--field-padding-x);
 }
 
-.life-people-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  padding: 0 var(--field-padding-x);
-}
-
-.life-people-search input,
-.life-people-form input,
-.life-people-form textarea,
-.life-people-sort select {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-}
-
 .life-people-form {
   display: grid;
   gap: 14px;
 }
 
-.life-people-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.life-people-form span,
 .life-people-suggestions strong {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
-}
-
-.life-people-form textarea {
-  min-height: 96px;
-  resize: vertical;
-}
-
-.life-people-form label input,
-.life-people-form label textarea {
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  padding: var(--field-padding-y) var(--field-padding-x);
 }
 
 .life-people-form__actions,
@@ -2496,18 +2426,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-}
-
-.life-people-sort {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  color: var(--muted);
-  padding: 0 var(--field-padding-x);
 }
 
 .life-person-buttons--scroll {
@@ -4657,27 +4575,6 @@ button:disabled {
   width: 100%;
 }
 
-.life-photo-link-field {
-  display: grid;
-  gap: 8px;
-}
-
-.life-photo-link-field span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.life-photo-link-field select {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  min-height: 42px;
-  padding: 0 12px;
-}
-
 .life-photo-upload-error {
   margin: -4px 0 2px;
   border: 1px solid rgba(255, 107, 149, 0.28);
@@ -4750,56 +4647,9 @@ button:disabled {
   font-weight: 900;
 }
 
-.life-section-edit,
-.life-section-save {
-  min-height: 34px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 900;
-  padding: 0 13px;
-}
-
-.life-section-edit {
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--muted);
-}
-
-.life-section-save {
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.13);
-  color: var(--violet);
-}
-
-.life-section-edit:disabled,
-.life-section-save:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
 .life-health-editor {
   display: grid;
   gap: 10px;
-}
-
-.life-health-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.life-health-fields label,
-.life-health-weight-field {
-  display: grid;
-  gap: 8px;
-}
-
-.life-health-fields span,
-.life-health-weight-field span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
 }
 
 .life-health-message {
@@ -4994,11 +4844,11 @@ button:disabled {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.life-gallery-toolbar__filters--compact .life-capture-secondary {
+.life-gallery-toolbar__filters--compact .ui-action-button {
   min-height: var(--chip-height);
 }
 
-.life-gallery-toolbar__filters--compact .life-capture-date input {
+.life-gallery-toolbar__filters--compact .ui-form-field > input {
   min-height: var(--chip-height);
 }
 

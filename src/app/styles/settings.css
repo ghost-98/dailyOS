@@ -119,7 +119,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.date-picker-grid label {
+.date-picker-grid .ui-form-field {
   display: grid;
   gap: 8px;
   border: 1px solid var(--line);
@@ -128,13 +128,13 @@
   padding: 14px;
 }
 
-.date-picker-grid span {
+.date-picker-grid .ui-form-field__label {
   color: var(--muted);
   font-size: 13px;
   font-weight: 750;
 }
 
-.date-picker-grid select {
+.date-picker-grid .ui-form-field > select {
   width: 100%;
   border: 0;
   outline: 0;

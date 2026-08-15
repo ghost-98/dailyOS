@@ -214,6 +214,80 @@
   cursor: default;
 }
 
+.ui-form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.ui-form-grid--compact {
+  gap: 10px;
+}
+
+.ui-form-grid--columns-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-form-grid--columns-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ui-form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.ui-form-field__label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ui-form-field > input,
+.ui-form-field > select,
+.ui-form-field > textarea {
+  width: 100%;
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  outline: 0;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  padding: var(--field-padding-y) var(--field-padding-x);
+}
+
+.ui-form-field > textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.ui-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ui-input-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--field-min-height);
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
+  padding: 0 var(--field-padding-x);
+}
+
+.ui-input-shell > input,
+.ui-input-shell > select,
+.ui-input-shell > textarea {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
 .ui-chip-group {
   display: inline-flex;
   flex-wrap: wrap;

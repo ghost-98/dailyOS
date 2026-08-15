@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, MapPin } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatDateKey, parseTimeToMinutes } from "@/features/life/dateTime";
@@ -129,13 +131,11 @@ export function LifeMediaUploadPanel({
         <span>사진 · 영상 업로드</span>
       </div>
 
-      <label className="life-capture-date">
-        <span>기록 날짜</span>
+      <FormField label="기록 날짜">
         <input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} />
-      </label>
+      </FormField>
 
-      <label className="life-photo-link-field">
-        <span>연결할 기록</span>
+      <FormField label="연결할 기록">
         <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
           <option value="">날짜만 연결</option>
           {linkedTargetOptions.map((option) => (
@@ -144,12 +144,12 @@ export function LifeMediaUploadPanel({
             </option>
           ))}
         </select>
-      </label>
+      </FormField>
 
       {suggestedTarget ? (
-        <button className="life-capture-secondary" onClick={() => setLinkedTargetKey(suggestedTarget.key)} type="button">
+        <ActionButton onClick={() => setLinkedTargetKey(suggestedTarget.key)} variant="secondary">
           추천 연결: {suggestedTarget.label} · {suggestedTarget.title}
-        </button>
+        </ActionButton>
       ) : null}
 
       <label className="life-photo-dropzone">
@@ -184,12 +184,12 @@ export function LifeMediaUploadPanel({
       {message ? <p className="life-health-message">{message}</p> : null}
 
       <div className="life-media-upload-panel__actions">
-        <button className="life-capture-secondary" disabled={previews.length === 0 || isUploading} onClick={clearSelectedMedia} type="button">
+        <ActionButton disabled={previews.length === 0 || isUploading} onClick={clearSelectedMedia} variant="secondary">
           선택 비우기
-        </button>
-        <button className="life-capture-primary" disabled={previews.length === 0 || isUploading} onClick={uploadPhotos} type="button">
+        </ActionButton>
+        <ActionButton disabled={previews.length === 0 || isUploading} onClick={uploadPhotos}>
           {isUploading ? "업로드 중..." : "업로드"}
-        </button>
+        </ActionButton>
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { NotebookPen } from "lucide-react";
+import { NotebookPen, Pencil, Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
@@ -128,38 +131,41 @@ export function LifeLogsView({
             <NotebookPen aria-hidden size={17} />
             <span>오늘의 하루 기록</span>
           </div>
-          <label className="life-capture-date">
-            <span>기록 날짜</span>
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-          </label>
-          <label className="life-photo-link-field">
-            <span>연결할 활동/계획</span>
-            <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
-              <option value="">날짜에만 연결</option>
-              {linkedTargetOptions.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <textarea placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
-          {editingLogId ? (
-            <button
-              className="life-capture-secondary"
-              onClick={() => {
-                setEditingLogId(null);
-                setContent("");
-                setLinkedTargetKey("");
-              }}
-              type="button"
-            >
-              수정 취소
-            </button>
-          ) : null}
-          <button className="life-capture-primary" disabled={!content.trim() || isSaving} onClick={saveLog} type="button">
-            {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
-          </button>
+          <div className="ui-form-grid">
+            <FormField label="기록 날짜">
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            </FormField>
+            <FormField label="연결할 기록">
+              <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
+                <option value="">날짜에만 연결</option>
+                {linkedTargetOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="내용">
+              <textarea placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+            </FormField>
+          </div>
+          <div className="ui-form-actions">
+            {editingLogId ? (
+              <ActionButton
+                onClick={() => {
+                  setEditingLogId(null);
+                  setContent("");
+                  setLinkedTargetKey("");
+                }}
+                variant="secondary"
+              >
+                수정 취소
+              </ActionButton>
+            ) : null}
+            <ActionButton disabled={!content.trim() || isSaving} onClick={saveLog}>
+              {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
+            </ActionButton>
+          </div>
           {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
           {message ? <p className="life-health-message">{message}</p> : null}
         </SectionCard>
@@ -182,10 +188,12 @@ export function LifeLogsView({
                   <span>하루 기록</span>
                   <p>{log.content}</p>
                   <div className="life-record-actions">
-                    <button onClick={() => editLog(log)} type="button">수정</button>
-                    <button disabled={deletingLogId === log.id} onClick={() => void deleteLog(log.id)} type="button">
-                      {deletingLogId === log.id ? "삭제 중..." : "삭제"}
-                    </button>
+                    <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
+                      <Pencil aria-hidden size={14} />
+                    </IconButton>
+                    <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
+                      <Trash2 aria-hidden size={14} />
+                    </IconButton>
                   </div>
                 </article>
               ))}
