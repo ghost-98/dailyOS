@@ -383,8 +383,8 @@ export function LifeActivitiesView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
-      <div className="life-activity-layout">
-        <SectionCard className="life-activity-form">
+      <div className="life-activity-layout ui-workspace-grid ui-workspace-grid--form-detail">
+        <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading life-activity-form__heading ui-panel-heading">
             <div className="ui-panel-heading__intro">
               <p className="eyebrow">Core Life Block</p>
@@ -624,7 +624,7 @@ export function LifeActivitiesView({
 
         </SectionCard>
 
-        <SectionCard className="life-activity-list life-selected-day-panel ui-sticky-side-panel">
+        <SectionCard className="life-activity-list life-selected-day-panel ui-workspace-panel ui-workspace-panel--tall ui-sticky-side-panel">
           <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
             <div className="ui-panel-heading__intro">
               <p className="eyebrow">Selected Day</p>

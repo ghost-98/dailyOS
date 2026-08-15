@@ -97,14 +97,16 @@ export function LifeAskView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="AI 질문" description="쌓인 일정, 할 일, 하루기록, 사진, 장소, 지출, 건강 기록을 근거로 자연어 질문에 답합니다." />
-      <div className="life-ask-layout">
-        <SectionCard className="life-ask-card">
-          <div className="section-heading">
-            <div>
+      <div className="life-ask-layout ui-workspace-grid ui-workspace-grid--balanced">
+        <SectionCard className="life-ask-card ui-workspace-panel">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">Life DB Copilot</p>
               <h2>내 기록에 질문하기</h2>
             </div>
-            <strong className="life-places-count">{scopedRecords.length}/{records.length}건</strong>
+            <div className="ui-panel-heading__meta">
+              <strong className="life-places-count">{scopedRecords.length}/{records.length}건</strong>
+            </div>
           </div>
           <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 나 3월달에 부산 갔던 것 같은데 그때 어땠어?" />
           <div className="life-ask-examples">
@@ -120,7 +122,7 @@ export function LifeAskView({
           {error ? <p className="life-ask-error">{error}</p> : null}
         </SectionCard>
 
-        <SectionCard className="life-ask-answer">
+        <SectionCard className="life-ask-answer ui-workspace-panel">
           <p className="eyebrow">AI Answer</p>
           <div className="life-ask-brief">
             <article className="life-ask-overview-card">

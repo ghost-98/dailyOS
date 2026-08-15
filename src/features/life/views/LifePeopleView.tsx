@@ -242,10 +242,10 @@ export function LifePeopleView({
         description="함께한 사람을 별도로 관리하고, 연결된 기록과 장소 흐름을 한쪽에서 바로 확인합니다."
       />
 
-      <div className="life-people-view">
-        <SectionCard className="life-people-list">
-          <div className="section-heading">
-            <div>
+      <div className="life-people-view ui-workspace-grid ui-workspace-grid--balanced">
+        <SectionCard className="life-people-list ui-workspace-panel ui-workspace-panel--tall">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">People Directory</p>
               <h2>{people.length}명</h2>
             </div>
@@ -379,14 +379,14 @@ export function LifePeopleView({
           )}
         </SectionCard>
 
-        <SectionCard className="life-people-detail">
-          <div className="section-heading">
-            <div>
+        <SectionCard className="life-people-detail ui-workspace-panel ui-workspace-panel--tall">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">Person Detail</p>
               <h2>{selectedPerson?.name ?? "사람을 선택해 주세요"}</h2>
             </div>
             {selectedPerson ? (
-              <div className="life-people-detail__actions">
+              <div className="life-people-detail__actions ui-panel-heading__actions">
                 <IconButton
                   disabled={!detailDirty || isSavingDetail || !detailName.trim()}
                   label="사람 정보 저장"

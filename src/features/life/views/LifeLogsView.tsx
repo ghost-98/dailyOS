@@ -119,9 +119,9 @@ export function LifeLogsView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="하루 기록" description="하루 전체의 감정, 맥락, 짧은 회고를 날짜 중심으로 남겨두는 공간이에요." />
-      <div className="life-capture-page">
-        <SectionCard className="life-capture-editor">
-          <div className="life-capture-card__title">
+      <div className="life-capture-page ui-workspace-grid ui-workspace-grid--form-detail">
+        <SectionCard className="life-capture-editor ui-workspace-panel">
+          <div className="life-capture-card__title ui-card-kicker">
             <NotebookPen aria-hidden size={17} />
             <span>오늘의 하루 기록</span>
           </div>
@@ -161,13 +161,15 @@ export function LifeLogsView({
           {message ? <p className="life-health-message">{message}</p> : null}
         </SectionCard>
 
-        <SectionCard className="life-capture-list">
-          <div className="section-heading">
-            <div>
+        <SectionCard className="life-capture-list ui-workspace-panel">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">선택한 날짜</p>
               <h2>{formatFullDate(date)}</h2>
             </div>
-            <strong className="life-places-count">{selectedLogs.length}개</strong>
+            <div className="ui-panel-heading__meta">
+              <strong className="life-places-count">{selectedLogs.length}개</strong>
+            </div>
           </div>
           {selectedLogs.length > 0 ? (
             <div className="life-log-list">

@@ -656,7 +656,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
         description="기본 검색과 기록 검색을 분리하고, 내 장소와 방문 기록을 더 안정적인 구조로 관리합니다."
       />
 
-      <SectionCard className="life-places-toolbar">
+      <SectionCard className="life-places-toolbar ui-toolbar-panel">
         <div className="life-places-mode-switch">
           <button
             className={searchMode === "place" ? "life-places-mode-switch__button life-places-mode-switch__button--active" : "life-places-mode-switch__button"}
@@ -729,8 +729,8 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
       {searchMessage ? <p className="life-places-message">{searchMessage}</p> : null}
       {personalPlaceMessage ? <p className="life-places-message">{personalPlaceMessage}</p> : null}
 
-      <div className="life-places-layout">
-        <SectionCard className="life-places-map-panel life-places-map-panel--bleed">
+      <div className="life-places-layout ui-workspace-grid ui-workspace-grid--sidebar">
+        <SectionCard className="life-places-map-panel life-places-map-panel--bleed ui-workspace-panel ui-workspace-panel--tall">
           <div className="life-places-map-shell">
             <div className={`life-places-map ${mapStatus !== "ready" ? "life-places-map--hidden" : ""}`} ref={mapElementRef} />
             {mapStatus !== "ready" ? (
@@ -747,16 +747,16 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           </div>
         </SectionCard>
 
-        <div className="life-places-side">
-          <SectionCard className={`life-places-manager${isMyPlacesExpanded ? "" : " life-places-manager--collapsed"}`}>
-            <div className="life-places-panel-head">
+        <div className="life-places-side ui-workspace-stack">
+          <SectionCard className={`life-places-manager ui-workspace-panel${isMyPlacesExpanded ? "" : " life-places-manager--collapsed"}`}>
+            <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
               <div>
                 <span>My Places</span>
                 <strong>
                   내 장소 <em className="life-places-count-accent">{allPersonalPlaces.length}곳</em>
                 </strong>
               </div>
-              <div className="life-places-panel-head__actions">
+              <div className="life-places-panel-head__actions ui-panel-heading__actions">
                 {isMyPlacesExpanded ? (
                   <IconButton label="내 장소 접기" onClick={() => setIsMyPlacesExpanded(false)} size="sm" tone="ghost">
                     <X aria-hidden size={17} />
@@ -918,15 +918,15 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
           </SectionCard>
 
           <div className="life-places-side__bottom">
-            <SectionCard className="life-places-summary">
-              <div className="life-places-panel-head">
+            <SectionCard className="life-places-summary ui-workspace-panel">
+              <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
                 <div>
                   <span>Visited Places</span>
                   <strong>
                     방문 장소 <em className="life-places-count-accent">{filteredVisitedPlaces.length}곳</em>
                   </strong>
                 </div>
-                <div className="life-places-panel-head__meta">
+                <div className="life-places-panel-head__meta ui-panel-heading__meta">
                   <b>{totalPlaceVisits}건</b>
                 </div>
               </div>
@@ -957,14 +957,14 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
               </div>
             </SectionCard>
 
-            <SectionCard className="life-places-detail">
-              <div className="life-places-panel-head">
+            <SectionCard className="life-places-detail ui-workspace-panel">
+              <div className="life-places-panel-head section-heading ui-panel-heading ui-panel-heading--compact">
                 <div>
                   <span>Place Records</span>
                   <strong>{selectedVisitedPlace?.name ?? "기록 장소를 선택해 주세요"}</strong>
                 </div>
                 {selectedVisitedPlace ? (
-                  <div className="life-places-panel-head__meta">
+                  <div className="life-places-panel-head__meta ui-panel-heading__meta">
                     <b>{selectedVisitedPlace.visitCount}건</b>
                     <b>{selectedVisitedPlace.visitDates.length}일</b>
                   </div>

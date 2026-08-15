@@ -47,7 +47,16 @@ export function LifeSearchView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="전체 검색" description="사람, 장소, 금액, 메모, 사진명, 날짜를 한 번에 찾아 전체 인생 DB를 탐색합니다." />
-      <SectionCard className="life-report-panel">
+      <SectionCard className="life-report-panel ui-workspace-panel">
+        <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+          <div className="ui-panel-heading__intro">
+            <p className="eyebrow">Unified Search</p>
+            <h2>기록 찾기</h2>
+          </div>
+          <div className="ui-panel-heading__meta">
+            <strong className="life-places-count">{filteredItems.length}개</strong>
+          </div>
+        </div>
         <div className="life-search-controls">
           <label>
             <Search aria-hidden size={18} />

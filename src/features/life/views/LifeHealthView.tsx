@@ -163,14 +163,14 @@ export function LifeHealthView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="건강" description="러닝과 아침 몸무게를 저장하면 건강 축과 라이프 캘린더 기간 기록에 함께 반영됩니다." />
-      <div className="life-health-view">
-        <SectionCard className="life-capture-list life-health-summary">
-          <div className="section-heading">
-            <div>
+      <div className="life-health-view ui-workspace-stack">
+        <SectionCard className="life-capture-list life-health-summary ui-workspace-panel">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">선택한 날짜</p>
               <h2>{formatFullDate(date)}</h2>
             </div>
-            <label className="life-health-date-control">
+            <label className="life-health-date-control ui-panel-heading__meta">
               <span>기록 날짜</span>
               <input type="date" value={date} onChange={(event) => changeDate(event.target.value)} />
             </label>

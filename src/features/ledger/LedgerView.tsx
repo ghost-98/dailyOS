@@ -134,7 +134,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
 
   return (
     <div className="ledger-page">
-      <header className={variant === "tab" ? "life-tab-heading ledger-header" : "page-header ledger-header"}>
+      <header className={variant === "tab" ? "life-tab-heading ledger-header ui-toolbar-panel" : "page-header ledger-header ui-toolbar-panel"}>
         <div>
           <h1>가계부</h1>
           <p className="ledger-header__note">지출은 일정·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
@@ -164,8 +164,8 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         </SectionCard>
       </section>
 
-      <div className="ledger-layout">
-        <SectionCard className="ledger-calendar-card">
+      <div className="ledger-layout ui-workspace-grid ui-workspace-grid--sidebar">
+        <SectionCard className="ledger-calendar-card ui-workspace-panel ui-workspace-panel--tall">
           <div className="calendar-toolbar">
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
@@ -216,7 +216,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         </SectionCard>
 
         <aside className="ledger-detail">
-          <SectionCard className="date-detail-card">
+          <SectionCard className="date-detail-card ui-workspace-panel ui-workspace-panel--tall">
             <div className="section-heading ledger-detail-heading ui-panel-heading">
               <div className="ui-panel-heading__intro">
                 <p className="eyebrow">선택 날짜 자금 흐름</p>

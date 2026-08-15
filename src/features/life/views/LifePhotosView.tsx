@@ -128,9 +128,9 @@ export function LifePhotosView({
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="사진" description="날짜별 사진과 영상을 모아 보고, EXIF 시간·위치 정보가 있으면 함께 정리합니다." />
-      <div className="life-capture-page">
-        <SectionCard className="life-capture-editor">
-          <div className="life-capture-card__title">
+      <div className="life-capture-page ui-workspace-grid ui-workspace-grid--form-detail">
+        <SectionCard className="life-capture-editor ui-workspace-panel">
+          <div className="life-capture-card__title ui-card-kicker">
             <ImagePlus aria-hidden size={17} />
             <span>사진 · 영상 업로드</span>
           </div>
@@ -193,13 +193,15 @@ export function LifePhotosView({
           </button>
         </SectionCard>
 
-        <SectionCard className="life-capture-list">
-          <div className="section-heading">
-            <div>
+        <SectionCard className="life-capture-list ui-workspace-panel">
+          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">선택한 날짜</p>
               <h2>{formatFullDate(date)}</h2>
             </div>
-            <strong className="life-places-count">{selectedPhotos.length}개</strong>
+            <div className="ui-panel-heading__meta">
+              <strong className="life-places-count">{selectedPhotos.length}개</strong>
+            </div>
           </div>
 
           {selectedPhotos.length > 0 ? (

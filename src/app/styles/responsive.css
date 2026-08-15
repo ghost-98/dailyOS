@@ -30,12 +30,23 @@
     grid-template-columns: 1fr;
   }
 
+  .ui-workspace-grid--form-detail,
+  .ui-workspace-grid--balanced,
+  .ui-workspace-grid--sidebar {
+    grid-template-columns: 1fr;
+  }
+
   .life-activity-quick-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .calendar-detail {
     animation: detail-slide-up 220ms ease-out both;
+  }
+
+  .ui-sticky-side-panel {
+    position: static;
+    top: auto;
   }
 
 }
@@ -422,6 +433,12 @@
   .life-activity-form,
   .life-activity-list {
     padding: 16px;
+  }
+
+  .ui-workspace-panel,
+  .ui-toolbar-panel {
+    min-height: auto;
+    padding: 18px;
   }
 
   .ui-panel-heading {

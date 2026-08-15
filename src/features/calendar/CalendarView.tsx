@@ -471,7 +471,7 @@ export function CalendarView({
 
   return (
     <div className="calendar-page">
-      <header className="life-tab-heading calendar-header">
+      <header className="life-tab-heading calendar-header ui-toolbar-panel">
         <div>
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
@@ -532,8 +532,8 @@ export function CalendarView({
         </div> : null}
       </header>
 
-      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""}`}>
-        <SectionCard className="calendar-board">
+      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""} ui-workspace-grid ${isDatabaseView ? "ui-workspace-grid--balanced" : "ui-workspace-grid--sidebar"}`}>
+        <SectionCard className="calendar-board ui-workspace-panel ui-workspace-panel--tall">
           <div className="calendar-toolbar">
             <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
               <ChevronLeft aria-hidden size={20} />
@@ -607,7 +607,7 @@ export function CalendarView({
 
         {selectedDate || isDatabaseView ? (
           <aside className="calendar-detail">
-            <SectionCard className="date-detail-card">
+            <SectionCard className="date-detail-card ui-workspace-panel ui-workspace-panel--tall">
               <div className="section-heading ui-panel-heading">
                 <div className="ui-panel-heading__intro">
                   <p className="eyebrow">{isDatabaseView ? getDatabaseEyebrow(dbScope) : "선택한 날짜"}</p>
