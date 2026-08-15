@@ -1284,12 +1284,6 @@
   gap: 4px;
 }
 
-.schedule-place-card__header span {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 850;
-}
-
 .schedule-place-card__header strong {
   font-size: 16px;
 }

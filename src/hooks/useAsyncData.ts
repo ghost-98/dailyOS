@@ -1,7 +1,7 @@
 "use client";
 
 import type { DependencyList } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type UseAsyncDataOptions<T> = {
   deps: DependencyList;
@@ -13,43 +13,54 @@ type UseAsyncDataOptions<T> = {
 export function useAsyncData<T>({ deps, initialData, load, onError }: UseAsyncDataOptions<T>) {
   const [data, setData] = useState<T>(initialData);
   const [isLoading, setIsLoading] = useState(true);
-
-  const reload = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const nextData = await load();
-      setData(nextData);
-      return nextData;
-    } catch (error) {
-      onError?.(error);
-      return initialData;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [initialData, load, onError]);
+  const initialDataRef = useRef(initialData);
+  const loadRef = useRef(load);
+  const onErrorRef = useRef(onError);
+  const previousDepsRef = useRef<DependencyList | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    let isMounted = true;
+    initialDataRef.current = initialData;
+  }, [initialData]);
 
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  const reload = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setIsLoading(true);
-    load()
-      .then((nextData) => {
-        if (isMounted) setData(nextData);
-      })
-      .catch((error) => {
-        if (isMounted) {
-          setData(initialData);
-          onError?.(error);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
 
-    return () => {
-      isMounted = false;
-    };
-  }, deps);
+    try {
+      const nextData = await loadRef.current();
+      if (requestIdRef.current === requestId) setData(nextData);
+      return nextData;
+    } catch (error) {
+      if (requestIdRef.current === requestId) {
+        setData(initialDataRef.current);
+        onErrorRef.current?.(error);
+      }
+      return initialDataRef.current;
+    } finally {
+      if (requestIdRef.current === requestId) setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const previousDeps = previousDepsRef.current;
+    const shouldReload =
+      previousDeps === null || previousDeps.length !== deps.length || previousDeps.some((dependency, index) => !Object.is(dependency, deps[index]));
+
+    if (!shouldReload) return;
+
+    previousDepsRef.current = deps;
+    void reload();
+  });
 
   return { data, isLoading, reload, setData };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Camera, ChevronDown, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -158,7 +159,7 @@ export function LifeGalleryView({
                         photo.mimeType?.startsWith("video/") ? (
                           <video controls preload="metadata" src={photo.fileUrl} />
                         ) : (
-                          <img alt={photo.caption || photo.fileName} loading="lazy" src={photo.fileUrl} />
+                          <Image alt={photo.caption || photo.fileName} fill sizes="(max-width: 900px) 100vw, 33vw" src={photo.fileUrl} />
                         )
                       ) : (
                         <div>{photo.fileName}</div>

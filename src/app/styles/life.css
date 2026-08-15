@@ -3738,8 +3738,8 @@ button:disabled {
 }
 
 .life-places-manager__buttons button,
-.schedule-place-search button,
-.schedule-place-results button {
+.life-places-mapping-search button,
+.life-places-mapping-results button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3899,7 +3899,7 @@ button:disabled {
   resize: vertical;
 }
 
-.schedule-place-search {
+.life-places-mapping-search {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
@@ -3911,7 +3911,7 @@ button:disabled {
   padding: 8px var(--field-padding-x);
 }
 
-.schedule-place-search input {
+.life-places-mapping-search input {
   min-width: 0;
   border: 0 !important;
   background: transparent !important;
@@ -3935,7 +3935,7 @@ button:disabled {
   align-content: start;
 }
 
-.schedule-place-results {
+.life-places-mapping-results {
   display: grid;
   gap: 8px;
   max-height: 220px;
@@ -3943,19 +3943,19 @@ button:disabled {
   padding: 2px 4px 2px 2px;
 }
 
-.schedule-place-results button {
+.life-places-mapping-results button {
   justify-content: flex-start;
   text-align: left;
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-strong);
 }
 
-.schedule-place-results button strong,
-.schedule-place-results button span {
+.life-places-mapping-results button strong,
+.life-places-mapping-results button span {
   display: block;
 }
 
-.schedule-place-results button span {
+.life-places-mapping-results button span {
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -5059,8 +5059,10 @@ button:disabled {
 }
 
 .life-gallery-card__media {
+  position: relative;
   min-height: 220px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
 }
 
 .life-gallery-card__media img,

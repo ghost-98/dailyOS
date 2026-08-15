@@ -842,7 +842,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
                     <label>
                       <span>위치 매핑 검색</span>
-                      <div className="schedule-place-search">
+                      <div className="life-places-mapping-search">
                         <MapPin aria-hidden size={18} />
                         <input
                           placeholder="예: 부산광역시 ... 아파트"
@@ -874,7 +874,7 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
                   ) : null}
 
                   {mappingResults.length > 0 ? (
-                    <div className="schedule-place-results">
+                    <div className="life-places-mapping-results">
                       {mappingResults.map((place) => (
                         <button
                           key={`${place.providerPlaceId ?? place.id}-${place.name}`}
