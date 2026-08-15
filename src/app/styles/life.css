@@ -3098,19 +3098,27 @@ button:disabled {
   gap: 18px;
 }
 
-.life-activity-action-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.035);
+.life-activity-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
-.life-activity-action-group--accent {
-  border-color: rgba(201, 184, 255, 0.22);
-  background: rgba(201, 184, 255, 0.08);
+.life-activity-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.life-activity-action-group--mode {
+  justify-content: flex-start;
+}
+
+.life-activity-action-group--state {
+  margin-left: 8px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .life-selected-day-panel__heading {
@@ -3125,19 +3133,23 @@ button:disabled {
 
 .life-activity-state-toggle {
   display: inline-flex;
+  width: 38px;
+  height: 38px;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  border-radius: 14px !important;
+  padding: 0 !important;
 }
 
 .life-activity-state-toggle--wake {
   border-color: rgba(125, 211, 252, 0.28) !important;
-  background: rgba(56, 189, 248, 0.12) !important;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.08)) !important;
   color: #c8f1ff !important;
 }
 
 .life-activity-state-toggle--sleep {
   border-color: rgba(196, 181, 253, 0.28) !important;
-  background: rgba(139, 92, 246, 0.14) !important;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.08)) !important;
   color: #e7ddff !important;
 }
 
@@ -3151,6 +3163,11 @@ button:disabled {
   border-color: rgba(196, 181, 253, 0.5) !important;
   background: rgba(139, 92, 246, 0.24) !important;
   color: #ffffff !important;
+}
+
+.life-activity-state-reset {
+  min-height: 38px;
+  border-style: dashed !important;
 }
 
 .life-activity-quick-panel {

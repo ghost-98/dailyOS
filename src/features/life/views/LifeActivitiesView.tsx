@@ -438,27 +438,31 @@ export function LifeActivitiesView({
                 </button>
               </div>
               {inputPanelMode === "activity" ? (
-              <div className="life-activity-action-group life-activity-action-group--accent">
-                <button
-                  className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
-                  disabled={isSaving}
-                  onClick={() => setEntryMode("wake")}
-                  type="button"
-                >
-                  <Sunrise aria-hidden size={14} />
-                  기상
-                </button>
-                <button
-                  className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
-                  disabled={isSaving}
-                  onClick={() => setEntryMode("sleep")}
-                  type="button"
-                >
-                  <BedDouble aria-hidden size={14} />
-                  취침
-                </button>
-                {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
-              </div>
+                <div className="life-activity-action-group life-activity-action-group--state">
+                  <button
+                    aria-label="기상 기록"
+                    className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
+                    disabled={isSaving}
+                    onClick={() => setEntryMode("wake")}
+                    type="button"
+                  >
+                    <Sunrise aria-hidden size={15} />
+                  </button>
+                  <button
+                    aria-label="취침 기록"
+                    className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
+                    disabled={isSaving}
+                    onClick={() => setEntryMode("sleep")}
+                    type="button"
+                  >
+                    <BedDouble aria-hidden size={15} />
+                  </button>
+                  {entryMode !== "activity" ? (
+                    <button className="life-activity-state-reset" disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">
+                      활동 입력
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
               {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
