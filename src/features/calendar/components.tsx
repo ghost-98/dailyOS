@@ -48,7 +48,7 @@ export function ExpenseLine({ amount }: { amount: number }) {
 
 export function FormSectionTitle({ description, title }: { description: string; title: string }) {
   return (
-    <div className="schedule-form-section-title">
+    <div className="planner-form-section-title">
       <strong>{title}</strong>
       <span>{description}</span>
     </div>

@@ -141,7 +141,7 @@
     font-size: 40px;
   }
 
-  .schedule-card,
+  .dashboard-card,
   .todo-card,
   .system-log,
   .vitals-card,
@@ -205,8 +205,7 @@
     flex-wrap: wrap;
   }
 
-  .todo-item,
-  .schedule-item {
+  .todo-item {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -282,13 +281,13 @@
     border-left: 0;
   }
 
-  .schedule-form-card--primary,
-  .schedule-form-card--grid,
-  .task-sheet .schedule-form-card--grid {
+  .planner-form-card--primary,
+  .planner-form-card--grid,
+  .task-sheet .planner-form-card--grid {
     grid-template-columns: 1fr;
   }
 
-  .schedule-form-card--primary .schedule-field + .schedule-field {
+  .planner-form-card--primary .planner-field + .planner-field {
     border-top: 1px solid rgba(255, 255, 255, 0.09);
     border-left: 0;
   }
@@ -425,8 +424,8 @@
     text-align: left;
   }
 
-  .schedule-date-row,
-  .schedule-time-row {
+  .planner-date-row,
+  .planner-time-row {
     grid-template-columns: 1fr;
   }
 

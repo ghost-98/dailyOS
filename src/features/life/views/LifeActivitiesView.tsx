@@ -480,7 +480,7 @@ export function LifeActivitiesView({
               </div>
 
               <div className="life-activity-form-card">
-                <div className="schedule-form-section-title life-activity-form-card__title">
+                <div className="planner-form-section-title life-activity-form-card__title">
                   <strong>활동 유형</strong>
                 </div>
                 <div className="life-activity-tag-row">
@@ -511,28 +511,28 @@ export function LifeActivitiesView({
               </div>
 
               <div className="life-activity-form-card">
-                <div className="schedule-form-section-title life-activity-form-card__title">
+                <div className="planner-form-section-title life-activity-form-card__title">
                   <strong>날짜와 시간</strong>
                 </div>
-                <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-                  <label className="event-form-row event-form-row--field schedule-field">
+                <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>기록 날짜</span>
                     <input type="date" value={date} onChange={(event) => selectDate(event.target.value)} />
                   </label>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>시작 시간</span>
                     <input disabled={!hasTime} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
                   </label>
                   {hasEndTime ? (
-                    <label className="event-form-row event-form-row--field schedule-field">
+                    <label className="event-form-row event-form-row--field planner-field">
                       <span>종료 시간</span>
                       <input disabled={!hasTime} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
                     </label>
                   ) : null}
-                  <div className="event-form-row event-form-row--field schedule-field schedule-toggle-row">
+                  <div className="event-form-row event-form-row--field planner-field planner-toggle-row">
                     <span>시간 옵션</span>
-                    <div className="schedule-option-toggle-group">
-                      <label className="schedule-option-toggle">
+                    <div className="planner-option-toggle-group">
+                      <label className="planner-option-toggle">
                         <input
                           checked={!hasTime}
                           type="checkbox"
@@ -546,7 +546,7 @@ export function LifeActivitiesView({
                         />
                         시간 미정
                       </label>
-                      <label className="schedule-option-toggle">
+                      <label className="planner-option-toggle">
                         <input
                           checked={hasEndTime}
                           disabled={!hasTime}
@@ -565,7 +565,7 @@ export function LifeActivitiesView({
 
               {category === "이동" ? (
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>이동 정보</strong>
                   </div>
                   <div className="life-activity-form-grid">
@@ -584,14 +584,14 @@ export function LifeActivitiesView({
                       <PlaceSearchField selectedPlace={endPlace} onSelect={setEndPlace} />
                     </div>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>이동 수단</span>
                     <input placeholder="예: 도보, 지하철, 버스, 택시, 자차" value={transportMode} onChange={(event) => setTransportMode(event.target.value)} />
                   </label>
                 </div>
               ) : (
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>장소</strong>
                   </div>
                   <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
@@ -600,20 +600,20 @@ export function LifeActivitiesView({
 
               <div className={category === "식사" ? "life-activity-form-grid life-activity-form-grid--people-meal" : "life-activity-form-grid life-activity-form-grid--single-wide"}>
                 <div className="life-activity-form-card life-activity-form-card--wide">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>함께한 사람</strong>
                   </div>
-                  <div className="event-form-row event-form-row--field schedule-field schedule-field--stack">
+                  <div className="event-form-row event-form-row--field planner-field planner-field--stack">
                     <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
                   </div>
                 </div>
 
                 {category === "식사" ? (
                   <div className="life-activity-form-card">
-                    <div className="schedule-form-section-title life-activity-form-card__title">
+                    <div className="planner-form-section-title life-activity-form-card__title">
                       <strong>식사 메모</strong>
                     </div>
-                    <label className="event-form-row event-form-row--field schedule-field">
+                    <label className="event-form-row event-form-row--field planner-field">
                       <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
                     </label>
                   </div>
@@ -622,19 +622,19 @@ export function LifeActivitiesView({
 
               <div className="life-activity-form-grid">
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>금액</strong>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
                   </label>
                 </div>
 
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>메모</strong>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
                   </label>
                 </div>
@@ -662,7 +662,7 @@ export function LifeActivitiesView({
                 null
               )}
               <div className="life-activity-quick-panel__grid">
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <span><Clock3 aria-hidden size={14} />시간</span>
                   <input type="time" value={entryMode === "wake" ? wakeTime : sleepTime} onChange={(event) => (entryMode === "wake" ? setWakeTime(event.target.value) : setSleepTime(event.target.value))} />
                 </label>

@@ -728,9 +728,9 @@ function EventCreateSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet schedule-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
+      <section aria-labelledby="event-sheet-title" aria-modal="true" className="event-sheet planner-sheet" role="dialog" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header schedule-sheet__header">
+        <header className="event-sheet__header planner-sheet__header">
           <div>
             <h2 id="event-sheet-title">{event ? "항목 수정" : `${categoryLabels[type]} 추가`}</h2>
             <p>{event ? "등록된 내용을 수정합니다." : "날짜와 종류를 정해 계획에 추가합니다."}</p>
@@ -740,14 +740,14 @@ function EventCreateSheet({
           </IconButton>
         </header>
 
-        <div className="event-sheet__body schedule-sheet__body">
+        <div className="event-sheet__body planner-sheet__body">
           <FormSectionTitle title="기본 정보" description="제목과 메모를 먼저 잡아두세요." />
-          <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
-            <label className="schedule-field schedule-field--wide">
+          <div className="event-form-card event-form-card--title planner-form-card planner-form-card--primary">
+            <label className="planner-field planner-field--wide">
               <span>제목</span>
               <input autoFocus placeholder={`${categoryLabels[type]} 제목`} value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
             </label>
-            <label className="schedule-field schedule-field--wide">
+            <label className="planner-field planner-field--wide">
               <span>메모</span>
               <input placeholder="링크, 준비물, 간단한 설명" value={meta} onChange={(changeEvent) => setMeta(changeEvent.target.value)} />
             </label>
@@ -757,8 +757,8 @@ function EventCreateSheet({
           <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
           <FormSectionTitle title="관계와 지출" description="지출은 가계부에 자동으로 연동됩니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
-            <label className="event-form-row event-form-row--field schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid">
+            <label className="event-form-row event-form-row--field planner-field">
               <div className="event-form-row__label">
                 <UsersRound aria-hidden size={18} />
                 <span>함께한 사람</span>
@@ -766,7 +766,7 @@ function EventCreateSheet({
               <PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} />
             </label>
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            <label className="event-form-row event-form-row--field planner-field">
               <div className="event-form-row__label">
                 <WalletCards aria-hidden size={18} />
                 <span>지출</span>
@@ -776,9 +776,9 @@ function EventCreateSheet({
           </div>
 
           <FormSectionTitle title="날짜" description="기본은 단일 날짜이며, 기간 설정을 켜면 종료 날짜를 함께 기록합니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-date-grid">
-            <div className="schedule-date-row">
-              <label className="event-form-row event-form-row--field schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid planner-date-grid">
+            <div className="planner-date-row">
+              <label className="event-form-row event-form-row--field planner-field">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
                   <span>날짜</span>
@@ -794,7 +794,7 @@ function EventCreateSheet({
               </label>
 
               {isDateRange ? (
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <div className="event-form-row__label">
                     <CalendarDays aria-hidden size={18} />
                     <span>종료 날짜</span>
@@ -803,12 +803,12 @@ function EventCreateSheet({
                 </label>
               ) : null}
 
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
                   <span>기간</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={isDateRange}
                     type="checkbox"
@@ -825,14 +825,14 @@ function EventCreateSheet({
           </div>
 
           <FormSectionTitle title="시간" description="기본은 하루종일이며, 체크를 해제하면 시작 시간과 종료 시간을 설정할 수 있습니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-            <div className="schedule-time-row">
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+          <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
+            <div className="planner-time-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>시간</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={isAllDay}
                     type="checkbox"
@@ -849,7 +849,7 @@ function EventCreateSheet({
                 </label>
               </label>
 
-              <label className="event-form-row event-form-row--field schedule-field">
+              <label className="event-form-row event-form-row--field planner-field">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>시작 시간</span>
@@ -858,7 +858,7 @@ function EventCreateSheet({
               </label>
 
               {!isAllDay && hasEndTime ? (
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <div className="event-form-row__label">
                     <Clock3 aria-hidden size={18} />
                     <span>종료 시간</span>
@@ -867,12 +867,12 @@ function EventCreateSheet({
                 </label>
               ) : null}
 
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>종료</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={!isAllDay && hasEndTime}
                     disabled={isAllDay}
@@ -889,8 +889,8 @@ function EventCreateSheet({
 
           </div>
 
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
-            <label className="event-form-row event-form-row--select schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid">
+            <label className="event-form-row event-form-row--select planner-field">
               <div className="event-form-row__label">
                 <Bell aria-hidden size={18} />
                 <span>종류</span>
@@ -976,9 +976,9 @@ function TaskCreateSheet({
 
   return (
     <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="task-sheet-title" aria-modal="true" className="event-sheet schedule-sheet task-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+      <section aria-labelledby="task-sheet-title" aria-modal="true" className="event-sheet planner-sheet task-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header schedule-sheet__header">
+        <header className="event-sheet__header planner-sheet__header">
           <div>
             <h2 id="task-sheet-title">{task ? "할 일 수정" : "할 일 추가"}</h2>
             <p>{task ? "상태와 날짜를 조정합니다." : "예정일 기준으로 할 일을 추가합니다."}</p>
@@ -988,14 +988,14 @@ function TaskCreateSheet({
           </IconButton>
         </header>
 
-        <div className="event-sheet__body schedule-sheet__body">
+        <div className="event-sheet__body planner-sheet__body">
           <FormSectionTitle title="기본 정보" description="할 일의 핵심 내용과 메모를 적어두세요." />
-          <div className="event-form-card event-form-card--title schedule-form-card schedule-form-card--primary">
-            <label className="schedule-field schedule-field--wide">
+          <div className="event-form-card event-form-card--title planner-form-card planner-form-card--primary">
+            <label className="planner-field planner-field--wide">
               <span>제목</span>
               <input autoFocus placeholder="할 일 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
-            <label className="schedule-field schedule-field--wide">
+            <label className="planner-field planner-field--wide">
               <span>메모</span>
               <input placeholder="필요한 내용을 적어주세요." value={memo} onChange={(event) => setMemo(event.target.value)} />
             </label>
@@ -1005,8 +1005,8 @@ function TaskCreateSheet({
           <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
 
           <FormSectionTitle title="관계와 지출" description="금액을 입력하면 가계부에 연결 지출로 기록됩니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
-            <label className="event-form-row event-form-row--field schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid">
+            <label className="event-form-row event-form-row--field planner-field">
               <div className="event-form-row__label">
                 <UsersRound aria-hidden size={18} />
                 <span>함께한 사람</span>
@@ -1014,7 +1014,7 @@ function TaskCreateSheet({
               <PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} />
             </label>
 
-            <label className="event-form-row event-form-row--field schedule-field">
+            <label className="event-form-row event-form-row--field planner-field">
               <div className="event-form-row__label">
                 <WalletCards aria-hidden size={18} />
                 <span>지출</span>
@@ -1024,8 +1024,8 @@ function TaskCreateSheet({
           </div>
 
           <FormSectionTitle title="진행 상태" description="상태와 우선순위로 오늘 할 일을 정리하세요." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid">
-            <label className="event-form-row event-form-row--select schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid">
+            <label className="event-form-row event-form-row--select planner-field">
               <div className="event-form-row__label">
                 <ListChecks aria-hidden size={18} />
                 <span>상태</span>
@@ -1037,7 +1037,7 @@ function TaskCreateSheet({
               </select>
             </label>
 
-            <label className="event-form-row event-form-row--select schedule-field">
+            <label className="event-form-row event-form-row--select planner-field">
               <div className="event-form-row__label">
                 <Bell aria-hidden size={18} />
                 <span>우선순위</span>
@@ -1051,9 +1051,9 @@ function TaskCreateSheet({
           </div>
 
           <FormSectionTitle title="날짜" description="기본은 단일 날짜이며, 기간 설정을 켜면 종료 날짜를 함께 기록합니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-date-grid">
-            <div className="schedule-date-row">
-              <label className="event-form-row event-form-row--field schedule-field">
+          <div className="event-form-card planner-form-card planner-form-card--grid planner-date-grid">
+            <div className="planner-date-row">
+              <label className="event-form-row event-form-row--field planner-field">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
                   <span>날짜</span>
@@ -1069,7 +1069,7 @@ function TaskCreateSheet({
               </label>
 
               {isDateRange ? (
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <div className="event-form-row__label">
                     <CalendarDays aria-hidden size={18} />
                     <span>종료 날짜</span>
@@ -1078,12 +1078,12 @@ function TaskCreateSheet({
                 </label>
               ) : null}
 
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <CalendarDays aria-hidden size={18} />
                   <span>기간</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={isDateRange}
                     type="checkbox"
@@ -1100,14 +1100,14 @@ function TaskCreateSheet({
           </div>
 
           <FormSectionTitle title="시간" description="기본은 하루종일이며, 체크를 해제하면 시작 시간과 종료 시간을 설정할 수 있습니다." />
-          <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-            <div className="schedule-time-row">
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+          <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
+            <div className="planner-time-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>시간</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={isAllDay}
                     type="checkbox"
@@ -1124,7 +1124,7 @@ function TaskCreateSheet({
                 </label>
               </label>
 
-              <label className="event-form-row event-form-row--field schedule-field">
+              <label className="event-form-row event-form-row--field planner-field">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>시작 시간</span>
@@ -1133,7 +1133,7 @@ function TaskCreateSheet({
               </label>
 
               {!isAllDay && hasEndTime ? (
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <div className="event-form-row__label">
                     <Clock3 aria-hidden size={18} />
                     <span>종료 시간</span>
@@ -1142,12 +1142,12 @@ function TaskCreateSheet({
                 </label>
               ) : null}
 
-              <label className="event-form-row event-form-row--select schedule-field schedule-toggle-row">
+              <label className="event-form-row event-form-row--select planner-field planner-toggle-row">
                 <div className="event-form-row__label">
                   <Clock3 aria-hidden size={18} />
                   <span>종료</span>
                 </div>
-                <label className="schedule-option-toggle">
+                <label className="planner-option-toggle">
                   <input
                     checked={!isAllDay && hasEndTime}
                     disabled={isAllDay}

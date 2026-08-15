@@ -375,7 +375,7 @@ export function TodayDashboard() {
       </section>
 
       <div className="today-work-grid today-life-grid">
-        <SectionCard className="schedule-card today-command-card today-timeline-card">
+        <SectionCard className="dashboard-card today-command-card today-timeline-card">
           <DashboardHeader href="/life/activities" icon={<Clock3 aria-hidden size={20} />} title={text.todayTimeline} trailing={`${timelineItems.length}${text.count}`} />
           <div className="today-life-timeline">
             {timelineItems.length > 0 ? (
@@ -399,7 +399,7 @@ export function TodayDashboard() {
         </SectionCard>
 
         <div className="today-side-grid">
-          <SectionCard className="schedule-card today-command-card">
+          <SectionCard className="dashboard-card today-command-card">
             <DashboardHeader href="/life/logs" icon={<NotebookPen aria-hidden size={20} />} title={text.dailyLog} trailing={`${text.thisMonth} ${monthLogs.length}${text.count}`} />
             <div className="today-log-stack">
               {todayLogs.length > 0 ? (
@@ -415,7 +415,7 @@ export function TodayDashboard() {
             </div>
           </SectionCard>
 
-          <SectionCard className="schedule-card today-command-card">
+          <SectionCard className="dashboard-card today-command-card">
             <DashboardHeader href="/life/gallery" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
             {todayPhotos.length > 0 ? (
               <div className="today-photo-strip">
@@ -433,7 +433,7 @@ export function TodayDashboard() {
       </div>
 
       <div className="today-support-grid">
-        <SectionCard className="schedule-card today-command-card">
+        <SectionCard className="dashboard-card today-command-card">
           <DashboardHeader href="/life/calendar" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
           <div className="today-place-list">
             {places.length > 0 ? (
@@ -449,7 +449,7 @@ export function TodayDashboard() {
           </div>
         </SectionCard>
 
-        <SectionCard className="schedule-card today-command-card">
+        <SectionCard className="dashboard-card today-command-card">
           <DashboardHeader href="/ledger" icon={<WalletCards aria-hidden size={20} />} title={text.ledger} trailing={`${todayExpenses.length}\uAC74`} />
           <div className="today-ledger-total">
             <span>{text.todayUsed}</span>

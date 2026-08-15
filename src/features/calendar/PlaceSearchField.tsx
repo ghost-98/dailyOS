@@ -94,8 +94,8 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   };
 
   return (
-    <div className="event-form-card schedule-place-card">
-      <div className="schedule-place-card__header">
+    <div className="event-form-card planner-place-card">
+      <div className="planner-place-card__header">
         <div>
           <strong>{selectedPlace ? selectedPlace.name : "장소 선택"}</strong>
         </div>
@@ -106,19 +106,19 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
         ) : null}
       </div>
 
-      <div className="schedule-place-mode">
-        <button className={searchMode === "map" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("map")} type="button">
+      <div className="planner-place-mode">
+        <button className={searchMode === "map" ? "planner-place-mode__button planner-place-mode__button--active" : "planner-place-mode__button"} onClick={() => setSearchMode("map")} type="button">
           <MapPin aria-hidden size={14} />
           장소 선택
         </button>
-        <button className={searchMode === "saved" ? "schedule-place-mode__button schedule-place-mode__button--active" : "schedule-place-mode__button"} onClick={() => setSearchMode("saved")} type="button">
+        <button className={searchMode === "saved" ? "planner-place-mode__button planner-place-mode__button--active" : "planner-place-mode__button"} onClick={() => setSearchMode("saved")} type="button">
           <Star aria-hidden size={14} />
           내 장소
           <b>{savedPlaces.length}</b>
         </button>
       </div>
 
-      <div className="schedule-place-search">
+      <div className="planner-place-search">
         <MapPin aria-hidden size={18} />
         <input
           placeholder={searchMode === "saved" ? "내 장소 이름이나 주소 찾기" : "장소명이나 주소 검색"}
@@ -140,10 +140,10 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       </div>
 
       {selectedPlace ? <PlaceLine place={selectedPlace} /> : null}
-      {message ? <p className="schedule-place-message">{message}</p> : null}
+      {message ? <p className="planner-place-message">{message}</p> : null}
 
       {searchMode === "saved" ? (
-        <div className="schedule-place-results">
+        <div className="planner-place-results">
           {filteredSavedPlaces.length > 0 ? (
             filteredSavedPlaces.map((place) => (
               <button key={place.id} onClick={() => choosePersonalPlace(place)} type="button">
@@ -152,13 +152,13 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
               </button>
             ))
           ) : (
-            <p className="schedule-place-message">
+            <p className="planner-place-message">
               {isLoadingSaved ? "내 장소 불러오는 중..." : "저장된 내 장소가 없어요. DB의 장소 탭에서 먼저 만들어둘 수 있어요."}
             </p>
           )}
         </div>
       ) : results.length > 0 ? (
-        <div className="schedule-place-results">
+        <div className="planner-place-results">
           {results.map((place) => (
             <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMapPlace(place)} type="button">
               <strong>{place.name}</strong>

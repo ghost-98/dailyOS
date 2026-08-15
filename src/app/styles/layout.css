@@ -534,7 +534,7 @@
   color: var(--muted);
 }
 
-.schedule-card,
+.dashboard-card,
 .todo-card,
 .system-log {
   padding: 24px;
@@ -570,13 +570,11 @@
   line-height: 1.2;
 }
 
-.schedule-list,
 .todo-list {
   display: grid;
   gap: 14px;
 }
 
-.schedule-item,
 .todo-item {
   display: flex;
   align-items: center;
@@ -586,35 +584,16 @@
   background: rgba(255, 255, 255, 0.04);
   padding: 18px 20px;
 }
-
-.schedule-item {
-  border-left: 4px solid var(--violet-deep);
-}
-
-.schedule-item span {
-  color: var(--violet);
-  font-family: "Courier New", monospace;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.schedule-item h3,
 .todo-item h3 {
   margin: 6px 0 4px;
   font-size: 21px;
   line-height: 1.25;
 }
 
-.schedule-item p,
 .todo-item p {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
-}
-
-.schedule-item--muted {
-  opacity: 0.42;
 }
 
 .todo-card {
