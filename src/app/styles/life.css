@@ -621,6 +621,10 @@
   padding: 16px;
 }
 
+.life-calendar-db-section--empty {
+  min-height: 148px;
+}
+
 .life-calendar-db-section__head h3 {
   margin: 2px 0 0;
   font-size: 1.04rem;

@@ -668,7 +668,6 @@ export function CalendarView({
               <div className="date-event-list">
                 {isDatabaseView ? (
                   <LifeCalendarDatabasePanel
-                    currentMonth={currentMonth}
                     daySummaries={periodDaySummaries}
                     endDate={periodBounds.end}
                     isLoading={isLoading}
@@ -1289,7 +1288,6 @@ type PeriodDaySummary = {
 };
 
 function LifeCalendarDatabasePanel({
-  currentMonth,
   daySummaries,
   endDate,
   isLoading,
@@ -1299,7 +1297,6 @@ function LifeCalendarDatabasePanel({
   scope,
   startDate,
 }: {
-  currentMonth: Date;
   daySummaries: PeriodDaySummary[];
   endDate: string;
   isLoading: boolean;
@@ -1367,6 +1364,16 @@ function LifeCalendarDatabasePanel({
     );
   }
 
+  if (scope === "week" || scope === "month") {
+    return (
+      <div className="life-calendar-db-content">
+        <section className="life-calendar-db-section life-calendar-db-section--empty" />
+        <section className="life-calendar-db-section life-calendar-db-section--empty" />
+        <section className="life-calendar-db-section life-calendar-db-section--empty" />
+      </div>
+    );
+  }
+
   const periodLength = enumerateDates(startDate, endDate).length;
   const totalActivities = daySummaries.reduce((sum, item) => sum + item.activityCount, 0);
   const totalPlans = daySummaries.reduce((sum, item) => sum + item.planCount, 0);
@@ -1385,7 +1392,7 @@ function LifeCalendarDatabasePanel({
     <div className="life-calendar-db-content">
       <section className="life-calendar-db-section">
         <article className="life-calendar-db-story">
-          <span>{scope === "week" ? "주간 한 줄 요약" : scope === "month" ? "월간 한 줄 요약" : "기간 한 줄 요약"}</span>
+          <span>기간 한 줄 요약</span>
           <strong>{scopeNarrative}</strong>
         </article>
         <div className="life-calendar-db-hero">
@@ -1416,7 +1423,7 @@ function LifeCalendarDatabasePanel({
         <div className="life-calendar-db-section__head">
           <div>
             <p className="eyebrow">Core Signals</p>
-            <h3>{scope === "week" ? "이번 주를 만든 핵심 축" : scope === "month" ? `${currentMonth.getMonth() + 1}월을 만든 핵심 축` : "이 기간을 만든 핵심 축"}</h3>
+            <h3>이 기간을 만든 핵심 축</h3>
           </div>
         </div>
         <div className="life-calendar-db-period-grid life-calendar-db-period-grid--signals">
