@@ -1217,6 +1217,8 @@ function LifeCalendarDatabasePanel({
   const periodNarrative = getPeriodNarrative(scope, daySummaries, finance, topCompanions, topPlaces);
   const dayEventCounts = getDayEventCounts(items);
   const dayEventGroups = buildDayEventGroups(items);
+  const periodOverview = getPeriodOverviewCards(daySummaries, finance);
+  const periodHighlights = getPeriodHighlightCards(daySummaries, topCompanions, topPlaces);
 
   if (scope === "day") {
     return (
@@ -1259,6 +1261,53 @@ function LifeCalendarDatabasePanel({
         <span>기간 서사</span>
         <strong>{periodNarrative}</strong>
       </article>
+      <section className="life-calendar-week-panel">
+        <div className="life-calendar-week-overview">
+          {periodOverview.map((card) => (
+            <article key={card.label}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <p>{card.note}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="life-calendar-week-layout">
+          <article className="life-calendar-week-card">
+            <div className="life-calendar-db-section__head">
+              <span className="eyebrow">기간 흐름</span>
+              <h3>{getPeriodSectionTitle(scope)}</h3>
+            </div>
+            <div className={`life-calendar-db-period-grid ${scope === "week" ? "life-calendar-db-period-grid--week" : ""}`}>
+              {daySummaries.length > 0 ? daySummaries.map((day) => (
+                <article className="life-calendar-db-period-card" key={day.date}>
+                  <span>{formatSelectedDate(day.date)}</span>
+                  <strong>{getPeriodDayHeadline(day)}</strong>
+                  <p>{getPeriodDayDetail(day)}</p>
+                </article>
+              )) : <div className="life-calendar-db-empty">이 기간에는 아직 해석할 기록이 없어요.</div>}
+            </div>
+          </article>
+
+          <div className="life-calendar-week-side">
+            <article className="life-calendar-week-card life-calendar-week-card--focus">
+              <div className="life-calendar-db-section__head">
+                <span className="eyebrow">핵심 축</span>
+                <h3>이 기간의 중심</h3>
+              </div>
+              <div className="life-calendar-db-rhythm">
+                {periodHighlights.map((card) => (
+                  <article className="life-calendar-db-rhythm__card" key={card.label}>
+                    <span>{card.label}</span>
+                    <strong>{card.value}</strong>
+                    <p>{card.note}</p>
+                  </article>
+                ))}
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1848,6 +1897,94 @@ function getPeriodNarrative(
     "자금 흐름은 큰 편차 없이 균형에 가까웠어요.";
 
   return `${density}. ${activeDays}일에 기록이 남았고, ${rhythm} ${place} ${people} ${recordTone} ${financeTone}`;
+}
+
+function getPeriodSectionTitle(scope: Exclude<LifeCalendarScope, "day">) {
+  if (scope === "week") return "주간 흐름";
+  if (scope === "month") return "월간 흐름";
+  return "선택 기간 흐름";
+}
+
+function getPeriodOverviewCards(daySummaries: PeriodDaySummary[], finance: { expense: number; income: number; net: number }) {
+  const totalCount = daySummaries.reduce((sum, summary) => sum + summary.totalCount, 0);
+  const activeDays = daySummaries.length;
+  const activityTotal = daySummaries.reduce((sum, summary) => sum + summary.activityCount, 0);
+  const recordTotal = daySummaries.reduce((sum, summary) => sum + summary.recordCount, 0);
+
+  return [
+    {
+      label: "기록 남은 날",
+      note: "실제 흔적이 남은 날짜 수",
+      value: `${activeDays}일`,
+    },
+    {
+      label: "전체 흐름",
+      note: "일정·활동·기록을 합친 총량",
+      value: `${totalCount}건`,
+    },
+    {
+      label: "활동 중심도",
+      note: "활동 기록과 회고 기록의 균형",
+      value: `${activityTotal} / ${recordTotal}`,
+    },
+    {
+      label: "자금 흐름",
+      note: finance.net === 0 ? "큰 편차 없음" : finance.net > 0 ? "순유입" : "순지출",
+      value: formatNumberWithUnit(finance.net, "원"),
+    },
+  ];
+}
+
+function getPeriodHighlightCards(
+  daySummaries: PeriodDaySummary[],
+  topCompanions: Array<{ count: number; value: string }>,
+  topPlaces: Array<{ count: number; value: string }>,
+) {
+  const busiestDay = [...daySummaries].sort((left, right) => right.totalCount - left.totalCount || left.date.localeCompare(right.date))[0];
+  const mostActiveDay = [...daySummaries].sort((left, right) => right.activityCount - left.activityCount || left.date.localeCompare(right.date))[0];
+
+  return [
+    {
+      label: "가장 진했던 날",
+      note: busiestDay ? `${busiestDay.totalCount}건이 몰린 날` : "아직 분석할 기록이 적어요",
+      value: busiestDay ? formatSelectedDate(busiestDay.date) : "데이터 없음",
+    },
+    {
+      label: "관계 축",
+      note: topCompanions[0] ? `${topCompanions[0].count}번 함께 기록됨` : "아직 반복 관계가 옅어요",
+      value: topCompanions[0]?.value ?? "단독 흐름 중심",
+    },
+    {
+      label: "장소 축",
+      note: topPlaces[0] ? `${topPlaces[0].count}번 등장` : "아직 대표 장소가 약해요",
+      value: topPlaces[0]?.value ?? "분산된 이동",
+    },
+    {
+      label: "활동이 선명한 날",
+      note: mostActiveDay ? `${mostActiveDay.activityCount}건의 활동 기록` : "활동 데이터가 적어요",
+      value: mostActiveDay ? formatSelectedDate(mostActiveDay.date) : "데이터 없음",
+    },
+  ];
+}
+
+function getPeriodDayHeadline(summary: PeriodDaySummary) {
+  const chunks = [
+    summary.planCount > 0 ? `일정 ${summary.planCount}` : null,
+    summary.activityCount > 0 ? `활동 ${summary.activityCount}` : null,
+    summary.recordCount > 0 ? `회고 ${summary.recordCount}` : null,
+  ].filter(Boolean);
+
+  return chunks.join(" · ") || "기록 없음";
+}
+
+function getPeriodDayDetail(summary: PeriodDaySummary) {
+  const placeTone = summary.placeCount > 0 ? `장소 ${summary.placeCount}곳` : "장소 축 없음";
+  const financeTone =
+    summary.expenseCount + summary.incomeCount > 0
+      ? `자금 ${summary.expenseCount + summary.incomeCount}건`
+      : "자금 흐름 없음";
+  const healthTone = summary.healthCount > 0 ? `건강 ${summary.healthCount}건` : "건강 기록 없음";
+  return `${placeTone} · ${financeTone} · ${healthTone}`;
 }
 
 function getDayEventCounts(items: DayTimelineItem[]) {

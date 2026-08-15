@@ -8,6 +8,7 @@ import { buildLifeAskAnalysis } from "@/features/life/askInsights";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { buildLifeSearchItems, selectRelevantLifeAskRecords } from "@/features/life/insights";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 
 type LifeAskViewProps = {
@@ -101,12 +102,24 @@ export function LifeAskView({
         <SectionCard className="life-ask-card ui-workspace-panel">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">Life DB Copilot</p>
+              <p className="eyebrow">라이프 DB 코파일럿</p>
               <h2>내 기록에 질문하기</h2>
             </div>
             <div className="ui-panel-heading__meta">
               <strong className="life-places-count">{scopedRecords.length}/{records.length}건</strong>
             </div>
+          </div>
+          <div className="life-ask-interpretation">
+            <article>
+              <span>해석 기간</span>
+              <strong>{analysis.windowLabel}</strong>
+              <p>{analysis.dateRange}</p>
+            </article>
+            <article>
+              <span>질문 초점</span>
+              <strong>{analysis.focusTitle}</strong>
+              <p>{analysis.focusDescription}</p>
+            </article>
           </div>
           <textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 나 3월달에 부산 갔던 것 같은데 그때 어땠어?" />
           <div className="life-ask-examples">
@@ -116,14 +129,14 @@ export function LifeAskView({
               </button>
             ))}
           </div>
-          <button className="life-ask-submit" disabled={isAsking || !question.trim()} onClick={() => void askLifeDb()} type="button">
+          <ActionButton className="life-ask-submit" disabled={isAsking || !question.trim()} onClick={() => void askLifeDb()}>
             {isAsking ? "기록 읽는 중..." : "AI에게 물어보기"}
-          </button>
+          </ActionButton>
           {error ? <p className="life-ask-error">{error}</p> : null}
         </SectionCard>
 
         <SectionCard className="life-ask-answer ui-workspace-panel">
-          <p className="eyebrow">AI Answer</p>
+          <p className="eyebrow">AI 답변</p>
           <div className="life-ask-brief">
             <article className="life-ask-overview-card">
               <span>{analysis.focusTitle}</span>
@@ -158,6 +171,33 @@ export function LifeAskView({
                   </div>
                 </article>
               ))}
+            </div>
+
+            <div className="life-ask-breakdowns">
+              {analysis.breakdowns.map((section) => (
+                <article className="life-ask-breakdown-card" key={section.title}>
+                  <span>{section.title}</span>
+                  <div>
+                    {section.items.map((item) => (
+                      <p key={`${section.title}-${item}`}>{item}</p>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="life-ask-followups">
+              <div className="life-ask-followups__head">
+                <p className="eyebrow">후속 질문</p>
+                <span>바로 이어서 물어볼 수 있어요</span>
+              </div>
+              <div className="life-ask-followups__items">
+                {analysis.followUpQuestions.map((nextQuestion) => (
+                  <button key={nextQuestion} onClick={() => setQuestion(nextQuestion)} type="button">
+                    {nextQuestion}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="life-ask-answer-block">

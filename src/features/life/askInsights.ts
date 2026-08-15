@@ -112,7 +112,9 @@ export type LifeAskLinkGroup = {
 export type LifeAskAnalysis = {
   breakdowns: LifeAskBreakdown[];
   cards: LifeAskInsightCard[];
+  dateRange: string;
   evidence: LifeAskEvidenceItem[];
+  followUpQuestions: string[];
   focus: AskFocus;
   focusDescription: string;
   focusTitle: string;
@@ -122,6 +124,7 @@ export type LifeAskAnalysis = {
   patterns: string[];
   promptContext: string;
   suggestions: string[];
+  windowLabel: string;
 };
 
 export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
@@ -171,6 +174,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     title: record.title,
   }));
   const linkGroups = buildAskLinkGroups(filtered, effectiveWindow, topPeople, topPlaces);
+  const followUpQuestions = buildFollowUpQuestions(focus, effectiveWindow.label, topPeople, topPlaces, topActivityTypes, topExpenseCategories);
 
   const promptContext = [
     `질문 초점: ${focus}`,
@@ -190,7 +194,9 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
   return {
     breakdowns: focusData.breakdowns,
     cards: focusData.cards,
+    dateRange: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
     evidence,
+    followUpQuestions,
     focus,
     focusDescription: focusData.focusDescription,
     focusTitle: focusData.focusTitle,
@@ -200,7 +206,31 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     patterns: focusData.patterns,
     promptContext,
     suggestions: focusData.suggestions,
+    windowLabel: effectiveWindow.label,
   };
+}
+
+function buildFollowUpQuestions(
+  focus: AskFocus,
+  windowLabel: string,
+  topPeople: NamedCount[],
+  topPlaces: NamedCount[],
+  topActivityTypes: NamedCount[],
+  topExpenseCategories: Array<{ amount: number; name: string }>,
+) {
+  const questions = new Set<string>();
+  questions.add(`${windowLabel}에 가장 두드러진 흐름 한 가지만 짚어줘`);
+
+  if (topPeople[0]) questions.add(`${windowLabel}에 ${topPeople[0].name}와의 기록을 더 자세히 풀어줘`);
+  if (topPlaces[0]) questions.add(`${windowLabel}에 ${topPlaces[0].name}이 왜 중요했는지 설명해줘`);
+  if (topActivityTypes[0]) questions.add(`${windowLabel}에 ${topActivityTypes[0].name} 패턴이 왜 많았는지 정리해줘`);
+  if (topExpenseCategories[0]) questions.add(`${windowLabel}에 ${topExpenseCategories[0].name} 지출이 커진 이유를 알려줘`);
+
+  if (focus !== "compare") {
+    questions.add(`${windowLabel}과 직전 기간을 비교하면 뭐가 가장 달라?`);
+  }
+
+  return [...questions].slice(0, 5);
 }
 
 function buildAskNarrative(args: FocusAnalysisArgs) {

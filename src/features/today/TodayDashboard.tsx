@@ -1,10 +1,9 @@
 "use client";
 
-import { Activity, CalendarDays, Camera, CheckCircle2, Clock3, Dumbbell, MapPin, NotebookPen, Plus, Sparkles, WalletCards } from "lucide-react";
+import { Activity, CalendarDays, Camera, CheckCircle2, Clock3, Dumbbell, MapPin, NotebookPen, Sparkles, WalletCards } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { useDailyOSUser } from "@/components/auth/AuthGate";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -14,6 +13,7 @@ import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features
 import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/life/api";
 import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
+import { DashboardHeader, EmptyBlock, QuickAction, SignalCard } from "@/features/today/TodayDashboardSections";
 import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 type TimelineKind = "task" | "event" | "activity" | "log" | "photo" | "expense" | "workout" | "weight";
@@ -376,7 +376,7 @@ export function TodayDashboard() {
 
       <div className="today-work-grid today-life-grid">
         <SectionCard className="dashboard-card today-command-card today-timeline-card">
-          <DashboardHeader href="/life/activities" icon={<Clock3 aria-hidden size={20} />} title={text.todayTimeline} trailing={`${timelineItems.length}${text.count}`} />
+          <DashboardHeader href="/life/activities" icon={<Clock3 aria-hidden size={20} />} openLabel={text.open} title={text.todayTimeline} trailing={`${timelineItems.length}${text.count}`} />
           <div className="today-life-timeline">
             {timelineItems.length > 0 ? (
               timelineItems.slice(0, 9).map((item) => (
@@ -393,14 +393,14 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/activities" text="오늘을 복원하려면 실제 활동부터 하나 남겨보세요." />
+              <EmptyBlock ctaLabel={text.goRecord} href="/life/activities" text="오늘을 복원하려면 실제 활동부터 하나 남겨보세요." />
             )}
           </div>
         </SectionCard>
 
         <div className="today-side-grid">
           <SectionCard className="dashboard-card today-command-card">
-            <DashboardHeader href="/life/logs" icon={<NotebookPen aria-hidden size={20} />} title={text.dailyLog} trailing={`${text.thisMonth} ${monthLogs.length}${text.count}`} />
+            <DashboardHeader href="/life/logs" icon={<NotebookPen aria-hidden size={20} />} openLabel={text.open} title={text.dailyLog} trailing={`${text.thisMonth} ${monthLogs.length}${text.count}`} />
             <div className="today-log-stack">
               {todayLogs.length > 0 ? (
                 todayLogs.slice(0, 3).map((log) => (
@@ -410,13 +410,13 @@ export function TodayDashboard() {
                   </article>
                 ))
               ) : (
-                <EmptyBlock href="/life/logs" text={text.noDailyLog} />
+                <EmptyBlock ctaLabel={text.goRecord} href="/life/logs" text={text.noDailyLog} />
               )}
             </div>
           </SectionCard>
 
           <SectionCard className="dashboard-card today-command-card">
-            <DashboardHeader href="/life/gallery" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
+            <DashboardHeader href="/life/gallery" icon={<Camera aria-hidden size={20} />} openLabel={text.open} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
             {todayPhotos.length > 0 ? (
               <div className="today-photo-strip">
                 {todayPhotos.slice(0, 4).map((photo) => (
@@ -426,7 +426,7 @@ export function TodayDashboard() {
                 ))}
               </div>
             ) : (
-              <EmptyBlock href="/life/gallery" text={text.noPhoto} />
+              <EmptyBlock ctaLabel={text.goRecord} href="/life/gallery" text={text.noPhoto} />
             )}
           </SectionCard>
         </div>
@@ -434,7 +434,7 @@ export function TodayDashboard() {
 
       <div className="today-support-grid">
         <SectionCard className="dashboard-card today-command-card">
-          <DashboardHeader href="/life/calendar" icon={<MapPin aria-hidden size={20} />} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
+          <DashboardHeader href="/life/calendar" icon={<MapPin aria-hidden size={20} />} openLabel={text.open} title={text.todayPlaces} trailing={`${places.length}${text.places}`} />
           <div className="today-place-list">
             {places.length > 0 ? (
               places.slice(0, 5).map((place) => (
@@ -444,13 +444,13 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/calendar" text={text.noPlaces} />
+              <EmptyBlock ctaLabel={text.goRecord} href="/life/calendar" text={text.noPlaces} />
             )}
           </div>
         </SectionCard>
 
         <SectionCard className="dashboard-card today-command-card">
-          <DashboardHeader href="/ledger" icon={<WalletCards aria-hidden size={20} />} title={text.ledger} trailing={`${todayExpenses.length}\uAC74`} />
+          <DashboardHeader href="/ledger" icon={<WalletCards aria-hidden size={20} />} openLabel={text.open} title={text.ledger} trailing={`${todayExpenses.length}\uAC74`} />
           <div className="today-ledger-total">
             <span>{text.todayUsed}</span>
             <strong>{formatCurrency(todayExpenseTotal)}</strong>
@@ -467,13 +467,13 @@ export function TodayDashboard() {
                 </article>
               ))
             ) : (
-              <EmptyBlock href="/life/calendar" text={text.noLedger} />
+              <EmptyBlock ctaLabel={text.goRecord} href="/life/calendar" text={text.noLedger} />
             )}
           </div>
         </SectionCard>
 
         <SectionCard className="vitals-card today-command-card today-health-card">
-          <DashboardHeader href="/life/health" icon={<Dumbbell aria-hidden size={20} />} title={text.health} />
+          <DashboardHeader href="/life/health" icon={<Dumbbell aria-hidden size={20} />} openLabel={text.open} title={text.health} />
           <div className="today-health-grid">
             <div className="workout-plan">
               <Dumbbell aria-hidden size={18} />
@@ -498,54 +498,3 @@ export function TodayDashboard() {
   );
 }
 
-function SignalCard({ icon, label, note, value }: { icon: ReactNode; label: string; note: string; value: string }) {
-  return (
-    <SectionCard className="today-focus-card today-signal-card">
-      <span className="today-signal-card__icon">{icon}</span>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <p>{note}</p>
-    </SectionCard>
-  );
-}
-
-function QuickAction({ href, icon, label, note }: { href: string; icon: ReactNode; label: string; note: string }) {
-  return (
-    <Link className="today-quick-action" href={href}>
-      <span>
-        {icon}
-        <Plus aria-hidden size={14} />
-      </span>
-      <strong>{label}</strong>
-      <p>{note}</p>
-    </Link>
-  );
-}
-
-function DashboardHeader({ href, icon, title, trailing }: { href: string; icon: ReactNode; title: string; trailing?: string }) {
-  return (
-    <div className="section-heading">
-      <div className="card-title">
-        {icon}
-        <span>{title}</span>
-      </div>
-      <div className="today-heading-actions">
-        {trailing ? <strong>{trailing}</strong> : null}
-        <Link className="empty-dashboard-link" href={href}>
-          {text.open}
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function EmptyBlock({ href, text: message }: { href: string; text: string }) {
-  return (
-    <div className="today-empty-block">
-      <p>{message}</p>
-      <Link className="empty-dashboard-link" href={href}>
-        {text.goRecord}
-      </Link>
-    </div>
-  );
-}
