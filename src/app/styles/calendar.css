@@ -888,49 +888,17 @@
   color: var(--text);
 }
 
-.date-empty-state {
-  display: grid;
-  min-height: 240px;
-  align-content: center;
-  justify-items: center;
-  border: 1px dashed var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 28px;
-  text-align: center;
-}
-
-.date-empty-state svg {
-  color: var(--violet);
-}
-
 .date-empty-state strong {
   margin-top: 10px;
-  font-size: 18px;
 }
 
 .date-empty-state p {
   max-width: 260px;
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 14px;
+  margin-top: 6px;
 }
 
 .date-empty-state__add {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
   margin-top: 14px;
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.12);
-  color: var(--violet);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 850;
-  padding: 0 13px;
 }
 
 @keyframes detail-slide-in {

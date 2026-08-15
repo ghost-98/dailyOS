@@ -157,13 +157,13 @@
 }
 
 .calendar-filter--todo.calendar-filter--active {
-  border-color: rgba(110, 231, 183, 0.3);
-  background: rgba(110, 231, 183, 0.12);
+  border-color: var(--tone-green-border);
+  background: var(--tone-green-bg);
 }
 
 .calendar-filter--event.calendar-filter--active {
-  border-color: rgba(244, 114, 182, 0.3);
-  background: rgba(244, 114, 182, 0.12);
+  border-color: var(--tone-pink-border);
+  background: var(--tone-pink-bg);
 }
 
 .calendar-filter--muted {

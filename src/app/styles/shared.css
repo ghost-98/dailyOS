@@ -3,41 +3,82 @@
   gap: var(--space-5);
 }
 
-.empty-dashboard-card p,
-.empty-dashboard-copy {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.6;
+.ui-empty-state,
+.today-empty-block,
+.health-empty,
+.date-empty-state,
+.life-map-empty {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-frost);
+  padding: var(--card-padding-lg);
+  text-align: center;
 }
 
-.empty-dashboard-link {
+.ui-empty-state--compact,
+.today-empty-block,
+.health-empty--compact,
+.life-map-empty--compact {
+  min-height: 150px;
+}
+
+.ui-empty-state--spacious,
+.health-empty,
+.date-empty-state,
+.life-map-empty {
+  min-height: 240px;
+}
+
+.ui-empty-state svg,
+.health-empty svg,
+.date-empty-state svg,
+.life-map-empty svg {
+  color: var(--violet);
+}
+
+.ui-empty-state strong,
+.health-empty strong,
+.date-empty-state strong {
+  font-size: 18px;
+}
+
+.empty-dashboard-card p,
+.empty-dashboard-copy,
+.ui-empty-state p,
+.today-empty-block p,
+.health-empty p,
+.date-empty-state p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.empty-dashboard-link,
+.ui-empty-state__action {
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  justify-content: center;
+  min-height: var(--chip-height);
+  border: 1px solid var(--tone-muted-border);
+  border-radius: var(--radius-pill);
   background: var(--surface-soft);
-  padding: 9px 12px;
+  padding: 0 var(--chip-padding-x);
   color: var(--text);
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
 }
 
-.today-empty-block {
-  display: grid;
-  gap: var(--space-3);
-  border: 1px dashed var(--line);
-  border-radius: var(--radius-md);
-  background: var(--panel-frost);
-  padding: var(--card-padding);
-}
-
-.today-empty-block p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.55;
+.ui-empty-state__action--primary,
+.date-empty-state__add {
+  border-color: var(--tone-violet-border);
+  background: var(--tone-violet-bg);
+  color: var(--violet);
 }
 
 .ui-icon-button {
@@ -131,25 +172,25 @@
 }
 
 .ui-action-button--primary {
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.12);
+  border: 1px solid var(--tone-violet-border);
+  background: var(--tone-violet-bg);
   color: var(--text);
 }
 
 .ui-action-button--secondary {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--tone-muted-border);
   background: var(--surface-soft);
   color: var(--muted);
 }
 
 .ui-action-button--primary:hover:not(:disabled),
 .ui-action-button--secondary:hover:not(:disabled) {
-  border-color: rgba(201, 184, 255, 0.28);
+  border-color: var(--tone-violet-border);
   color: var(--text);
 }
 
 .ui-action-button--primary:hover:not(:disabled) {
-  background: rgba(201, 184, 255, 0.16);
+  background: var(--tone-violet-bg-strong);
 }
 
 .ui-action-button--secondary:hover:not(:disabled) {
@@ -188,7 +229,7 @@
 }
 
 .ui-chip-button--active {
-  border-color: rgba(201, 184, 255, 0.32);
+  border-color: var(--tone-violet-border);
   background: var(--surface-accent);
   color: var(--text);
 }

@@ -34,6 +34,16 @@
   --green: #65c9a4;
   --amber: #d9ad63;
   --blue: #8db5ff;
+  --tone-violet-bg: rgba(201, 184, 255, 0.12);
+  --tone-violet-bg-strong: rgba(201, 184, 255, 0.16);
+  --tone-violet-border: rgba(201, 184, 255, 0.28);
+  --tone-green-bg: rgba(110, 231, 183, 0.12);
+  --tone-green-border: rgba(110, 231, 183, 0.3);
+  --tone-pink-bg: rgba(244, 114, 182, 0.12);
+  --tone-pink-border: rgba(244, 114, 182, 0.3);
+  --tone-amber-bg: rgba(246, 173, 69, 0.18);
+  --tone-muted-bg: rgba(255, 255, 255, 0.1);
+  --tone-muted-border: rgba(255, 255, 255, 0.1);
   --shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   --radius: 10px;
   --radius-sm: 10px;

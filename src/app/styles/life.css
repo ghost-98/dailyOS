@@ -1019,8 +1019,8 @@
 }
 
 .life-calendar-header-modes__button--active {
-  border-color: rgba(201, 184, 255, 0.32);
-  background: rgba(201, 184, 255, 0.14);
+  border-color: var(--tone-violet-border);
+  background: var(--tone-violet-bg);
 }
 
 .life-calendar-header-modes__range {
@@ -1327,13 +1327,7 @@
 
 .life-map-empty {
   align-items: center;
-  gap: 12px;
   min-height: 260px;
-  text-align: center;
-}
-
-.life-map-empty svg {
-  color: var(--violet);
 }
 
 .ledger-page {

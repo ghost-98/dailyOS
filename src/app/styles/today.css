@@ -128,8 +128,8 @@
 }
 
 .today-plan-tab--active {
-  border-color: rgba(157, 178, 255, 0.4);
-  background: rgba(157, 178, 255, 0.14);
+  border-color: var(--tone-violet-border);
+  background: var(--tone-violet-bg);
   color: var(--text);
 }
 

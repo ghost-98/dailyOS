@@ -658,27 +658,27 @@
 }
 
 .badge--violet {
-  background: rgba(200, 182, 255, 0.18);
+  background: var(--tone-violet-bg);
   color: var(--violet);
 }
 
 .badge--green {
-  background: rgba(61, 220, 151, 0.16);
+  background: var(--tone-green-bg);
   color: var(--green);
 }
 
 .badge--pink {
-  background: rgba(255, 156, 175, 0.18);
+  background: var(--tone-pink-bg);
   color: var(--pink);
 }
 
 .badge--amber {
-  background: rgba(246, 173, 69, 0.18);
+  background: var(--tone-amber-bg);
   color: var(--amber);
 }
 
 .badge--muted {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tone-muted-bg);
   color: var(--muted);
 }
 
