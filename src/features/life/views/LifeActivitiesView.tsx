@@ -12,6 +12,7 @@ import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
+import { confirmAction } from "@/lib/actionGuards";
 import type { LifeActivityRecord, LifeMediaUploadInput, PersonRecord, PlanPlace } from "@/types/domain";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 
@@ -243,6 +244,7 @@ export function LifeActivitiesView({
       setFormError("종료 시간은 시작 시간보다 뒤여야 합니다.");
       return;
     }
+    if (!confirmAction(editing ? "활동 수정을 저장할까요?" : "활동을 저장할까요?")) return;
 
     saveLockRef.current = true;
     setIsSaving(true);
@@ -297,6 +299,7 @@ export function LifeActivitiesView({
       setFormError(`${label} 시간은 비워둘 수 없어요.`);
       return;
     }
+    if (!confirmAction(`${label} 기록을 저장할까요?`)) return;
 
     saveLockRef.current = true;
     setIsSaving(true);
@@ -346,6 +349,7 @@ export function LifeActivitiesView({
   };
 
   const removeCustomCategory = (target: string) => {
+    if (!confirmAction(`"${target}" 태그를 삭제할까요?`)) return;
     setCustomCategories((current) => current.filter((item) => item !== target));
     if (category === target) setCategory(DEFAULT_CATEGORY);
   };

@@ -9,6 +9,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
+import { confirmAction } from "@/lib/actionGuards";
 import type { ExpenseCategory, ExpenseRecord, IncomeCategory, IncomeRecord } from "@/types/domain";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
@@ -99,6 +100,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
     const trimmedTitle = incomeTitle.trim();
     const amount = Number(incomeAmount);
     if (!trimmedTitle || !Number.isFinite(amount) || amount <= 0 || isSavingIncome) return;
+    if (!confirmAction("수입 기록을 저장할까요?")) return;
 
     setIsSavingIncome(true);
     try {
@@ -123,6 +125,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   };
 
   const removeIncome = async (id: string) => {
+    if (!confirmAction("이 수입 기록을 삭제할까요?")) return;
     setDeletingIncomeId(id);
     try {
       await deleteIncomeRecordFromDb(id);

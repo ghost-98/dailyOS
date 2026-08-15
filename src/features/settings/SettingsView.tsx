@@ -5,6 +5,7 @@ import { Bell, Database, Download, LogOut, Mail, Save, Settings, ShieldCheck, Tr
 import { useEffect, useRef, useState } from "react";
 import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { confirmAction } from "@/lib/actionGuards";
 import { supabase } from "@/lib/supabase";
 import { deleteDailyOSData, downloadDailyOSExport, exportDailyOSData, importDailyOSData } from "./dataManagement";
 
@@ -36,6 +37,7 @@ export function SettingsView() {
       setSaveMessage("이름을 입력해 주세요.");
       return;
     }
+    if (!confirmAction("계정 정보를 저장할까요?")) return;
 
     const { error: profileError } = await supabase.from("profiles").upsert({
       birth_date: profile?.birthDate ?? null,

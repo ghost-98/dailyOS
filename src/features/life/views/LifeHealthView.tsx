@@ -15,6 +15,7 @@ import {
 import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatRunDuration } from "@/features/life/reconstruction";
+import { confirmAction } from "@/lib/actionGuards";
 import type { WeightRecord, WorkoutSession } from "@/types/domain";
 
 export function LifeHealthView({
@@ -64,6 +65,7 @@ export function LifeHealthView({
     const parsedSeconds = Number(durationSeconds) || 0;
     const parsedTotalSeconds = parsedMinutes * 60 + parsedSeconds;
     if (!parsedDistance || parsedTotalSeconds <= 0) return;
+    if (!confirmAction(editingRunId ? "러닝 기록 수정을 저장할까요?" : "러닝 기록을 저장할까요?")) return;
 
     setIsSavingRunning(true);
     try {
@@ -100,6 +102,7 @@ export function LifeHealthView({
   };
 
   const deleteRunning = async (id: string) => {
+    if (!confirmAction("이 러닝 기록을 삭제할까요?")) return;
     setDeletingRunId(id);
     try {
       await deleteWorkoutSessionFromDb(id);
@@ -120,6 +123,7 @@ export function LifeHealthView({
   const saveMorningWeight = async () => {
     const parsedWeight = Number(weightKg);
     if (!parsedWeight) return;
+    if (!confirmAction(selectedWeight ? "체중 수정을 저장할까요?" : "체중을 저장할까요?")) return;
 
     setIsSavingWeight(true);
     try {
@@ -147,6 +151,7 @@ export function LifeHealthView({
 
   const deleteMorningWeight = async () => {
     if (!selectedWeight) return;
+    if (!confirmAction("이 체중 기록을 삭제할까요?")) return;
 
     setDeletingWeightId(selectedWeight.id);
     try {

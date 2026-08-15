@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverMap, NaverMarker } from "@/lib/naverMap";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
@@ -168,6 +169,7 @@ export function PlacesView() {
   };
 
   const savePlaceFolders = async (place: PlaceRecord, folderIds: string[]) => {
+    if (!confirmAction("장소 저장 내용을 적용할까요?")) return;
     const uniqueFolderIds = [...new Set(folderIds)];
     const existingPlace = places.find((item) => isSamePlace(item, place));
 
@@ -211,6 +213,7 @@ export function PlacesView() {
   };
 
   const deletePlace = async (id: string) => {
+    if (!confirmAction("이 장소를 삭제할까요?")) return;
     const targetPlace = places.find((place) => place.id === id || place.sourceIds?.includes(id));
     const targetIds = targetPlace?.sourceIds ?? [id];
 
@@ -232,6 +235,7 @@ export function PlacesView() {
   };
 
   const saveFolder = async (folder: PlaceFolder) => {
+    if (!confirmAction(folder.id ? "폴더 수정을 저장할까요?" : "폴더를 저장할까요?")) return false;
     try {
       const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
       if (!savedFolder) return false;
@@ -250,6 +254,7 @@ export function PlacesView() {
   };
 
   const deleteFolder = async (folderId: string) => {
+    if (!confirmAction("이 폴더를 삭제할까요? 연결된 장소 분류도 함께 정리됩니다.")) return;
     const targetFolder = folders.find((folder) => folder.id === folderId);
     try {
       const didDelete = await deletePlaceFolderFromDb(folderId);

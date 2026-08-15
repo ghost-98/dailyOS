@@ -23,6 +23,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
+import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
 import type { EventType, PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
@@ -219,6 +220,7 @@ export function CalendarView({
 
   const saveEvent = async (event: CalendarEvent) => {
     if (isSavingEvent) return;
+    if (!confirmAction(editingEvent ? "일정/이벤트 수정을 저장할까요?" : "일정/이벤트를 저장할까요?")) return;
     setIsSavingEvent(true);
     try {
       const exists = events.some((item) => item.id === event.id);
@@ -248,6 +250,7 @@ export function CalendarView({
 
   const deleteEvent = async (id: string) => {
     if (deletingPlan) return;
+    if (!confirmAction("이 일정/이벤트를 삭제할까요?")) return;
     setDeletingPlan({ id, type: "event" });
     try {
       const targetEvent = events.find((event) => event.id === id);
@@ -262,6 +265,7 @@ export function CalendarView({
 
   const saveTask = async (task: TaskItem) => {
     if (isSavingTask) return;
+    if (!confirmAction(editingTask ? "할 일 수정을 저장할까요?" : "할 일을 저장할까요?")) return;
     setIsSavingTask(true);
     try {
       const exists = tasks.some((item) => item.id === task.id);
@@ -287,6 +291,7 @@ export function CalendarView({
 
   const deleteTask = async (id: string) => {
     if (deletingPlan) return;
+    if (!confirmAction("이 할 일을 삭제할까요?")) return;
     setDeletingPlan({ id, type: "task" });
     try {
       await deleteTaskFromDb(id);
@@ -299,6 +304,7 @@ export function CalendarView({
   };
 
   const toggleTaskDone = async (task: TaskItem) => {
+    if (!confirmAction(task.status === "done" ? "이 할 일을 미완료로 되돌릴까요?" : "이 할 일을 완료 처리할까요?")) return;
     const nextTask: TaskItem = {
       ...task,
       status: task.status === "done" ? "todo" : "done",

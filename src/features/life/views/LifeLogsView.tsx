@@ -11,6 +11,7 @@ import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { fetchTasksFromDb } from "@/features/tasks/api";
+import { confirmAction } from "@/lib/actionGuards";
 import type { DailyLogRecord, LifeActivityRecord, TaskItem } from "@/types/domain";
 
 export function LifeLogsView({
@@ -59,6 +60,7 @@ export function LifeLogsView({
   const saveLog = async () => {
     const trimmedContent = content.trim();
     if (!trimmedContent) return;
+    if (!confirmAction(editingLogId ? "하루 기록 수정을 저장할까요?" : "하루 기록을 저장할까요?")) return;
 
     setIsSaving(true);
     setFormError("");
@@ -97,6 +99,7 @@ export function LifeLogsView({
   };
 
   const deleteLog = async (id: string) => {
+    if (!confirmAction("이 하루 기록을 삭제할까요?")) return;
     setDeletingLogId(id);
     setFormError("");
     setMessage("");
