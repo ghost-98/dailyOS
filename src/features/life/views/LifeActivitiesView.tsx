@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
-import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
+import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
@@ -224,27 +224,6 @@ export function LifeActivitiesView({
     setMessage("활동 기록을 불러왔어요.");
   };
 
-  const startNow = () => {
-    const today = formatDateKey(new Date());
-    selectDate(today);
-    setHasTime(true);
-    setHasEndTime(false);
-    setStartTime(getDefaultActivityTime());
-    setEndTime("");
-    setMessage("지금 시작한 활동 기준으로 시간을 맞췄어요.");
-  };
-
-  const finishRecent = () => {
-    const endMinutes = parseTimeToMinutes(getDefaultActivityTime()) ?? 0;
-    const today = formatDateKey(new Date());
-    selectDate(today);
-    setHasTime(true);
-    setHasEndTime(true);
-    setStartTime(formatMinutesLabel(Math.max(0, endMinutes - 60)));
-    setEndTime(formatMinutesLabel(endMinutes));
-    setMessage("최근 1시간 활동 기준으로 시간을 맞췄어요.");
-  };
-
   const saveActivity = async () => {
     if (saveLockRef.current || isSaving) return;
     if (!title.trim()) return;
@@ -426,12 +405,6 @@ export function LifeActivitiesView({
                   사진 · 영상
                 </button>
               </div>
-              {inputPanelMode === "activity" ? (
-              <div className="life-activity-action-group">
-                <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
-                <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
-              </div>
-              ) : null}
               {inputPanelMode === "activity" ? (
               <div className="life-activity-action-group life-activity-action-group--accent">
                 <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
