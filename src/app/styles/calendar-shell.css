@@ -161,6 +161,11 @@
   background: var(--tone-pink-bg);
 }
 
+.calendar-filter--record.calendar-filter--active {
+  border-color: rgba(96, 165, 250, 0.26);
+  background: rgba(96, 165, 250, 0.12);
+}
+
 .calendar-filter--muted {
   opacity: 0.5;
 }

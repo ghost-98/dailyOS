@@ -68,10 +68,11 @@ export function CalendarView({
   viewMode = "manage",
   title = "이벤트",
 }: CalendarViewProps) {
+  type CalendarVisualFilter = CalendarCategory | "record";
   const isDatabaseView = viewMode === "database";
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
-  const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarCategory[]>([]);
+  const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarVisualFilter[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -93,7 +94,10 @@ export function CalendarView({
   const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
-  const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
+  const visibleCalendarCategories = calendarCategoryFilters.length > 0
+    ? categories.filter((type) => calendarCategoryFilters.includes(type))
+    : categories;
+  const recordFilterEnabled = isDatabaseView && (calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes("record"));
   const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
@@ -107,7 +111,10 @@ export function CalendarView({
   }, [currentMonth, dbScope, detailAnchorDate, isDatabaseView, rangeEnd, rangeStart]);
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
-  const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
+  const selectedExternalItems = useMemo(
+    () => (selectedDate ? externalItems.filter((item) => item.date === selectedDate && (!isDatabaseView || recordFilterEnabled)) : []),
+    [externalItems, isDatabaseView, recordFilterEnabled, selectedDate],
+  );
   const periodEvents = useMemo(
     () => visibleEvents.filter((event) => event.type === "event" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
     [periodBounds.end, periodBounds.start, visibleEvents],
@@ -117,8 +124,8 @@ export function CalendarView({
     [periodBounds.end, periodBounds.start, tasks],
   );
   const periodExternalItems = useMemo(
-    () => externalItems.filter((item) => item.date >= periodBounds.start && item.date <= periodBounds.end),
-    [externalItems, periodBounds.end, periodBounds.start],
+    () => externalItems.filter((item) => item.date >= periodBounds.start && item.date <= periodBounds.end && (!isDatabaseView || recordFilterEnabled)),
+    [externalItems, isDatabaseView, periodBounds.end, periodBounds.start, recordFilterEnabled],
   );
   const selectedTimelineItems = useMemo(
     () =>
@@ -181,9 +188,14 @@ export function CalendarView({
     setSelectedDate(date);
   };
 
-  const toggleCalendarCategoryFilter = (type: CalendarCategory) => {
+  const toggleCalendarCategoryFilter = (type: CalendarVisualFilter) => {
     setCalendarCategoryFilters((current) => (current.includes(type) ? current.filter((item) => item !== type) : [...current, type]));
   };
+
+  const filterTypes = useMemo(
+    () => (isDatabaseView ? [...categories, "record"] as CalendarVisualFilter[] : categories),
+    [categories, isDatabaseView],
+  );
 
   const openCreateEventSheet = (type: CalendarCategory) => {
     setIsAddMenuOpen(false);
@@ -510,19 +522,21 @@ export function CalendarView({
 
           {!(isDatabaseView && dbScope === "day") ? (
             <div className="calendar-filters" aria-label="표시 항목">
-              {categories.map((type) => (
+              {filterTypes.map((type) => {
+                const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
+                const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
+                return (
                 <button
-                  className={`calendar-filter calendar-filter--${type} ${
-                    calendarCategoryFilters.includes(type) ? "calendar-filter--active" : ""
-                  } ${calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+                  className={`calendar-filter calendar-filter--${type} ${isFilterActive ? "calendar-filter--active" : ""} ${isFilterMuted ? "calendar-filter--muted" : ""}`}
                   key={type}
                   onClick={() => toggleCalendarCategoryFilter(type)}
                   type="button"
                 >
                   <span className={`calendar-dot calendar-dot--${type}`} />
-                  {categoryLabels[type]}
+                  {type === "record" ? "기록" : categoryLabels[type]}
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : null}
 
@@ -538,7 +552,7 @@ export function CalendarView({
                 ? visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory))
                 : [];
               const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
-              const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date) : [];
+              const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled)) : [];
               const eventSummary = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
               return (
                 <button
@@ -555,21 +569,18 @@ export function CalendarView({
                         {eventSummary.todoCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--todo">
                             <i aria-hidden className="calendar-day__signal-dot" />
-                            <span>할 일</span>
                             <b>{eventSummary.todoCount}</b>
                           </span>
                         ) : null}
                         {eventSummary.eventCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--event">
                             <i aria-hidden className="calendar-day__signal-dot" />
-                            <span>이벤트</span>
                             <b>{eventSummary.eventCount}</b>
                           </span>
                         ) : null}
                         {eventSummary.recordCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--record">
                             <i aria-hidden className="calendar-day__signal-dot" />
-                            <span>기록</span>
                             <b>{eventSummary.recordCount}</b>
                           </span>
                         ) : null}
