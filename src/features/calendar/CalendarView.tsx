@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
@@ -455,10 +456,13 @@ export function CalendarView({
               </button>
             ))}
             {dbScope === "range" ? (
-              <div className="life-calendar-header-modes__range">
-                <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
-                <span>~</span>
-                <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
+              <div className="life-calendar-header-modes__range ui-form-grid ui-form-grid--compact">
+                <FormField label="시작일">
+                  <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
+                </FormField>
+                <FormField label="종료일">
+                  <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
+                </FormField>
               </div>
             ) : null}
           </div>
@@ -1244,7 +1248,7 @@ function LifeCalendarDatabasePanel({
           <div className="life-calendar-db-section__head">
             <div className="life-calendar-db-section__head life-calendar-db-section__head--canvas">
               <h3>기록으로 보는 하루</h3>
-              <p className="eyebrow">DAY CANVAS</p>
+              <p className="eyebrow">하루 캔버스</p>
             </div>
           </div>
           <LifeCalendarDayPanel isLoading={isLoading} items={items} />

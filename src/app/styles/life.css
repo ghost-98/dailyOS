@@ -1024,26 +1024,19 @@
 }
 
 .life-calendar-header-modes__range {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  align-items: end;
+  gap: 10px;
   margin-left: 6px;
+}
+
+.life-calendar-header-modes__range .ui-form-field {
+  min-width: 0;
 }
 
 .life-calendar-header-modes__range input {
   min-height: var(--chip-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  color: var(--text);
-  font: inherit;
-  padding: 0 var(--field-padding-x);
-}
-
-.life-calendar-header-modes__range span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
 }
 
 .life-db-hero--dashboard {
