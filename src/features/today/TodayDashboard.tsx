@@ -16,7 +16,7 @@ import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
-type TimelineKind = "schedule" | "task" | "event" | "activity" | "log" | "photo" | "expense" | "workout" | "weight";
+type TimelineKind = "task" | "event" | "activity" | "log" | "photo" | "expense" | "workout" | "weight";
 
 type TimelineItem = {
   id: string;
@@ -52,7 +52,7 @@ const text = {
   photoVideo: "사진·영상",
   noPhoto: "오늘의 사진이나 영상을 올리면 메타데이터와 함께 보입니다.",
   todayPlaces: "오늘 간 장소",
-  noPlaces: "일정이나 할 일, 활동에 장소를 연결하면 자동으로 모입니다.",
+  noPlaces: "이벤트나 할 일, 활동에 장소를 연결하면 자동으로 모입니다.",
   ledger: "가계부",
   todayUsed: "오늘 사용",
   noLedger: "활동이나 계획에서 지출이 생기면 자동으로 집계합니다.",
@@ -69,13 +69,11 @@ const text = {
   unknownTime: "시간 미정",
   unknownSize: "용량 미기록",
   noDetail: "상세 없음",
-  scheduleDetail: "일정 상세 없음",
   eventDetail: "이벤트 상세 없음",
   fasted: "공복 측정",
 };
 
 const kindLabel: Record<TimelineKind, string> = {
-  schedule: "일정",
   task: "할 일",
   event: "이벤트",
   activity: "활동",
@@ -143,7 +141,6 @@ function getTimelineSortMinutes(timeLabel: string, kind: TimelineKind) {
   const [hours, minutes] = timeLabel.slice(0, 5).split(":").map(Number);
   if (Number.isFinite(hours) && Number.isFinite(minutes)) return hours * 60 + minutes;
   const fallbackOrder: Record<TimelineKind, number> = {
-    schedule: 0,
     task: 1,
     event: 2,
     activity: 3,
@@ -225,7 +222,6 @@ export function TodayDashboard() {
     };
   }, [todayKey]);
 
-  const todaySchedules = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "schedule");
   const todayEvents = events.filter((event) => isDateInRange(todayKey, event.date, event.endDate) && event.type === "event");
   const todayTasks = tasks.filter((task) => isDateInRange(todayKey, task.scheduledDate, task.dueDate));
   const todayActivities = activities.filter((activity) => activity.date === todayKey);
@@ -244,7 +240,6 @@ export function TodayDashboard() {
   const monthPhotos = lifePhotos.filter((photo) => photo.date.startsWith(monthKey));
 
   const places = [
-    ...todaySchedules.flatMap((event) => (event.place ? [event.place] : [])),
     ...todayEvents.flatMap((event) => (event.place ? [event.place] : [])),
     ...todayTasks.flatMap((task) => (task.place ? [task.place] : [])),
     ...todayActivities.flatMap((activity) =>
@@ -263,14 +258,6 @@ export function TodayDashboard() {
   ].filter((place, index, list) => list.findIndex((candidate) => getPlaceKey(candidate) === getPlaceKey(place)) === index);
 
   const timelineItems = [
-    ...todaySchedules.map<TimelineItem>((event) => ({
-      id: `schedule-${event.id}`,
-      title: event.title,
-      description: event.place?.name ?? event.meta ?? text.scheduleDetail,
-      timeLabel: formatEventTime(event),
-      tone: "violet",
-      kind: "schedule",
-    })),
     ...todayTasks.map<TimelineItem>((task) => ({
       id: `task-${task.id}`,
       title: task.title,
@@ -341,8 +328,8 @@ export function TodayDashboard() {
       : []),
   ].sort((left, right) => getTimelineSortMinutes(left.timeLabel, left.kind) - getTimelineSortMinutes(right.timeLabel, right.kind));
 
-  const lifeScore = todaySchedules.length + todayEvents.length + todayTasks.length + todayActivities.length + todayLogs.length + todayPhotos.length + todayExpenses.length + todayWorkouts.length;
-  const plannedBlocks = todaySchedules.length + todayEvents.length + todayTasks.length;
+  const lifeScore = todayEvents.length + todayTasks.length + todayActivities.length + todayLogs.length + todayPhotos.length + todayExpenses.length + todayWorkouts.length;
+  const plannedBlocks = todayEvents.length + todayTasks.length;
   const evidenceBlocks = todayActivities.length + todayLogs.length + todayPhotos.length + todayWorkouts.length;
   const coverageLabel = plannedBlocks === 0 ? "계획 없음" : `${Math.min(100, Math.round((evidenceBlocks / Math.max(plannedBlocks, 1)) * 100))}%`;
   const missingSignals = [
@@ -381,7 +368,7 @@ export function TodayDashboard() {
 
       <section className="today-quick-actions" aria-label="오늘 빠른 입력">
         <QuickAction href="/life/activities" icon={<Activity aria-hidden size={18} />} label="활동 기록" note="몇 시부터 어디서 뭘 했는지" />
-        <QuickAction href="/life/calendar" icon={<CalendarDays aria-hidden size={18} />} label="계획 입력" note="일정·할일·이벤트" />
+        <QuickAction href="/life/calendar" icon={<CalendarDays aria-hidden size={18} />} label="계획 입력" note="할 일·이벤트" />
         <QuickAction href="/life/logs" icon={<NotebookPen aria-hidden size={18} />} label="하루기록" note="짧은 감상과 맥락" />
         <QuickAction href="/life/activities" icon={<Camera aria-hidden size={18} />} label="사진 추가" note="활동 기록 안에서 미디어도 같이 입력" />
         <QuickAction href="/life/health" icon={<Dumbbell aria-hidden size={18} />} label="건강 기록" note="러닝·몸무게" />

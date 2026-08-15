@@ -65,7 +65,7 @@ export function CalendarView({
   externalItems = [],
   showEventAddButton = false,
   viewMode = "manage",
-  title = "일정",
+  title = "이벤트",
 }: CalendarViewProps) {
   const isDatabaseView = viewMode === "database";
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
@@ -79,7 +79,7 @@ export function CalendarView({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
-  const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
+  const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("event");
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<{ id: string; type: "event" | "task" } | null>(null);
@@ -104,14 +104,9 @@ export function CalendarView({
     if (dbScope === "range") return normalizeRangeBounds(rangeStart, rangeEnd);
     return { end: detailAnchorDate, start: detailAnchorDate };
   }, [currentMonth, dbScope, detailAnchorDate, isDatabaseView, rangeEnd, rangeStart]);
-  const selectedSchedules = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule") : []), [selectedDate, visibleEvents]);
   const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
   const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
   const selectedExternalItems = useMemo(() => (selectedDate ? externalItems.filter((item) => item.date === selectedDate) : []), [externalItems, selectedDate]);
-  const periodSchedules = useMemo(
-    () => visibleEvents.filter((event) => event.type === "schedule" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
-    [periodBounds.end, periodBounds.start, visibleEvents],
-  );
   const periodEvents = useMemo(
     () => visibleEvents.filter((event) => event.type === "event" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
     [periodBounds.end, periodBounds.start, visibleEvents],
@@ -127,17 +122,15 @@ export function CalendarView({
   const selectedTimelineItems = useMemo(
     () =>
       [
-        ...selectedSchedules.map((event) => createEventTimelineItem(event)),
         ...selectedTasks.map((task) => createTaskTimelineItem(task)),
         ...selectedEvents.map((event) => createEventTimelineItem(event)),
         ...selectedExternalItems.map((external) => createExternalTimelineItem(external)),
       ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type)),
-    [selectedEvents, selectedExternalItems, selectedSchedules, selectedTasks],
+    [selectedEvents, selectedExternalItems, selectedTasks],
   );
   const periodTimelineItems = useMemo(
     () =>
       [
-        ...periodSchedules.map((event) => createEventTimelineItem(event)),
         ...periodTasks.map((task) => createTaskTimelineItem(task)),
         ...periodEvents.map((event) => createEventTimelineItem(event)),
         ...periodExternalItems.map((external) => createExternalTimelineItem(external)),
@@ -147,30 +140,28 @@ export function CalendarView({
         if (firstDate !== secondDate) return firstDate.localeCompare(secondDate);
         return first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type);
       }),
-    [periodEvents, periodExternalItems, periodSchedules, periodTasks],
+    [periodEvents, periodExternalItems, periodTasks],
   );
   const countsByCategory = useMemo(() => {
     if (isDatabaseView) {
       return {
-        schedule: periodSchedules.length,
         event: periodEvents.length,
         todo: periodTasks.length,
       };
     }
-    if (!selectedDate) return { schedule: 0, event: 0, todo: 0 };
+    if (!selectedDate) return { event: 0, todo: 0 };
     return {
-      schedule: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "schedule").length,
       event: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event").length,
       todo: selectedTasks.length,
     };
-  }, [isDatabaseView, periodEvents.length, periodSchedules.length, periodTasks.length, selectedDate, selectedTasks.length, visibleEvents]);
+  }, [isDatabaseView, periodEvents.length, periodTasks.length, selectedDate, selectedTasks.length, visibleEvents]);
   const selectedPlanPlaces = useMemo(() => {
-    const sourceItems = isDatabaseView ? [...periodSchedules, ...periodEvents, ...periodTasks] : [...selectedSchedules, ...selectedEvents, ...selectedTasks];
+    const sourceItems = isDatabaseView ? [...periodEvents, ...periodTasks] : [...selectedEvents, ...selectedTasks];
     return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
-  }, [isDatabaseView, periodEvents, periodSchedules, periodTasks, selectedEvents, selectedSchedules, selectedTasks]);
+  }, [isDatabaseView, periodEvents, periodTasks, selectedEvents, selectedTasks]);
   const periodDaySummaries = useMemo(
-    () => buildPeriodDaySummaries(periodBounds.start, periodBounds.end, periodSchedules, periodEvents, periodTasks, periodExternalItems),
-    [periodBounds.end, periodBounds.start, periodEvents, periodExternalItems, periodSchedules, periodTasks],
+    () => buildPeriodDaySummaries(periodBounds.start, periodBounds.end, periodEvents, periodTasks, periodExternalItems),
+    [periodBounds.end, periodBounds.start, periodEvents, periodExternalItems, periodTasks],
   );
   const visibleTimelineItems = useMemo(() => {
     if (!isDatabaseView) return selectedTimelineItems;
@@ -220,15 +211,15 @@ export function CalendarView({
 
   const saveEvent = async (event: CalendarEvent) => {
     if (isSavingEvent) return;
-    if (!confirmAction(editingEvent ? "일정/이벤트 수정을 저장할까요?" : "일정/이벤트를 저장할까요?")) return;
+    if (!confirmAction(editingEvent ? "이벤트 수정을 저장할까요?" : "이벤트를 저장할까요?")) return;
     setIsSavingEvent(true);
     try {
       const exists = events.some((item) => item.id === event.id);
       const previousEvent = events.find((item) => item.id === event.id);
       const savedEvent = exists ? await updateCalendarEventInDb(event) : await createCalendarEventInDb(event);
       const nextEvent = savedEvent ?? event;
-      const nextTargetType = nextEvent.type === "event" ? "event" : "schedule";
-      const previousTargetType = previousEvent?.type === "event" ? "event" : previousEvent ? "schedule" : nextTargetType;
+      const nextTargetType = "event";
+      const previousTargetType = previousEvent ? "event" : nextTargetType;
       if (previousEvent && previousTargetType !== nextTargetType) await deleteLinkedExpenseRecordInDb(previousTargetType, nextEvent.id);
       await syncLinkedExpenseRecordInDb({
         amount: nextEvent.expenseAmount,
@@ -250,13 +241,13 @@ export function CalendarView({
 
   const deleteEvent = async (id: string) => {
     if (deletingPlan) return;
-    if (!confirmAction("이 일정/이벤트를 삭제할까요?")) return;
+    if (!confirmAction("이 이벤트를 삭제할까요?")) return;
     setDeletingPlan({ id, type: "event" });
     try {
       const targetEvent = events.find((event) => event.id === id);
       await deleteCalendarEventFromDb(id);
-      if (targetEvent) await deleteLinkedExpenseRecordInDb(targetEvent.type === "event" ? "event" : "schedule", id);
-      if (targetEvent) await deleteLifeActivitiesBySourceFromDb(targetEvent.type === "event" ? "event" : "schedule", id);
+      if (targetEvent) await deleteLinkedExpenseRecordInDb("event", id);
+      if (targetEvent) await deleteLifeActivitiesBySourceFromDb("event", id);
       setEvents((current) => current.filter((item) => item.id !== id));
     } finally {
       setDeletingPlan(null);
@@ -316,7 +307,7 @@ export function CalendarView({
 
   const createActivityFromEvent = async (event: CalendarEvent) => {
     const conversionDate = selectedDate && isDateInRange(selectedDate, event.date, event.endDate) ? selectedDate : event.date;
-    const targetType = event.type === "event" ? "event" : "schedule";
+    const targetType = "event";
     setConvertingToActivity({ id: event.id, type: "event" });
     setActivityConversionMessage("");
 
@@ -328,7 +319,7 @@ export function CalendarView({
         endTime: event.isAllDay ? undefined : event.endTime,
         isAllDay: event.isAllDay,
         title: event.title,
-        category: event.type === "event" ? "이벤트" : "일정",
+        category: "이벤트",
         companions: event.companions,
         expenseAmount: event.expenseAmount,
         memo: event.meta ? `${event.meta} · ${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록` : `${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록`,
@@ -480,10 +471,6 @@ export function CalendarView({
             </button>
             {isAddMenuOpen ? (
               <div className="add-menu__panel" role="menu">
-                <button onClick={() => openCreateEventSheet("schedule")} role="menuitem" type="button">
-                  <span className="calendar-dot calendar-dot--schedule" />
-                  일정 추가
-                </button>
                 {showEventAddButton && categories.includes("event") ? (
                   <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
                     <span className="calendar-dot calendar-dot--event" />
@@ -641,7 +628,7 @@ export function CalendarView({
         <EventCreateSheet
           allowedTypes={categories.filter((type) => type !== "todo")}
           defaultDate={selectedDate ?? formatDateKey(currentMonth)}
-          defaultType={sheetDefaultType === "todo" ? "schedule" : sheetDefaultType}
+          defaultType={sheetDefaultType === "todo" ? "event" : sheetDefaultType}
           event={editingEvent}
           isSaving={isSavingEvent}
           onClose={() => {
@@ -1237,13 +1224,6 @@ function LifeCalendarDatabasePanel({
           </article>
           <div className="life-calendar-day-events">
             <article className="life-calendar-day-events__card">
-              <span>일정</span>
-              <strong>{dayEventCounts.schedule}건</strong>
-              <div className="life-calendar-day-events__list">
-                {dayEventGroups.schedule.length > 0 ? dayEventGroups.schedule.map((item) => <p key={item.id}><b>{item.meta}</b>{item.title}</p>) : <p>등록된 일정이 없어요.</p>}
-              </div>
-            </article>
-            <article className="life-calendar-day-events__card">
               <span>할 일</span>
               <strong>{dayEventCounts.todo}건</strong>
               <div className="life-calendar-day-events__list">
@@ -1288,7 +1268,7 @@ function LifeCalendarDatabasePanel({
 
 type DayDetailView = "activities" | "map" | "photos" | null;
 type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "activity" };
-type DayEventPreview = { id: string; meta: string; title: string; type: "event" | "schedule" | "todo" };
+type DayEventPreview = { id: string; meta: string; title: string; type: "event" | "todo" };
 type DayLogItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "daily_log" };
 type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
 type DayStandalonePhotoGroup = { id: string; items: DayPhotoItem[]; sortMinutes: number; timeLabel: string };
@@ -1876,28 +1856,27 @@ function getPeriodNarrative(
 function getDayEventCounts(items: DayTimelineItem[]) {
   return items.reduce(
     (counts, item) => {
-      if ("event" in item) counts[item.event.type as "schedule" | "event"] += 1;
+      if ("event" in item) counts.event += 1;
       if ("task" in item) counts.todo += 1;
       return counts;
     },
-    { event: 0, schedule: 0, todo: 0 },
+    { event: 0, todo: 0 },
   );
 }
 
 function buildDayEventGroups(items: DayTimelineItem[]) {
-  const groups: Record<"event" | "schedule" | "todo", DayEventPreview[]> = {
+  const groups: Record<"event" | "todo", DayEventPreview[]> = {
     event: [],
-    schedule: [],
     todo: [],
   };
 
   items.forEach((item) => {
     if ("event" in item) {
-      groups[item.event.type as "schedule" | "event"].push({
+      groups.event.push({
         id: item.id,
         meta: item.timeLabel === "하루종일" ? "종일" : item.timeLabel,
         title: item.event.title,
-        type: item.event.type as "schedule" | "event",
+        type: "event",
       });
       return;
     }
@@ -1914,7 +1893,6 @@ function buildDayEventGroups(items: DayTimelineItem[]) {
 
   return {
     event: groups.event.slice(0, 3),
-    schedule: groups.schedule.slice(0, 3),
     todo: groups.todo.slice(0, 3),
   };
 }
@@ -2156,8 +2134,7 @@ function getPhotoStopName(photo: ExternalCalendarItem) {
   return `${timeLabel} ${subject}`;
 }
 
-function getLinkedTargetTypeLabel(type?: "schedule" | "todo" | "event" | "activity") {
-  if (type === "schedule") return "일정";
+function getLinkedTargetTypeLabel(type?: "todo" | "event" | "activity") {
   if (type === "todo") return "할 일";
   if (type === "event") return "이벤트";
   if (type === "activity") return "활동";
@@ -2210,29 +2187,20 @@ function getTimelineItemDate(item: DayTimelineItem) {
   return item.external.date;
 }
 
-function buildPeriodDaySummaries(
-  start: string,
-  end: string,
-  schedules: CalendarEvent[],
-  events: CalendarEvent[],
-  tasks: TaskItem[],
-  externalItems: ExternalCalendarItem[],
-) {
+function buildPeriodDaySummaries(start: string, end: string, events: CalendarEvent[], tasks: TaskItem[], externalItems: ExternalCalendarItem[]) {
   const allDates = enumerateDates(start, end);
   return allDates
     .map((date) => {
-      const daySchedules = schedules.filter((item) => isDateInRange(date, item.date, item.endDate));
       const dayEvents = events.filter((item) => isDateInRange(date, item.date, item.endDate));
       const dayTasks = tasks.filter((item) => isDateInRange(date, item.scheduledDate, item.dueDate));
       const dayExternalItems = externalItems.filter((item) => item.date === date);
       const items = [
-        ...daySchedules.map((item) => createEventTimelineItem(item)),
         ...dayTasks.map((item) => createTaskTimelineItem(item)),
         ...dayEvents.map((item) => createEventTimelineItem(item)),
         ...dayExternalItems.map((item) => createExternalTimelineItem(item)),
       ];
       const places = uniquePlanPlaces(
-        [...daySchedules, ...dayEvents, ...dayTasks]
+        [...dayEvents, ...dayTasks]
           .map((item) => item.place)
           .filter((place): place is PlanPlace => Boolean(place)),
       );
@@ -2245,7 +2213,7 @@ function buildPeriodDaySummaries(
         healthCount: dayExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
         items,
         placeCount: places.length,
-        planCount: daySchedules.length + dayEvents.length + dayTasks.length,
+        planCount: dayEvents.length + dayTasks.length,
         recordCount: dayExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
         totalCount: items.length,
       } satisfies PeriodDaySummary;
@@ -2277,9 +2245,8 @@ function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
 }
 
 function createActivitySourceFromEvent(event: CalendarEvent) {
-  const sourceType = event.type === "event" ? "event" : "schedule";
   return {
-    category: event.type === "event" ? "이벤트" : "일정",
+    category: "이벤트",
     companions: event.companions,
     date: event.date,
     endTime: event.endTime,
@@ -2289,7 +2256,7 @@ function createActivitySourceFromEvent(event: CalendarEvent) {
     placeAddress: event.place?.address,
     placeName: event.place?.name,
     sourceId: event.id,
-    sourceType,
+    sourceType: "event",
     startTime: event.time,
     title: event.title,
   } satisfies Parameters<typeof updateLifeActivitiesBySourceInDb>[0];
@@ -2316,10 +2283,10 @@ function createActivitySourceFromTask(task: TaskItem) {
 function createEventTimelineItem(event: CalendarEvent): DayTimelineItem {
   return {
     event,
-    id: `${event.type}-${event.id}`,
+    id: `event-${event.id}`,
     sortMinutes: getTimelineSortMinutes(event.time, event.isAllDay),
     timeLabel: getTimelineTimeLabel(event.time, event.isAllDay),
-    type: event.type as "schedule" | "event",
+    type: "event",
   };
 }
 
@@ -2393,7 +2360,6 @@ function formatExpenseAmount(amount: number) {
 
 function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory) {
   const order: Record<CalendarCategory | ExternalCalendarCategory, number> = {
-    schedule: 0,
     todo: 1,
     event: 2,
     activity: 3,

@@ -1,16 +1,14 @@
 import type { TaskPriority, TaskStatus } from "@/types/domain";
 import type { CalendarCategory, ExternalCalendarCategory } from "@/features/calendar/types";
 
-export const categoryDisplayOrder: CalendarCategory[] = ["schedule", "todo", "event"];
+export const categoryDisplayOrder: CalendarCategory[] = ["todo", "event"];
 
 export const categoryLabels: Record<CalendarCategory, string> = {
-  schedule: "일정",
   event: "이벤트",
   todo: "할 일",
 };
 
-export const eventTone: Record<CalendarCategory, "violet" | "green" | "pink"> = {
-  schedule: "violet",
+export const eventTone: Record<CalendarCategory, "green" | "pink"> = {
   event: "pink",
   todo: "green",
 };

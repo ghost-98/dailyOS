@@ -1,4 +1,4 @@
-export type EventType = "schedule" | "todo" | "event" | "health" | "weight" | "expense" | "income";
+export type EventType = "todo" | "event" | "health" | "weight" | "expense" | "income";
 
 export type TaskStatus = "todo" | "inProgress" | "done";
 
@@ -67,7 +67,7 @@ export type ExpenseRecord = {
   amount: number;
   category: ExpenseCategory;
   memo?: string;
-  targetType: "schedule" | "todo" | "event" | "activity";
+  targetType: "todo" | "event" | "activity";
   targetId: string;
 };
 
@@ -103,7 +103,7 @@ export type LifeActivityRecord = {
   transportMode?: string;
   sourceId?: string;
   sourceTitle?: string;
-  sourceType?: "schedule" | "todo" | "event";
+  sourceType?: "todo" | "event";
   createdAt?: string;
 };
 
@@ -113,7 +113,7 @@ export type DailyLogRecord = {
   content: string;
   linkedTargetId?: string;
   linkedTargetTitle?: string;
-  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  linkedTargetType?: "todo" | "event" | "activity";
   createdAt?: string;
 };
 
@@ -131,7 +131,7 @@ export type LifePhotoRecord = {
   caption?: string;
   linkedTargetId?: string;
   linkedTargetTitle?: string;
-  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  linkedTargetType?: "todo" | "event" | "activity";
   takenAt?: string;
   latitude?: number;
   longitude?: number;

@@ -10,7 +10,7 @@ export type NavItem = {
 
 const captureChildren = [
   { label: "활동 기록", href: "/life/activities", key: "life-activities" },
-  { label: "일정·할 일·이벤트", href: "/life/plans", key: "life-plans" },
+  { label: "할 일·이벤트", href: "/life/plans", key: "life-plans" },
   { label: "하루기록", href: "/life/logs", key: "life-logs" },
   { label: "건강", href: "/life/health", key: "life-health" },
 ];

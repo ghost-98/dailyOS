@@ -16,7 +16,7 @@ export function useCalendarResources() {
       const [events, tasks] = await Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()]);
       return { events: events ?? [], tasks: tasks ?? [] };
     },
-    onError: (error) => console.error("Failed to load schedule data from Supabase", error),
+    onError: (error) => console.error("Failed to load calendar data from Supabase", error),
   });
 
   const people = useAsyncData({

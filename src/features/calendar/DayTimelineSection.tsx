@@ -11,7 +11,7 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
 
 type ActivityConversionState = { id: string; type: "event" | "task" } | null;
-type TimelineFilter = "event" | "schedule" | "todo";
+type TimelineFilter = "event" | "todo";
 
 export function DayTimelineSection({
   countsByCategory,
@@ -36,9 +36,9 @@ export function DayTimelineSection({
   onToggleDone,
   readOnly = false,
 }: {
-  countsByCategory?: { event: number; schedule: number; todo: number };
+  countsByCategory?: { event: number; todo: number };
   deletingPlan?: { id: string; type: "event" | "task" } | null;
-  draggingItem: { id: string; type: "schedule" | "event" | "todo" } | null;
+  draggingItem: { id: string; type: "event" | "todo" } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
   externalCount?: number;
   isConvertingToActivity?: ActivityConversionState;
@@ -49,13 +49,13 @@ export function DayTimelineSection({
   onCreateActivityFromTask: (task: TaskItem) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: "schedule" | "event" | "todo") => void;
+  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: "event" | "todo") => void;
   onEditEvent: (event: CalendarEvent) => void;
   onEditTask: (task: TaskItem) => void;
   onReorderEvent: (targetId: string, placement?: DragPlacement) => void;
   onReorderTask: (targetId: string, placement?: DragPlacement) => void;
   onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
-  onSetDragging: (item: { id: string; type: "schedule" | "event" | "todo" }) => void;
+  onSetDragging: (item: { id: string; type: "event" | "todo" }) => void;
   onToggleDone: (task: TaskItem) => void;
   readOnly?: boolean;
 }) {
@@ -67,7 +67,7 @@ export function DayTimelineSection({
         ? items
         : items.filter((item) => {
             if ("task" in item) return activeFilters.includes("todo");
-            if ("event" in item) return activeFilters.includes(item.event.type as "event" | "schedule");
+            if ("event" in item) return activeFilters.includes("event");
             return true;
           }),
     [activeFilters, items],
@@ -87,7 +87,6 @@ export function DayTimelineSection({
         {countsByCategory ? (
           <div className="day-timeline__filters" aria-label="타임라인 필터">
             {([
-              ["schedule", "일정", countsByCategory.schedule],
               ["todo", "할 일", countsByCategory.todo],
               ["event", "이벤트", countsByCategory.event],
             ] as const).map(([type, label, count]) => (

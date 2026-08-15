@@ -3103,6 +3103,7 @@ button:disabled {
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
 .life-activity-action-group {
@@ -3116,7 +3117,12 @@ button:disabled {
 }
 
 .life-activity-action-group--state {
-  margin-left: 8px;
+  order: 1;
+  margin-right: 4px;
+}
+
+.life-activity-action-group--mode {
+  order: 2;
   padding-left: 14px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -4238,6 +4244,10 @@ button:disabled {
 }
 
 .life-activity-calendar__month-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   border: 0 !important;
   background: transparent !important;
@@ -4246,6 +4256,7 @@ button:disabled {
   font: inherit;
   font-size: 0.98rem;
   font-weight: 900;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   text-align: center;
 }

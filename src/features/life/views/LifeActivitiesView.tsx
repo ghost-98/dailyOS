@@ -419,24 +419,6 @@ export function LifeActivitiesView({
               </h2>
             </div>
             <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
-              <div className="life-activity-action-group life-activity-action-group--mode">
-                <button
-                  className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
-                  disabled={isSaving}
-                  onClick={() => setInputPanelMode("activity")}
-                  type="button"
-                >
-                  활동 기록
-                </button>
-                <button
-                  className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
-                  disabled={isSaving}
-                  onClick={() => setInputPanelMode("media")}
-                  type="button"
-                >
-                  사진 · 영상
-                </button>
-              </div>
               {inputPanelMode === "activity" ? (
                 <div className="life-activity-action-group life-activity-action-group--state">
                   <button
@@ -464,6 +446,24 @@ export function LifeActivitiesView({
                   ) : null}
                 </div>
               ) : null}
+              <div className="life-activity-action-group life-activity-action-group--mode">
+                <button
+                  className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("activity")}
+                  type="button"
+                >
+                  활동 기록
+                </button>
+                <button
+                  className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("media")}
+                  type="button"
+                >
+                  사진 · 영상
+                </button>
+              </div>
               {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
           </div>

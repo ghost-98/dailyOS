@@ -43,7 +43,7 @@ const dashboardCards = [
 
 const captureLinks = [
   { href: "/life/activities", icon: Activity, label: "활동 기록", title: "실제 삶을 남기는 기본 입력" },
-  { href: "/life/plans", icon: CalendarDays, label: "계획 입력", title: "일정·할 일·이벤트 정리" },
+  { href: "/life/plans", icon: CalendarDays, label: "계획 입력", title: "할 일·이벤트 정리" },
   { href: "/life/logs", icon: NotebookPen, label: "하루기록", title: "의미와 감정, 메모 보강" },
   { href: "/life/health", icon: HeartPulse, label: "건강", title: "몸 상태와 운동 축 보강" },
 ];
@@ -161,7 +161,7 @@ export function LifeHomeView() {
           title: "하루기록 연결하기",
         },
         {
-          description: summary.orphanPhotos > 0 ? `연결되지 않은 사진 ${summary.orphanPhotos}개가 있습니다.` : "사진은 활동이나 일정에 붙여야 나중에 기억 복원이 쉬워집니다.",
+          description: summary.orphanPhotos > 0 ? `연결되지 않은 사진 ${summary.orphanPhotos}개가 있습니다.` : "사진은 활동이나 이벤트에 붙여야 나중에 기억 복원이 쉬워집니다.",
           href: "/life/gallery",
           title: "사진 맥락 보강",
         },

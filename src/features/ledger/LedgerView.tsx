@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
@@ -39,7 +39,6 @@ const incomeCategoryLabels: Record<IncomeCategory, string> = {
 const targetTypeLabels: Record<NonNullable<ExpenseRecord["targetType"]>, string> = {
   activity: "활동",
   event: "이벤트",
-  schedule: "일정",
   todo: "할 일",
 };
 
@@ -434,3 +433,4 @@ function formatCompactCurrency(value: number) {
   if (value >= 10000) return `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
   return value.toLocaleString("ko-KR");
 }
+

@@ -96,7 +96,7 @@ export function LifeAskView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="AI 질문" description="쌓인 일정, 할 일, 하루기록, 사진, 장소, 지출, 건강 기록을 근거로 자연어 질문에 답합니다." />
+      <LifeTabHeading title="AI 질문" description="쌓인 이벤트, 할 일, 하루기록, 사진, 장소, 지출, 건강 기록을 근거로 자연어 질문에 답합니다." />
       <div className="life-ask-layout ui-workspace-grid ui-workspace-grid--balanced">
         <SectionCard className="life-ask-card ui-workspace-panel">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">

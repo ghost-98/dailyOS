@@ -1,4 +1,4 @@
-import type { ExternalCalendarItem } from "@/features/calendar/types";
+﻿import type { ExternalCalendarItem } from "@/features/calendar/types";
 import { formatWon } from "@/features/life/formatters";
 import { formatRunDuration } from "@/features/life/reconstruction";
 import type { LifeDataSnapshot } from "@/features/life/dataLoader";
@@ -81,3 +81,4 @@ export function buildLifeExternalItems(snapshot: Pick<LifeDataSnapshot, "activit
     })),
   ];
 }
+

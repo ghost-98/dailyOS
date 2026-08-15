@@ -64,7 +64,6 @@ export function LifeSearchView({
           </label>
           <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | LifeSearchItem["type"])}>
             <option value="all">전체</option>
-            <option value="schedule">일정</option>
             <option value="todo">할일</option>
             <option value="event">이벤트</option>
             <option value="activity">활동</option>

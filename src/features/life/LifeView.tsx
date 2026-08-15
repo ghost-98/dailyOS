@@ -35,11 +35,11 @@ function LifeDataRouter({ activeTab, activityDraft, initialDate }: { activeTab: 
     return (
       <div className="life-axis-view">
         <CalendarView
-          allowedTypes={["schedule", "event", "todo"]}
+          allowedTypes={["event", "todo"]}
           defaultSelectedDate={formatDateKey(new Date())}
-          description="미래 계획과 당일 해야 할 일, 중요한 이벤트를 기록하고 관리합니다. 실제로 끝난 것은 활동 기록으로 전환할 수 있습니다."
+          description="할 일과 중요한 이벤트를 기록하고 관리합니다. 실제로 끝난 것은 활동 기록으로 전환할 수 있습니다."
           showEventAddButton
-          title="일정·할 일·이벤트"
+          title="할 일·이벤트"
           viewMode="manage"
         />
       </div>
@@ -50,9 +50,9 @@ function LifeDataRouter({ activeTab, activityDraft, initialDate }: { activeTab: 
     return (
       <div className="life-axis-view">
         <CalendarView
-          allowedTypes={["schedule", "event", "todo"]}
+          allowedTypes={["event", "todo"]}
           defaultSelectedDate={initialDate ?? formatDateKey(new Date())}
-          description="일정과 할 일을 날짜별로 묶고, 필요한 항목을 바로 추가하세요."
+          description="이벤트와 할 일을 날짜별로 묶고, 필요한 항목을 바로 추가하세요."
           externalItems={externalItems}
           showEventAddButton={false}
           title="라이프 캘린더"

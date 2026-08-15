@@ -17,7 +17,7 @@ export function SettingsView() {
   const [saveMessage, setSaveMessage] = useState("");
   const [dataMessage, setDataMessage] = useState("");
   const [isManagingData, setIsManagingData] = useState(false);
-  const [scheduleAlarm, setScheduleAlarm] = useState(true);
+  const [eventAlarm, setEventAlarm] = useState(true);
   const [taskAlarm, setTaskAlarm] = useState(true);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export function SettingsView() {
             <Bell aria-hidden size={20} />
             <span>알림</span>
           </div>
-          <SettingToggle checked={scheduleAlarm} label="일정 알림" onChange={setScheduleAlarm} />
+          <SettingToggle checked={eventAlarm} label="이벤트 알림" onChange={setEventAlarm} />
           <SettingToggle checked={taskAlarm} label="할 일 마감 알림" onChange={setTaskAlarm} />
           <p className="settings-hint">현재는 화면 설정만 저장합니다. 라즈베리파이 상시 실행 이후 푸시 알림과 연결하면 완성도가 올라갑니다.</p>
         </SectionCard>

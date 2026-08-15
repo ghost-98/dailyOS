@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/features/calendar/data";
 import type { LifeActivityRecord, LifePhotoRecord, TaskItem } from "@/types/domain";
 
-export type LifeLinkedTarget = { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" };
+export type LifeLinkedTarget = { id: string; title: string; type: "todo" | "event" | "activity" };
 
 export type LifeLinkedTargetOption = {
   id: string;
@@ -28,13 +28,13 @@ export function getPhotoLinkedTargetOptions(
         type: "activity" as const,
       })),
     ...events
-      .filter((event) => event.date <= date && (event.endDate ?? event.date) >= date && (event.type === "schedule" || event.type === "event"))
+      .filter((event) => event.date <= date && (event.endDate ?? event.date) >= date && event.type === "event")
       .map((event) => ({
         id: event.id,
-        key: `${event.type}:${event.id}`,
-        label: event.type === "event" ? "이벤트" : "일정",
+        key: `event:${event.id}`,
+        label: "이벤트",
         title: event.title,
-        type: event.type === "event" ? ("event" as const) : ("schedule" as const),
+        type: "event" as const,
       })),
     ...tasks
       .filter((task) => task.scheduledDate <= date && (task.dueDate ?? task.scheduledDate) >= date)
@@ -49,7 +49,6 @@ export function getPhotoLinkedTargetOptions(
 }
 
 export function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
-  if (type === "schedule") return "일정";
   if (type === "todo") return "할 일";
   if (type === "event") return "이벤트";
   if (type === "activity") return "활동";

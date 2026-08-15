@@ -333,7 +333,7 @@ function AuthScreen() {
           <span className="auth-brand__mark">d</span>
           <div>
             <strong>dailyOS</strong>
-            <span>일정, 할 일, 건강, 취업 관리</span>
+            <span>이벤트, 할 일, 건강, 취업 관리</span>
           </div>
         </div>
 
@@ -344,7 +344,7 @@ function AuthScreen() {
         </div>
 
         <div className="auth-proof" aria-label="관리 항목">
-          <span>일정</span>
+          <span>이벤트</span>
           <span>할 일</span>
           <span>건강</span>
           <span>취업</span>

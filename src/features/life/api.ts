@@ -116,7 +116,7 @@ function mapDailyLogRow(row: DailyLogRow): DailyLogRecord {
     content: row.content,
     linkedTargetId: row.linked_target_id ?? undefined,
     linkedTargetTitle: row.linked_target_title ?? undefined,
-    linkedTargetType: row.linked_target_type ?? undefined,
+    linkedTargetType: row.linked_target_type === "schedule" ? "event" : row.linked_target_type ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -143,7 +143,7 @@ function mapLifeActivityRow(row: LifeActivityRow): LifeActivityRecord {
     transportMode: row.transport_mode ?? undefined,
     sourceId: row.source_id ?? undefined,
     sourceTitle: row.source_title ?? undefined,
-    sourceType: row.source_type ?? undefined,
+    sourceType: row.source_type === "schedule" ? "event" : row.source_type ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -196,7 +196,7 @@ function mapLifePhotoMetadataRow(row: LifePhotoRow): LifePhotoRecord {
     caption: row.caption ?? undefined,
     linkedTargetId: row.linked_target_id ?? undefined,
     linkedTargetTitle: row.linked_target_title ?? undefined,
-    linkedTargetType: row.linked_target_type ?? undefined,
+    linkedTargetType: row.linked_target_type === "schedule" ? "event" : row.linked_target_type ?? undefined,
     takenAt: row.taken_at ?? undefined,
     latitude: row.latitude === null ? undefined : Number(row.latitude),
     longitude: row.longitude === null ? undefined : Number(row.longitude),
@@ -263,7 +263,7 @@ export async function updateLifeActivityInDb(activity: LifeActivityRecord) {
 
 export async function updateLifeActivitiesBySourceInDb(source: {
   sourceId: string;
-  sourceType: "schedule" | "todo" | "event";
+  sourceType: "todo" | "event";
   date: string;
   startTime?: string;
   endTime?: string;
@@ -275,7 +275,7 @@ export async function updateLifeActivitiesBySourceInDb(source: {
   memo?: string;
   placeAddress?: string;
   placeName?: string;
-  previousSourceType?: "schedule" | "todo" | "event";
+  previousSourceType?: "todo" | "event";
 }) {
   if (!supabase) return [];
 
@@ -325,7 +325,7 @@ export async function deleteLifeActivityFromDb(id: string) {
   return true;
 }
 
-export async function deleteLifeActivitiesBySourceFromDb(sourceType: "schedule" | "todo" | "event", sourceId: string) {
+export async function deleteLifeActivitiesBySourceFromDb(sourceType: "todo" | "event", sourceId: string) {
   if (!supabase) return false;
   const { data, error: selectError } = await supabase.from("life_activities").select("id").eq("source_type", sourceType).eq("source_id", sourceId);
   if (selectError) throw selectError;
@@ -351,7 +351,7 @@ export async function fetchDailyLogsFromDb() {
   return (data as DailyLogRow[]).map(mapDailyLogRow);
 }
 
-export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" }) {
+export async function createDailyLogInDb(date: string, content: string, linkedTarget?: { id: string; title: string; type: "todo" | "event" | "activity" }) {
   if (!supabase) return null;
   const userId = await getCurrentUserId();
   if (!userId) return null;
@@ -436,7 +436,7 @@ export async function uploadLifePhotosToDb(
   date: string,
   uploads: LifeMediaUploadInput[],
   caption?: string,
-  linkedTarget?: { id: string; title: string; type: "schedule" | "todo" | "event" | "activity" },
+  linkedTarget?: { id: string; title: string; type: "todo" | "event" | "activity" },
 ) {
   if (!supabase) return null;
   const userId = await getCurrentUserId();
@@ -505,3 +505,4 @@ async function getLifePhotoSignedUrl(path: string) {
   if (error) return null;
   return data.signedUrl;
 }
+

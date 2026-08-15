@@ -476,7 +476,7 @@ export function LifePeopleView({
                       <div className="life-map-empty life-map-empty--compact">
                         <UserRound aria-hidden size={28} />
                         <strong>아직 연결된 기록이 없어요</strong>
-                        <p>일정, 할 일, 활동에서 함께한 사람으로 지정하면 여기에 쌓입니다.</p>
+                        <p>이벤트, 할 일, 활동에서 함께한 사람으로 지정하면 여기에 쌓입니다.</p>
                       </div>
                     )}
                   </div>
@@ -506,7 +506,7 @@ export function LifePeopleView({
                     <div className="life-map-empty life-map-empty--compact">
                       <UserRound aria-hidden size={28} />
                       <strong>아직 연결된 장소가 없어요</strong>
-                      <p>장소가 있는 일정이나 활동과 연결되면 여기에 정리됩니다.</p>
+                      <p>장소가 있는 이벤트나 활동과 연결되면 여기에 정리됩니다.</p>
                     </div>
                   )
                 ) : null}
