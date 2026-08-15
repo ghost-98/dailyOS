@@ -3,6 +3,7 @@
 import type { DragEvent } from "react";
 import { useMemo, useState } from "react";
 import { Activity, Check, Pencil, Trash2 } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
 import { categoryLabels, eventTone, formatPlanDateTime, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
@@ -231,15 +232,15 @@ function EventDateItem({
       </div>
       {!readOnly ? (
         <div className="date-event__actions">
-          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 항목을 실제 활동으로 기록" type="button">
+          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(event)} size="sm" title="이 항목을 실제 활동으로 기록" tone="outline">
             <Activity aria-hidden size={15} />
-          </button>
-          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(event)} type="button">
+          </IconButton>
+          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(event)} size="sm" tone="outline">
             <Pencil aria-hidden size={15} />
-          </button>
-          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
+          </IconButton>
+          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(event.id)} size="sm" tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         </div>
       ) : null}
     </article>
@@ -310,15 +311,15 @@ function TaskDateItem({
       </div>
       {!readOnly ? (
         <div className="date-event__actions">
-          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
+          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(task)} size="sm" title="이 할 일을 실제 활동으로 기록" tone="outline">
             <Activity aria-hidden size={15} />
-          </button>
-          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(task)} type="button">
+          </IconButton>
+          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(task)} size="sm" tone="outline">
             <Pencil aria-hidden size={15} />
-          </button>
-          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
+          </IconButton>
+          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(task.id)} size="sm" tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         </div>
       ) : null}
     </article>

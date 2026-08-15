@@ -730,9 +730,9 @@ function SelectedPlacePanel({
   return (
     <section className="places-selected-panel" aria-label="선택 장소 정보">
       <div className="places-selected-panel__head">
-        <button className="places-selected-panel__back" aria-label="선택 장소 닫기" onClick={onBack} type="button">
+        <IconButton className="places-selected-panel__back" label="선택 장소 닫기" onClick={onBack} size="sm" tone="soft">
           <ArrowLeft aria-hidden size={17} />
-        </button>
+        </IconButton>
         <div className="places-selected-panel__mark" style={{ backgroundColor: folders[0]?.color ?? "var(--violet)" }}>
           {isSaved ? <Star aria-hidden size={17} /> : <MapPin aria-hidden size={17} />}
         </div>
@@ -753,20 +753,20 @@ function SelectedPlacePanel({
       </div>
       <div className="places-selected-panel__actions">
         {isSaved ? (
-          <button className="places-selected-panel__button places-selected-panel__button--muted" onClick={onSave} type="button">
+          <ActionButton className="places-selected-panel__button places-selected-panel__button--muted" onClick={onSave} variant="secondary">
             <Check aria-hidden size={15} />
             저장 폴더 편집
-          </button>
+          </ActionButton>
         ) : (
-          <button className="places-selected-panel__button" onClick={onSave} type="button">
+          <ActionButton className="places-selected-panel__button" onClick={onSave}>
             <Star aria-hidden size={15} />
             폴더에 저장
-          </button>
+          </ActionButton>
         )}
         {onDelete ? (
-          <button className="places-selected-panel__icon" aria-label="장소 삭제" onClick={onDelete} type="button">
+          <IconButton className="places-selected-panel__icon" label="장소 삭제" onClick={onDelete} tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         ) : null}
       </div>
     </section>

@@ -492,16 +492,16 @@ export function CalendarView({
       <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""} ui-workspace-grid ${isDatabaseView ? "ui-workspace-grid--balanced" : "ui-workspace-grid--sidebar"}`}>
         <SectionCard className="calendar-board ui-workspace-panel ui-workspace-panel--tall">
           <div className="calendar-toolbar">
-            <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+            <IconButton label="이전 달" onClick={() => moveMonth(-1)} tone="outline">
               <ChevronLeft aria-hidden size={20} />
-            </button>
+            </IconButton>
             <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
             </button>
-            <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+            <IconButton label="다음 달" onClick={() => moveMonth(1)} tone="outline">
               <ChevronRight aria-hidden size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {!(isDatabaseView && dbScope === "day") ? (
@@ -1493,9 +1493,9 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                       : "시간, 연결된 기록, 장소 문맥을 함께 보면서 사진 흐름을 확인할 수 있어요."}
                 </p>
               </div>
-              <button aria-label="닫기" onClick={closeDetail} type="button">
+              <IconButton label="닫기" onClick={closeDetail} tone="outline">
                 <X aria-hidden size={18} />
-              </button>
+              </IconButton>
             </div>
 
             {detailView === "map" ? (

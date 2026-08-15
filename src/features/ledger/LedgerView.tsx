@@ -169,16 +169,16 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
       <div className="ledger-layout ui-workspace-grid ui-workspace-grid--sidebar">
         <SectionCard className="ledger-calendar-card ui-workspace-panel ui-workspace-panel--tall">
           <div className="calendar-toolbar">
-            <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+            <IconButton label="이전 달" onClick={() => moveMonth(-1)} tone="outline">
               <ChevronLeft aria-hidden size={20} />
-            </button>
+            </IconButton>
             <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
             </button>
-            <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+            <IconButton label="다음 달" onClick={() => moveMonth(1)} tone="outline">
               <ChevronRight aria-hidden size={20} />
-            </button>
+            </IconButton>
           </div>
 
           <div className="calendar-weekdays">
@@ -303,9 +303,9 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                     <div className="ledger-record__side">
                       <b>{formatIncomeCurrency(record.amount)}</b>
                       <div>
-                        <button aria-label="수입 삭제" disabled={deletingIncomeId === record.id} onClick={() => void removeIncome(record.id)} type="button">
+                        <IconButton disabled={deletingIncomeId === record.id} label="수입 삭제" onClick={() => void removeIncome(record.id)} size="sm" tone="danger">
                           <Trash2 aria-hidden size={14} />
-                        </button>
+                        </IconButton>
                       </div>
                     </div>
                   </article>

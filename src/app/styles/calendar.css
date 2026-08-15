@@ -872,18 +872,13 @@
   gap: 6px;
 }
 
-.date-event__actions button {
-  display: grid;
+.date-event__actions .ui-icon-button {
   width: 32px;
   height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
   color: var(--muted);
 }
 
-.date-event__actions button:hover {
+.date-event__actions .ui-icon-button:hover {
   border-color: var(--line-strong);
   color: var(--text);
 }

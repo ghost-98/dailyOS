@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
@@ -704,9 +706,9 @@ export function LifeActivitiesView({
 
           <div className="life-activity-calendar">
             <div className="life-activity-calendar__header">
-              <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+              <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
                 <ChevronLeft aria-hidden size={16} />
-              </button>
+              </IconButton>
               <div className="life-activity-calendar__month-picker">
                 <button className="life-activity-calendar__month-button" onClick={toggleMonthPicker} type="button">
                   {monthLabel}
@@ -728,15 +730,15 @@ export function LifeActivitiesView({
                       ))}
                     </select>
                     <div className="life-activity-calendar__month-actions">
-                      <button onClick={() => setIsMonthPickerOpen(false)} type="button">닫기</button>
-                      <button onClick={applyMonthPicker} type="button">이동</button>
+                      <ActionButton onClick={() => setIsMonthPickerOpen(false)} variant="secondary">닫기</ActionButton>
+                      <ActionButton onClick={applyMonthPicker}>이동</ActionButton>
                     </div>
                   </div>
                 ) : null}
               </div>
-              <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+              <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
                 <ChevronRight aria-hidden size={16} />
-              </button>
+              </IconButton>
             </div>
             <div className="life-activity-calendar__weekdays">
               {WEEKDAYS.map((weekday, index) => (
