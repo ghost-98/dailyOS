@@ -15,6 +15,13 @@
   padding: var(--card-padding);
 }
 
+.life-calendar-db-story--plain {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .life-calendar-db-story span {
   color: var(--muted);
   font-size: 0.74rem;

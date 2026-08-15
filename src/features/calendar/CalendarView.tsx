@@ -1221,7 +1221,7 @@ function LifeCalendarDatabasePanel({
   if (scope === "day") {
     return (
       <div className="life-calendar-db-content">
-        <section className="life-calendar-db-section">
+        <div className="life-calendar-db-day-summary">
           <article className="life-calendar-db-story">
             <span>한 줄 요약</span>
             <strong>{narrative}</strong>
@@ -1242,9 +1242,9 @@ function LifeCalendarDatabasePanel({
               </div>
             </article>
           </div>
-        </section>
+        </div>
 
-        <section className="life-calendar-db-section">
+        <section className="life-calendar-db-section life-calendar-db-section--plain">
           <div className="life-calendar-db-section__head">
             <div className="life-calendar-db-section__head life-calendar-db-section__head--canvas">
               <h3>기록으로 보는 하루</h3>
@@ -1260,12 +1260,10 @@ function LifeCalendarDatabasePanel({
 
   return (
     <div className="life-calendar-db-content">
-      <section className="life-calendar-db-section">
-        <article className="life-calendar-db-story">
-          <span>기간 서사</span>
-          <strong>{periodNarrative}</strong>
-        </article>
-      </section>
+      <article className="life-calendar-db-story life-calendar-db-story--plain">
+        <span>기간 서사</span>
+        <strong>{periodNarrative}</strong>
+      </article>
     </div>
   );
 }

@@ -621,8 +621,20 @@
   padding: 16px;
 }
 
+.life-calendar-db-day-summary {
+  display: grid;
+  gap: 16px;
+}
+
 .life-calendar-db-section--empty {
   min-height: 148px;
+}
+
+.life-calendar-db-section--plain {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .life-calendar-db-section__head h3 {
