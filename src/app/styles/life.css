@@ -2369,31 +2369,6 @@
   gap: 12px;
 }
 
-.ledger-income-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.ledger-income-form span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.ledger-income-form input,
-.ledger-income-form select,
-.ledger-income-form textarea {
-  width: 100%;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  outline: 0;
-  background: var(--field-bg);
-  color: var(--text);
-  font: inherit;
-  padding: var(--field-padding-y) var(--field-padding-x);
-}
-
 .life-people-form {
   display: grid;
   gap: 14px;

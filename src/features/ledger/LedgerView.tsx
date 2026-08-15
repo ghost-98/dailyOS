@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -244,7 +245,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
             <div className={`ledger-capture-panel${isIncomeCaptureExpanded ? "" : " ledger-capture-panel--collapsed"}`}>
               <div className="section-heading ledger-capture-panel__heading ui-panel-heading">
                 <div className="ui-panel-heading__intro">
-                  <p className="eyebrow">Income Capture</p>
+                  <p className="eyebrow">수입 입력</p>
                   <h3>수입 추가</h3>
                 </div>
                 <IconButton
@@ -258,17 +259,14 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
               </div>
 
               {isIncomeCaptureExpanded ? (
-              <div className="ledger-income-form">
-                <label>
-                  <span>제목</span>
+              <div className="ledger-income-form ui-form-grid">
+                <FormField label="제목">
                   <input placeholder="예: 월급, 환급, 사이드 프로젝트" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} />
-                </label>
-                <label>
-                  <span>금액</span>
+                </FormField>
+                <FormField label="금액">
                   <input inputMode="numeric" placeholder="0" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value.replace(/[^\d]/g, ""))} />
-                </label>
-                <label>
-                  <span>카테고리</span>
+                </FormField>
+                <FormField label="카테고리">
                   <select value={incomeCategory} onChange={(event) => setIncomeCategory(event.target.value as IncomeCategory)}>
                     {Object.entries(incomeCategoryLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -276,11 +274,10 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label>
-                  <span>메모</span>
+                </FormField>
+                <FormField label="메모">
                   <textarea placeholder="입금 경로나 설명" rows={3} value={incomeMemo} onChange={(event) => setIncomeMemo(event.target.value)} />
-                </label>
+                </FormField>
                 <ActionButton disabled={isSavingIncome || !incomeTitle.trim() || !incomeAmount} onClick={() => void createIncome()}>
                   {isSavingIncome ? "저장 중..." : "수입 저장"}
                 </ActionButton>

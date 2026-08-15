@@ -651,17 +651,6 @@
   gap: 6px;
 }
 
-.places-folder-row button {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-}
-
 .places-folder-form {
   display: grid;
   gap: 12px;
@@ -671,27 +660,7 @@
   padding: 14px;
 }
 
-.places-folder-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.places-folder-form label span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.places-folder-form input {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.045);
-  color: var(--text);
-  padding: 10px 12px;
-}
-
-.places-folder-form input[type="color"] {
+.places-folder-form .ui-form-field > input[type="color"] {
   height: 42px;
   padding: 5px;
 }

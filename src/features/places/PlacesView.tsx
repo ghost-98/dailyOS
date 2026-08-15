@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
@@ -595,27 +596,25 @@ function FolderManagerSheet({
                 <span style={{ backgroundColor: folder.color }} />
                 <strong>{folder.name}</strong>
                 <div>
-                  <button aria-label="폴더 수정" onClick={() => setEditingFolder(folder)} type="button">
+                  <IconButton label="폴더 수정" onClick={() => setEditingFolder(folder)} size="sm" tone="soft">
                     <Pencil aria-hidden size={14} />
-                  </button>
-                  <button aria-label="폴더 삭제" disabled={deletingFolderId === folder.id} onClick={() => void remove(folder.id)} type="button">
+                  </IconButton>
+                  <IconButton label="폴더 삭제" disabled={deletingFolderId === folder.id} onClick={() => void remove(folder.id)} size="sm" tone="danger">
                     <Trash2 aria-hidden size={14} />
-                  </button>
+                  </IconButton>
                 </div>
               </article>
             ))}
           </div>
 
           {editingFolder ? (
-            <div className="places-folder-form">
-              <label>
-                <span>폴더명</span>
+            <div className="places-folder-form ui-form-grid">
+              <FormField label="폴더명">
                 <input value={editingFolder.name} onChange={(event) => setEditingFolder((current) => (current ? { ...current, name: event.target.value } : current))} />
-              </label>
-              <label>
-                <span>색상</span>
+              </FormField>
+              <FormField label="색상">
                 <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
-              </label>
+              </FormField>
               <footer>
                 <ActionButton disabled={isSaving} onClick={() => setEditingFolder(null)} variant="secondary">
                   취소
