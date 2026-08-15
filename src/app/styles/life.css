@@ -1007,7 +1007,7 @@
 }
 
 .life-calendar-header-modes__button {
-  min-height: 38px;
+  min-height: var(--chip-height);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -1015,7 +1015,7 @@
   font: inherit;
   font-size: 0.84rem;
   font-weight: 820;
-  padding: 0 14px;
+  padding: 0 var(--chip-padding-x);
 }
 
 .life-calendar-header-modes__button--active {
@@ -1031,13 +1031,13 @@
 }
 
 .life-calendar-header-modes__range input {
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  min-height: var(--chip-height);
+  border: var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
   color: var(--text);
   font: inherit;
-  padding: 0 12px;
+  padding: 0 var(--field-padding-x);
 }
 
 .life-calendar-header-modes__range span {
@@ -1681,7 +1681,7 @@
 
 .life-capture-secondary,
 .life-record-actions button {
-  min-height: 34px;
+  min-height: var(--planner-toggle-height);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.05);
@@ -1689,7 +1689,7 @@
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 850;
-  padding: 0 11px;
+  padding: 0 var(--planner-toggle-padding-x);
 }
 
 .life-capture-secondary:hover,
@@ -3751,7 +3751,8 @@ button:disabled {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  padding: 10px 12px;
+  min-height: var(--chip-height);
+  padding: 0 var(--chip-padding-x);
 }
 
 .life-places-manager__buttons button {
@@ -3908,7 +3909,7 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--field-radius);
   background: rgba(255, 255, 255, 0.7);
-  padding: 8px var(--field-padding-x);
+  padding: var(--planner-search-padding-y) var(--field-padding-x);
 }
 
 .life-places-mapping-search input {
@@ -5000,11 +5001,11 @@ button:disabled {
 }
 
 .life-gallery-toolbar__filters--compact .life-capture-secondary {
-  min-height: 40px;
+  min-height: var(--chip-height);
 }
 
 .life-gallery-toolbar__filters--compact .life-capture-date input {
-  min-height: 40px;
+  min-height: var(--chip-height);
 }
 
 .life-gallery-toolbar__summary,
