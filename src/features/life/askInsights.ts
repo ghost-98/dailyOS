@@ -25,6 +25,23 @@ type NamedCount = {
   name: string;
 };
 
+const POSITIVE_SIGNAL_KEYWORDS = [
+  "좋",
+  "즐거",
+  "행복",
+  "재밌",
+  "재미",
+  "신났",
+  "기뻤",
+  "설렜",
+  "웃",
+  "선물",
+  "축하",
+  "생일",
+  "여행",
+  "맛있",
+];
+
 type AskAnalysisInput = {
   activities: LifeActivityRecord[];
   events: CalendarEvent[];
@@ -118,6 +135,7 @@ export type LifeAskAnalysis = {
   focus: AskFocus;
   focusDescription: string;
   focusTitle: string;
+  inferenceHints: string[];
   linkGroups: LifeAskLinkGroup[];
   narrative: string;
   overview: string;
@@ -175,6 +193,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
   }));
   const linkGroups = buildAskLinkGroups(filtered, effectiveWindow, topPeople, topPlaces);
   const followUpQuestions = buildFollowUpQuestions(focus, effectiveWindow.label, topPeople, topPlaces, topActivityTypes, topExpenseCategories);
+  const inferenceHints = buildInferenceHints(input.question, filtered, effectiveWindow.label);
 
   const promptContext = [
     `질문 초점: ${focus}`,
@@ -189,6 +208,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     `패턴: ${focusData.patterns.join(" / ") || "패턴 부족"}`,
     `제안: ${focusData.suggestions.join(" / ") || "제안 없음"}`,
     `브레이크다운: ${focusData.breakdowns.map((section) => `${section.title}: ${section.items.join(" | ")}`).join(" || ")}`,
+    inferenceHints.length > 0 ? `추론 힌트: ${inferenceHints.join(" / ")}` : "",
   ].join("\n");
 
   return {
@@ -200,6 +220,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     focus,
     focusDescription: focusData.focusDescription,
     focusTitle: focusData.focusTitle,
+    inferenceHints,
     linkGroups,
     narrative,
     overview: focusData.overview,
@@ -626,6 +647,89 @@ function buildGeneralFocus(args: FocusAnalysisArgs): LifeAskFocusData {
       args.comparison ? "비교 포인트를 더 구체화하면 변화 해석이 더 강해집니다." : "비교 기준을 함께 주면 더 강한 해석이 가능합니다.",
     ],
   };
+}
+
+function buildInferenceHints(question: string, filtered: FilteredLifeData, windowLabel: string) {
+  const hints: string[] = [];
+
+  if (isEnjoymentQuestion(question)) {
+    const candidates = rankEnjoymentCandidates(filtered).slice(0, 3);
+    if (candidates[0]) {
+      hints.push(
+        `${windowLabel} 즐거움 추정 1위는 ${candidates[0].title} (${candidates[0].date})이며 근거는 ${candidates[0].reasons.join(", ")}`,
+      );
+    }
+    if (candidates[1]) {
+      hints.push(`${windowLabel} 차선 후보는 ${candidates[1].title} (${candidates[1].date})`);
+    }
+    if (candidates.length === 0) {
+      hints.push("즐거움을 직접 추정할 명시적 감정 표현이 부족하므로 사진, 메모, 함께한 사람, 음식/문화 맥락을 약한 근거로만 해석해야 함");
+    }
+  }
+
+  return hints;
+}
+
+function isEnjoymentQuestion(question: string) {
+  const normalized = question.toLowerCase();
+  return ["즐겁", "재밌", "재미", "행복", "좋았", "기뻤", "신났", "설렜", "가장 좋", "best"].some((keyword) => normalized.includes(keyword));
+}
+
+function rankEnjoymentCandidates(filtered: FilteredLifeData) {
+  const candidates = [
+    ...filtered.activities.map((activity) => {
+      const text = [activity.title, activity.memo, activity.food, activity.placeName, activity.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const photoCount = filtered.photos.filter((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id).length;
+      const logCount = filtered.logs.filter((log) => log.linkedTargetType === "activity" && log.linkedTargetId === activity.id).length;
+      const companionCount = splitCompanions(activity.companions).length;
+      const score = positiveScore + photoCount * 2 + logCount * 2 + companionCount + (activity.food ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        photoCount > 0 ? `연결 사진 ${photoCount}장` : null,
+        logCount > 0 ? `연결 하루기록 ${logCount}건` : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        activity.food ? `음식 기록 ${activity.food}` : null,
+      ].filter(Boolean) as string[];
+
+      return { date: activity.date, reasons, score, title: activity.title };
+    }),
+    ...filtered.events.map((event) => {
+      const text = [event.title, event.meta, event.place?.name, event.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const companionCount = splitCompanions(event.companions).length;
+      const score = positiveScore + companionCount + (event.place?.name ? 1 : 0) + (event.expenseAmount ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        event.place?.name ? `장소 ${event.place.name}` : null,
+      ].filter(Boolean) as string[];
+
+      return { date: event.date, reasons, score, title: event.title };
+    }),
+    ...filtered.tasks.map((task) => {
+      const text = [task.title, task.memo, task.place?.name, task.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const companionCount = splitCompanions(task.companions).length;
+      const score = positiveScore + companionCount + (task.status === "done" ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        task.status === "done" ? "완료된 기록" : null,
+      ].filter(Boolean) as string[];
+
+      return { date: task.scheduledDate, reasons, score, title: task.title };
+    }),
+  ];
+
+  return candidates
+    .filter((candidate) => candidate.score > 0)
+    .sort((left, right) => right.score - left.score || right.date.localeCompare(left.date));
+}
+
+function countKeywordHits(text: string, keywords: string[]) {
+  const normalized = text.toLowerCase();
+  return keywords.reduce((count, keyword) => (normalized.includes(keyword) ? count + 1 : count), 0);
 }
 
 function buildComparisonContext(input: AskAnalysisInput, detectedWindows: DateWindow[], effectiveWindow: DateWindow) {
