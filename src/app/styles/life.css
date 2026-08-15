@@ -637,6 +637,13 @@
   padding: 0;
 }
 
+.life-calendar-db-divider {
+  height: 1px;
+  margin: 2px 0 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(201, 184, 255, 0.42), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(201, 184, 255, 0.08);
+}
+
 .life-calendar-db-section__head h3 {
   margin: 2px 0 0;
   font-size: 1.04rem;

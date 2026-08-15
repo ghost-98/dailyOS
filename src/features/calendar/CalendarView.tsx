@@ -1245,12 +1245,7 @@ function LifeCalendarDatabasePanel({
         </div>
 
         <section className="life-calendar-db-section life-calendar-db-section--plain">
-          <div className="life-calendar-db-section__head">
-            <div className="life-calendar-db-section__head life-calendar-db-section__head--canvas">
-              <h3>기록으로 보는 하루</h3>
-              <p className="eyebrow">하루 캔버스</p>
-            </div>
-          </div>
+          <div className="life-calendar-db-divider" aria-hidden />
           <LifeCalendarDayPanel isLoading={isLoading} items={items} />
         </section>
 
