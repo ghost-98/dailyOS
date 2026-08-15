@@ -95,11 +95,17 @@ function LifeDataRouter({ activeTab, activityDraft, initialDate }: { activeTab: 
           workouts={workouts}
         />
       ) : activeTab === "activities" ? (
-        <LifeActivitiesView activities={activities} initialDraft={activityDraft} onDeleteActivity={mutations.deleteActivity} onSaveActivity={mutations.saveActivity} />
+        <LifeActivitiesView
+          activities={activities}
+          initialDraft={activityDraft}
+          onDeleteActivity={mutations.deleteActivity}
+          onSaveActivity={mutations.saveActivity}
+          onUploadPhotos={mutations.uploadLifePhotos}
+        />
       ) : activeTab === "logs" ? (
         <LifeLogsView activities={activities} logs={dailyLogs} onCreateLog={mutations.createDailyLog} onDeleteLog={mutations.deleteDailyLog} onUpdateLog={mutations.updateDailyLog} />
       ) : activeTab === "photos" ? (
-        <LifePhotosView activities={activities} onDeletePhoto={mutations.deleteLifePhoto} onUploadPhotos={mutations.uploadLifePhotos} photos={lifePhotos} />
+        <LifePhotosView onDeletePhoto={mutations.deleteLifePhoto} photos={lifePhotos} />
       ) : (
         <LifeHealthView
           setWeights={(updater) => setData((current) => ({ ...current, weights: typeof updater === "function" ? updater(current.weights) : updater }))}

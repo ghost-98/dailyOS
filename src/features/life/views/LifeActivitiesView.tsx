@@ -4,13 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
+import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
-import type { LifeActivityRecord, PersonRecord, PlanPlace } from "@/types/domain";
+import type { LifeActivityRecord, LifeMediaUploadInput, PersonRecord, PlanPlace } from "@/types/domain";
+import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 
 export type LifeActivityDraft = {
   date?: string;
@@ -20,6 +23,7 @@ export type LifeActivityDraft = {
 };
 
 type EntryMode = "activity" | "wake" | "sleep";
+type InputPanelMode = "activity" | "media";
 type SleepDateMode = "selected" | "next";
 
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
@@ -31,15 +35,18 @@ export function LifeActivitiesView({
   activities,
   initialDraft,
   onDeleteActivity,
+  onUploadPhotos,
   onSaveActivity,
 }: {
   activities: LifeActivityRecord[];
   initialDraft?: LifeActivityDraft;
   onDeleteActivity: (id: string) => Promise<void> | void;
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: LifeLinkedTarget) => Promise<void> | void;
   onSaveActivity: (activity: LifeActivityRecord) => Promise<void> | void;
 }) {
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [entryMode, setEntryMode] = useState<EntryMode>("activity");
+  const [inputPanelMode, setInputPanelMode] = useState<InputPanelMode>("activity");
   const [date, setDate] = useState(initialDraft?.date ?? formatDateKey(new Date()));
   const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(initialDraft?.date ?? formatDateKey(new Date())));
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
@@ -95,6 +102,7 @@ export function LifeActivitiesView({
     const draftDate = initialDraft.date ?? formatDateKey(new Date());
     setEditing(null);
     setEntryMode("activity");
+    setInputPanelMode("activity");
     setDate(draftDate);
     setMonthCursor(createMonthCursor(draftDate));
     setHasTime(Boolean(initialDraft.startTime || initialDraft.endTime));
@@ -195,6 +203,7 @@ export function LifeActivitiesView({
 
   const editActivity = (activity: LifeActivityRecord) => {
     setEditing(activity);
+    setInputPanelMode("activity");
     setEntryMode("activity");
     selectDate(activity.date);
     setCategory(activity.category ?? DEFAULT_CATEGORY);
@@ -387,24 +396,56 @@ export function LifeActivitiesView({
         <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading life-activity-form__heading ui-panel-heading">
             <div className="ui-panel-heading__intro">
-              <p className="eyebrow">활동 입력</p>
-              <h2>{entryMode === "activity" ? (editing ? "활동 수정" : "활동 추가") : entryMode === "wake" ? "기상 기록" : "취침 기록"}</h2>
+              <p className="eyebrow">{inputPanelMode === "activity" ? "활동 입력" : "미디어 업로드"}</p>
+              <h2>
+                {inputPanelMode === "media"
+                  ? "사진 · 영상 업로드"
+                  : entryMode === "activity"
+                    ? (editing ? "활동 수정" : "활동 추가")
+                    : entryMode === "wake"
+                      ? "기상 기록"
+                      : "취침 기록"}
+              </h2>
             </div>
             <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
+              <div className="life-activity-action-group life-activity-action-group--mode">
+                <button
+                  className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("activity")}
+                  type="button"
+                >
+                  활동 기록
+                </button>
+                <button
+                  className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("media")}
+                  type="button"
+                >
+                  사진 · 영상
+                </button>
+              </div>
+              {inputPanelMode === "activity" ? (
               <div className="life-activity-action-group">
                 <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
                 <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
               </div>
+              ) : null}
+              {inputPanelMode === "activity" ? (
               <div className="life-activity-action-group life-activity-action-group--accent">
                 <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
                 <button className={entryMode === "sleep" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("sleep")} type="button">취침</button>
                 {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
               </div>
-              {editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
+              ) : null}
+              {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
           </div>
 
-          {entryMode === "activity" ? (
+          {inputPanelMode === "media" ? (
+            <LifeMediaUploadPanel activities={activities} date={date} onDateChange={selectDate} onUploadPhotos={onUploadPhotos} />
+          ) : entryMode === "activity" ? (
             <>
               <div className="life-activity-form-card">
                 <label className="life-activity-title-field">
@@ -614,9 +655,9 @@ export function LifeActivitiesView({
             </div>
           )}
 
-          {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
-          {message ? <p className="life-health-message">{message}</p> : null}
-          {entryMode === "activity" ? (
+          {inputPanelMode === "activity" && formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+          {inputPanelMode === "activity" && message ? <p className="life-health-message">{message}</p> : null}
+          {inputPanelMode === "activity" && entryMode === "activity" ? (
             <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
               {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
             </button>
@@ -771,11 +812,6 @@ function formatActivitySummary(activity: LifeActivityRecord) {
     activity.food ? `식사 · ${activity.food}` : null,
     activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
   ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음";
-}
-
-function getLifeActionErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
 }
 
 function parseCompanionNames(value?: string) {
