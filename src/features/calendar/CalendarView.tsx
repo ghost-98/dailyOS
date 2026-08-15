@@ -1217,6 +1217,7 @@ function LifeCalendarDatabasePanel({
   ).slice(0, 4);
   const topPlaces = getTopValues(places.map((place) => place.name)).slice(0, 4);
   const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
+  const periodNarrative = getPeriodNarrative(scope, daySummaries, finance, topCompanions, topPlaces);
   const dayEventCounts = getDayEventCounts(items);
   const dayEventGroups = buildDayEventGroups(items);
 
@@ -1267,7 +1268,16 @@ function LifeCalendarDatabasePanel({
     );
   }
 
-  return null;
+  return (
+    <div className="life-calendar-db-content">
+      <section className="life-calendar-db-section">
+        <article className="life-calendar-db-story">
+          <span>기간 서사</span>
+          <strong>{periodNarrative}</strong>
+        </article>
+      </section>
+    </div>
+  );
 }
 
 type DayDetailView = "activities" | "map" | "photos" | null;
@@ -1814,6 +1824,49 @@ function getDayNarrative(summary: PeriodDaySummary | undefined, finance: { expen
   return `${density}. ${people} ${place} ${financeTone}.`;
 }
 
+function getPeriodNarrative(
+  scope: Exclude<LifeCalendarScope, "day"> | LifeCalendarScope,
+  daySummaries: PeriodDaySummary[],
+  finance: { expense: number; income: number; net: number },
+  topCompanions: Array<{ count: number; value: string }>,
+  topPlaces: Array<{ count: number; value: string }>,
+) {
+  if (scope === "day") return getDayNarrative(daySummaries[0], finance, topCompanions, topPlaces);
+  if (daySummaries.length === 0) return "아직 이 기간을 해석할 만큼 쌓인 기록이 없어요.";
+
+  const totalCount = daySummaries.reduce((sum, summary) => sum + summary.totalCount, 0);
+  const activeDays = daySummaries.length;
+  const totalActivities = daySummaries.reduce((sum, summary) => sum + summary.activityCount, 0);
+  const totalRecords = daySummaries.reduce((sum, summary) => sum + summary.recordCount, 0);
+  const peakDay = [...daySummaries].sort((left, right) => right.totalCount - left.totalCount || left.date.localeCompare(right.date))[0];
+  const density =
+    totalCount >= 28 ? "기록 밀도가 꽤 높은 기간" :
+    totalCount >= 14 ? "생활 흔적이 비교적 고르게 남은 기간" :
+    "비교적 조용하게 지나간 기간";
+  const rhythm =
+    peakDay && peakDay.totalCount > 0
+      ? `${formatMonthDayLabel(peakDay.date)}에 가장 많은 흐름이 몰렸고`
+      : "특정 날짜에 크게 쏠리지는 않았고";
+  const people =
+    topCompanions[0]
+      ? `${topCompanions[0].value}와 연결된 장면이 가장 자주 반복됐어요.`
+      : "혼자 정리된 기록 비중이 더 높아요.";
+  const place =
+    topPlaces[0]
+      ? `${topPlaces[0].value} 축이 기간 전체의 대표 배경으로 보이고`
+      : "뚜렷한 장소 축은 아직 약하고";
+  const recordTone =
+    totalActivities > totalRecords
+      ? `활동 기록(${totalActivities}건)이 사진·하루기록(${totalRecords}건)보다 앞서며 움직임 중심의 기간이었어요.`
+      : `사진·하루기록(${totalRecords}건)이 활동 기록(${totalActivities}건)과 비슷하거나 더 많아 회고성이 살아 있는 기간이었어요.`;
+  const financeTone =
+    finance.net > 0 ? `자금 흐름은 ${formatNumberWithUnit(finance.net, " 순증")}으로 마무리됐어요.` :
+    finance.net < 0 ? `자금 흐름은 ${formatNumberWithUnit(finance.net, " 순지출")}이었어요.` :
+    "자금 흐름은 큰 편차 없이 균형에 가까웠어요.";
+
+  return `${density}. ${activeDays}일에 기록이 남았고, ${rhythm} ${place} ${people} ${recordTone} ${financeTone}`;
+}
+
 function getDayEventCounts(items: DayTimelineItem[]) {
   return items.reduce(
     (counts, item) => {
@@ -1977,6 +2030,10 @@ function hasCoordinates(stop: DayRouteStop): stop is DayResolvedRouteStop {
 function formatNumberWithUnit(value: number, unit: string) {
   const prefix = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${prefix}${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
+}
+
+function formatMonthDayLabel(dateKey: string) {
+  return new Intl.DateTimeFormat("ko-KR", { day: "numeric", month: "numeric" }).format(new Date(`${dateKey}T00:00:00`));
 }
 
 function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {

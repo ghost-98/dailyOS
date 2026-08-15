@@ -117,6 +117,7 @@ export type LifeAskAnalysis = {
   focusDescription: string;
   focusTitle: string;
   linkGroups: LifeAskLinkGroup[];
+  narrative: string;
   overview: string;
   patterns: string[];
   promptContext: string;
@@ -151,6 +152,18 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     topPlaces,
     windowLabel: effectiveWindow.label,
   });
+  const narrative = buildAskNarrative({
+    comparison,
+    dateRange: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
+    filtered,
+    focus,
+    focusEntity,
+    topActivityTypes,
+    topExpenseCategories,
+    topPeople,
+    topPlaces,
+    windowLabel: effectiveWindow.label,
+  });
 
   const evidence = filtered.records.slice(0, 8).map((record) => ({
     date: record.date,
@@ -164,6 +177,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     `해석 기간: ${effectiveWindow.label} (${effectiveWindow.start} ~ ${effectiveWindow.end})`,
     `핵심 제목: ${focusData.focusTitle}`,
     `핵심 요약: ${focusData.overview}`,
+    `기간 서사: ${narrative}`,
     comparison
       ? `비교 기준: ${comparison.label} / 현재 ${comparison.current.recordCount}건 vs 이전 ${comparison.previous.recordCount}건`
       : "비교 기준: 단일 기간 해석",
@@ -181,11 +195,43 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     focusDescription: focusData.focusDescription,
     focusTitle: focusData.focusTitle,
     linkGroups,
+    narrative,
     overview: focusData.overview,
     patterns: focusData.patterns,
     promptContext,
     suggestions: focusData.suggestions,
   };
+}
+
+function buildAskNarrative(args: FocusAnalysisArgs) {
+  const recordCount = args.filtered.records.length;
+  const activityCount = args.filtered.activities.length;
+  const photoCount = args.filtered.photos.length;
+  const logCount = args.filtered.logs.length;
+  const expenseTotal = sumAmounts(args.filtered.expenses.map((item) => item.amount));
+  const incomeTotal = sumAmounts(args.filtered.incomes.map((item) => item.amount));
+  const net = incomeTotal - expenseTotal;
+  const people = args.topPeople[0]?.name;
+  const place = args.topPlaces[0]?.name;
+  const activity = args.topActivityTypes[0]?.name;
+  const density =
+    recordCount >= 40 ? "기록 밀도가 높은 기간" :
+    recordCount >= 16 ? "기록이 비교적 꾸준히 남은 기간" :
+    "비교적 잔잔한 기간";
+  const axis = [people ? `${people} 관계축` : null, place ? `${place} 장소축` : null, activity ? `${activity} 활동축` : null].filter(Boolean).join(", ");
+  const memoryTone =
+    photoCount + logCount > activityCount
+      ? `사진과 기록 회고(${photoCount + logCount}건)가 활동 기록(${activityCount}건)과 비슷하거나 더 강하게 남아 있어요.`
+      : `활동 기록(${activityCount}건)이 회고 기록(${photoCount + logCount}건)보다 앞서며 움직임이 더 또렷해요.`;
+  const financeTone =
+    net > 0 ? `자금 흐름은 ${formatWon(net)} 순유입이에요.` :
+    net < 0 ? `자금 흐름은 ${formatWon(net)} 순지출이에요.` :
+    "자금 흐름은 대체로 균형적이에요.";
+  const compareTone = args.comparison
+    ? `${args.comparison.label} 비교도 가능해서 변화 방향까지 읽을 수 있어요.`
+    : "현재는 단일 기간 흐름에 집중한 해석이 적합해요.";
+
+  return `${args.windowLabel}은(는) ${density}예요. ${axis ? `${axis}이(가) 중심으로 보이고, ` : ""}${memoryTone} ${financeTone} ${compareTone}`;
 }
 
 function buildFocusData(args: FocusAnalysisArgs): LifeAskFocusData {

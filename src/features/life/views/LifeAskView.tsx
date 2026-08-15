@@ -129,6 +129,7 @@ export function LifeAskView({
               <span>{analysis.focusTitle}</span>
               <strong>{analysis.overview}</strong>
               <p>{analysis.focusDescription}</p>
+              <p>{analysis.narrative}</p>
             </article>
 
             <div className="life-ask-metric-grid">
