@@ -639,7 +639,7 @@
 
 .life-calendar-db-divider {
   height: 1px;
-  margin: 2px 0 4px;
+  margin: 10px 0;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(201, 184, 255, 0.42), rgba(255, 255, 255, 0.04));
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(201, 184, 255, 0.08);
 }
