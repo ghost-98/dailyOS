@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { Bell, Database, Download, LogOut, Mail, Save, Settings, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { supabase } from "@/lib/supabase";
@@ -119,10 +120,10 @@ export function SettingsView() {
             <span>계정, 알림, 백업과 데이터 관리 방식을 조정합니다.</span>
           </div>
         </div>
-        <button className="header-action" onClick={() => void saveAccount()} type="button">
+        <ActionButton className="header-action" onClick={() => void saveAccount()}>
           <Save aria-hidden size={18} />
           저장
-        </button>
+        </ActionButton>
       </header>
 
       <div className="settings-grid">
@@ -150,10 +151,10 @@ export function SettingsView() {
               <strong>{user?.email_confirmed_at ? "이메일 인증 완료" : "이메일 인증 확인 필요"}</strong>
             </div>
           </div>
-          <button className="settings-command settings-command--danger" onClick={() => void signOutDailyOS()} type="button">
+          <ActionButton onClick={() => void signOutDailyOS()} variant="danger">
             <LogOut aria-hidden size={16} />
             로그아웃
-          </button>
+          </ActionButton>
         </SectionCard>
 
         <SectionCard className="settings-card">
@@ -171,19 +172,19 @@ export function SettingsView() {
             <Database aria-hidden size={20} />
             <span>데이터 관리</span>
           </div>
-          <button className="settings-command" disabled={isManagingData} onClick={() => void exportData()} type="button">
+          <ActionButton disabled={isManagingData} onClick={() => void exportData()} variant="secondary">
             <Download aria-hidden size={16} />
             데이터 내보내기
-          </button>
-          <button className="settings-command" disabled={isManagingData} onClick={() => importInputRef.current?.click()} type="button">
+          </ActionButton>
+          <ActionButton disabled={isManagingData} onClick={() => importInputRef.current?.click()} variant="secondary">
             <Upload aria-hidden size={16} />
             백업 파일 가져오기
-          </button>
+          </ActionButton>
           <input ref={importInputRef} accept="application/json" hidden type="file" onChange={(event) => void importData(event.target.files?.[0])} />
-          <button className="settings-command settings-command--danger" disabled={isManagingData} onClick={() => void deleteData()} type="button">
+          <ActionButton disabled={isManagingData} onClick={() => void deleteData()} variant="danger">
             <Trash2 aria-hidden size={16} />
             계정 데이터 삭제
-          </button>
+          </ActionButton>
           {dataMessage ? <p className="settings-message">{dataMessage}</p> : null}
           <p className="settings-hint">사진 파일은 Supabase Storage에 남아 있고, 백업 파일에는 사진 메타데이터와 경로가 저장됩니다.</p>
         </SectionCard>

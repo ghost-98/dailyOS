@@ -88,28 +88,6 @@
   padding: 12px;
 }
 
-.settings-command {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-weight: 800;
-}
-
-.settings-command:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.settings-command--danger {
-  color: var(--pink);
-}
-
 .date-picker-sheet {
   width: min(520px, 100%);
 }

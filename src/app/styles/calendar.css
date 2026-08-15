@@ -897,10 +897,6 @@
   margin-top: 6px;
 }
 
-.date-empty-state__add {
-  margin-top: 14px;
-}
-
 @keyframes detail-slide-in {
   from {
     opacity: 0;
