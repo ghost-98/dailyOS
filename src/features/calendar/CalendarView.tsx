@@ -54,7 +54,6 @@ type CalendarViewProps = {
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 type LifeCalendarScope = "day" | "week" | "month" | "range";
-type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "finance" | "health";
 const naverMapClientId = getNaverMapClientId();
 const dayRouteGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
@@ -88,7 +87,6 @@ export function CalendarView({
   const [activityConversionMessage, setActivityConversionMessage] = useState("");
   const [convertingToActivity, setConvertingToActivity] = useState<{ id: string; type: "event" | "task" } | null>(null);
   const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
-  const [dbAxis, setDbAxis] = useState<LifeCalendarAxis>("all");
   const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
   const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
 
@@ -169,49 +167,14 @@ export function CalendarView({
     const sourceItems = isDatabaseView ? [...periodSchedules, ...periodEvents, ...periodTasks] : [...selectedSchedules, ...selectedEvents, ...selectedTasks];
     return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
   }, [isDatabaseView, periodEvents, periodSchedules, periodTasks, selectedEvents, selectedSchedules, selectedTasks]);
-  const dbAxisCounts = useMemo(
-    () => ({
-      activity: periodExternalItems.filter((item) => item.type === "activity").length,
-      all: periodTimelineItems.length,
-      finance: periodExternalItems.filter((item) => item.type === "expense" || item.type === "income").length,
-      health: periodExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
-      places: periodTimelineItems.filter((item) => hasTimelinePlace(item)).length,
-      records: periodExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
-    }),
-    [periodExternalItems, periodTimelineItems],
-  );
-  const dbPeopleNames = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [...periodSchedules, ...periodEvents, ...periodTasks]
-            .flatMap((item) => parseCompanionNames(item.companions))
-            .filter(Boolean),
-        ),
-      ),
-    [periodEvents, periodSchedules, periodTasks],
-  );
   const periodDaySummaries = useMemo(
     () => buildPeriodDaySummaries(periodBounds.start, periodBounds.end, periodSchedules, periodEvents, periodTasks, periodExternalItems),
     [periodBounds.end, periodBounds.start, periodEvents, periodExternalItems, periodSchedules, periodTasks],
   );
   const visibleTimelineItems = useMemo(() => {
     if (!isDatabaseView) return selectedTimelineItems;
-    switch (dbAxis) {
-      case "activity":
-        return periodTimelineItems.filter((item) => item.type === "activity");
-      case "places":
-        return periodTimelineItems.filter((item) => hasTimelinePlace(item));
-      case "records":
-        return periodTimelineItems.filter((item) => item.type === "daily_log" || item.type === "photo");
-      case "finance":
-        return periodTimelineItems.filter((item) => item.type === "expense" || item.type === "income");
-      case "health":
-        return periodTimelineItems.filter((item) => item.type === "workout" || item.type === "weight");
-      default:
-        return periodTimelineItems;
-    }
-  }, [dbAxis, isDatabaseView, periodTimelineItems, selectedTimelineItems]);
+    return periodTimelineItems;
+  }, [isDatabaseView, periodTimelineItems, selectedTimelineItems]);
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
@@ -617,53 +580,6 @@ export function CalendarView({
               </div>
 
               {!isDatabaseView ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
-
-              {isDatabaseView && dbScope === "range" ? (
-                <div className="life-calendar-db-panel">
-                  <div className="life-calendar-db-summary" aria-label="기록 축">
-                    {([
-                      ["activity", "활동", dbAxisCounts.activity],
-                      ["places", "장소축", dbAxisCounts.places],
-                      ["records", "기록 사진", dbAxisCounts.records],
-                      ["finance", "수입·지출", dbAxisCounts.finance],
-                      ["health", "건강", dbAxisCounts.health],
-                    ] as const).map(([axis, label, count]) => (
-                      <button
-                        className={dbAxis === axis ? "life-calendar-db-summary__card life-calendar-db-summary__card--active" : "life-calendar-db-summary__card"}
-                        key={axis}
-                        onClick={() => setDbAxis((current) => (current === axis ? "all" : axis))}
-                        type="button"
-                      >
-                        <span>{label}</span>
-                        <strong>{count}</strong>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="life-calendar-db-overview">
-                    <article>
-                      <span>계획</span>
-                      <strong>{periodSchedules.length + periodEvents.length + periodTasks.length}</strong>
-                      <p>일정 · 이벤트 · 할 일</p>
-                    </article>
-                    <article>
-                      <span>선택 축 기록</span>
-                      <strong>{visibleTimelineItems.length}</strong>
-                      <p>{getAxisDescription(dbAxis)}</p>
-                    </article>
-                    <article>
-                      <span>장소</span>
-                      <strong>{selectedPlanPlaces.length}</strong>
-                      <p>기간 안에서 남은 동선</p>
-                    </article>
-                    <article>
-                      <span>함께한 사람</span>
-                      <strong>{dbPeopleNames.length}</strong>
-                      <p>계획과 활동에 함께 남은 이름</p>
-                    </article>
-                  </div>
-                </div>
-              ) : null}
 
               <div className="date-event-list">
                 {isDatabaseView ? (
@@ -2229,21 +2145,6 @@ function getTimelineItemDate(item: DayTimelineItem) {
   if ("event" in item) return item.event.date;
   if ("task" in item) return item.task.scheduledDate;
   return item.external.date;
-}
-
-function hasTimelinePlace(item: DayTimelineItem) {
-  if ("event" in item) return Boolean(item.event.place?.name || item.event.place?.address);
-  if ("task" in item) return Boolean(item.task.place?.name || item.task.place?.address);
-  return Boolean(item.external.placeName || item.external.placeAddress);
-}
-
-function getAxisDescription(axis: LifeCalendarAxis) {
-  if (axis === "activity") return "실제로 남긴 활동 기록";
-  if (axis === "places") return "장소가 연결된 기록";
-  if (axis === "records") return "하루기록과 사진";
-  if (axis === "finance") return "수입과 지출로 남은 자금 흐름";
-  if (axis === "health") return "운동과 몸무게";
-  return "전체 흐름";
 }
 
 function buildPeriodDaySummaries(
