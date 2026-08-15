@@ -424,9 +424,9 @@
     padding: 16px;
   }
 
-  .life-activity-form .section-heading {
-    align-items: stretch;
-    flex-direction: column;
+  .ui-panel-heading {
+    grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .life-activity-form .life-record-actions,
@@ -439,6 +439,7 @@
     flex: 1 1 auto;
   }
 
+  .ui-panel-heading__actions,
   .life-activity-form__actions,
   .life-activity-quick-panel__actions,
   .life-activity-tag-editor {

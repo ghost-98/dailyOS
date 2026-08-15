@@ -3044,28 +3044,6 @@
   padding: 22px;
 }
 
-.life-activity-form > .section-heading,
-.life-selected-day-panel > .section-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 104px;
-  align-items: flex-start;
-  padding-top: 4px;
-}
-
-.life-activity-form > .section-heading > div:first-child,
-.life-selected-day-panel > .section-heading > div:first-child {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-}
-
-.life-selected-day-panel {
-  position: sticky;
-  top: 18px;
-  overflow: hidden;
-}
-
 .life-selected-day-title {
   display: inline-flex;
   align-items: center;
@@ -3116,14 +3094,6 @@ button:disabled {
   gap: 18px;
 }
 
-.life-activity-form__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 10px;
-}
-
 .life-activity-action-group {
   display: inline-flex;
   flex-wrap: wrap;
@@ -3141,15 +3111,6 @@ button:disabled {
 
 .life-selected-day-panel__heading {
   gap: 18px;
-  padding-top: 4px;
-}
-
-.life-selected-day-panel__heading::after {
-  content: "";
-  display: block;
-  min-width: 190px;
-  height: 46px;
-  visibility: hidden;
 }
 
 .life-activity-quick-toggle--active {

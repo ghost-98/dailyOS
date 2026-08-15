@@ -608,8 +608,8 @@ export function CalendarView({
         {selectedDate || isDatabaseView ? (
           <aside className="calendar-detail">
             <SectionCard className="date-detail-card">
-              <div className="section-heading">
-                <div>
+              <div className="section-heading ui-panel-heading">
+                <div className="ui-panel-heading__intro">
                   <p className="eyebrow">{isDatabaseView ? getDatabaseEyebrow(dbScope) : "선택한 날짜"}</p>
                   <h2>{isDatabaseView ? getScopeTitle(dbScope, periodBounds.start, periodBounds.end, currentMonth) : formatSelectedDate(selectedDate ?? detailAnchorDate)}</h2>
                 </div>

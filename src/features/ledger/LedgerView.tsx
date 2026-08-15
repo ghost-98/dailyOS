@@ -217,8 +217,8 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
 
         <aside className="ledger-detail">
           <SectionCard className="date-detail-card">
-            <div className="section-heading ledger-detail-heading">
-              <div>
+            <div className="section-heading ledger-detail-heading ui-panel-heading">
+              <div className="ui-panel-heading__intro">
                 <p className="eyebrow">선택 날짜 자금 흐름</p>
                 <h2>{formatFullDate(selectedDate)}</h2>
               </div>
@@ -240,8 +240,8 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
             </div>
 
             <div className={`ledger-capture-panel${isIncomeCaptureExpanded ? "" : " ledger-capture-panel--collapsed"}`}>
-              <div className="section-heading ledger-capture-panel__heading">
-                <div>
+              <div className="section-heading ledger-capture-panel__heading ui-panel-heading">
+                <div className="ui-panel-heading__intro">
                   <p className="eyebrow">Income Capture</p>
                   <h3>수입 추가</h3>
                 </div>

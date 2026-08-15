@@ -192,3 +192,34 @@
   background: var(--surface-accent);
   color: var(--text);
 }
+
+.ui-panel-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 18px;
+  min-height: 104px;
+  margin-bottom: 0;
+  padding-top: 4px;
+}
+
+.ui-panel-heading__intro {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-panel-heading__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ui-sticky-side-panel {
+  position: sticky;
+  top: 18px;
+  overflow: hidden;
+}

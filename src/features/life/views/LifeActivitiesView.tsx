@@ -385,12 +385,12 @@ export function LifeActivitiesView({
       <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
       <div className="life-activity-layout">
         <SectionCard className="life-activity-form">
-          <div className="section-heading life-activity-form__heading">
-            <div>
+          <div className="section-heading life-activity-form__heading ui-panel-heading">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">Core Life Block</p>
               <h2>{entryMode === "activity" ? (editing ? "활동 수정" : "활동 추가") : entryMode === "wake" ? "기상 기록" : "취침 기록"}</h2>
             </div>
-            <div className="life-record-actions life-activity-form__actions">
+            <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
               <div className="life-activity-action-group">
                 <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
                 <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
@@ -624,9 +624,9 @@ export function LifeActivitiesView({
 
         </SectionCard>
 
-        <SectionCard className="life-activity-list life-selected-day-panel">
-          <div className="section-heading life-selected-day-panel__heading">
-            <div>
+        <SectionCard className="life-activity-list life-selected-day-panel ui-sticky-side-panel">
+          <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
+            <div className="ui-panel-heading__intro">
               <p className="eyebrow">Selected Day</p>
               <h2 className="life-selected-day-title">
                 <span>{formatFullDate(date)}</span>
