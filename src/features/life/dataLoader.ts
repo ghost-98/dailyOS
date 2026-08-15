@@ -49,9 +49,9 @@ export async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataS
     return { ...emptyLifeDataSnapshot, activities: activities ?? [], dailyLogs: dailyLogs ?? [], lifePhotos: lifePhotos ?? [] };
   }
 
-  if (mode === "photos") {
-    const [activities, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchLifePhotosFromDb()]);
-    return { ...emptyLifeDataSnapshot, activities: activities ?? [], lifePhotos: lifePhotos ?? [] };
+  if (mode === "gallery") {
+    const lifePhotos = await fetchLifePhotosFromDb();
+    return { ...emptyLifeDataSnapshot, lifePhotos: lifePhotos ?? [] };
   }
 
   if (mode === "health") {

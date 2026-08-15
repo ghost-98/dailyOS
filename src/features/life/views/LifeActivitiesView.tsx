@@ -76,6 +76,9 @@ export function LifeActivitiesView({
   const [wakeTime, setWakeTime] = useState("07:00");
   const [sleepPlace, setSleepPlace] = useState<PlanPlace | undefined>();
   const [wakePlace, setWakePlace] = useState<PlanPlace | undefined>();
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+  const [pickerMonth, setPickerMonth] = useState(new Date().getMonth() + 1);
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -148,6 +151,15 @@ export function LifeActivitiesView({
   const connectedCount = selectedActivities.filter((activity) => hasActivityContext(activity)).length;
   const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
+  const availableYears = useMemo(() => {
+    const years = [
+      new Date().getFullYear(),
+      ...activities.map((activity) => Number(activity.date.slice(0, 4))).filter((year) => Number.isFinite(year)),
+    ];
+    const minYear = Math.min(...years, new Date().getFullYear() - 2);
+    const maxYear = Math.max(...years, new Date().getFullYear() + 2);
+    return Array.from({ length: maxYear - minYear + 1 }, (_, index) => minYear + index);
+  }, [activities]);
   const sameDaySleepActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [selectedActivities]);
   const nextDaySleepActivity = useMemo(() => nextDateActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [nextDateActivities]);
   const wakeActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "wake")), [selectedActivities]);
@@ -368,6 +380,22 @@ export function LifeActivitiesView({
     setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
   };
 
+  const toggleMonthPicker = () => {
+    setPickerYear(monthCursor.getFullYear());
+    setPickerMonth(monthCursor.getMonth() + 1);
+    setIsMonthPickerOpen((current) => !current);
+  };
+
+  const applyMonthPicker = () => {
+    const targetMonthCursor = new Date(pickerYear, pickerMonth - 1, 1);
+    const currentDate = new Date(`${date}T00:00:00`);
+    const lastDayOfMonth = new Date(pickerYear, pickerMonth, 0).getDate();
+    const nextSelectedDate = new Date(pickerYear, pickerMonth - 1, Math.min(currentDate.getDate(), lastDayOfMonth));
+    setMonthCursor(targetMonthCursor);
+    setDate(formatDateKey(nextSelectedDate));
+    setIsMonthPickerOpen(false);
+  };
+
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
@@ -407,8 +435,24 @@ export function LifeActivitiesView({
               </div>
               {inputPanelMode === "activity" ? (
               <div className="life-activity-action-group life-activity-action-group--accent">
-                <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
-                <button className={entryMode === "sleep" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("sleep")} type="button">취침</button>
+                <button
+                  className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
+                  disabled={isSaving}
+                  onClick={() => setEntryMode("wake")}
+                  type="button"
+                >
+                  <Sunrise aria-hidden size={14} />
+                  기상
+                </button>
+                <button
+                  className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
+                  disabled={isSaving}
+                  onClick={() => setEntryMode("sleep")}
+                  type="button"
+                >
+                  <BedDouble aria-hidden size={14} />
+                  취침
+                </button>
                 {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
               </div>
               ) : null}
@@ -655,21 +699,62 @@ export function LifeActivitiesView({
               <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
                 <ChevronLeft aria-hidden size={16} />
               </button>
-              <strong>{monthLabel}</strong>
+              <div className="life-activity-calendar__month-picker">
+                <button className="life-activity-calendar__month-button" onClick={toggleMonthPicker} type="button">
+                  {monthLabel}
+                </button>
+                {isMonthPickerOpen ? (
+                  <div className="life-activity-calendar__month-popover">
+                    <select value={pickerYear} onChange={(event) => setPickerYear(Number(event.target.value))}>
+                      {availableYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}년
+                        </option>
+                      ))}
+                    </select>
+                    <select value={pickerMonth} onChange={(event) => setPickerMonth(Number(event.target.value))}>
+                      {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                        <option key={month} value={month}>
+                          {month}월
+                        </option>
+                      ))}
+                    </select>
+                    <div className="life-activity-calendar__month-actions">
+                      <button onClick={() => setIsMonthPickerOpen(false)} type="button">닫기</button>
+                      <button onClick={applyMonthPicker} type="button">이동</button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
                 <ChevronRight aria-hidden size={16} />
               </button>
             </div>
             <div className="life-activity-calendar__weekdays">
-              {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
+              {WEEKDAYS.map((weekday, index) => (
+                <span
+                  className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
+                  key={weekday}
+                >
+                  {weekday}
+                </span>
+              ))}
             </div>
             <div className="life-activity-calendar__grid">
               {calendarDays.map((day) => {
                 const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+                const weekday = day.date ? new Date(`${day.date}T00:00:00`).getDay() : -1;
                 return (
                   <button
                     aria-pressed={day.date === date}
-                    className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
+                    className={
+                      [
+                        "life-activity-calendar__day",
+                        day.date === date ? "life-activity-calendar__day--selected" : "",
+                        weekday === 0 ? "life-activity-calendar__day--sun" : "",
+                        weekday === 6 ? "life-activity-calendar__day--sat" : "",
+                      ].filter(Boolean).join(" ")
+                    }
                     disabled={!day.date}
                     key={day.key}
                     onClick={() => day.date && selectDate(day.date)}

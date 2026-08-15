@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Activity, CalendarDays, Camera, HeartPulse, LoaderCircle, NotebookPen, Sparkles, Target, UserRound } from "lucide-react";
+import { Activity, CalendarDays, Camera, HeartPulse, LoaderCircle, NotebookPen, Sparkles, Target } from "lucide-react";
 import { useMemo } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { useAsyncData } from "@/hooks/useAsyncData";
@@ -33,11 +33,11 @@ const dashboardCards = [
     title: "관계 축",
   },
   {
-    description: "누구와 시간을 썼는지, 어떤 장소와 지출 맥락이 붙는지 확인합니다.",
-    href: "/life/people",
-    icon: UserRound,
-    label: "관계",
-    title: "사람",
+    description: "사진과 영상을 시간순으로 훑고, 기간을 잘라보며 장면 흐름을 복원합니다.",
+    href: "/life/gallery",
+    icon: Camera,
+    label: "미디어",
+    title: "갤러리",
   },
 ];
 
@@ -45,7 +45,6 @@ const captureLinks = [
   { href: "/life/activities", icon: Activity, label: "활동 기록", title: "실제 삶을 남기는 기본 입력" },
   { href: "/life/plans", icon: CalendarDays, label: "계획 입력", title: "일정·할 일·이벤트 정리" },
   { href: "/life/logs", icon: NotebookPen, label: "하루기록", title: "의미와 감정, 메모 보강" },
-  { href: "/life/photos", icon: Camera, label: "사진·영상", title: "증거와 장면 연결" },
   { href: "/life/health", icon: HeartPulse, label: "건강", title: "몸 상태와 운동 축 보강" },
 ];
 
@@ -163,7 +162,7 @@ export function LifeHomeView() {
         },
         {
           description: summary.orphanPhotos > 0 ? `연결되지 않은 사진 ${summary.orphanPhotos}개가 있습니다.` : "사진은 활동이나 일정에 붙여야 나중에 기억 복원이 쉬워집니다.",
-          href: "/life/photos",
+          href: "/life/gallery",
           title: "사진 맥락 보강",
         },
       ].slice(0, 4),

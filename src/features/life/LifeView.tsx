@@ -10,9 +10,9 @@ import { LifeActivitiesView } from "@/features/life/views/LifeActivitiesView";
 import type { LifeActivityDraft } from "@/features/life/views/LifeActivitiesView";
 import { LifeAskView } from "@/features/life/views/LifeAskView";
 import { LifeHealthView } from "@/features/life/views/LifeHealthView";
+import { LifeGalleryView } from "@/features/life/views/LifeGalleryView";
 import { LifeLogsView } from "@/features/life/views/LifeLogsView";
 import { LifePeopleView } from "@/features/life/views/LifePeopleView";
-import { LifePhotosView } from "@/features/life/views/LifePhotosView";
 import { LifePlacesView } from "@/features/life/views/LifePlacesView";
 import { LifeSearchView } from "@/features/life/views/LifeSearchView";
 
@@ -104,8 +104,8 @@ function LifeDataRouter({ activeTab, activityDraft, initialDate }: { activeTab: 
         />
       ) : activeTab === "logs" ? (
         <LifeLogsView activities={activities} logs={dailyLogs} onCreateLog={mutations.createDailyLog} onDeleteLog={mutations.deleteDailyLog} onUpdateLog={mutations.updateDailyLog} />
-      ) : activeTab === "photos" ? (
-        <LifePhotosView onDeletePhoto={mutations.deleteLifePhoto} photos={lifePhotos} />
+      ) : activeTab === "gallery" ? (
+        <LifeGalleryView onDeletePhoto={mutations.deleteLifePhoto} photos={lifePhotos} />
       ) : (
         <LifeHealthView
           setWeights={(updater) => setData((current) => ({ ...current, weights: typeof updater === "function" ? updater(current.weights) : updater }))}

@@ -97,7 +97,6 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     <div className="event-form-card schedule-place-card">
       <div className="schedule-place-card__header">
         <div>
-          <span>장소</span>
           <strong>{selectedPlace ? selectedPlace.name : "장소 선택"}</strong>
         </div>
         {selectedPlace ? (

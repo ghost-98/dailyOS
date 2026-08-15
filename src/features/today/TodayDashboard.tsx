@@ -383,7 +383,7 @@ export function TodayDashboard() {
         <QuickAction href="/life/activities" icon={<Activity aria-hidden size={18} />} label="활동 기록" note="몇 시부터 어디서 뭘 했는지" />
         <QuickAction href="/life/calendar" icon={<CalendarDays aria-hidden size={18} />} label="계획 입력" note="일정·할일·이벤트" />
         <QuickAction href="/life/logs" icon={<NotebookPen aria-hidden size={18} />} label="하루기록" note="짧은 감상과 맥락" />
-        <QuickAction href="/life/photos" icon={<Camera aria-hidden size={18} />} label="사진 추가" note="사건/활동의 증거" />
+        <QuickAction href="/life/activities" icon={<Camera aria-hidden size={18} />} label="사진 추가" note="활동 기록 안에서 미디어도 같이 입력" />
         <QuickAction href="/life/health" icon={<Dumbbell aria-hidden size={18} />} label="건강 기록" note="러닝·몸무게" />
       </section>
 
@@ -429,7 +429,7 @@ export function TodayDashboard() {
           </SectionCard>
 
           <SectionCard className="schedule-card today-command-card">
-            <DashboardHeader href="/life/photos" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
+            <DashboardHeader href="/life/gallery" icon={<Camera aria-hidden size={20} />} title={text.photoVideo} trailing={`${text.thisMonth} ${monthPhotos.length}${text.count}`} />
             {todayPhotos.length > 0 ? (
               <div className="today-photo-strip">
                 {todayPhotos.slice(0, 4).map((photo) => (
@@ -439,7 +439,7 @@ export function TodayDashboard() {
                 ))}
               </div>
             ) : (
-              <EmptyBlock href="/life/photos" text={text.noPhoto} />
+              <EmptyBlock href="/life/gallery" text={text.noPhoto} />
             )}
           </SectionCard>
         </div>

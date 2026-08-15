@@ -477,6 +477,19 @@
     grid-template-columns: 1fr;
   }
 
+  .life-gallery-toolbar__filters,
+  .life-gallery-grid,
+  .life-activity-calendar__month-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .life-gallery-pagination,
+  .life-gallery-toolbar__summary,
+  .life-media-upload-panel__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .progress-meter {
     width: 120px;
   }
