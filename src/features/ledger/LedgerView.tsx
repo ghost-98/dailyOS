@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { MonthPickerSheet } from "@/features/calendar/CalendarView";
+import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
 import type { ExpenseCategory, ExpenseRecord, IncomeCategory, IncomeRecord } from "@/types/domain";
 
@@ -46,11 +47,17 @@ type LedgerViewProps = {
 };
 
 export function LedgerView({ variant = "page" }: LedgerViewProps) {
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
-  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
+  const { data, isLoading, setData } = useAsyncData({
+    deps: [],
+    initialData: { expenses: [] as ExpenseRecord[], incomes: [] as IncomeRecord[] },
+    load: async () => {
+      const [expenses, incomes] = await Promise.all([fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()]);
+      return { expenses: expenses ?? [], incomes: incomes ?? [] };
+    },
+    onError: (error) => console.error("Failed to load ledger records", error),
+  });
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
-  const [isLoading, setIsLoading] = useState(true);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [incomeTitle, setIncomeTitle] = useState("");
   const [incomeAmount, setIncomeAmount] = useState("");
@@ -60,24 +67,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
   const [isIncomeCaptureExpanded, setIsIncomeCaptureExpanded] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()])
-      .then(([nextExpenses, nextIncomes]) => {
-        if (!isMounted) return;
-        setExpenses(nextExpenses ?? []);
-        setIncomes(nextIncomes ?? []);
-      })
-      .catch((error) => console.error("Failed to load ledger records", error))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { expenses, incomes } = data;
 
   const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}`;
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
@@ -121,7 +111,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         title: trimmedTitle,
       });
       if (saved) {
-        setIncomes((current) => [saved, ...current]);
+        setData((current) => ({ ...current, incomes: [saved, ...current.incomes] }));
         setIncomeTitle("");
         setIncomeAmount("");
         setIncomeMemo("");
@@ -136,7 +126,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
     setDeletingIncomeId(id);
     try {
       await deleteIncomeRecordFromDb(id);
-      setIncomes((current) => current.filter((record) => record.id !== id));
+      setData((current) => ({ ...current, incomes: current.incomes.filter((record) => record.id !== id) }));
     } finally {
       setDeletingIncomeId(null);
     }

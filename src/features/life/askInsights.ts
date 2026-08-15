@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@/features/calendar/data";
+﻿import type { CalendarEvent } from "@/features/calendar/data";
 import { formatWon } from "@/features/life/formatters";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
@@ -98,6 +98,17 @@ export type LifeAskBreakdown = {
   title: string;
 };
 
+export type LifeAskLinkItem = {
+  date: string;
+  label: string;
+  meta?: string;
+};
+
+export type LifeAskLinkGroup = {
+  items: LifeAskLinkItem[];
+  title: string;
+};
+
 export type LifeAskAnalysis = {
   breakdowns: LifeAskBreakdown[];
   cards: LifeAskInsightCard[];
@@ -105,6 +116,7 @@ export type LifeAskAnalysis = {
   focus: AskFocus;
   focusDescription: string;
   focusTitle: string;
+  linkGroups: LifeAskLinkGroup[];
   overview: string;
   patterns: string[];
   promptContext: string;
@@ -145,6 +157,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     description: record.description || record.tags.join(" · ") || record.label,
     title: record.title,
   }));
+  const linkGroups = buildAskLinkGroups(filtered, effectiveWindow, topPeople, topPlaces);
 
   const promptContext = [
     `질문 초점: ${focus}`,
@@ -167,6 +180,7 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     focus,
     focusDescription: focusData.focusDescription,
     focusTitle: focusData.focusTitle,
+    linkGroups,
     overview: focusData.overview,
     patterns: focusData.patterns,
     promptContext,
@@ -737,6 +751,126 @@ function collectTopPlaces(input: Pick<FilteredLifeData, "activities" | "events" 
     ...input.events.map((event) => event.place?.name).filter(Boolean),
     ...input.tasks.map((task) => task.place?.name).filter(Boolean),
   ] as string[]);
+}
+
+function buildAskLinkGroups(
+  filtered: FilteredLifeData,
+  effectiveWindow: DateWindow,
+  topPeople: NamedCount[],
+  topPlaces: NamedCount[],
+): LifeAskLinkGroup[] {
+  const recordGroups = new Map<string, AskRecord[]>();
+  filtered.records.forEach((record) => {
+    const list = recordGroups.get(record.date) ?? [];
+    list.push(record);
+    recordGroups.set(record.date, list);
+  });
+
+  const periodItems = Array.from(recordGroups.entries())
+    .sort(([leftDate], [rightDate]) => rightDate.localeCompare(leftDate))
+    .slice(0, 3)
+    .map(([date, records]) => ({
+      date,
+      label: `${date} 기록 보기`,
+      meta: `${records.length}건`,
+    }));
+
+  const peopleItems = topPeople
+    .map((person) => findPersonAnchorDate(person.name, filtered))
+    .filter((item): item is LifeAskLinkItem => Boolean(item))
+    .slice(0, 3);
+
+  const placeItems = topPlaces
+    .map((place) => findPlaceAnchorDate(place.name, filtered))
+    .filter((item): item is LifeAskLinkItem => Boolean(item))
+    .slice(0, 3);
+
+  const evidenceItems = filtered.records.slice(0, 3).map((record) => ({
+    date: record.date,
+    label: record.title,
+    meta: record.description || record.label,
+  }));
+
+  return [
+    {
+      title: "기간 바로가기",
+      items:
+        periodItems.length > 0
+          ? periodItems
+          : [
+              {
+                date: effectiveWindow.start,
+                label: effectiveWindow.label,
+                meta: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
+              },
+            ],
+    },
+    ...(peopleItems.length > 0 ? [{ title: "사람 기준", items: peopleItems }] : []),
+    ...(placeItems.length > 0 ? [{ title: "장소 기준", items: placeItems }] : []),
+    ...(evidenceItems.length > 0 ? [{ title: "기록 근거", items: evidenceItems }] : []),
+  ];
+}
+
+function findPersonAnchorDate(name: string, filtered: FilteredLifeData): LifeAskLinkItem | null {
+  const activity = filtered.activities.find((item) => splitCompanions(item.companions).includes(name));
+  if (activity) {
+    return {
+      date: activity.date,
+      label: name,
+      meta: activity.title || activity.category || "활동 기록",
+    };
+  }
+
+  const event = filtered.events.find((item) => splitCompanions(item.companions).includes(name));
+  if (event) {
+    return {
+      date: event.date,
+      label: name,
+      meta: event.title || "일정 기록",
+    };
+  }
+
+  const task = filtered.tasks.find((item) => splitCompanions(item.companions).includes(name));
+  if (task) {
+    return {
+      date: task.scheduledDate,
+      label: name,
+      meta: task.title || "할 일 기록",
+    };
+  }
+
+  return null;
+}
+
+function findPlaceAnchorDate(name: string, filtered: FilteredLifeData): LifeAskLinkItem | null {
+  const activity = filtered.activities.find((item) => item.placeName === name);
+  if (activity) {
+    return {
+      date: activity.date,
+      label: name,
+      meta: activity.title || activity.category || "활동 기록",
+    };
+  }
+
+  const event = filtered.events.find((item) => item.place?.name === name);
+  if (event) {
+    return {
+      date: event.date,
+      label: name,
+      meta: event.title || "일정 기록",
+    };
+  }
+
+  const task = filtered.tasks.find((item) => item.place?.name === name);
+  if (task) {
+    return {
+      date: task.scheduledDate,
+      label: name,
+      meta: task.title || "할 일 기록",
+    };
+  }
+
+  return null;
 }
 
 function splitCompanions(value?: string) {

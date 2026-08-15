@@ -1,227 +1,3 @@
-.life-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.life-header {
-  align-items: flex-start;
-}
-
-.life-axis-view {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
-  gap: var(--space-4);
-}
-
-.life-tab-panel,
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.life-axis-view .calendar-layout--detail-open,
-.life-axis-view .ledger-layout {
-  align-items: flex-start;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
-}
-
-.life-axis-view .calendar-layout--database.calendar-layout--detail-open {
-  grid-template-columns: minmax(0, 0.96fr) minmax(460px, 1.14fr);
-}
-
-.life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card,
-.life-axis-view .date-detail-card {
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: var(--radius-xl);
-  background: var(--panel-elevated);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
-}
-
-.life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card {
-  min-height: 720px;
-  padding: 28px;
-}
-
-.life-axis-view .date-detail-card {
-  min-height: 720px;
-  padding: 24px;
-}
-
-.life-calendar-db-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.life-calendar-db-panel {
-  display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.life-calendar-db-scopes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.life-calendar-db-chip,
-.life-calendar-db-summary__card {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  color: var(--text);
-  font: inherit;
-}
-
-.life-calendar-db-chip {
-  min-height: var(--chip-height);
-  border-radius: var(--radius-pill);
-  background: var(--field-bg-strong);
-  padding: 0 var(--chip-padding-x);
-}
-
-.life-calendar-db-chip--active {
-  border-color: rgba(201, 184, 255, 0.35);
-  background: rgba(201, 184, 255, 0.14);
-}
-
-.life-calendar-db-range {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.life-calendar-db-range label {
-  display: grid;
-  gap: 6px;
-}
-
-.life-calendar-db-range span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.life-calendar-db-summary__card {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: var(--radius-md);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.11), transparent 34%),
-    var(--surface-soft);
-  padding: 12px;
-  text-align: left;
-}
-
-.life-calendar-db-summary__card--active {
-  border-color: rgba(201, 184, 255, 0.34);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.18), transparent 38%),
-    rgba(255, 255, 255, 0.07);
-}
-
-.life-calendar-db-summary span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 850;
-}
-
-.life-calendar-db-summary strong {
-  display: block;
-  margin-top: 5px;
-  color: var(--text);
-  font-size: 1.15rem;
-  font-weight: 950;
-}
-
-.life-calendar-db-overview {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.life-calendar-db-overview article,
-.life-calendar-db-day-grid article,
-.life-calendar-db-hero article,
-.life-calendar-db-brief-item {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  background: var(--panel-frost);
-  padding: 14px;
-}
-
-.life-calendar-db-overview span,
-.life-calendar-db-day-grid span,
-.life-calendar-db-hero span,
-.life-calendar-db-brief-item span,
-.life-calendar-db-meta article > span,
-.life-calendar-db-section__head .eyebrow {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-calendar-db-overview strong,
-.life-calendar-db-day-grid strong,
-.life-calendar-db-hero strong,
-.life-calendar-db-brief-item strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.life-calendar-db-overview p,
-.life-calendar-db-period-card p,
-.life-calendar-db-busy-item span,
-.life-calendar-db-meta p,
-.life-calendar-db-hero p,
-.life-calendar-db-brief-item p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.life-calendar-db-content {
-  display: grid;
-  gap: var(--space-4);
-  min-height: 620px;
-}
-
-.life-calendar-db-story {
-  display: grid;
-  gap: var(--space-2);
-  border: 1px solid rgba(201, 184, 255, 0.16);
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.12), transparent 38%),
-    var(--field-bg-strong);
-  padding: var(--card-padding);
-}
-
-.life-calendar-db-story span,
-.life-calendar-db-rhythm__card span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-calendar-db-story strong {
-  color: var(--text);
-  font-size: 0.98rem;
-  line-height: 1.6;
-}
-
 .life-calendar-day-panel {
   display: grid;
   gap: var(--space-3);
@@ -3168,6 +2944,62 @@
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.life-ask-link-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-ask-link-group {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-ask-link-group__head span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-ask-link-group__items {
+  display: grid;
+  gap: 8px;
+}
+
+.life-ask-link-item {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid rgba(201, 184, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.life-ask-link-item strong {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.life-ask-link-item span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
+.life-ask-link-item:hover {
+  border-color: rgba(201, 184, 255, 0.32);
+  background: rgba(201, 184, 255, 0.12);
 }
 
 .life-ask-answer-block {

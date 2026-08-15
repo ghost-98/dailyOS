@@ -21,20 +21,22 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
 import type { EventType, PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
-import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
+import { createPersonInDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
-import { createTaskInDb, deleteTaskFromDb, fetchTasksFromDb, updateTaskInDb } from "@/features/tasks/api";
+import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { FormSectionTitle } from "@/features/calendar/components";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
+import { useCalendarResources } from "@/features/calendar/useCalendarResources";
 import { formatDateKey, formatSelectedDate, formatShortDate, getMonthDays, isDateInRange, parseOptionalAmount, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
-import { createCalendarEventInDb, deleteCalendarEventFromDb, fetchCalendarEventsFromDb, updateCalendarEventInDb } from "./api";
+import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "./api";
 import { categoryDisplayOrder, categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "./data";
@@ -50,7 +52,6 @@ type CalendarViewProps = {
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
-const yearOptions = Array.from({ length: 151 }, (_, index) => new Date().getFullYear() - 75 + index);
 type LifeCalendarScope = "day" | "week" | "month" | "range";
 type LifeCalendarAxis = "all" | "activity" | "places" | "records" | "finance" | "health";
 const naverMapClientId = getNaverMapClientId();
@@ -67,9 +68,8 @@ export function CalendarView({
 }: CalendarViewProps) {
   const isDatabaseView = viewMode === "database";
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
+  const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
   const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarCategory[]>([]);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -79,7 +79,6 @@ export function CalendarView({
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("schedule");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [deletingPlan, setDeletingPlan] = useState<{ id: string; type: "event" | "task" } | null>(null);
@@ -87,44 +86,10 @@ export function CalendarView({
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
   const [activityConversionMessage, setActivityConversionMessage] = useState("");
   const [convertingToActivity, setConvertingToActivity] = useState<{ id: string; type: "event" | "task" } | null>(null);
-  const [people, setPeople] = useState<PersonRecord[]>([]);
   const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
   const [dbAxis, setDbAxis] = useState<LifeCalendarAxis>("all");
   const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
   const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
-
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
-      .then(([dbEvents, dbTasks]) => {
-        if (!isMounted) return;
-        setEvents(dbEvents ?? []);
-        setTasks(dbTasks ?? []);
-      })
-      .catch((error) => console.error("Failed to load schedule data from Supabase", error))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    fetchPeopleFromDb()
-      .then((records) => {
-        if (!isMounted) return;
-        setPeople(records ?? []);
-      })
-      .catch((error) => console.error("Failed to load people from Supabase", error));
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
   const visibleCalendarCategories = calendarCategoryFilters.length > 0 ? calendarCategoryFilters : categories;
@@ -1305,64 +1270,6 @@ function TaskCreateSheet({
             {isSaving ? "저장 중..." : "저장"}
           </ActionButton>
         </footer>
-      </section>
-    </div>
-  );
-}
-
-export function MonthPickerSheet({
-  currentMonth,
-  onClose,
-  onSelect,
-}: {
-  currentMonth: Date;
-  onClose: () => void;
-  onSelect: (month: Date) => void;
-}) {
-  const [year, setYear] = useState(currentMonth.getFullYear());
-  const [month, setMonth] = useState(currentMonth.getMonth() + 1);
-
-  return (
-    <div className="event-sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section aria-labelledby="month-picker-title" aria-modal="true" className="event-sheet date-picker-sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="event-sheet__grabber" aria-hidden />
-        <header className="event-sheet__header">
-          <button className="event-sheet__text-button" onClick={onClose} type="button">
-            취소
-          </button>
-          <h2 id="month-picker-title">월 선택</h2>
-          <button className="event-sheet__done-button" onClick={() => onSelect(new Date(year, month - 1, 1))} type="button">
-            선택
-          </button>
-        </header>
-
-        <div className="date-picker-body">
-          <div className="date-picker-preview">
-            {year}년 {month}월
-          </div>
-          <div className="date-picker-grid date-picker-grid--month">
-            <label>
-              <span>연도</span>
-              <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
-                {yearOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {value}년
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>월</span>
-              <select value={month} onChange={(event) => setMonth(Number(event.target.value))}>
-                {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
-                  <option key={value} value={value}>
-                    {value}월
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
       </section>
     </div>
   );
