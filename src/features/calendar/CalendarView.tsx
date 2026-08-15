@@ -554,20 +554,23 @@ export function CalendarView({
                       <div className="calendar-day__signal-stack">
                         {eventSummary.todoCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--todo">
-                            <b>할 일</b>
-                            <strong>{eventSummary.todoCount}</strong>
+                            <i aria-hidden className="calendar-day__signal-dot" />
+                            <span>할 일</span>
+                            <b>{eventSummary.todoCount}</b>
                           </span>
                         ) : null}
                         {eventSummary.eventCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--event">
-                            <b>이벤트</b>
-                            <strong>{eventSummary.eventCount}</strong>
+                            <i aria-hidden className="calendar-day__signal-dot" />
+                            <span>이벤트</span>
+                            <b>{eventSummary.eventCount}</b>
                           </span>
                         ) : null}
                         {eventSummary.recordCount > 0 ? (
                           <span className="calendar-day__signal calendar-day__signal--record">
-                            <b>기록</b>
-                            <strong>{eventSummary.recordCount}</strong>
+                            <i aria-hidden className="calendar-day__signal-dot" />
+                            <span>기록</span>
+                            <b>{eventSummary.recordCount}</b>
                           </span>
                         ) : null}
                       </div>

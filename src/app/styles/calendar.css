@@ -139,65 +139,71 @@
 .calendar-day__signal {
   display: inline-flex;
   min-width: 0;
+  align-self: start;
   min-height: 24px;
   align-items: center;
   gap: 6px;
-  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  font-size: 11px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
   font-weight: 850;
   line-height: 1;
-  padding: 0 9px 0 7px;
+  padding: 0 6px 0 8px;
 }
 
-.calendar-day__signal b,
-.calendar-day__signal strong {
+.calendar-day__signal-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.calendar-day__signal span,
+.calendar-day__signal b {
   line-height: 1;
+}
+
+.calendar-day__signal span {
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
 }
 
 .calendar-day__signal b {
   display: inline-flex;
+  min-width: 18px;
+  height: 18px;
   align-items: center;
-  gap: 5px;
-  color: inherit;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.02em;
-}
-
-.calendar-day__signal b::before {
-  width: 6px;
-  height: 6px;
+  justify-content: center;
   border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
-  content: "";
-}
-
-.calendar-day__signal strong {
+  background: rgba(255, 255, 255, 0.12);
   color: var(--text);
-  font-size: 12px;
-  font-weight: 950;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 0 5px;
 }
 
 .calendar-day__signal--todo {
-  border-color: rgba(168, 85, 247, 0.2);
-  background: linear-gradient(180deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1));
-  color: #e9d5ff;
+  border-color: var(--tone-green-border);
+  background: var(--tone-green-bg);
+  color: rgb(134, 239, 172);
 }
 
 .calendar-day__signal--event {
-  border-color: rgba(96, 165, 250, 0.24);
-  background: linear-gradient(180deg, rgba(96, 165, 250, 0.2), rgba(96, 165, 250, 0.1));
-  color: #dbeafe;
+  border-color: var(--tone-pink-border);
+  background: var(--tone-pink-bg);
+  color: rgb(251, 113, 133);
 }
 
 .calendar-day__signal--record {
-  border-color: rgba(16, 185, 129, 0.2);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.08));
-  color: #bbf7d0;
+  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(96, 165, 250, 0.12);
+  color: rgb(147, 197, 253);
 }
 
 .calendar-detail {
