@@ -552,10 +552,16 @@ export function CalendarView({
                   <div className="calendar-day__events">
                     {eventSummary.totalCount > 0 ? (
                       <div className="calendar-day__signal-stack">
-                        {eventSummary.planCount > 0 ? (
-                          <span className="calendar-day__signal calendar-day__signal--plan">
-                            <b>계획</b>
-                            <strong>{eventSummary.planCount}</strong>
+                        {eventSummary.todoCount > 0 ? (
+                          <span className="calendar-day__signal calendar-day__signal--todo">
+                            <b>할 일</b>
+                            <strong>{eventSummary.todoCount}</strong>
+                          </span>
+                        ) : null}
+                        {eventSummary.eventCount > 0 ? (
+                          <span className="calendar-day__signal calendar-day__signal--event">
+                            <b>이벤트</b>
+                            <strong>{eventSummary.eventCount}</strong>
                           </span>
                         ) : null}
                         {eventSummary.recordCount > 0 ? (
@@ -2515,15 +2521,19 @@ function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory)
 }
 
 function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
+  const eventCount = categories.includes("event") ? events.filter((event) => event.type === "event").length : 0;
+  const todoCount = categories.includes("todo") ? tasks.length : 0;
   const planCount = categoryDisplayOrder
     .filter((type) => categories.includes(type))
     .reduce((count, type) => count + (type === "todo" ? tasks.length : events.filter((event) => event.type === type).length), 0);
   const recordCount = externalItems.filter((item) => item.type === "activity" || item.type === "expense" || item.type === "income" || item.type === "daily_log" || item.type === "photo").length;
   return {
+    eventCount,
     hasPlan: planCount > 0,
     hasRecord: recordCount > 0,
     planCount,
     recordCount,
+    todoCount,
     totalCount: planCount + recordCount,
   };
 }

@@ -182,10 +182,16 @@
   font-weight: 950;
 }
 
-.calendar-day__signal--plan {
+.calendar-day__signal--todo {
   border-color: rgba(168, 85, 247, 0.2);
   background: linear-gradient(180deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1));
   color: #e9d5ff;
+}
+
+.calendar-day__signal--event {
+  border-color: rgba(96, 165, 250, 0.24);
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.2), rgba(96, 165, 250, 0.1));
+  color: #dbeafe;
 }
 
 .calendar-day__signal--record {
