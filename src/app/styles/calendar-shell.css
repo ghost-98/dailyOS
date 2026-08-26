@@ -140,6 +140,27 @@
     opacity 160ms ease;
 }
 
+.calendar-filter span:last-of-type {
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+}
+
+.calendar-filter b {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 5px;
+}
+
 .calendar-filter:hover {
   border-color: rgba(201, 184, 255, 0.26);
   background: rgba(201, 184, 255, 0.1);
@@ -164,6 +185,23 @@
 .calendar-filter--record.calendar-filter--active {
   border-color: rgba(96, 165, 250, 0.26);
   background: rgba(96, 165, 250, 0.12);
+}
+
+.calendar-filter--compact {
+  min-height: 24px;
+  gap: 6px;
+  padding: 0 6px 0 8px;
+}
+
+.calendar-filter--compact .calendar-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.calendar-filter--compact b {
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
 }
 
 .calendar-filter--muted {

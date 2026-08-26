@@ -136,68 +136,6 @@
   gap: 5px;
 }
 
-.calendar-day__signal {
-  display: inline-flex;
-  align-self: start;
-  min-width: 0;
-  min-height: 24px;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 850;
-  line-height: 1;
-  padding: 0 6px 0 8px;
-}
-
-.calendar-day__signal-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.calendar-day__signal b {
-  line-height: 1;
-}
-
-.calendar-day__signal b {
-  display: inline-flex;
-  min-width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text);
-  font-size: 0.7rem;
-  font-weight: 900;
-  padding: 0 5px;
-}
-
-.calendar-day__signal--todo {
-  border-color: var(--tone-green-border);
-  background: var(--tone-green-bg);
-  color: rgb(134, 239, 172);
-}
-
-.calendar-day__signal--event {
-  border-color: var(--tone-pink-border);
-  background: var(--tone-pink-bg);
-  color: rgb(251, 113, 133);
-}
-
-.calendar-day__signal--record {
-  border-color: rgba(96, 165, 250, 0.2);
-  background: rgba(96, 165, 250, 0.12);
-  color: rgb(147, 197, 253);
-}
-
 .calendar-detail {
   min-width: 0;
   animation: detail-slide-in 220ms ease-out both;

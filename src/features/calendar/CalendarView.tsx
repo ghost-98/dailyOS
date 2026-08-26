@@ -23,6 +23,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
@@ -525,15 +526,14 @@ export function CalendarView({
               const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
               const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
               return (
-                <button
-                  className={`calendar-filter calendar-filter--${type} ${isFilterActive ? "calendar-filter--active" : ""} ${isFilterMuted ? "calendar-filter--muted" : ""}`}
+                <CalendarFilterChip
+                  active={isFilterActive}
                   key={type}
+                  label={type === "record" ? "기록" : categoryLabels[type]}
+                  muted={isFilterMuted}
                   onClick={() => toggleCalendarCategoryFilter(type)}
-                  type="button"
-                >
-                  <span className={`calendar-dot calendar-dot--${type}`} />
-                  {type === "record" ? "기록" : categoryLabels[type]}
-                </button>
+                  tone={type}
+                />
               );
             })}
           </div>
@@ -565,22 +565,13 @@ export function CalendarView({
                     {eventSummary.totalCount > 0 ? (
                       <div className="calendar-day__signal-stack">
                         {eventSummary.todoCount > 0 ? (
-                          <span className="calendar-day__signal calendar-day__signal--todo">
-                            <i aria-hidden className="calendar-day__signal-dot" />
-                            <b>{eventSummary.todoCount}</b>
-                          </span>
+                          <CalendarFilterChip active compact count={eventSummary.todoCount} tone="todo" />
                         ) : null}
                         {eventSummary.eventCount > 0 ? (
-                          <span className="calendar-day__signal calendar-day__signal--event">
-                            <i aria-hidden className="calendar-day__signal-dot" />
-                            <b>{eventSummary.eventCount}</b>
-                          </span>
+                          <CalendarFilterChip active compact count={eventSummary.eventCount} tone="event" />
                         ) : null}
                         {eventSummary.recordCount > 0 ? (
-                          <span className="calendar-day__signal calendar-day__signal--record">
-                            <i aria-hidden className="calendar-day__signal-dot" />
-                            <b>{eventSummary.recordCount}</b>
-                          </span>
+                          <CalendarFilterChip active compact count={eventSummary.recordCount} tone="record" />
                         ) : null}
                       </div>
                     ) : null}
@@ -618,7 +609,6 @@ export function CalendarView({
                     deletingPlan={deletingPlan}
                     draggingItem={draggingItem}
                     dropTarget={dropTarget}
-                    externalCount={selectedExternalItems.length}
                     isConvertingToActivity={convertingToActivity}
                     isLoading={isLoading}
                     items={visibleTimelineItems}
@@ -2535,17 +2525,11 @@ function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory)
 function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
   const eventCount = categories.includes("event") ? events.filter((event) => event.type === "event").length : 0;
   const todoCount = categories.includes("todo") ? tasks.length : 0;
-  const planCount = categoryDisplayOrder
-    .filter((type) => categories.includes(type))
-    .reduce((count, type) => count + (type === "todo" ? tasks.length : events.filter((event) => event.type === type).length), 0);
   const recordCount = externalItems.filter((item) => item.type === "activity" || item.type === "expense" || item.type === "income" || item.type === "daily_log" || item.type === "photo").length;
   return {
     eventCount,
-    hasPlan: planCount > 0,
-    hasRecord: recordCount > 0,
-    planCount,
     recordCount,
     todoCount,
-    totalCount: planCount + recordCount,
+    totalCount: eventCount + todoCount + recordCount,
   };
 }

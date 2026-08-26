@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Activity, Check, Pencil, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
+import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
 import { categoryLabels, eventTone, formatPlanDateTime, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
@@ -41,7 +42,6 @@ export function DayTimelineSection({
   deletingPlan?: { id: string; type: "event" | "task" } | null;
   draggingItem: { id: string; type: "event" | "todo" } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
-  externalCount?: number;
   isConvertingToActivity?: ActivityConversionState;
   isLoading: boolean;
   items: DayTimelineItem[];
@@ -91,16 +91,15 @@ export function DayTimelineSection({
               ["todo", "할 일", countsByCategory.todo],
               ["event", "이벤트", countsByCategory.event],
             ] as const).map(([type, label, count]) => (
-              <button
-                className={`calendar-filter calendar-filter--${type} ${activeFilters.includes(type) ? "calendar-filter--active" : ""} ${activeFilters.length > 0 && !activeFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+              <CalendarFilterChip
+                active={activeFilters.includes(type)}
+                count={count}
                 key={type}
+                label={label}
+                muted={activeFilters.length > 0 && !activeFilters.includes(type)}
                 onClick={() => toggleFilter(type)}
-                type="button"
-              >
-                <span className={`calendar-dot calendar-dot--${type}`} />
-                {label}
-                <b>{count}</b>
-              </button>
+                tone={type}
+              />
             ))}
           </div>
         ) : null}
