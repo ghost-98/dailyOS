@@ -266,6 +266,10 @@
   gap: 10px;
 }
 
+.ui-form-actions--footer {
+  justify-content: flex-end;
+}
+
 .ui-input-shell {
   display: flex;
   align-items: center;

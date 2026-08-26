@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
 import { FormField } from "@/components/ui/FormField";
+import { FormActionBar } from "@/components/ui/FormActionBar";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
@@ -615,14 +616,13 @@ function FolderManagerSheet({
               <FormField label="색상">
                 <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
               </FormField>
-              <footer>
-                <ActionButton disabled={isSaving} onClick={() => setEditingFolder(null)} variant="secondary">
-                  취소
-                </ActionButton>
-                <ActionButton disabled={isSaving || editingFolder.name.trim().length === 0} onClick={() => void save()}>
-                  {isSaving ? "저장 중" : "확인"}
-                </ActionButton>
-              </footer>
+              <FormActionBar
+                cancelDisabled={isSaving}
+                onCancel={() => setEditingFolder(null)}
+                onSubmit={() => void save()}
+                submitDisabled={isSaving || editingFolder.name.trim().length === 0}
+                submitLabel={isSaving ? "저장 중" : "확인"}
+              />
             </div>
           ) : (
             <ActionButton onClick={startCreate}>
@@ -632,14 +632,15 @@ function FolderManagerSheet({
           )}
         </div>
 
-        <footer className="event-sheet__footer">
-          <ActionButton disabled={isSaving || Boolean(deletingFolderId)} onClick={onClose} variant="secondary">
-            닫기
-          </ActionButton>
-          <ActionButton disabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)} onClick={() => void confirm()}>
-            {isSaving ? "저장 중" : "확인"}
-          </ActionButton>
-        </footer>
+        <FormActionBar
+          cancelDisabled={isSaving || Boolean(deletingFolderId)}
+          cancelLabel="닫기"
+          className="event-sheet__footer"
+          onCancel={onClose}
+          onSubmit={() => void confirm()}
+          submitDisabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)}
+          submitLabel={isSaving ? "저장 중" : "확인"}
+        />
       </section>
     </div>
   );
@@ -698,14 +699,13 @@ function SavePlaceSheet({
           ))}
         </div>
 
-        <footer className="event-sheet__footer">
-          <ActionButton onClick={onClose} variant="secondary">
-            취소
-          </ActionButton>
-          <ActionButton onClick={() => onSave(checkedFolderIds)}>
-            적용
-          </ActionButton>
-        </footer>
+        <FormActionBar
+          cancelLabel="취소"
+          className="event-sheet__footer"
+          onCancel={onClose}
+          onSubmit={() => onSave(checkedFolderIds)}
+          submitLabel="적용"
+        />
       </section>
     </div>
   );
