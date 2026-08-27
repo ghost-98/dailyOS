@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp, GripVertical, ImagePlus, Trash2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import type { DocumentBlock, DocumentChecklistItem, DocumentImageAsset } from "@/features/documents/types";
 import {
@@ -29,6 +29,24 @@ type DocumentBlockEditorProps = {
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
 };
 
+type SlashCommandTarget = {
+  mode: "replace" | "appendChild";
+  value: string;
+};
+
+const slashCommandEntries: Array<{ description: string; label: string; type: DocumentBlock["type"] }> = [
+  { description: "일반 문단을 바로 추가합니다.", label: "본문", type: "paragraph" },
+  { description: "큰 제목 블록으로 바꿉니다.", label: "제목 1", type: "heading1" },
+  { description: "중간 제목 블록으로 바꿉니다.", label: "제목 2", type: "heading2" },
+  { description: "토글 섹션을 만듭니다.", label: "토글", type: "toggle" },
+  { description: "체크리스트를 만듭니다.", label: "체크리스트", type: "checklist" },
+  { description: "표를 추가합니다.", label: "표", type: "table" },
+  { description: "인용 블록으로 바꿉니다.", label: "인용", type: "quote" },
+  { description: "강조 콜아웃을 추가합니다.", label: "콜아웃", type: "callout" },
+  { description: "이미지 블록을 추가합니다.", label: "이미지", type: "image" },
+  { description: "구분선을 넣습니다.", label: "구분선", type: "divider" },
+];
+
 export function DocumentBlockEditor({
   block,
   depth = 0,
@@ -44,6 +62,58 @@ export function DocumentBlockEditor({
   onMoveUp,
   onReplaceImage,
 }: DocumentBlockEditorProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  const [slashTarget, setSlashTarget] = useState<SlashCommandTarget | null>(null);
+
+  const openSlashForValue = (mode: SlashCommandTarget["mode"], value: string) => {
+    const trimmed = value.trimStart();
+    if (!trimmed.startsWith("/")) {
+      setSlashTarget(null);
+      return;
+    }
+    setSlashTarget({ mode, value: trimmed.slice(1) });
+  };
+
+  const slashItems = useMemo(() => {
+    const keyword = slashTarget?.value.trim().toLowerCase() ?? "";
+    if (!keyword) return slashCommandEntries;
+    return slashCommandEntries.filter((entry) => `${entry.label} ${entry.description}`.toLowerCase().includes(keyword));
+  }, [slashTarget]);
+
+  const applySlashCommand = (type: DocumentBlock["type"]) => {
+    setSlashTarget(null);
+    if (slashTarget?.mode === "appendChild" && block.type === "toggle") {
+      onChange({ ...block, children: [...block.children, createDocumentBlock(type)] });
+      return;
+    }
+
+    const next = createDocumentBlock(type);
+    if (next.type === "paragraph" || next.type === "heading1" || next.type === "heading2" || next.type === "heading3" || next.type === "quote") {
+      next.text = "";
+    }
+    if (next.type === "toggle") next.title = "";
+    onChange(next);
+  };
+
+  const toolbar = (
+    <div className={`doc-inline-toolbar ${isFocused ? "doc-inline-toolbar--visible" : ""}`}>
+      <select aria-label="블록 종류 추가" value="" onChange={(event) => {
+        if (!event.target.value) return;
+        onAddBelow(event.target.value as DocumentBlock["type"], index);
+        event.target.value = "";
+      }}>
+        <option value="">블록 추가</option>
+        {Object.entries(documentBlockTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select>
+      <select aria-label="글자색" value={block.textTone ?? "default"} onChange={(event) => onChange({ ...block, textTone: event.target.value === "default" ? undefined : event.target.value as DocumentBlock["textTone"] })}>
+        {documentTextToneOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      <select aria-label="배경색" value={block.backgroundTone ?? "none"} onChange={(event) => onChange({ ...block, backgroundTone: event.target.value === "none" ? undefined : event.target.value as DocumentBlock["backgroundTone"] })}>
+        {documentBackgroundToneOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </div>
+  );
+
   return (
     <article
       className={`doc-block doc-block--${block.type} ${isDragging ? "doc-block--dragging" : ""}`}
@@ -65,24 +135,6 @@ export function DocumentBlockEditor({
         >
           <GripVertical aria-hidden size={14} />
         </button>
-        <div className="doc-block__inline-tools">
-          <select aria-label="블록 종류 추가" value="" onChange={(event) => {
-            if (!event.target.value) return;
-            onAddBelow(event.target.value as DocumentBlock["type"], index);
-            event.target.value = "";
-          }}>
-            <option value="">+</option>
-            {Object.entries(documentBlockTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-          <select aria-label="글자색" value={block.textTone ?? "default"} onChange={(event) => onChange({ ...block, textTone: event.target.value === "default" ? undefined : event.target.value as DocumentBlock["textTone"] })}>
-            {documentTextToneOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-          <select aria-label="배경색" value={block.backgroundTone ?? "none"} onChange={(event) => onChange({ ...block, backgroundTone: event.target.value === "none" ? undefined : event.target.value as DocumentBlock["backgroundTone"] })}>
-            {documentBackgroundToneOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </div>
       </div>
 
       <div className="doc-block__content">
@@ -91,7 +143,33 @@ export function DocumentBlockEditor({
           <IconButton label="아래로 이동" onClick={onMoveDown} size="sm" tone="ghost"><ChevronDown aria-hidden size={15} /></IconButton>
           <IconButton label="블록 삭제" onClick={onDelete} size="sm" tone="danger"><Trash2 aria-hidden size={15} /></IconButton>
         </div>
-        <DocumentBlockFields block={block} depth={depth} isUploading={isUploading} onChange={onChange} onReplaceImage={onReplaceImage} />
+        <div className="doc-block__editor" onFocusCapture={() => setIsFocused(true)} onBlurCapture={(event) => {
+          const nextFocus = event.relatedTarget as Node | null;
+          if (nextFocus && event.currentTarget.contains(nextFocus)) return;
+          setIsFocused(false);
+          setSlashTarget(null);
+        }}>
+          {toolbar}
+          <DocumentBlockFields
+            block={block}
+            depth={depth}
+            isUploading={isUploading}
+            onChange={onChange}
+            onEnterAtEnd={(type) => onAddBelow(type, index)}
+            onOpenSlash={openSlashForValue}
+            onReplaceImage={onReplaceImage}
+          />
+          {slashTarget ? (
+            <div className="doc-slash-menu" role="menu">
+              {slashItems.length > 0 ? slashItems.map((entry) => (
+                <button className="doc-slash-menu__item" key={entry.type} onMouseDown={(event) => event.preventDefault()} onClick={() => applySlashCommand(entry.type)} type="button">
+                  <strong>{entry.label}</strong>
+                  <span>{entry.description}</span>
+                </button>
+              )) : <div className="doc-slash-menu__empty">맞는 블록이 없어요.</div>}
+            </div>
+          ) : null}
+        </div>
       </div>
     </article>
   );
@@ -102,12 +180,16 @@ function DocumentBlockFields({
   depth,
   isUploading,
   onChange,
+  onEnterAtEnd,
+  onOpenSlash,
   onReplaceImage,
 }: {
   block: DocumentBlock;
   depth: number;
   isUploading: boolean;
   onChange: (nextBlock: DocumentBlock) => void;
+  onEnterAtEnd: (type: DocumentBlock["type"]) => void;
+  onOpenSlash: (mode: SlashCommandTarget["mode"], value: string) => void;
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
 }) {
   if (block.type === "divider") return <div className="doc-divider" />;
@@ -137,11 +219,19 @@ function DocumentBlockFields({
     return (
       <div className="doc-block__body">
         <div className="doc-checklist">
-          {block.items.map((item) => (
+          {block.items.map((item, itemIndex) => (
             <ChecklistRow
               item={item}
               key={item.id}
-              onChange={(nextItem) => onChange({ ...block, items: block.items.map((current) => current.id === nextItem.id ? nextItem : current) })}
+              onChange={(nextItem) => {
+                onOpenSlash("replace", nextItem.text);
+                onChange({ ...block, items: block.items.map((current) => current.id === nextItem.id ? nextItem : current) });
+              }}
+              onEnterAtEnd={() => {
+                const nextItems = [...block.items];
+                nextItems.splice(itemIndex + 1, 0, createChecklistItem());
+                onChange({ ...block, items: nextItems });
+              }}
               onRemove={() => onChange({ ...block, items: block.items.length === 1 ? [createChecklistItem()] : block.items.filter((current) => current.id !== item.id) })}
             />
           ))}
@@ -158,7 +248,7 @@ function DocumentBlockFields({
           <span>{block.isOpen ? "▾" : "▸"}</span>
           <strong>{block.title.trim() || "토글"}</strong>
         </button>
-        <AutoSizeTextarea className="doc-toggle-title" minRows={1} placeholder="토글 제목" value={block.title} onChange={(value) => onChange({ ...block, title: value })} />
+        <AutoSizeTextarea className="doc-toggle-title" minRows={1} placeholder="토글 제목" value={block.title} onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, title: value }); }} onEnterAtEnd={() => onChange({ ...block, children: [...block.children, createDocumentBlock("paragraph")] })} />
         {block.isOpen ? (
           <>
             <div className="doc-nested-blocks">
@@ -237,7 +327,7 @@ function DocumentBlockFields({
     return (
       <div className="doc-block__body doc-block__body--callout">
         <input className="doc-callout-icon" maxLength={4} placeholder="💡" value={block.icon} onChange={(event) => onChange({ ...block, icon: event.target.value })} />
-        <AutoSizeTextarea className="doc-callout-text" minRows={2} placeholder="강조해서 남길 문맥" value={block.text} onChange={(value) => onChange({ ...block, text: value })} />
+        <AutoSizeTextarea className="doc-callout-text" minRows={2} placeholder="강조해서 남길 문맥" value={block.text} onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, text: value }); }} onEnterAtEnd={() => onEnterAtEnd("paragraph")} />
       </div>
     );
   }
@@ -248,19 +338,30 @@ function DocumentBlockFields({
       <AutoSizeTextarea
         className={`doc-textarea doc-textarea--${block.type}`}
         minRows={minRows}
-        placeholder={block.type.startsWith("heading") ? "제목" : block.type === "quote" ? "인용" : "내용을 입력하세요. / 로 새 블록을 추가할 수 있는 느낌으로 써보세요."}
+        placeholder={block.type.startsWith("heading") ? "제목" : block.type === "quote" ? "인용" : "내용을 입력하세요. / 로 새 블록을 추가할 수 있어요."}
         value={block.text}
-        onChange={(value) => onChange({ ...block, text: value })}
+        onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, text: value }); }}
+        onEnterAtEnd={() => onEnterAtEnd(block.type === "heading1" || block.type === "heading2" || block.type === "heading3" ? "paragraph" : block.type)}
       />
     </div>
   );
 }
 
-function ChecklistRow({ item, onChange, onRemove }: { item: DocumentChecklistItem; onChange: (nextItem: DocumentChecklistItem) => void; onRemove: () => void }) {
+function ChecklistRow({
+  item,
+  onChange,
+  onEnterAtEnd,
+  onRemove,
+}: {
+  item: DocumentChecklistItem;
+  onChange: (nextItem: DocumentChecklistItem) => void;
+  onEnterAtEnd: () => void;
+  onRemove: () => void;
+}) {
   return (
     <div className="doc-checklist__row">
       <label><input checked={item.checked} type="checkbox" onChange={(event) => onChange({ ...item, checked: event.target.checked })} /></label>
-      <AutoSizeTextarea className="doc-checklist__text" minRows={1} placeholder="할 일" value={item.text} onChange={(value) => onChange({ ...item, text: value })} />
+      <AutoSizeTextarea className="doc-checklist__text" minRows={1} placeholder="할 일" value={item.text} onChange={(value) => onChange({ ...item, text: value })} onEnterAtEnd={onEnterAtEnd} />
       <IconButton label="항목 삭제" onClick={onRemove} size="sm" tone="ghost"><Trash2 aria-hidden size={14} /></IconButton>
     </div>
   );
@@ -270,12 +371,14 @@ function AutoSizeTextarea({
   className = "",
   minRows = 1,
   onChange,
+  onEnterAtEnd,
   placeholder,
   value,
 }: {
   className?: string;
   minRows?: number;
   onChange: (value: string) => void;
+  onEnterAtEnd?: () => void;
   placeholder?: string;
   value: string;
 }) {
@@ -297,6 +400,17 @@ function AutoSizeTextarea({
       rows={minRows}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" || event.shiftKey) return;
+        const element = event.currentTarget;
+        const selectionStart = element.selectionStart ?? value.length;
+        const selectionEnd = element.selectionEnd ?? value.length;
+        if (selectionStart !== selectionEnd) return;
+        const isAtEnd = selectionStart === value.length;
+        if (!isAtEnd) return;
+        event.preventDefault();
+        onEnterAtEnd?.();
+      }}
     />
   );
 }
