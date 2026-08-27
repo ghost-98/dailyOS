@@ -18,9 +18,12 @@ type DocumentBlockEditorProps = {
   depth?: number;
   index: number;
   isUploading: boolean;
+  isDragging?: boolean;
   onAddBelow: (type: DocumentBlock["type"], index: number) => void;
   onChange: (nextBlock: DocumentBlock) => void;
   onDelete: () => void;
+  onDragEnd?: () => void;
+  onDragStart?: (blockId: string) => void;
   onMoveDown: () => void;
   onMoveUp: () => void;
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
@@ -31,33 +34,36 @@ export function DocumentBlockEditor({
   depth = 0,
   index,
   isUploading,
+  isDragging = false,
   onAddBelow,
   onChange,
   onDelete,
+  onDragEnd,
+  onDragStart,
   onMoveDown,
   onMoveUp,
   onReplaceImage,
 }: DocumentBlockEditorProps) {
   return (
     <article
-      className={`doc-block doc-block--${block.type}`}
+      className={`doc-block doc-block--${block.type} ${isDragging ? "doc-block--dragging" : ""}`}
       data-background-tone={block.backgroundTone ?? "none"}
       data-depth={depth}
       data-text-tone={block.textTone ?? "default"}
-      draggable
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const sourceIndex = Number(event.dataTransfer.getData("text/document-block-index"));
-        if (Number.isNaN(sourceIndex)) return;
-        if (sourceIndex < index) onMoveUp();
-        if (sourceIndex > index) onMoveDown();
-      }}
-      onDragStart={(event) => event.dataTransfer.setData("text/document-block-index", String(index))}
     >
       <div className="doc-block__toolbar">
         <div className="doc-block__meta">
-          <button className="doc-drag-handle" type="button">
+          <button
+            className="doc-drag-handle"
+            draggable
+            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/document-block-id", block.id);
+              onDragStart?.(block.id);
+            }}
+            type="button"
+          >
             <GripVertical aria-hidden size={14} />
           </button>
           <span>{index + 1}</span>
@@ -172,6 +178,7 @@ function DocumentBlockFields({
                   depth={depth + 1}
                   index={childIndex}
                   isUploading={isUploading}
+                  isDragging={false}
                   key={child.id}
                   onAddBelow={(type, targetIndex) => {
                     const nextChildren = [...block.children];
@@ -180,6 +187,8 @@ function DocumentBlockFields({
                   }}
                   onChange={(nextChild) => onChange({ ...block, children: block.children.map((current) => current.id === child.id ? nextChild : current) })}
                   onDelete={() => onChange({ ...block, children: block.children.length === 1 ? [createDocumentBlock("paragraph")] : block.children.filter((current) => current.id !== child.id) })}
+                  onDragEnd={undefined}
+                  onDragStart={undefined}
                   onMoveDown={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.min(block.children.length - 1, childIndex + 1)) })}
                   onMoveUp={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.max(0, childIndex - 1)) })}
                   onReplaceImage={onReplaceImage}

@@ -472,3 +472,113 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.documents-layout--split {
+  display: grid;
+  grid-template-columns: 240px 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.documents-folder-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 24px;
+}
+
+.documents-folder-sidebar__head {
+  display: grid;
+  gap: 4px;
+}
+
+.documents-folder-sidebar__head span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.documents-folder-list {
+  display: grid;
+  gap: 8px;
+}
+
+.documents-folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+}
+
+.documents-folder-item span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.documents-folder-item b {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.documents-folder-item--active {
+  border-color: rgba(157, 178, 255, 0.35);
+  background: rgba(157, 178, 255, 0.1);
+}
+
+.documents-block-frame {
+  display: grid;
+  gap: 8px;
+}
+
+.documents-drop-zone {
+  height: 10px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 160ms ease, box-shadow 160ms ease, height 160ms ease;
+}
+
+.documents-drop-zone--active {
+  height: 12px;
+  background: rgba(157, 178, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(157, 178, 255, 0.24);
+}
+
+.documents-drop-zone--empty {
+  height: 16px;
+  border: 1px dashed rgba(157, 178, 255, 0.28);
+  background: rgba(157, 178, 255, 0.04);
+}
+
+.doc-block--dragging {
+  opacity: 0.56;
+  transform: scale(0.992);
+}
+
+.documents-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+@media (max-width: 1280px) {
+  .documents-layout--split {
+    grid-template-columns: 220px 280px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1040px) {
+  .documents-layout--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .documents-folder-sidebar,
+  .documents-sidebar {
+    position: static;
+  }
+}

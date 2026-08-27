@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus2, NotebookPen, Search } from "lucide-react";
+import { FilePlus2, FolderOpen, NotebookPen, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormActionBar } from "@/components/ui/FormActionBar";
@@ -13,6 +13,8 @@ import { collectDocumentFilePathsFromBlocks, createDocumentBlock, moveArrayItem,
 import { confirmAction } from "@/lib/actionGuards";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+type FolderFilter = "all" | "uncategorized" | string;
+type DropPosition = "before" | "after";
 
 export function DocumentsView() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -24,6 +26,9 @@ export function DocumentsView() {
   const [query, setQuery] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [folderFilter, setFolderFilter] = useState<FolderFilter>("all");
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; position: DropPosition } | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedRef = useRef(false);
 
@@ -54,17 +59,41 @@ export function DocumentsView() {
     };
   }, []);
 
+  const folderSummaries = useMemo(() => {
+    const counts = new Map<string, number>();
+    let uncategorizedCount = 0;
+    for (const document of documents) {
+      const folder = document.folder?.trim();
+      if (!folder) {
+        uncategorizedCount += 1;
+        continue;
+      }
+      counts.set(folder, (counts.get(folder) ?? 0) + 1);
+    }
+    return {
+      folders: [...counts.entries()].map(([name, count]) => ({ count, name })).sort((left, right) => left.name.localeCompare(right.name, "ko")),
+      uncategorizedCount,
+    };
+  }, [documents]);
+
   const filteredDocuments = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    if (!keyword) return documents;
     return documents.filter((document) => {
-      const source = [document.title, document.summary, document.folder, ...document.tags].filter(Boolean).join(" ").toLowerCase();
+      const folder = document.folder?.trim() ?? "";
+      const folderMatched = folderFilter === "all"
+        ? true
+        : folderFilter === "uncategorized"
+          ? folder.length === 0
+          : folder === folderFilter;
+      if (!folderMatched) return false;
+      if (!keyword) return true;
+      const source = [document.title, document.summary, folder, ...document.tags].filter(Boolean).join(" ").toLowerCase();
       return source.includes(keyword);
     });
-  }, [documents, query]);
+  }, [documents, folderFilter, query]);
 
   const selectedDocument = useMemo(() => documents.find((document) => document.id === selectedId) ?? null, [documents, selectedId]);
-  const folderOptions = useMemo(() => [...new Set(documents.map((document) => document.folder?.trim()).filter(Boolean))], [documents]);
+  const folderOptions = useMemo(() => folderSummaries.folders.map((folder) => folder.name), [folderSummaries.folders]);
   const selectedDocumentImageCount = selectedDocument ? collectDocumentFilePathsFromBlocks(selectedDocument.content).length : 0;
 
   useEffect(() => {
@@ -210,6 +239,18 @@ export function DocumentsView() {
     patchSelectedDocument((document) => ({ ...document, content: moveArrayItem(document.content, fromIndex, toIndex) }));
   };
 
+  const moveDraggedBlock = (targetId: string, position: DropPosition) => {
+    if (!selectedDocument || !draggedBlockId || draggedBlockId === targetId) return;
+    const fromIndex = selectedDocument.content.findIndex((block) => block.id === draggedBlockId);
+    const targetIndex = selectedDocument.content.findIndex((block) => block.id === targetId);
+    if (fromIndex < 0 || targetIndex < 0) return;
+    let nextIndex = position === "before" ? targetIndex : targetIndex + 1;
+    if (fromIndex < nextIndex) nextIndex -= 1;
+    patchSelectedDocument((document) => ({ ...document, content: moveArrayItem(document.content, fromIndex, nextIndex) }));
+    setDraggedBlockId(null);
+    setDropTarget(null);
+  };
+
   return (
     <div className="documents-page">
       <header className="life-tab-heading documents-header ui-toolbar-panel">
@@ -223,16 +264,36 @@ export function DocumentsView() {
         </div>
       </header>
 
-      <div className="documents-layout ui-workspace-grid ui-workspace-grid--sidebar">
+      <div className="documents-layout documents-layout--split">
+        <SectionCard className="documents-folder-sidebar ui-workspace-panel">
+          <div className="documents-folder-sidebar__head">
+            <span>문서 폴더</span>
+            <strong>{folderSummaries.folders.length}개</strong>
+          </div>
+          <button className={folderFilter === "all" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("all")} type="button">
+            <span><FolderOpen aria-hidden size={15} />전체 문서</span>
+            <b>{documents.length}</b>
+          </button>
+          <button className={folderFilter === "uncategorized" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("uncategorized")} type="button">
+            <span>미분류</span>
+            <b>{folderSummaries.uncategorizedCount}</b>
+          </button>
+          <div className="documents-folder-list">
+            {folderSummaries.folders.map((folder) => (
+              <button className={folderFilter === folder.name ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} key={folder.name} onClick={() => setFolderFilter(folder.name)} type="button">
+                <span>{folder.name}</span>
+                <b>{folder.count}</b>
+              </button>
+            ))}
+          </div>
+        </SectionCard>
+
         <SectionCard className="documents-sidebar ui-workspace-panel">
           <div className="documents-search"><Search aria-hidden size={16} /><input placeholder="문서 검색" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
           <div className="documents-sidebar__summary">
-            <span>전체 문서</span>
-            <strong>{documents.length}개</strong>
-            <p>폴더 {folderOptions.length}개 · 검색 결과 {filteredDocuments.length}개</p>
-          </div>
-          <div className="documents-folder-chips">
-            {folderOptions.map((folder) => <button key={folder} onClick={() => setQuery(String(folder))} type="button">{folder}</button>)}
+            <span>{folderFilter === "all" ? "전체 문서" : folderFilter === "uncategorized" ? "미분류 문서" : folderFilter}</span>
+            <strong>{filteredDocuments.length}개</strong>
+            <p>전체 {documents.length}개 · 검색어 {query.trim() ? "적용 중" : "없음"}</p>
           </div>
           <div className="documents-list">
             {filteredDocuments.length > 0 ? filteredDocuments.map((document) => (
@@ -244,7 +305,7 @@ export function DocumentsView() {
                   <span>{document.folder?.trim() || "미분류"} · {formatDateTime(document.updatedAt ?? document.createdAt)}</span>
                 </div>
               </button>
-            )) : <div className="documents-empty"><strong>{isLoading ? "문서를 불러오는 중..." : "아직 문서가 없어요."}</strong><p>{isLoading ? "잠시만 기다려 주세요." : "첫 문서를 만들어 문맥과 아이디어를 쌓아보세요."}</p></div>}
+            )) : <div className="documents-empty"><strong>{isLoading ? "문서를 불러오는 중..." : "조건에 맞는 문서가 없어요."}</strong><p>{isLoading ? "잠시만 기다려 주세요." : "폴더나 검색 조건을 바꿔보세요."}</p></div>}
           </div>
         </SectionCard>
 
@@ -273,21 +334,59 @@ export function DocumentsView() {
                 {selectedDocument.tags.map((tag) => <button key={tag} onClick={() => setQuery(String(tag))} type="button">#{tag}</button>)}
               </div>
 
-              <div className="documents-blocks">
+              <div className="documents-blocks" onDragOver={(event) => event.preventDefault()}>
                 {selectedDocument.content.map((block, index) => (
-                  <DocumentBlockEditor
-                    block={block}
-                    index={index}
-                    isUploading={isUploading}
-                    key={block.id}
-                    onAddBelow={addBlock}
-                    onChange={(nextBlock) => updateBlock(block.id, nextBlock)}
-                    onDelete={() => void removeBlock(block.id)}
-                    onMoveDown={() => moveBlock(index, Math.min(selectedDocument.content.length - 1, index + 1))}
-                    onMoveUp={() => moveBlock(index, Math.max(0, index - 1))}
-                    onReplaceImage={(file, previousImage) => replaceBlockImage(block.id, file, previousImage)}
-                  />
+                  <div className="documents-block-frame" key={block.id}>
+                    <div
+                      className={dropTarget?.id === block.id && dropTarget.position === "before" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
+                      onDragEnter={(event) => {
+                        event.preventDefault();
+                        if (!draggedBlockId || draggedBlockId === block.id) return;
+                        setDropTarget({ id: block.id, position: "before" });
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        moveDraggedBlock(block.id, "before");
+                      }}
+                    />
+                    <DocumentBlockEditor
+                      block={block}
+                      index={index}
+                      isDragging={draggedBlockId === block.id}
+                      isUploading={isUploading}
+                      key={block.id}
+                      onAddBelow={addBlock}
+                      onChange={(nextBlock) => updateBlock(block.id, nextBlock)}
+                      onDelete={() => void removeBlock(block.id)}
+                      onDragEnd={() => {
+                        setDraggedBlockId(null);
+                        setDropTarget(null);
+                      }}
+                      onDragStart={(blockId) => {
+                        setDraggedBlockId(blockId);
+                        setDropTarget(null);
+                      }}
+                      onMoveDown={() => moveBlock(index, Math.min(selectedDocument.content.length - 1, index + 1))}
+                      onMoveUp={() => moveBlock(index, Math.max(0, index - 1))}
+                      onReplaceImage={(file, previousImage) => replaceBlockImage(block.id, file, previousImage)}
+                    />
+                    <div
+                      className={dropTarget?.id === block.id && dropTarget.position === "after" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
+                      onDragEnter={(event) => {
+                        event.preventDefault();
+                        if (!draggedBlockId || draggedBlockId === block.id) return;
+                        setDropTarget({ id: block.id, position: "after" });
+                      }}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        moveDraggedBlock(block.id, "after");
+                      }}
+                    />
+                  </div>
                 ))}
+                {selectedDocument.content.length === 0 ? <div className="documents-drop-zone documents-drop-zone--empty" /> : null}
               </div>
 
               <div className="documents-add-row">
@@ -376,4 +475,3 @@ async function readImageDimensions(file: File) {
     URL.revokeObjectURL(objectUrl);
   }
 }
-
