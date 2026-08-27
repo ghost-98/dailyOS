@@ -3,6 +3,7 @@
 @import "./styles/life-database.css";
 @import "./styles/life.css";
 @import "./styles/places.css";
+@import "./styles/documents.css";
 @import "./styles/layout.css";
 @import "./styles/calendar-shell.css";
 @import "./styles/calendar-markers.css";
@@ -132,3 +133,4 @@ select {
 button {
   cursor: pointer;
 }
+

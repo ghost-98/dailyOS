@@ -1,4 +1,4 @@
-﻿import { Activity, BookOpenCheck, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
+import { Activity, BookOpenCheck, FileText, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
 
 export type NavItem = {
   children?: Array<Omit<NavItem, "children" | "icon">>;
@@ -34,6 +34,7 @@ export const primaryNav: NavItem[] = [
   { label: "기록", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
   { label: "DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
+  { label: "문서", href: "/documents", key: "documents", icon: FileText },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
 
@@ -42,5 +43,7 @@ export const mobileNav: NavItem[] = [
   { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
   { label: "DB", href: "/life", key: "life", icon: BookOpenCheck },
   { label: "장소", href: "/places", key: "places", icon: Map },
+  { label: "문서", href: "/documents", key: "documents", icon: FileText },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];
+

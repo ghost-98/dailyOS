@@ -416,6 +416,17 @@ create table if not exists public.people_links (
   unique (user_id, person_name, target_type, target_id)
 );
 
+create table if not exists public.documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null default '새 문서',
+  icon text,
+  summary text,
+  content jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists profiles_email_idx on public.profiles(email);
 create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, scheduled_date);
 create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date);
@@ -429,6 +440,7 @@ create index if not exists expense_records_user_date_idx on public.expense_recor
 create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
+create index if not exists documents_user_updated_idx on public.documents(user_id, updated_at desc);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
 create index if not exists personal_places_user_label_idx on public.personal_places(user_id, label);
 
@@ -760,6 +772,11 @@ create trigger set_place_links_updated_at
 before update on public.place_links
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_documents_updated_at on public.documents;
+create trigger set_documents_updated_at
+before update on public.documents
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
@@ -777,6 +794,7 @@ alter table public.place_folder_links enable row level security;
 alter table public.place_links enable row level security;
 alter table public.people enable row level security;
 alter table public.people_links enable row level security;
+alter table public.documents enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -1192,6 +1210,31 @@ on public.place_links for delete
 to authenticated
 using (user_id = auth.uid());
 
+drop policy if exists "Users can read own documents" on public.documents;
+create policy "Users can read own documents"
+on public.documents for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own documents" on public.documents;
+create policy "Users can insert own documents"
+on public.documents for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own documents" on public.documents;
+create policy "Users can update own documents"
+on public.documents for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own documents" on public.documents;
+create policy "Users can delete own documents"
+on public.documents for delete
+to authenticated
+using (user_id = auth.uid());
+
 drop policy if exists "Users can read own people" on public.people;
 create policy "Users can read own people"
 on public.people for select
@@ -1265,3 +1308,4 @@ to authenticated
 using (user_id = auth.uid());
 
 notify pgrst, 'reload schema';
+
