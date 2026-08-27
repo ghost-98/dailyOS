@@ -74,6 +74,8 @@ export function DocumentBlockEditor({
   const [activeTextField, setActiveTextField] = useState<TextFieldController | null>(null);
   const [slashQuery, setSlashQuery] = useState<string | null>(null);
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
+  const [nestedDraggedBlockId, setNestedDraggedBlockId] = useState<string | null>(null);
+  const [nestedDropTarget, setNestedDropTarget] = useState<{ id: string; position: "before" | "after" } | null>(null);
 
   const slashItems = useMemo(() => {
     const keyword = slashQuery?.trim().toLowerCase() ?? "";
@@ -102,6 +104,18 @@ export function DocumentBlockEditor({
     }
     if (next.type === "toggle") next.title = "";
     onChange(next);
+  };
+
+  const moveNestedBlock = (targetId: string, position: "before" | "after") => {
+    if (block.type !== "toggle" || !nestedDraggedBlockId || nestedDraggedBlockId === targetId) return;
+    const fromIndex = block.children.findIndex((child) => child.id === nestedDraggedBlockId);
+    const targetIndex = block.children.findIndex((child) => child.id === targetId);
+    if (fromIndex < 0 || targetIndex < 0) return;
+    let nextIndex = position === "before" ? targetIndex : targetIndex + 1;
+    if (fromIndex < nextIndex) nextIndex -= 1;
+    onChange({ ...block, children: moveArrayItem(block.children, fromIndex, nextIndex) });
+    setNestedDraggedBlockId(null);
+    setNestedDropTarget(null);
   };
 
   const handleSlashKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -209,9 +223,14 @@ export function DocumentBlockEditor({
             block={block}
             depth={depth}
             isUploading={isUploading}
+            nestedDraggedBlockId={nestedDraggedBlockId}
+            nestedDropTarget={nestedDropTarget}
             onChange={onChange}
             onEnterAtEnd={(type) => onAddBelow(type, index)}
+            onMoveNestedBlock={moveNestedBlock}
             onOpenSlash={openSlashForValue}
+            onSetNestedDraggedBlockId={setNestedDraggedBlockId}
+            onSetNestedDropTarget={setNestedDropTarget}
             onRegisterTextField={setActiveTextField}
             onReplaceImage={onReplaceImage}
             onSlashKeyDown={handleSlashKeyDown}
@@ -242,9 +261,14 @@ function DocumentBlockFields({
   block,
   depth,
   isUploading,
+  nestedDraggedBlockId,
+  nestedDropTarget,
   onChange,
   onEnterAtEnd,
+  onMoveNestedBlock,
   onOpenSlash,
+  onSetNestedDraggedBlockId,
+  onSetNestedDropTarget,
   onRegisterTextField,
   onReplaceImage,
   onSlashKeyDown,
@@ -252,9 +276,14 @@ function DocumentBlockFields({
   block: DocumentBlock;
   depth: number;
   isUploading: boolean;
+  nestedDraggedBlockId: string | null;
+  nestedDropTarget: { id: string; position: "before" | "after" } | null;
   onChange: (nextBlock: DocumentBlock) => void;
   onEnterAtEnd: (type: DocumentBlock["type"]) => void;
+  onMoveNestedBlock: (targetId: string, position: "before" | "after") => void;
   onOpenSlash: (value: string) => void;
+  onSetNestedDraggedBlockId: (value: string | null) => void;
+  onSetNestedDropTarget: (value: { id: string; position: "before" | "after" } | null) => void;
   onRegisterTextField: (controller: TextFieldController | null) => void;
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
   onSlashKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
@@ -278,6 +307,7 @@ function DocumentBlockFields({
           </label>
         </div>
         <AutoSizeTextarea className="doc-image-caption" minRows={1} placeholder="이미지 설명" value={block.caption} onChange={(value) => onChange({ ...block, caption: value })} onFocusEditor={onRegisterTextField} />
+        <RichTextPreview value={block.caption} />
       </div>
     );
   }
@@ -318,28 +348,65 @@ function DocumentBlockFields({
           <strong>{block.title.trim() || "토글"}</strong>
         </button>
         <AutoSizeTextarea className="doc-toggle-title" minRows={1} placeholder="토글 제목" value={block.title} onChange={(value) => { onOpenSlash(value); onChange({ ...block, title: value }); }} onEnterAtEnd={() => onChange({ ...block, children: [...block.children, createDocumentBlock("paragraph")] })} onFocusEditor={onRegisterTextField} onKeyDown={onSlashKeyDown} />
+        <RichTextPreview value={block.title} />
         {block.isOpen ? (
           <>
             <div className="doc-nested-blocks">
               {block.children.map((child, childIndex) => (
-                <DocumentBlockEditor
-                  block={child}
-                  depth={depth + 1}
-                  index={childIndex}
-                  isDragging={false}
-                  isUploading={isUploading}
-                  key={child.id}
-                  onAddBelow={(type, targetIndex) => {
-                    const nextChildren = [...block.children];
-                    nextChildren.splice(targetIndex + 1, 0, createDocumentBlock(type));
-                    onChange({ ...block, children: nextChildren });
-                  }}
-                  onChange={(nextChild) => onChange({ ...block, children: block.children.map((current) => current.id === child.id ? nextChild : current) })}
-                  onDelete={() => onChange({ ...block, children: block.children.length === 1 ? [createDocumentBlock("paragraph")] : block.children.filter((current) => current.id !== child.id) })}
-                  onMoveDown={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.min(block.children.length - 1, childIndex + 1)) })}
-                  onMoveUp={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.max(0, childIndex - 1)) })}
-                  onReplaceImage={onReplaceImage}
-                />
+                <div className="documents-block-frame" key={child.id}>
+                  <div
+                    className={nestedDropTarget?.id === child.id && nestedDropTarget.position === "before" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      if (!nestedDraggedBlockId || nestedDraggedBlockId === child.id) return;
+                      onSetNestedDropTarget({ id: child.id, position: "before" });
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      onMoveNestedBlock(child.id, "before");
+                    }}
+                  />
+                  <DocumentBlockEditor
+                    block={child}
+                    depth={depth + 1}
+                    index={childIndex}
+                    isDragging={nestedDraggedBlockId === child.id}
+                    isUploading={isUploading}
+                    key={child.id}
+                    onAddBelow={(type, targetIndex) => {
+                      const nextChildren = [...block.children];
+                      nextChildren.splice(targetIndex + 1, 0, createDocumentBlock(type));
+                      onChange({ ...block, children: nextChildren });
+                    }}
+                    onChange={(nextChild) => onChange({ ...block, children: block.children.map((current) => current.id === child.id ? nextChild : current) })}
+                    onDelete={() => onChange({ ...block, children: block.children.length === 1 ? [createDocumentBlock("paragraph")] : block.children.filter((current) => current.id !== child.id) })}
+                    onDragEnd={() => {
+                      onSetNestedDraggedBlockId(null);
+                      onSetNestedDropTarget(null);
+                    }}
+                    onDragStart={(blockId) => {
+                      onSetNestedDraggedBlockId(blockId);
+                      onSetNestedDropTarget(null);
+                    }}
+                    onMoveDown={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.min(block.children.length - 1, childIndex + 1)) })}
+                    onMoveUp={() => onChange({ ...block, children: moveArrayItem(block.children, childIndex, Math.max(0, childIndex - 1)) })}
+                    onReplaceImage={onReplaceImage}
+                  />
+                  <div
+                    className={nestedDropTarget?.id === child.id && nestedDropTarget.position === "after" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      if (!nestedDraggedBlockId || nestedDraggedBlockId === child.id) return;
+                      onSetNestedDropTarget({ id: child.id, position: "after" });
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      onMoveNestedBlock(child.id, "after");
+                    }}
+                  />
+                </div>
               ))}
             </div>
             <button className="doc-ghost-add" onClick={() => onChange({ ...block, children: [...block.children, createDocumentBlock("paragraph")] })} type="button">+ 하위 블록 추가</button>
@@ -387,6 +454,7 @@ function DocumentBlockFields({
           <button className="doc-ghost-add" onClick={() => onChange({ ...block, rows: block.rows.map((row) => [...row, ""]) })} type="button">+ 열</button>
           <button className="doc-ghost-add" disabled={block.rows.length <= 1} onClick={() => onChange({ ...block, rows: block.rows.slice(0, -1) })} type="button">- 행</button>
           <button className="doc-ghost-add" disabled={(block.rows[0]?.length ?? 0) <= 1} onClick={() => onChange({ ...block, rows: block.rows.map((row) => row.slice(0, -1)) })} type="button">- 열</button>
+          <button className="doc-ghost-add" disabled={block.rows.length <= 1} onClick={() => onChange({ ...block, rows: moveArrayItem(block.rows, block.rows.length - 1, 0) })} type="button">행 순환</button>
         </div>
       </div>
     );
@@ -397,6 +465,7 @@ function DocumentBlockFields({
       <div className="doc-block__body doc-block__body--callout">
         <input className="doc-callout-icon" maxLength={4} placeholder="💡" value={block.icon} onChange={(event) => onChange({ ...block, icon: event.target.value })} />
         <AutoSizeTextarea className="doc-callout-text" minRows={2} placeholder="강조해서 남길 문맥" value={block.text} onChange={(value) => { onOpenSlash(value); onChange({ ...block, text: value }); }} onEnterAtEnd={() => onEnterAtEnd("paragraph")} onFocusEditor={onRegisterTextField} onKeyDown={onSlashKeyDown} />
+        <RichTextPreview value={block.text} />
       </div>
     );
   }
@@ -414,6 +483,7 @@ function DocumentBlockFields({
         onFocusEditor={onRegisterTextField}
         onKeyDown={onSlashKeyDown}
       />
+      <RichTextPreview value={block.text} />
     </div>
   );
 }
@@ -438,6 +508,7 @@ function ChecklistRow({
       <label><input checked={item.checked} type="checkbox" onChange={(event) => onChange({ ...item, checked: event.target.checked })} /></label>
       <AutoSizeTextarea className="doc-checklist__text" minRows={1} placeholder="할 일" value={item.text} onChange={(value) => onChange({ ...item, text: value })} onEnterAtEnd={onEnterAtEnd} onFocusEditor={onFocusEditor} onKeyDown={onKeyDown} />
       <IconButton label="항목 삭제" onClick={onRemove} size="sm" tone="ghost"><Trash2 aria-hidden size={14} /></IconButton>
+      <RichTextPreview className="doc-rich-preview--checklist" value={item.text} />
     </div>
   );
 }
@@ -533,4 +604,54 @@ function getInlineMarkers(format: InlineFormatType) {
     default:
       return { end: "", placeholder: "", start: "" };
   }
+}
+
+function RichTextPreview({ className = "", value }: { className?: string; value: string }) {
+  const segments = useMemo(() => parseRichTextSegments(value), [value]);
+  const hasFormatting = segments.some((segment) => segment.type !== "text");
+  if (!hasFormatting) return null;
+
+  return (
+    <div className={`doc-rich-preview ${className}`.trim()}>
+      {segments.map((segment, index) => {
+        if (segment.type === "text") return <span key={`${segment.type}-${index}`}>{segment.value}</span>;
+        if (segment.type === "bold") return <strong key={`${segment.type}-${index}`}>{segment.value}</strong>;
+        if (segment.type === "italic") return <em key={`${segment.type}-${index}`}>{segment.value}</em>;
+        if (segment.type === "code") return <code key={`${segment.type}-${index}`}>{segment.value}</code>;
+        return <mark key={`${segment.type}-${index}`}>{segment.value}</mark>;
+      })}
+    </div>
+  );
+}
+
+function parseRichTextSegments(value: string) {
+  const segments: Array<{ type: "text" | "bold" | "italic" | "code" | "highlight"; value: string }> = [];
+  const pattern = /(\*\*[^*]+\*\*|_[^_]+_|`[^`]+`|==[^=]+==)/g;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const matchedText = match[0];
+    const startIndex = match.index ?? 0;
+    if (startIndex > lastIndex) {
+      segments.push({ type: "text", value: value.slice(lastIndex, startIndex) });
+    }
+
+    if (matchedText.startsWith("**")) {
+      segments.push({ type: "bold", value: matchedText.slice(2, -2) });
+    } else if (matchedText.startsWith("_")) {
+      segments.push({ type: "italic", value: matchedText.slice(1, -1) });
+    } else if (matchedText.startsWith("`")) {
+      segments.push({ type: "code", value: matchedText.slice(1, -1) });
+    } else {
+      segments.push({ type: "highlight", value: matchedText.slice(2, -2) });
+    }
+
+    lastIndex = startIndex + matchedText.length;
+  }
+
+  if (lastIndex < value.length) {
+    segments.push({ type: "text", value: value.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: "text", value }];
 }

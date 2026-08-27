@@ -494,3 +494,40 @@
   background: rgba(157,178,255,0.16);
   border: 1px solid rgba(157,178,255,0.22);
 }
+
+.doc-rich-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.doc-rich-preview strong,
+.doc-rich-preview em,
+.doc-rich-preview code,
+.doc-rich-preview mark {
+  color: var(--text);
+}
+
+.doc-rich-preview code {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(157,178,255,0.12);
+}
+
+.doc-rich-preview mark {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255,216,107,0.18);
+}
+
+.doc-rich-preview--checklist {
+  grid-column: 2 / 3;
+  margin-top: -4px;
+}
