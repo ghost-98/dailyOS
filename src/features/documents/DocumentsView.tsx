@@ -4,7 +4,6 @@ import { FilePlus2, FolderOpen, NotebookPen, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormActionBar } from "@/components/ui/FormActionBar";
-import { FormField } from "@/components/ui/FormField";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { DocumentBlockEditor } from "@/features/documents/DocumentBlockEditor";
 import { createDocumentInDb, deleteDocumentFromDb, deleteDocumentStorageFiles, fetchDocumentsFromDb, updateDocumentInDb, uploadDocumentImageToDb } from "@/features/documents/api";
@@ -80,11 +79,7 @@ export function DocumentsView() {
     const keyword = query.trim().toLowerCase();
     return documents.filter((document) => {
       const folder = document.folder?.trim() ?? "";
-      const folderMatched = folderFilter === "all"
-        ? true
-        : folderFilter === "uncategorized"
-          ? folder.length === 0
-          : folder === folderFilter;
+      const folderMatched = folderFilter === "all" ? true : folderFilter === "uncategorized" ? folder.length === 0 : folder === folderFilter;
       if (!folderMatched) return false;
       if (!keyword) return true;
       const source = [document.title, document.summary, folder, ...document.tags].filter(Boolean).join(" ").toLowerCase();
@@ -138,7 +133,7 @@ export function DocumentsView() {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       void persistDocument(selectedDocument, true);
-    }, 900);
+    }, 700);
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
@@ -252,49 +247,34 @@ export function DocumentsView() {
   };
 
   return (
-    <div className="documents-page">
+    <div className="documents-page documents-page--notion">
       <header className="life-tab-heading documents-header ui-toolbar-panel">
         <div>
           <p className="eyebrow">문서</p>
           <h1>문서</h1>
-          <p>노션처럼 문서를 만들되, 우리 서비스의 기록 맥락과 함께 바로 쌓이는 문서 공간으로 확장했어요.</p>
+          <p>관리보다 작성에 집중되도록, 한 장의 문서 캔버스처럼 재구성했어요.</p>
         </div>
         <div className="header-actions">
           <ActionButton disabled={isSaving} onClick={() => void createDocument()}><FilePlus2 aria-hidden size={16} />새 문서</ActionButton>
         </div>
       </header>
 
-      <div className="documents-layout documents-layout--split">
+      <div className="documents-layout--split">
         <SectionCard className="documents-folder-sidebar ui-workspace-panel">
           <div className="documents-folder-sidebar__head">
             <span>문서 폴더</span>
             <strong>{folderSummaries.folders.length}개</strong>
           </div>
-          <button className={folderFilter === "all" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("all")} type="button">
-            <span><FolderOpen aria-hidden size={15} />전체 문서</span>
-            <b>{documents.length}</b>
-          </button>
-          <button className={folderFilter === "uncategorized" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("uncategorized")} type="button">
-            <span>미분류</span>
-            <b>{folderSummaries.uncategorizedCount}</b>
-          </button>
+          <button className={folderFilter === "all" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("all")} type="button"><span><FolderOpen aria-hidden size={15} />전체 문서</span><b>{documents.length}</b></button>
+          <button className={folderFilter === "uncategorized" ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} onClick={() => setFolderFilter("uncategorized")} type="button"><span>미분류</span><b>{folderSummaries.uncategorizedCount}</b></button>
           <div className="documents-folder-list">
-            {folderSummaries.folders.map((folder) => (
-              <button className={folderFilter === folder.name ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} key={folder.name} onClick={() => setFolderFilter(folder.name)} type="button">
-                <span>{folder.name}</span>
-                <b>{folder.count}</b>
-              </button>
-            ))}
+            {folderSummaries.folders.map((folder) => <button className={folderFilter === folder.name ? "documents-folder-item documents-folder-item--active" : "documents-folder-item"} key={folder.name} onClick={() => setFolderFilter(folder.name)} type="button"><span>{folder.name}</span><b>{folder.count}</b></button>)}
           </div>
         </SectionCard>
 
         <SectionCard className="documents-sidebar ui-workspace-panel">
           <div className="documents-search"><Search aria-hidden size={16} /><input placeholder="문서 검색" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-          <div className="documents-sidebar__summary">
-            <span>{folderFilter === "all" ? "전체 문서" : folderFilter === "uncategorized" ? "미분류 문서" : folderFilter}</span>
-            <strong>{filteredDocuments.length}개</strong>
-            <p>전체 {documents.length}개 · 검색어 {query.trim() ? "적용 중" : "없음"}</p>
-          </div>
+          <div className="documents-sidebar__summary"><span>{folderFilter === "all" ? "전체 문서" : folderFilter === "uncategorized" ? "미분류 문서" : folderFilter}</span><strong>{filteredDocuments.length}개</strong><p>전체 {documents.length}개 · 검색어 {query.trim() ? "적용 중" : "없음"}</p></div>
           <div className="documents-list">
             {filteredDocuments.length > 0 ? filteredDocuments.map((document) => (
               <button className={document.id === selectedId ? "documents-list__item documents-list__item--active" : "documents-list__item"} key={document.id} onClick={() => setSelectedId(document.id)} type="button">
@@ -309,100 +289,54 @@ export function DocumentsView() {
           </div>
         </SectionCard>
 
-        <SectionCard className="documents-editor ui-workspace-panel">
+        <section className="documents-editor-surface">
           {selectedDocument ? (
             <>
-              <div className="documents-editor__top documents-editor__top--meta">
-                <FormField label="문서 아이콘"><input className="documents-icon-input" maxLength={4} placeholder="📝" value={selectedDocument.icon ?? ""} onChange={(event) => patchSelectedDocument((document) => ({ ...document, icon: event.target.value }))} /></FormField>
-                <FormField label="문서 제목"><input placeholder="문서 제목" value={selectedDocument.title} onChange={(event) => patchSelectedDocument((document) => ({ ...document, title: event.target.value }))} /></FormField>
+              <div className="documents-canvas">
+                <div className="documents-canvas__head">
+                  <input className="documents-canvas__icon" maxLength={4} placeholder="📝" value={selectedDocument.icon ?? ""} onChange={(event) => patchSelectedDocument((document) => ({ ...document, icon: event.target.value }))} />
+                  <input className="documents-canvas__title" placeholder="제목 없음" value={selectedDocument.title} onChange={(event) => patchSelectedDocument((document) => ({ ...document, title: event.target.value }))} />
+                </div>
+
+                <div className="documents-canvas__meta">
+                  <input className="documents-canvas__folder" list="document-folder-options" placeholder="폴더" value={selectedDocument.folder ?? ""} onChange={(event) => patchSelectedDocument((document) => ({ ...document, folder: event.target.value }))} />
+                  <input className="documents-canvas__tags" placeholder="태그를 쉼표로 입력" value={tagInput} onChange={(event) => { setTagInput(event.target.value); patchSelectedDocument((document) => ({ ...document, tags: parseDocumentTags(event.target.value) })); }} />
+                  <span>{getSaveStateLabel(saveState)}</span>
+                  <span>이미지 {selectedDocumentImageCount}</span>
+                  <datalist id="document-folder-options">{folderOptions.map((folder) => <option key={folder} value={folder} />)}</datalist>
+                </div>
+
+                <div className="documents-tag-list documents-tag-list--canvas">
+                  {selectedDocument.tags.map((tag) => <button key={tag} onClick={() => setQuery(String(tag))} type="button">#{tag}</button>)}
+                </div>
+
+                <div className="documents-blocks documents-blocks--canvas" onDragOver={(event) => event.preventDefault()}>
+                  {selectedDocument.content.map((block, index) => (
+                    <div className="documents-block-frame" key={block.id}>
+                      <div className={dropTarget?.id === block.id && dropTarget.position === "before" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"} onDragEnter={(event) => { event.preventDefault(); if (!draggedBlockId || draggedBlockId === block.id) return; setDropTarget({ id: block.id, position: "before" }); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); moveDraggedBlock(block.id, "before"); }} />
+                      <DocumentBlockEditor block={block} index={index} isDragging={draggedBlockId === block.id} isUploading={isUploading} onAddBelow={addBlock} onChange={(nextBlock) => updateBlock(block.id, nextBlock)} onDelete={() => void removeBlock(block.id)} onDragEnd={() => { setDraggedBlockId(null); setDropTarget(null); }} onDragStart={(blockId) => { setDraggedBlockId(blockId); setDropTarget(null); }} onMoveDown={() => moveBlock(index, Math.min(selectedDocument.content.length - 1, index + 1))} onMoveUp={() => moveBlock(index, Math.max(0, index - 1))} onReplaceImage={(file, previousImage) => replaceBlockImage(block.id, file, previousImage)} />
+                      <div className={dropTarget?.id === block.id && dropTarget.position === "after" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"} onDragEnter={(event) => { event.preventDefault(); if (!draggedBlockId || draggedBlockId === block.id) return; setDropTarget({ id: block.id, position: "after" }); }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); moveDraggedBlock(block.id, "after"); }} />
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="documents-editor__top documents-editor__top--meta">
-                <FormField label="폴더"><input list="document-folder-options" placeholder="예: 회고, 기획, 운영" value={selectedDocument.folder ?? ""} onChange={(event) => patchSelectedDocument((document) => ({ ...document, folder: event.target.value }))} /></FormField>
-                <FormField label="태그"><input placeholder="쉼표로 구분" value={tagInput} onChange={(event) => { setTagInput(event.target.value); patchSelectedDocument((document) => ({ ...document, tags: parseDocumentTags(event.target.value) })); }} /></FormField>
-                <datalist id="document-folder-options">{folderOptions.map((folder) => <option key={folder} value={folder} />)}</datalist>
+              <div className="documents-editor-footer">
+                <div className="documents-add-row documents-add-row--canvas">
+                  <ActionButton onClick={() => addBlock("paragraph", selectedDocument.content.length - 1)} variant="secondary">본문</ActionButton>
+                  <ActionButton onClick={() => addBlock("heading1", selectedDocument.content.length - 1)} variant="secondary">제목</ActionButton>
+                  <ActionButton onClick={() => addBlock("toggle", selectedDocument.content.length - 1)} variant="secondary">토글</ActionButton>
+                  <ActionButton onClick={() => addBlock("checklist", selectedDocument.content.length - 1)} variant="secondary">체크</ActionButton>
+                  <ActionButton onClick={() => addBlock("table", selectedDocument.content.length - 1)} variant="secondary">표</ActionButton>
+                  <ActionButton onClick={() => addBlock("image", selectedDocument.content.length - 1)} variant="secondary">이미지</ActionButton>
+                </div>
+                <FormActionBar cancelDisabled={isSaving} cancelLabel="문서 삭제" className="documents-editor__actions" onCancel={() => void deleteSelectedDocument()} onSubmit={() => selectedDocument ? void persistDocument(selectedDocument) : undefined} submitDisabled={isSaving || isUploading} submitLabel={isSaving ? "저장 중..." : "즉시 저장"} />
               </div>
-
-              <div className="documents-editor__meta">
-                <span>블록 {selectedDocument.content.length}개</span>
-                <span>이미지 {selectedDocumentImageCount}개</span>
-                <span>태그 {selectedDocument.tags.length}개</span>
-                <span>{getSaveStateLabel(saveState)}</span>
-              </div>
-
-              <div className="documents-tag-list">
-                {selectedDocument.tags.map((tag) => <button key={tag} onClick={() => setQuery(String(tag))} type="button">#{tag}</button>)}
-              </div>
-
-              <div className="documents-blocks" onDragOver={(event) => event.preventDefault()}>
-                {selectedDocument.content.map((block, index) => (
-                  <div className="documents-block-frame" key={block.id}>
-                    <div
-                      className={dropTarget?.id === block.id && dropTarget.position === "before" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
-                      onDragEnter={(event) => {
-                        event.preventDefault();
-                        if (!draggedBlockId || draggedBlockId === block.id) return;
-                        setDropTarget({ id: block.id, position: "before" });
-                      }}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        moveDraggedBlock(block.id, "before");
-                      }}
-                    />
-                    <DocumentBlockEditor
-                      block={block}
-                      index={index}
-                      isDragging={draggedBlockId === block.id}
-                      isUploading={isUploading}
-                      key={block.id}
-                      onAddBelow={addBlock}
-                      onChange={(nextBlock) => updateBlock(block.id, nextBlock)}
-                      onDelete={() => void removeBlock(block.id)}
-                      onDragEnd={() => {
-                        setDraggedBlockId(null);
-                        setDropTarget(null);
-                      }}
-                      onDragStart={(blockId) => {
-                        setDraggedBlockId(blockId);
-                        setDropTarget(null);
-                      }}
-                      onMoveDown={() => moveBlock(index, Math.min(selectedDocument.content.length - 1, index + 1))}
-                      onMoveUp={() => moveBlock(index, Math.max(0, index - 1))}
-                      onReplaceImage={(file, previousImage) => replaceBlockImage(block.id, file, previousImage)}
-                    />
-                    <div
-                      className={dropTarget?.id === block.id && dropTarget.position === "after" ? "documents-drop-zone documents-drop-zone--active" : "documents-drop-zone"}
-                      onDragEnter={(event) => {
-                        event.preventDefault();
-                        if (!draggedBlockId || draggedBlockId === block.id) return;
-                        setDropTarget({ id: block.id, position: "after" });
-                      }}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        moveDraggedBlock(block.id, "after");
-                      }}
-                    />
-                  </div>
-                ))}
-                {selectedDocument.content.length === 0 ? <div className="documents-drop-zone documents-drop-zone--empty" /> : null}
-              </div>
-
-              <div className="documents-add-row">
-                <ActionButton onClick={() => addBlock("paragraph", selectedDocument.content.length - 1)} variant="secondary">본문 추가</ActionButton>
-                <ActionButton onClick={() => addBlock("toggle", selectedDocument.content.length - 1)} variant="secondary">토글 추가</ActionButton>
-                <ActionButton onClick={() => addBlock("checklist", selectedDocument.content.length - 1)} variant="secondary">체크리스트 추가</ActionButton>
-                <ActionButton onClick={() => addBlock("table", selectedDocument.content.length - 1)} variant="secondary">표 추가</ActionButton>
-                <ActionButton onClick={() => addBlock("image", selectedDocument.content.length - 1)} variant="secondary">이미지 추가</ActionButton>
-              </div>
-
-              <FormActionBar cancelDisabled={isSaving} cancelLabel="문서 삭제" className="documents-editor__actions" onCancel={() => void deleteSelectedDocument()} onSubmit={() => selectedDocument ? void persistDocument(selectedDocument) : undefined} submitDisabled={isSaving || isUploading} submitLabel={isSaving ? "저장 중..." : "즉시 저장"} />
             </>
-          ) : <div className="documents-empty documents-empty--large"><NotebookPen aria-hidden size={22} /><strong>선택된 문서가 없어요.</strong><p>왼쪽에서 문서를 고르거나 새 문서를 만들어 시작해 보세요.</p><ActionButton disabled={isSaving} onClick={() => void createDocument()}><FilePlus2 aria-hidden size={16} />첫 문서 만들기</ActionButton></div>}
+          ) : <div className="documents-empty documents-empty--large documents-empty--canvas"><NotebookPen aria-hidden size={22} /><strong>선택된 문서가 없어요.</strong><p>왼쪽에서 문서를 고르거나 새 문서를 만들어 시작해 보세요.</p><ActionButton disabled={isSaving} onClick={() => void createDocument()}><FilePlus2 aria-hidden size={16} />첫 문서 만들기</ActionButton></div>}
 
-          {message ? <p className="documents-message">{message}</p> : null}
-        </SectionCard>
+          {message ? <p className="documents-message documents-message--canvas">{message}</p> : null}
+        </section>
       </div>
     </div>
   );
@@ -410,16 +344,11 @@ export function DocumentsView() {
 
 function getSaveStateLabel(saveState: SaveState) {
   switch (saveState) {
-    case "dirty":
-      return "변경됨 · 곧 자동 저장";
-    case "saving":
-      return "자동 저장 중";
-    case "saved":
-      return "자동 저장 완료";
-    case "error":
-      return "자동 저장 실패";
-    default:
-      return "저장 대기";
+    case "dirty": return "변경됨 · 자동 저장 대기";
+    case "saving": return "자동 저장 중";
+    case "saved": return "자동 저장 완료";
+    case "error": return "자동 저장 실패";
+    default: return "저장 대기";
   }
 }
 
