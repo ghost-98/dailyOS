@@ -13,22 +13,26 @@ import {
 type DocumentRow = {
   content: unknown;
   created_at: string;
+  folder: string | null;
   icon: string | null;
   id: string;
   summary: string | null;
+  tags: string[] | null;
   title: string;
   updated_at: string;
 };
 
-const documentColumns = "id,title,icon,summary,content,created_at,updated_at";
+const documentColumns = "id,title,icon,folder,tags,summary,content,created_at,updated_at";
 
 function mapDocumentRow(row: DocumentRow, content: DocumentRecord["content"]): DocumentRecord {
   return {
     content,
     createdAt: row.created_at,
+    folder: row.folder ?? undefined,
     icon: row.icon ?? undefined,
     id: row.id,
     summary: row.summary ?? undefined,
+    tags: Array.isArray(row.tags) ? row.tags.filter(Boolean) : [],
     title: row.title,
     updatedAt: row.updated_at,
   };
@@ -66,8 +70,10 @@ export async function createDocumentInDb() {
     .from("documents")
     .insert({
       content: stripTransientDocumentFields(draft.content),
+      folder: draft.folder || null,
       icon: draft.icon ?? null,
       summary: summarizeDocument(draft.title, draft.content),
+      tags: draft.tags,
       title: draft.title,
       user_id: userId,
     })
@@ -87,8 +93,10 @@ export async function updateDocumentInDb(document: DocumentRecord) {
     .from("documents")
     .update({
       content: stripTransientDocumentFields(document.content),
+      folder: document.folder?.trim() || null,
       icon: document.icon?.trim() || null,
       summary,
+      tags: document.tags,
       title: document.title.trim() || "제목 없는 문서",
     })
     .eq("id", document.id)

@@ -36,7 +36,7 @@ export type DocumentHeadingBlock = DocumentBlockBase & {
 };
 
 export type DocumentToggleBlock = DocumentBlockBase & {
-  body: string;
+  children: DocumentBlock[];
   isOpen: boolean;
   title: string;
   type: "toggle";
@@ -88,9 +88,11 @@ export type DocumentBlock =
 export type DocumentRecord = {
   content: DocumentBlock[];
   createdAt?: string;
+  folder?: string;
   icon?: string;
   id: string;
   summary?: string;
+  tags: string[];
   title: string;
   updatedAt?: string;
 };

@@ -6,6 +6,7 @@ import type {
   DocumentImageAsset,
   DocumentRecord,
   DocumentTextTone,
+  DocumentToggleBlock,
 } from "@/features/documents/types";
 
 type DocumentBlockType = DocumentBlock["type"];
@@ -45,8 +46,10 @@ export const documentBlockTypeLabels: Record<DocumentBlockType, string> = {
 export function createDocumentRecord(): Omit<DocumentRecord, "id"> {
   return {
     content: [createDocumentBlock("heading1"), createDocumentBlock("paragraph")],
+    folder: "",
     icon: "📝",
     summary: "",
+    tags: [],
     title: "새 문서",
   };
 }
@@ -59,13 +62,13 @@ export function createDocumentBlock(type: DocumentBlockType): DocumentBlock {
     case "heading3":
       return { id, text: "", type };
     case "toggle":
-      return { body: "", id, isOpen: true, title: "", type };
+      return { children: [createDocumentBlock("paragraph")], id, isOpen: true, title: "", type };
     case "checklist":
       return { id, items: [createChecklistItem()], type };
     case "quote":
       return { id, text: "", type };
     case "callout":
-      return { icon: "💡", id, text: "", type, backgroundTone: "violet" };
+      return { backgroundTone: "violet", icon: "💡", id, text: "", type };
     case "divider":
       return { id, type };
     case "image":
@@ -79,18 +82,12 @@ export function createDocumentBlock(type: DocumentBlockType): DocumentBlock {
 }
 
 export function createChecklistItem(): DocumentChecklistItem {
-  return {
-    checked: false,
-    id: crypto.randomUUID(),
-    text: "",
-  };
+  return { checked: false, id: crypto.randomUUID(), text: "" };
 }
 
 export function normalizeDocumentContent(value: unknown): DocumentBlock[] {
   if (!Array.isArray(value)) return [createDocumentBlock("paragraph")];
-  const blocks = value
-    .map((entry) => normalizeDocumentBlock(entry))
-    .filter((entry): entry is DocumentBlock => Boolean(entry));
+  const blocks = value.map((entry) => normalizeDocumentBlock(entry)).filter((entry): entry is DocumentBlock => Boolean(entry));
   return blocks.length > 0 ? blocks : [createDocumentBlock("paragraph")];
 }
 
@@ -125,13 +122,13 @@ function normalizeDocumentBlock(value: unknown): DocumentBlock | null {
   if (type === "toggle") {
     return {
       backgroundTone: normalizeBackgroundTone(block.backgroundTone),
-      body: typeof block.body === "string" ? block.body : "",
+      children: normalizeDocumentContent(block.children),
       id: typeof block.id === "string" ? block.id : crypto.randomUUID(),
       isOpen: typeof block.isOpen === "boolean" ? block.isOpen : true,
       textTone: normalizeTextTone(block.textTone),
       title: typeof block.title === "string" ? block.title : "",
       type: "toggle",
-    };
+    } satisfies DocumentToggleBlock;
   }
 
   if (type === "callout") {
@@ -158,9 +155,7 @@ function normalizeDocumentBlock(value: unknown): DocumentBlock | null {
 
   if (type === "table") {
     const rows = Array.isArray(block.rows)
-      ? block.rows
-        .filter(Array.isArray)
-        .map((row) => row.map((cell) => (typeof cell === "string" ? cell : "")))
+      ? block.rows.filter(Array.isArray).map((row) => row.map((cell) => (typeof cell === "string" ? cell : "")))
       : [["제목", "값"], ["", ""]];
     return {
       backgroundTone: normalizeBackgroundTone(block.backgroundTone),
@@ -219,12 +214,17 @@ function normalizeBackgroundTone(value: unknown): DocumentBackgroundTone | undef
 }
 
 export function summarizeDocument(title: string, content: DocumentBlock[]) {
-  const textChunks = content.flatMap((block) => {
+  const merged = [title.trim(), ...collectDocumentTexts(content)].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  return merged.slice(0, 180);
+}
+
+function collectDocumentTexts(content: DocumentBlock[]): string[] {
+  return content.flatMap((block) => {
     switch (block.type) {
       case "checklist":
         return block.items.map((item) => item.text.trim()).filter(Boolean);
       case "toggle":
-        return [block.title.trim(), block.body.trim()].filter(Boolean);
+        return [block.title.trim(), ...collectDocumentTexts(block.children)].filter(Boolean);
       case "table":
         return block.rows.flatMap((row) => row.map((cell) => cell.trim()).filter(Boolean));
       case "divider":
@@ -235,9 +235,6 @@ export function summarizeDocument(title: string, content: DocumentBlock[]) {
         return [("text" in block ? block.text : "")?.trim()].filter(Boolean);
     }
   });
-
-  const merged = [title.trim(), ...textChunks].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-  return merged.slice(0, 180);
 }
 
 export function stripTransientDocumentFields(content: DocumentBlock[]): DocumentBlock[] {
@@ -246,31 +243,38 @@ export function stripTransientDocumentFields(content: DocumentBlock[]): Document
       const { fileUrl, ...image } = block.image;
       return { ...block, image };
     }
+    if (block.type === "toggle") {
+      return { ...block, children: stripTransientDocumentFields(block.children) };
+    }
     return block;
   });
 }
 
-export async function hydrateDocumentImages(content: DocumentBlock[], getUrl: (path: string) => Promise<string | null>) {
+export async function hydrateDocumentImages(content: DocumentBlock[], getUrl: (path: string) => Promise<string | null>): Promise<DocumentBlock[]> {
   return Promise.all(
     content.map(async (block) => {
-      if (block.type !== "image" || !block.image?.filePath) return block;
-      const fileUrl = await getUrl(block.image.filePath);
-      return {
-        ...block,
-        image: {
-          ...block.image,
-          fileUrl: fileUrl ?? undefined,
-        },
-      };
+      if (block.type === "image" && block.image?.filePath) {
+        const fileUrl = await getUrl(block.image.filePath);
+        return { ...block, image: { ...block.image, fileUrl: fileUrl ?? undefined } };
+      }
+      if (block.type === "toggle") {
+        return { ...block, children: await hydrateDocumentImages(block.children, getUrl) };
+      }
+      return block;
     }),
   );
 }
 
 export function collectDocumentFilePathsFromBlocks(content: unknown) {
-  const blocks = normalizeDocumentContent(content);
-  return blocks
-    .flatMap((block) => (block.type === "image" && block.image?.filePath ? [block.image.filePath] : []))
-    .filter(Boolean);
+  return collectDocumentFilePaths(normalizeDocumentContent(content));
+}
+
+function collectDocumentFilePaths(content: DocumentBlock[]): string[] {
+  return content.flatMap((block) => {
+    if (block.type === "image" && block.image?.filePath) return [block.image.filePath];
+    if (block.type === "toggle") return collectDocumentFilePaths(block.children);
+    return [];
+  }).filter(Boolean);
 }
 
 export function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
@@ -280,3 +284,8 @@ export function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number)
   next.splice(toIndex, 0, item);
   return next;
 }
+
+export function parseDocumentTags(value: string) {
+  return [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
+}
+

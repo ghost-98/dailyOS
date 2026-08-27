@@ -421,11 +421,17 @@ create table if not exists public.documents (
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null default '새 문서',
   icon text,
+  folder text,
+  tags text[] not null default '{}'::text[],
   summary text,
   content jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.documents
+  add column if not exists folder text,
+  add column if not exists tags text[] not null default '{}'::text[];
 
 create index if not exists profiles_email_idx on public.profiles(email);
 create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, scheduled_date);
@@ -1308,4 +1314,5 @@ to authenticated
 using (user_id = auth.uid());
 
 notify pgrst, 'reload schema';
+
 
