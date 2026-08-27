@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronUp, GripVertical, ImagePlus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Code2, GripVertical, Highlighter, ImagePlus, Italic, Pilcrow, Trash2 } from "lucide-react";
+import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import type { DocumentBlock, DocumentChecklistItem, DocumentImageAsset } from "@/features/documents/types";
 import {
@@ -29,10 +29,11 @@ type DocumentBlockEditorProps = {
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
 };
 
-type SlashCommandTarget = {
-  mode: "replace" | "appendChild";
-  value: string;
+type TextFieldController = {
+  applyInlineFormat: (format: InlineFormatType) => void;
 };
+
+type InlineFormatType = "bold" | "code" | "highlight" | "italic";
 
 const slashCommandEntries: Array<{ description: string; label: string; type: DocumentBlock["type"] }> = [
   { description: "일반 문단을 바로 추가합니다.", label: "본문", type: "paragraph" },
@@ -45,6 +46,13 @@ const slashCommandEntries: Array<{ description: string; label: string; type: Doc
   { description: "강조 콜아웃을 추가합니다.", label: "콜아웃", type: "callout" },
   { description: "이미지 블록을 추가합니다.", label: "이미지", type: "image" },
   { description: "구분선을 넣습니다.", label: "구분선", type: "divider" },
+];
+
+const inlineFormatButtons: Array<{ format: InlineFormatType; label: string; icon: typeof Pilcrow }> = [
+  { format: "bold", icon: Pilcrow, label: "강조" },
+  { format: "italic", icon: Italic, label: "기울임" },
+  { format: "code", icon: Code2, label: "코드" },
+  { format: "highlight", icon: Highlighter, label: "형광펜" },
 ];
 
 export function DocumentBlockEditor({
@@ -63,30 +71,31 @@ export function DocumentBlockEditor({
   onReplaceImage,
 }: DocumentBlockEditorProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const [slashTarget, setSlashTarget] = useState<SlashCommandTarget | null>(null);
-
-  const openSlashForValue = (mode: SlashCommandTarget["mode"], value: string) => {
-    const trimmed = value.trimStart();
-    if (!trimmed.startsWith("/")) {
-      setSlashTarget(null);
-      return;
-    }
-    setSlashTarget({ mode, value: trimmed.slice(1) });
-  };
+  const [activeTextField, setActiveTextField] = useState<TextFieldController | null>(null);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
 
   const slashItems = useMemo(() => {
-    const keyword = slashTarget?.value.trim().toLowerCase() ?? "";
+    const keyword = slashQuery?.trim().toLowerCase() ?? "";
     if (!keyword) return slashCommandEntries;
     return slashCommandEntries.filter((entry) => `${entry.label} ${entry.description}`.toLowerCase().includes(keyword));
-  }, [slashTarget]);
+  }, [slashQuery]);
 
-  const applySlashCommand = (type: DocumentBlock["type"]) => {
-    setSlashTarget(null);
-    if (slashTarget?.mode === "appendChild" && block.type === "toggle") {
-      onChange({ ...block, children: [...block.children, createDocumentBlock(type)] });
+  useEffect(() => {
+    setSelectedSlashIndex(0);
+  }, [slashQuery]);
+
+  const openSlashForValue = (value: string) => {
+    const trimmed = value.trimStart();
+    if (!trimmed.startsWith("/")) {
+      setSlashQuery(null);
       return;
     }
+    setSlashQuery(trimmed.slice(1));
+  };
 
+  const applySlashCommand = (type: DocumentBlock["type"]) => {
+    setSlashQuery(null);
     const next = createDocumentBlock(type);
     if (next.type === "paragraph" || next.type === "heading1" || next.type === "heading2" || next.type === "heading3" || next.type === "quote") {
       next.text = "";
@@ -95,14 +104,59 @@ export function DocumentBlockEditor({
     onChange(next);
   };
 
+  const handleSlashKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (!slashQuery) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setSlashQuery(null);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSelectedSlashIndex((current) => Math.min(slashItems.length - 1, current + 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSelectedSlashIndex((current) => Math.max(0, current - 1));
+      return;
+    }
+    if (event.key === "Enter" && slashItems.length > 0) {
+      event.preventDefault();
+      applySlashCommand(slashItems[selectedSlashIndex]?.type ?? slashItems[0].type);
+    }
+  };
+
   const toolbar = (
     <div className={`doc-inline-toolbar ${isFocused ? "doc-inline-toolbar--visible" : ""}`}>
+      <div className="doc-inline-toolbar__group">
+        {inlineFormatButtons.map(({ format, icon: Icon, label }) => (
+          <button
+            key={format}
+            className="doc-inline-toolbar__button"
+            disabled={!activeTextField}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => activeTextField?.applyInlineFormat(format)}
+            type="button"
+          >
+            <Icon aria-hidden size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="doc-inline-toolbar__divider" />
+      <div className="doc-inline-toolbar__group">
+        <button className="doc-inline-toolbar__button" onMouseDown={(event) => event.preventDefault()} onClick={() => onChange(createDocumentBlock("paragraph"))} type="button">본문</button>
+        <button className="doc-inline-toolbar__button" onMouseDown={(event) => event.preventDefault()} onClick={() => onChange(createDocumentBlock("heading1"))} type="button">제목 1</button>
+        <button className="doc-inline-toolbar__button" onMouseDown={(event) => event.preventDefault()} onClick={() => onChange(createDocumentBlock("heading2"))} type="button">제목 2</button>
+      </div>
+      <div className="doc-inline-toolbar__divider" />
       <select aria-label="블록 종류 추가" value="" onChange={(event) => {
         if (!event.target.value) return;
         onAddBelow(event.target.value as DocumentBlock["type"], index);
         event.target.value = "";
       }}>
-        <option value="">블록 추가</option>
+        <option value="">아래에 블록 추가</option>
         {Object.entries(documentBlockTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select>
       <select aria-label="글자색" value={block.textTone ?? "default"} onChange={(event) => onChange({ ...block, textTone: event.target.value === "default" ? undefined : event.target.value as DocumentBlock["textTone"] })}>
@@ -147,7 +201,8 @@ export function DocumentBlockEditor({
           const nextFocus = event.relatedTarget as Node | null;
           if (nextFocus && event.currentTarget.contains(nextFocus)) return;
           setIsFocused(false);
-          setSlashTarget(null);
+          setActiveTextField(null);
+          setSlashQuery(null);
         }}>
           {toolbar}
           <DocumentBlockFields
@@ -157,12 +212,20 @@ export function DocumentBlockEditor({
             onChange={onChange}
             onEnterAtEnd={(type) => onAddBelow(type, index)}
             onOpenSlash={openSlashForValue}
+            onRegisterTextField={setActiveTextField}
             onReplaceImage={onReplaceImage}
+            onSlashKeyDown={handleSlashKeyDown}
           />
-          {slashTarget ? (
+          {slashQuery ? (
             <div className="doc-slash-menu" role="menu">
-              {slashItems.length > 0 ? slashItems.map((entry) => (
-                <button className="doc-slash-menu__item" key={entry.type} onMouseDown={(event) => event.preventDefault()} onClick={() => applySlashCommand(entry.type)} type="button">
+              {slashItems.length > 0 ? slashItems.map((entry, itemIndex) => (
+                <button
+                  className={itemIndex === selectedSlashIndex ? "doc-slash-menu__item doc-slash-menu__item--active" : "doc-slash-menu__item"}
+                  key={entry.type}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => applySlashCommand(entry.type)}
+                  type="button"
+                >
                   <strong>{entry.label}</strong>
                   <span>{entry.description}</span>
                 </button>
@@ -182,15 +245,19 @@ function DocumentBlockFields({
   onChange,
   onEnterAtEnd,
   onOpenSlash,
+  onRegisterTextField,
   onReplaceImage,
+  onSlashKeyDown,
 }: {
   block: DocumentBlock;
   depth: number;
   isUploading: boolean;
   onChange: (nextBlock: DocumentBlock) => void;
   onEnterAtEnd: (type: DocumentBlock["type"]) => void;
-  onOpenSlash: (mode: SlashCommandTarget["mode"], value: string) => void;
+  onOpenSlash: (value: string) => void;
+  onRegisterTextField: (controller: TextFieldController | null) => void;
   onReplaceImage: (file: File, previousImage?: DocumentImageAsset) => Promise<void>;
+  onSlashKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
 }) {
   if (block.type === "divider") return <div className="doc-divider" />;
 
@@ -210,7 +277,7 @@ function DocumentBlockFields({
             {isUploading ? "업로드 중..." : block.image ? "이미지 교체" : "이미지 올리기"}
           </label>
         </div>
-        <AutoSizeTextarea className="doc-image-caption" minRows={1} placeholder="이미지 설명" value={block.caption} onChange={(value) => onChange({ ...block, caption: value })} />
+        <AutoSizeTextarea className="doc-image-caption" minRows={1} placeholder="이미지 설명" value={block.caption} onChange={(value) => onChange({ ...block, caption: value })} onFocusEditor={onRegisterTextField} />
       </div>
     );
   }
@@ -224,7 +291,7 @@ function DocumentBlockFields({
               item={item}
               key={item.id}
               onChange={(nextItem) => {
-                onOpenSlash("replace", nextItem.text);
+                onOpenSlash(nextItem.text);
                 onChange({ ...block, items: block.items.map((current) => current.id === nextItem.id ? nextItem : current) });
               }}
               onEnterAtEnd={() => {
@@ -232,6 +299,8 @@ function DocumentBlockFields({
                 nextItems.splice(itemIndex + 1, 0, createChecklistItem());
                 onChange({ ...block, items: nextItems });
               }}
+              onFocusEditor={onRegisterTextField}
+              onKeyDown={onSlashKeyDown}
               onRemove={() => onChange({ ...block, items: block.items.length === 1 ? [createChecklistItem()] : block.items.filter((current) => current.id !== item.id) })}
             />
           ))}
@@ -248,7 +317,7 @@ function DocumentBlockFields({
           <span>{block.isOpen ? "▾" : "▸"}</span>
           <strong>{block.title.trim() || "토글"}</strong>
         </button>
-        <AutoSizeTextarea className="doc-toggle-title" minRows={1} placeholder="토글 제목" value={block.title} onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, title: value }); }} onEnterAtEnd={() => onChange({ ...block, children: [...block.children, createDocumentBlock("paragraph")] })} />
+        <AutoSizeTextarea className="doc-toggle-title" minRows={1} placeholder="토글 제목" value={block.title} onChange={(value) => { onOpenSlash(value); onChange({ ...block, title: value }); }} onEnterAtEnd={() => onChange({ ...block, children: [...block.children, createDocumentBlock("paragraph")] })} onFocusEditor={onRegisterTextField} onKeyDown={onSlashKeyDown} />
         {block.isOpen ? (
           <>
             <div className="doc-nested-blocks">
@@ -327,7 +396,7 @@ function DocumentBlockFields({
     return (
       <div className="doc-block__body doc-block__body--callout">
         <input className="doc-callout-icon" maxLength={4} placeholder="💡" value={block.icon} onChange={(event) => onChange({ ...block, icon: event.target.value })} />
-        <AutoSizeTextarea className="doc-callout-text" minRows={2} placeholder="강조해서 남길 문맥" value={block.text} onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, text: value }); }} onEnterAtEnd={() => onEnterAtEnd("paragraph")} />
+        <AutoSizeTextarea className="doc-callout-text" minRows={2} placeholder="강조해서 남길 문맥" value={block.text} onChange={(value) => { onOpenSlash(value); onChange({ ...block, text: value }); }} onEnterAtEnd={() => onEnterAtEnd("paragraph")} onFocusEditor={onRegisterTextField} onKeyDown={onSlashKeyDown} />
       </div>
     );
   }
@@ -340,8 +409,10 @@ function DocumentBlockFields({
         minRows={minRows}
         placeholder={block.type.startsWith("heading") ? "제목" : block.type === "quote" ? "인용" : "내용을 입력하세요. / 로 새 블록을 추가할 수 있어요."}
         value={block.text}
-        onChange={(value) => { onOpenSlash("replace", value); onChange({ ...block, text: value }); }}
+        onChange={(value) => { onOpenSlash(value); onChange({ ...block, text: value }); }}
         onEnterAtEnd={() => onEnterAtEnd(block.type === "heading1" || block.type === "heading2" || block.type === "heading3" ? "paragraph" : block.type)}
+        onFocusEditor={onRegisterTextField}
+        onKeyDown={onSlashKeyDown}
       />
     </div>
   );
@@ -351,17 +422,21 @@ function ChecklistRow({
   item,
   onChange,
   onEnterAtEnd,
+  onFocusEditor,
+  onKeyDown,
   onRemove,
 }: {
   item: DocumentChecklistItem;
   onChange: (nextItem: DocumentChecklistItem) => void;
   onEnterAtEnd: () => void;
+  onFocusEditor: (controller: TextFieldController | null) => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   onRemove: () => void;
 }) {
   return (
     <div className="doc-checklist__row">
       <label><input checked={item.checked} type="checkbox" onChange={(event) => onChange({ ...item, checked: event.target.checked })} /></label>
-      <AutoSizeTextarea className="doc-checklist__text" minRows={1} placeholder="할 일" value={item.text} onChange={(value) => onChange({ ...item, text: value })} onEnterAtEnd={onEnterAtEnd} />
+      <AutoSizeTextarea className="doc-checklist__text" minRows={1} placeholder="할 일" value={item.text} onChange={(value) => onChange({ ...item, text: value })} onEnterAtEnd={onEnterAtEnd} onFocusEditor={onFocusEditor} onKeyDown={onKeyDown} />
       <IconButton label="항목 삭제" onClick={onRemove} size="sm" tone="ghost"><Trash2 aria-hidden size={14} /></IconButton>
     </div>
   );
@@ -372,6 +447,8 @@ function AutoSizeTextarea({
   minRows = 1,
   onChange,
   onEnterAtEnd,
+  onFocusEditor,
+  onKeyDown,
   placeholder,
   value,
 }: {
@@ -379,6 +456,8 @@ function AutoSizeTextarea({
   minRows?: number;
   onChange: (value: string) => void;
   onEnterAtEnd?: () => void;
+  onFocusEditor?: (controller: TextFieldController | null) => void;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   value: string;
 }) {
@@ -392,6 +471,29 @@ function AutoSizeTextarea({
     element.style.height = `${nextHeight}px`;
   }, [minRows, value]);
 
+  const applyInlineFormat = (format: InlineFormatType) => {
+    const element = ref.current;
+    if (!element) return;
+
+    const selectionStart = element.selectionStart ?? 0;
+    const selectionEnd = element.selectionEnd ?? 0;
+    const currentValue = element.value;
+    const selectedText = currentValue.slice(selectionStart, selectionEnd);
+    const markers = getInlineMarkers(format);
+    const wrappedText = `${markers.start}${selectedText || markers.placeholder}${markers.end}`;
+    const nextValue = `${currentValue.slice(0, selectionStart)}${wrappedText}${currentValue.slice(selectionEnd)}`;
+    const nextSelectionStart = selectionStart + markers.start.length;
+    const nextSelectionEnd = selectedText ? nextSelectionStart + selectedText.length : nextSelectionStart + markers.placeholder.length;
+
+    onChange(nextValue);
+    requestAnimationFrame(() => {
+      const nextElement = ref.current;
+      if (!nextElement) return;
+      nextElement.focus();
+      nextElement.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+    });
+  };
+
   return (
     <textarea
       ref={ref}
@@ -400,7 +502,10 @@ function AutoSizeTextarea({
       rows={minRows}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onFocus={() => onFocusEditor?.({ applyInlineFormat })}
       onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (event.defaultPrevented) return;
         if (event.key !== "Enter" || event.shiftKey) return;
         const element = event.currentTarget;
         const selectionStart = element.selectionStart ?? value.length;
@@ -413,4 +518,19 @@ function AutoSizeTextarea({
       }}
     />
   );
+}
+
+function getInlineMarkers(format: InlineFormatType) {
+  switch (format) {
+    case "bold":
+      return { end: "**", placeholder: "강조", start: "**" };
+    case "italic":
+      return { end: "_", placeholder: "기울임", start: "_" };
+    case "code":
+      return { end: "`", placeholder: "code", start: "`" };
+    case "highlight":
+      return { end: "==", placeholder: "하이라이트", start: "==" };
+    default:
+      return { end: "", placeholder: "", start: "" };
+  }
 }
