@@ -7,15 +7,8 @@
     padding: 28px 22px;
   }
 
-  .today-summary-grid,
-  .today-work-grid,
-  .today-support-grid,
   .life-health-view {
     grid-template-columns: 1fr;
-  }
-
-  .today-quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .calendar-layout {
@@ -83,24 +76,6 @@
     padding: 28px 16px 34px;
   }
 
-  .today__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .today-mode-tabs {
-    width: 100%;
-  }
-
-  .today-mode-tabs__item {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .today-quick-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .page-header {
     align-items: stretch;
     flex-direction: column;
@@ -113,10 +88,6 @@
 
   .health-actions .header-action {
     flex: 1 1 180px;
-  }
-
-  .today__header h1 {
-    font-size: 42px;
   }
 
   .header-action {
@@ -317,14 +288,6 @@
 }
 
 @media (max-width: 460px) {
-  .today__header h1 {
-    font-size: 34px;
-  }
-
-  .today__date {
-    font-size: 14px;
-  }
-
   .hero-card__time strong {
     font-size: 58px;
   }
@@ -340,10 +303,6 @@
 
   .page-header h1 {
     font-size: 26px;
-  }
-
-  .today__header h1 {
-    font-size: 34px;
   }
 
   .weight-detail-grid,

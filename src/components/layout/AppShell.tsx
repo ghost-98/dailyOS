@@ -13,7 +13,7 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ activeKey = "today", children }: AppShellProps) {
+export function AppShell({ activeKey = "life", children }: AppShellProps) {
   return (
     <AuthGate>
       <AppShellContent activeKey={activeKey}>{children}</AppShellContent>
@@ -21,7 +21,7 @@ export function AppShell({ activeKey = "today", children }: AppShellProps) {
   );
 }
 
-function AppShellContent({ activeKey = "today", children }: AppShellProps) {
+function AppShellContent({ activeKey = "life", children }: AppShellProps) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     capture: activeKey === "capture" || activeKey === "life-activities",

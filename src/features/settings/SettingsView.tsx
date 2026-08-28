@@ -116,7 +116,7 @@ export function SettingsView() {
       <header className="page-header">
         <div>
           <h1>설정</h1>
-          <div className="today__date">
+          <div className="settings-header-copy">
             <Settings aria-hidden size={20} />
             <span>계정, 알림, 백업과 데이터 관리 방식을 조정합니다.</span>
           </div>

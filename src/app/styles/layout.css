@@ -263,24 +263,6 @@
   text-transform: uppercase;
 }
 
-.today__header h1 {
-  max-width: 860px;
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(40px, 5vw, 78px);
-  font-weight: 850;
-  line-height: 0.98;
-}
-
-.today__date {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-  color: var(--muted);
-  font-size: 17px;
-}
-
 .header-action {
   display: inline-flex;
   min-height: 44px;

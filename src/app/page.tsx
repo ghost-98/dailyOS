@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/layout/AppShell";
-import { TodayView } from "@/features/today/TodayView";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return (
-    <AppShell activeKey="today">
-      <TodayView />
-    </AppShell>
-  );
+  redirect("/life");
 }
