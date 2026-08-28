@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
+import { BedDouble, CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -14,6 +14,7 @@ import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { confirmAction } from "@/lib/actionGuards";
 import type { LifeActivityRecord, LifeMediaUploadInput, PersonRecord, PlanPlace } from "@/types/domain";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
@@ -47,6 +48,7 @@ export function LifeActivitiesView({
   onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: LifeLinkedTarget) => Promise<void> | void;
   onSaveActivity: (activity: LifeActivityRecord) => Promise<void> | void;
 }) {
+  const { isMobile } = useResponsiveMode();
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [entryMode, setEntryMode] = useState<EntryMode>("activity");
   const [inputPanelMode, setInputPanelMode] = useState<InputPanelMode>("activity");
@@ -82,6 +84,8 @@ export function LifeActivitiesView({
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
   const [pickerMonth, setPickerMonth] = useState(new Date().getMonth() + 1);
+  const [isComposerOpen, setIsComposerOpen] = useState(Boolean(initialDraft));
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -118,6 +122,7 @@ export function LifeActivitiesView({
     setTitle(initialDraft.title ?? "");
     setFormError("");
     setMessage("");
+    setIsComposerOpen(true);
   }, [initialDraft]);
 
   useEffect(() => {
@@ -189,6 +194,12 @@ export function LifeActivitiesView({
       setWakePlace(createActivityPlace(wakeActivity?.placeName, wakeActivity?.placeAddress));
     }
   }, [entryMode, nextDaySleepActivity, sameDaySleepActivity, wakeActivity]);
+
+  useEffect(() => {
+    if (editing || entryMode !== "activity" || inputPanelMode === "media") {
+      setIsComposerOpen(true);
+    }
+  }, [editing, entryMode, inputPanelMode]);
 
   const resetForm = () => {
     setEditing(null);
@@ -402,422 +413,525 @@ export function LifeActivitiesView({
     setIsMonthPickerOpen(false);
   };
 
+  const formPanelContent = inputPanelMode === "media" ? (
+    <LifeMediaUploadPanel activities={activities} date={date} onDateChange={selectDate} onUploadPhotos={onUploadPhotos} />
+  ) : entryMode === "activity" ? (
+    <>
+      <div className="life-activity-form-card">
+        <label className="life-activity-title-field">
+          <span>활동 내용</span>
+          <input placeholder="예: 점심 미팅, 문서 정리, 집 근처 산책" value={title} onChange={(event) => setTitle(event.target.value)} />
+        </label>
+      </div>
+
+      <div className="life-activity-form-card">
+        <div className="planner-form-section-title life-activity-form-card__title">
+          <strong>활동 유형</strong>
+        </div>
+        <div className="life-activity-tag-row">
+          {categories.map((item) => {
+            const isCustom = customCategories.includes(item);
+            return (
+              <div className={category === item ? "life-activity-tag life-activity-tag--active" : "life-activity-tag"} key={item}>
+                <button onClick={() => setCategory(item)} type="button">{item}</button>
+                {isCustom ? (
+                  <button aria-label={`${item} 삭제`} className="life-activity-tag__remove" onClick={() => removeCustomCategory(item)} type="button">
+                    <X aria-hidden size={12} />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+          <button className="life-activity-tag-add" onClick={() => setIsCategoryEditorOpen((current) => !current)} type="button">
+            <Plus aria-hidden size={14} />
+            태그 추가
+          </button>
+        </div>
+        {isCategoryEditorOpen ? (
+          <div className="life-activity-tag-editor">
+            <input placeholder="새 태그 이름" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} />
+            <button onClick={addCustomCategory} type="button">추가</button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="life-activity-form-card">
+        <div className="planner-form-section-title life-activity-form-card__title">
+          <strong>날짜와 시간</strong>
+        </div>
+        <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
+          <label className="event-form-row event-form-row--field planner-field">
+            <span>기록 날짜</span>
+            <input type="date" value={date} onChange={(event) => selectDate(event.target.value)} />
+          </label>
+          <label className="event-form-row event-form-row--field planner-field">
+            <span>시작 시간</span>
+            <input disabled={!hasTime} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+          </label>
+          {hasEndTime ? (
+            <label className="event-form-row event-form-row--field planner-field">
+              <span>종료 시간</span>
+              <input disabled={!hasTime} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+            </label>
+          ) : null}
+          <div className="event-form-row event-form-row--field planner-field planner-toggle-row">
+            <span>시간 옵션</span>
+            <div className="planner-option-toggle-group">
+              <label className="planner-option-toggle">
+                <input
+                  checked={!hasTime}
+                  type="checkbox"
+                  onChange={(event) => {
+                    setHasTime(!event.target.checked);
+                    if (event.target.checked) {
+                      setHasEndTime(false);
+                      setEndTime("");
+                    }
+                  }}
+                />
+                시간 미정
+              </label>
+              <label className="planner-option-toggle">
+                <input
+                  checked={hasEndTime}
+                  disabled={!hasTime}
+                  type="checkbox"
+                  onChange={(event) => {
+                    setHasEndTime(event.target.checked);
+                    if (!event.target.checked) setEndTime("");
+                  }}
+                />
+                종료 시간 사용
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {category === "이동" ? (
+        <div className="life-activity-form-card">
+          <div className="planner-form-section-title life-activity-form-card__title">
+            <strong>이동 정보</strong>
+          </div>
+          <div className="life-activity-form-grid">
+            <div className="life-activity-form-card life-activity-form-card--inner">
+              <div className="life-activity-minihead">
+                <MapPin aria-hidden size={14} />
+                <span>출발 장소</span>
+              </div>
+              <PlaceSearchField selectedPlace={startPlace} onSelect={setStartPlace} />
+            </div>
+            <div className="life-activity-form-card life-activity-form-card--inner">
+              <div className="life-activity-minihead">
+                <MoveRight aria-hidden size={14} />
+                <span>도착 장소</span>
+              </div>
+              <PlaceSearchField selectedPlace={endPlace} onSelect={setEndPlace} />
+            </div>
+          </div>
+          <label className="event-form-row event-form-row--field planner-field">
+            <span>이동 수단</span>
+            <input placeholder="예: 도보, 지하철, 버스, 택시, 자차" value={transportMode} onChange={(event) => setTransportMode(event.target.value)} />
+          </label>
+        </div>
+      ) : (
+        <div className="life-activity-form-card">
+          <div className="planner-form-section-title life-activity-form-card__title">
+            <strong>장소</strong>
+          </div>
+          <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
+        </div>
+      )}
+
+      <div className={category === "식사" ? "life-activity-form-grid life-activity-form-grid--people-meal" : "life-activity-form-grid life-activity-form-grid--single-wide"}>
+        <div className="life-activity-form-card life-activity-form-card--wide">
+          <div className="planner-form-section-title life-activity-form-card__title">
+            <strong>함께한 사람</strong>
+          </div>
+          <div className="event-form-row event-form-row--field planner-field planner-field--stack">
+            <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
+          </div>
+        </div>
+
+        {category === "식사" ? (
+          <div className="life-activity-form-card">
+            <div className="planner-form-section-title life-activity-form-card__title">
+              <strong>식사 메모</strong>
+            </div>
+            <label className="event-form-row event-form-row--field planner-field">
+              <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
+            </label>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="life-activity-form-grid">
+        <div className="life-activity-form-card">
+          <div className="planner-form-section-title life-activity-form-card__title">
+            <strong>금액</strong>
+          </div>
+          <label className="event-form-row event-form-row--field planner-field">
+            <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
+          </label>
+        </div>
+
+        <div className="life-activity-form-card">
+          <div className="planner-form-section-title life-activity-form-card__title">
+            <strong>메모</strong>
+          </div>
+          <label className="event-form-row event-form-row--field planner-field">
+            <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
+          </label>
+        </div>
+      </div>
+    </>
+  ) : (
+    <div className="life-activity-quick-panel life-activity-quick-panel--full">
+      <div className="life-activity-quick-panel__head">
+        <div>
+          <span className="eyebrow">{entryMode === "wake" ? "Wake Setup" : "Sleep Setup"}</span>
+          <strong>{entryMode === "wake" ? "기상 설정" : "취침 설정"}</strong>
+        </div>
+        {entryMode === "wake" ? <Sunrise aria-hidden size={18} /> : <BedDouble aria-hidden size={18} />}
+      </div>
+      {entryMode === "sleep" ? (
+        <div className="life-activity-quick-panel__date-mode">
+          <button className={sleepDateMode === "selected" ? "life-activity-date-mode life-activity-date-mode--active" : "life-activity-date-mode"} onClick={() => setSleepDateMode("selected")} type="button">
+            {date} 밤
+          </button>
+          <button className={sleepDateMode === "next" ? "life-activity-date-mode life-activity-date-mode--active" : "life-activity-date-mode"} onClick={() => setSleepDateMode("next")} type="button">
+            {nextDate} 새벽
+          </button>
+        </div>
+      ) : null}
+      <div className="life-activity-quick-panel__grid">
+        <label className="event-form-row event-form-row--field planner-field">
+          <span><Clock3 aria-hidden size={14} />시간</span>
+          <input type="time" value={entryMode === "wake" ? wakeTime : sleepTime} onChange={(event) => (entryMode === "wake" ? setWakeTime(event.target.value) : setSleepTime(event.target.value))} />
+        </label>
+        <div className="life-activity-quick-panel__place">
+          <span><MapPin aria-hidden size={14} />장소</span>
+          <PlaceSearchField selectedPlace={entryMode === "wake" ? wakePlace : sleepPlace} onSelect={entryMode === "wake" ? setWakePlace : setSleepPlace} />
+        </div>
+      </div>
+      <div className="life-activity-quick-panel__actions">
+        <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">취소</button>
+        <button className="life-activity-quick-panel__save" disabled={isSaving} onClick={() => void saveSleepWake(entryMode === "wake" ? "wake" : "sleep")} type="button">
+          {entryMode === "wake" ? "기상 저장" : "취침 저장"}
+        </button>
+      </div>
+    </div>
+  );
+
+  const formFeedback = (
+    <>
+      {inputPanelMode === "activity" && formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+      {inputPanelMode === "activity" && message ? <p className="life-health-message">{message}</p> : null}
+      {inputPanelMode === "activity" && entryMode === "activity" ? (
+        <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
+          {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
+        </button>
+      ) : null}
+    </>
+  );
+
+  const inputPanelHeader = (
+    <div className="section-heading life-activity-form__heading ui-panel-heading">
+      <div className="ui-panel-heading__intro">
+        <p className="eyebrow">{inputPanelMode === "activity" ? "활동 입력" : "미디어 업로드"}</p>
+        <h2>
+          {inputPanelMode === "media"
+            ? "사진 · 영상 업로드"
+            : entryMode === "activity"
+              ? (editing ? "활동 수정" : "활동 추가")
+              : entryMode === "wake"
+                ? "기상 기록"
+                : "취침 기록"}
+        </h2>
+      </div>
+      <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
+        {inputPanelMode === "activity" ? (
+          <div className="life-activity-action-group life-activity-action-group--state">
+            <button
+              aria-label="기상 기록"
+              className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
+              disabled={isSaving}
+              onClick={() => setEntryMode("wake")}
+              type="button"
+            >
+              <Sunrise aria-hidden size={15} />
+            </button>
+            <button
+              aria-label="취침 기록"
+              className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
+              disabled={isSaving}
+              onClick={() => setEntryMode("sleep")}
+              type="button"
+            >
+              <BedDouble aria-hidden size={15} />
+            </button>
+            {entryMode !== "activity" ? (
+              <button className="life-activity-state-reset" disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">
+                활동 입력
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="life-activity-action-group life-activity-action-group--mode">
+          <button
+            className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+            disabled={isSaving}
+            onClick={() => setInputPanelMode("activity")}
+            type="button"
+          >
+            활동 기록
+          </button>
+          <button
+            className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+            disabled={isSaving}
+            onClick={() => setInputPanelMode("media")}
+            type="button"
+          >
+            사진 · 영상
+          </button>
+        </div>
+        {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
+      </div>
+    </div>
+  );
+
+  const calendarPanel = (
+    <div className="life-activity-calendar">
+      <div className="life-activity-calendar__header">
+        <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
+          <ChevronLeft aria-hidden size={16} />
+        </IconButton>
+        <div className="life-activity-calendar__month-picker">
+          <button className="life-activity-calendar__month-button" onClick={toggleMonthPicker} type="button">
+            {monthLabel}
+          </button>
+          {isMonthPickerOpen ? (
+            <div className="life-activity-calendar__month-popover">
+              <select value={pickerYear} onChange={(event) => setPickerYear(Number(event.target.value))}>
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}년
+                  </option>
+                ))}
+              </select>
+              <select value={pickerMonth} onChange={(event) => setPickerMonth(Number(event.target.value))}>
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                  <option key={month} value={month}>
+                    {month}월
+                  </option>
+                ))}
+              </select>
+              <div className="life-activity-calendar__month-actions">
+                <ActionButton onClick={() => setIsMonthPickerOpen(false)} variant="secondary">닫기</ActionButton>
+                <ActionButton onClick={applyMonthPicker}>이동</ActionButton>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
+          <ChevronRight aria-hidden size={16} />
+        </IconButton>
+      </div>
+      <div className="life-activity-calendar__weekdays">
+        {WEEKDAYS.map((weekday, index) => (
+          <span
+            className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
+            key={weekday}
+          >
+            {weekday}
+          </span>
+        ))}
+      </div>
+      <div className="life-activity-calendar__grid">
+        {calendarDays.map((day) => {
+          const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+          const weekday = day.date ? new Date(`${day.date}T00:00:00`).getDay() : -1;
+          return (
+            <button
+              aria-pressed={day.date === date}
+              className={[
+                "life-activity-calendar__day",
+                day.date === date ? "life-activity-calendar__day--selected" : "",
+                weekday === 0 ? "life-activity-calendar__day--sun" : "",
+                weekday === 6 ? "life-activity-calendar__day--sat" : "",
+              ].filter(Boolean).join(" ")}
+              disabled={!day.date}
+              key={day.key}
+              onClick={() => day.date && selectDate(day.date)}
+              type="button"
+            >
+              <span>{day.day}</span>
+              {count > 0 ? <em>{count}</em> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const activitySummaryCards = (
+    <div className="life-activity-day-summary">
+      <article>
+        <span>시간</span>
+        <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
+      </article>
+      <article>
+        <span>지출</span>
+        <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
+      </article>
+      <article>
+        <span>기록 수</span>
+        <strong>{selectedActivities.length > 0 ? `${selectedActivities.length}건` : "-"}</strong>
+      </article>
+      <article>
+        <span>연결됨</span>
+        <strong>{selectedActivities.length > 0 ? `${connectedCount}건` : "-"}</strong>
+      </article>
+    </div>
+  );
+
+  const activityList = selectedActivities.length > 0 ? (
+    selectedActivities.map((activity) => (
+      <article className="life-activity-item" key={activity.id}>
+        <div className="life-activity-item__body">
+          <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
+          <strong>{activity.title}</strong>
+          <p>{formatActivitySummary(activity)}</p>
+        </div>
+        <div className="life-record-actions life-record-actions--activity-item">
+          <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
+          <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
+            {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
+          </button>
+        </div>
+      </article>
+    ))
+  ) : (
+    <div className="life-map-empty life-map-empty--compact">
+      <NotebookPen aria-hidden size={28} />
+      <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
+      <p>{isMobile ? "상단의 추가 버튼으로 새 활동을 바로 남겨보세요." : "오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요."}</p>
+    </div>
+  );
+
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
-      <div className="life-activity-layout ui-workspace-grid ui-workspace-grid--form-detail">
-        <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
-          <div className="section-heading life-activity-form__heading ui-panel-heading">
-            <div className="ui-panel-heading__intro">
-              <p className="eyebrow">{inputPanelMode === "activity" ? "활동 입력" : "미디어 업로드"}</p>
-              <h2>
-                {inputPanelMode === "media"
-                  ? "사진 · 영상 업로드"
-                  : entryMode === "activity"
-                    ? (editing ? "활동 수정" : "활동 추가")
-                    : entryMode === "wake"
-                      ? "기상 기록"
-                      : "취침 기록"}
-              </h2>
-            </div>
-            <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
-              {inputPanelMode === "activity" ? (
-                <div className="life-activity-action-group life-activity-action-group--state">
-                  <button
-                    aria-label="기상 기록"
-                    className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
-                    disabled={isSaving}
-                    onClick={() => setEntryMode("wake")}
-                    type="button"
-                  >
-                    <Sunrise aria-hidden size={15} />
-                  </button>
-                  <button
-                    aria-label="취침 기록"
-                    className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
-                    disabled={isSaving}
-                    onClick={() => setEntryMode("sleep")}
-                    type="button"
-                  >
-                    <BedDouble aria-hidden size={15} />
-                  </button>
-                  {entryMode !== "activity" ? (
-                    <button className="life-activity-state-reset" disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">
-                      활동 입력
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              <div className="life-activity-action-group life-activity-action-group--mode">
-                <button
-                  className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
-                  disabled={isSaving}
-                  onClick={() => setInputPanelMode("activity")}
-                  type="button"
-                >
-                  활동 기록
-                </button>
-                <button
-                  className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
-                  disabled={isSaving}
-                  onClick={() => setInputPanelMode("media")}
-                  type="button"
-                >
-                  사진 · 영상
-                </button>
-              </div>
-              {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
-            </div>
-          </div>
-
-          {inputPanelMode === "media" ? (
-            <LifeMediaUploadPanel activities={activities} date={date} onDateChange={selectDate} onUploadPhotos={onUploadPhotos} />
-          ) : entryMode === "activity" ? (
-            <>
-              <div className="life-activity-form-card">
-                <label className="life-activity-title-field">
-                  <span>활동 내용</span>
-                  <input placeholder="예: 점심 미팅, 문서 정리, 집 근처 산책" value={title} onChange={(event) => setTitle(event.target.value)} />
-                </label>
-              </div>
-
-              <div className="life-activity-form-card">
-                <div className="planner-form-section-title life-activity-form-card__title">
-                  <strong>활동 유형</strong>
-                </div>
-                <div className="life-activity-tag-row">
-                  {categories.map((item) => {
-                    const isCustom = customCategories.includes(item);
-                    return (
-                      <div className={category === item ? "life-activity-tag life-activity-tag--active" : "life-activity-tag"} key={item}>
-                        <button onClick={() => setCategory(item)} type="button">{item}</button>
-                        {isCustom ? (
-                          <button aria-label={`${item} 삭제`} className="life-activity-tag__remove" onClick={() => removeCustomCategory(item)} type="button">
-                            <X aria-hidden size={12} />
-                          </button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                  <button className="life-activity-tag-add" onClick={() => setIsCategoryEditorOpen((current) => !current)} type="button">
-                    <Plus aria-hidden size={14} />
-                    태그 추가
-                  </button>
-                </div>
-                {isCategoryEditorOpen ? (
-                  <div className="life-activity-tag-editor">
-                    <input placeholder="새 태그 이름" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} />
-                    <button onClick={addCustomCategory} type="button">추가</button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="life-activity-form-card">
-                <div className="planner-form-section-title life-activity-form-card__title">
-                  <strong>날짜와 시간</strong>
-                </div>
-                <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
-                  <label className="event-form-row event-form-row--field planner-field">
-                    <span>기록 날짜</span>
-                    <input type="date" value={date} onChange={(event) => selectDate(event.target.value)} />
-                  </label>
-                  <label className="event-form-row event-form-row--field planner-field">
-                    <span>시작 시간</span>
-                    <input disabled={!hasTime} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-                  </label>
-                  {hasEndTime ? (
-                    <label className="event-form-row event-form-row--field planner-field">
-                      <span>종료 시간</span>
-                      <input disabled={!hasTime} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
-                    </label>
-                  ) : null}
-                  <div className="event-form-row event-form-row--field planner-field planner-toggle-row">
-                    <span>시간 옵션</span>
-                    <div className="planner-option-toggle-group">
-                      <label className="planner-option-toggle">
-                        <input
-                          checked={!hasTime}
-                          type="checkbox"
-                          onChange={(event) => {
-                            setHasTime(!event.target.checked);
-                            if (event.target.checked) {
-                              setHasEndTime(false);
-                              setEndTime("");
-                            }
-                          }}
-                        />
-                        시간 미정
-                      </label>
-                      <label className="planner-option-toggle">
-                        <input
-                          checked={hasEndTime}
-                          disabled={!hasTime}
-                          type="checkbox"
-                          onChange={(event) => {
-                            setHasEndTime(event.target.checked);
-                            if (!event.target.checked) setEndTime("");
-                          }}
-                        />
-                        종료 시간 사용
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {category === "이동" ? (
-                <div className="life-activity-form-card">
-                  <div className="planner-form-section-title life-activity-form-card__title">
-                    <strong>이동 정보</strong>
-                  </div>
-                  <div className="life-activity-form-grid">
-                    <div className="life-activity-form-card life-activity-form-card--inner">
-                      <div className="life-activity-minihead">
-                        <MapPin aria-hidden size={14} />
-                        <span>출발 장소</span>
-                      </div>
-                      <PlaceSearchField selectedPlace={startPlace} onSelect={setStartPlace} />
-                    </div>
-                    <div className="life-activity-form-card life-activity-form-card--inner">
-                      <div className="life-activity-minihead">
-                        <MoveRight aria-hidden size={14} />
-                        <span>도착 장소</span>
-                      </div>
-                      <PlaceSearchField selectedPlace={endPlace} onSelect={setEndPlace} />
-                    </div>
-                  </div>
-                  <label className="event-form-row event-form-row--field planner-field">
-                    <span>이동 수단</span>
-                    <input placeholder="예: 도보, 지하철, 버스, 택시, 자차" value={transportMode} onChange={(event) => setTransportMode(event.target.value)} />
-                  </label>
-                </div>
-              ) : (
-                <div className="life-activity-form-card">
-                  <div className="planner-form-section-title life-activity-form-card__title">
-                    <strong>장소</strong>
-                  </div>
-                  <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
-                </div>
-              )}
-
-              <div className={category === "식사" ? "life-activity-form-grid life-activity-form-grid--people-meal" : "life-activity-form-grid life-activity-form-grid--single-wide"}>
-                <div className="life-activity-form-card life-activity-form-card--wide">
-                  <div className="planner-form-section-title life-activity-form-card__title">
-                    <strong>함께한 사람</strong>
-                  </div>
-                  <div className="event-form-row event-form-row--field planner-field planner-field--stack">
-                    <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
-                  </div>
-                </div>
-
-                {category === "식사" ? (
-                  <div className="life-activity-form-card">
-                    <div className="planner-form-section-title life-activity-form-card__title">
-                      <strong>식사 메모</strong>
-                    </div>
-                    <label className="event-form-row event-form-row--field planner-field">
-                      <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
-                    </label>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="life-activity-form-grid">
-                <div className="life-activity-form-card">
-                  <div className="planner-form-section-title life-activity-form-card__title">
-                    <strong>금액</strong>
-                  </div>
-                  <label className="event-form-row event-form-row--field planner-field">
-                    <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
-                  </label>
-                </div>
-
-                <div className="life-activity-form-card">
-                  <div className="planner-form-section-title life-activity-form-card__title">
-                    <strong>메모</strong>
-                  </div>
-                  <label className="event-form-row event-form-row--field planner-field">
-                    <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
-                  </label>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="life-activity-quick-panel life-activity-quick-panel--full">
-              <div className="life-activity-quick-panel__head">
-                <div>
-                  <span className="eyebrow">{entryMode === "wake" ? "Wake Setup" : "Sleep Setup"}</span>
-                  <strong>{entryMode === "wake" ? "기상 설정" : "취침 설정"}</strong>
-                </div>
-                {entryMode === "wake" ? <Sunrise aria-hidden size={18} /> : <BedDouble aria-hidden size={18} />}
-              </div>
-              {entryMode === "sleep" ? (
-                <div className="life-activity-quick-panel__date-mode">
-                  <button className={sleepDateMode === "selected" ? "life-activity-date-mode life-activity-date-mode--active" : "life-activity-date-mode"} onClick={() => setSleepDateMode("selected")} type="button">
-                    {date} 밤
-                  </button>
-                  <button className={sleepDateMode === "next" ? "life-activity-date-mode life-activity-date-mode--active" : "life-activity-date-mode"} onClick={() => setSleepDateMode("next")} type="button">
-                    {nextDate} 새벽
-                  </button>
-                </div>
-              ) : (
-                null
-              )}
-              <div className="life-activity-quick-panel__grid">
-                <label className="event-form-row event-form-row--field planner-field">
-                  <span><Clock3 aria-hidden size={14} />시간</span>
-                  <input type="time" value={entryMode === "wake" ? wakeTime : sleepTime} onChange={(event) => (entryMode === "wake" ? setWakeTime(event.target.value) : setSleepTime(event.target.value))} />
-                </label>
-                <div className="life-activity-quick-panel__place">
-                  <span><MapPin aria-hidden size={14} />장소</span>
-                  <PlaceSearchField selectedPlace={entryMode === "wake" ? wakePlace : sleepPlace} onSelect={entryMode === "wake" ? setWakePlace : setSleepPlace} />
-                </div>
-              </div>
-              <div className="life-activity-quick-panel__actions">
-                <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">취소</button>
-                <button className="life-activity-quick-panel__save" disabled={isSaving} onClick={() => void saveSleepWake(entryMode === "wake" ? "wake" : "sleep")} type="button">
-                  {entryMode === "wake" ? "기상 저장" : "취침 저장"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {inputPanelMode === "activity" && formError ? <p className="life-photo-upload-error">{formError}</p> : null}
-          {inputPanelMode === "activity" && message ? <p className="life-health-message">{message}</p> : null}
-          {inputPanelMode === "activity" && entryMode === "activity" ? (
-            <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
-              {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
-            </button>
-          ) : null}
-
-        </SectionCard>
-
-        <SectionCard className="life-activity-list life-selected-day-panel ui-workspace-panel ui-workspace-panel--tall ui-sticky-side-panel">
-          <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
-            <div className="ui-panel-heading__intro">
-              <p className="eyebrow">선택한 날짜</p>
-              <h2 className="life-selected-day-title">
-                <span>{formatFullDate(date)}</span>
-                <i aria-hidden />
-                <span>활동 <b>{selectedActivities.length}</b>건</span>
-              </h2>
-            </div>
-          </div>
-
-          <div className="life-activity-calendar">
-            <div className="life-activity-calendar__header">
-              <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
+      <LifeTabHeading title="활동 기록" description={isMobile ? "모바일에서는 날짜 확인과 추가를 빠르게 처리하고, 상세 입력은 drawer에서 이어서 작성해요." : "PC에서는 입력 패널과 날짜별 목록을 한 화면에서 함께 다루도록 유지합니다."} />
+      {isMobile ? (
+        <div className="life-activity-mobile">
+          <SectionCard className="life-activity-mobile__hero">
+            <div className="life-activity-mobile__topbar">
+              <IconButton className="life-activity-mobile__nav" label="이전 날짜" onClick={() => selectDate(shiftDateKey(date, -1))} size="sm" tone="outline">
                 <ChevronLeft aria-hidden size={16} />
               </IconButton>
-              <div className="life-activity-calendar__month-picker">
-                <button className="life-activity-calendar__month-button" onClick={toggleMonthPicker} type="button">
-                  {monthLabel}
-                </button>
-                {isMonthPickerOpen ? (
-                  <div className="life-activity-calendar__month-popover">
-                    <select value={pickerYear} onChange={(event) => setPickerYear(Number(event.target.value))}>
-                      {availableYears.map((year) => (
-                        <option key={year} value={year}>
-                          {year}년
-                        </option>
-                      ))}
-                    </select>
-                    <select value={pickerMonth} onChange={(event) => setPickerMonth(Number(event.target.value))}>
-                      {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
-                        <option key={month} value={month}>
-                          {month}월
-                        </option>
-                      ))}
-                    </select>
-                    <div className="life-activity-calendar__month-actions">
-                      <ActionButton onClick={() => setIsMonthPickerOpen(false)} variant="secondary">닫기</ActionButton>
-                      <ActionButton onClick={applyMonthPicker}>이동</ActionButton>
-                    </div>
-                  </div>
-                ) : null}
+              <button className="life-activity-mobile__date" onClick={() => setIsCalendarExpanded((current) => !current)} type="button">
+                <strong>{formatFullDate(date)}</strong>
+                <span>{selectedActivities.length}개 기록</span>
+              </button>
+              <div className="life-activity-mobile__actions">
+                <IconButton label={isCalendarExpanded ? "달력 접기" : "달력 펼치기"} onClick={() => setIsCalendarExpanded((current) => !current)} size="sm" tone="outline">
+                  <CalendarDays aria-hidden size={16} />
+                </IconButton>
+                <IconButton
+                  className="life-activity-mobile__add"
+                  label="활동 추가"
+                  onClick={() => {
+                    setInputPanelMode("activity");
+                    setEntryMode("activity");
+                    setIsComposerOpen(true);
+                  }}
+                  size="sm"
+                >
+                  <Plus aria-hidden size={16} />
+                </IconButton>
               </div>
-              <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
+              <IconButton className="life-activity-mobile__nav" label="다음 날짜" onClick={() => selectDate(shiftDateKey(date, 1))} size="sm" tone="outline">
                 <ChevronRight aria-hidden size={16} />
               </IconButton>
             </div>
-            <div className="life-activity-calendar__weekdays">
-              {WEEKDAYS.map((weekday, index) => (
-                <span
-                  className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
-                  key={weekday}
-                >
-                  {weekday}
-                </span>
-              ))}
-            </div>
-            <div className="life-activity-calendar__grid">
-              {calendarDays.map((day) => {
-                const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
-                const weekday = day.date ? new Date(`${day.date}T00:00:00`).getDay() : -1;
-                return (
-                  <button
-                    aria-pressed={day.date === date}
-                    className={
-                      [
-                        "life-activity-calendar__day",
-                        day.date === date ? "life-activity-calendar__day--selected" : "",
-                        weekday === 0 ? "life-activity-calendar__day--sun" : "",
-                        weekday === 6 ? "life-activity-calendar__day--sat" : "",
-                      ].filter(Boolean).join(" ")
-                    }
-                    disabled={!day.date}
-                    key={day.key}
-                    onClick={() => day.date && selectDate(day.date)}
-                    type="button"
-                  >
-                    <span>{day.day}</span>
-                    {count > 0 ? <em>{count}</em> : null}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            {isCalendarExpanded ? <div className="life-activity-mobile__calendar">{calendarPanel}</div> : null}
+            {activitySummaryCards}
+          </SectionCard>
 
-          <div className="life-activity-day-summary">
-            <article>
-              <span>기록 시간</span>
-              <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
-            </article>
-            <article>
-              <span>활동 지출</span>
-              <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
-            </article>
-            <article>
-              <span>연결 정보</span>
-              <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
-            </article>
-          </div>
-          {selectedActivities.length > 0 ? (
-            selectedActivities.map((activity) => (
-              <article className="life-activity-item" key={activity.id}>
-                <div className="life-activity-item__body">
-                  <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
-                  <strong>{activity.title}</strong>
-                  <p>{formatActivitySummary(activity)}</p>
-                </div>
-                <div className="life-record-actions life-record-actions--activity-item">
-                  <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
-                  <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
-                    {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
-                  </button>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="life-map-empty life-map-empty--compact">
-              <NotebookPen aria-hidden size={28} />
-              <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
-              <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
+          <SectionCard className="life-activity-list life-activity-mobile__list">
+            <div className="life-activity-mobile__list-head">
+              <div>
+                <span>선택한 날짜</span>
+                <strong>{formatFullDate(date)}</strong>
+              </div>
+              <button
+                className="life-activity-mobile__inline-add"
+                onClick={() => {
+                  setInputPanelMode("activity");
+                  setEntryMode("activity");
+                  setIsComposerOpen(true);
+                }}
+                type="button"
+              >
+                <Plus aria-hidden size={14} />
+                추가
+              </button>
             </div>
-          )}
+            <div className="life-activity-mobile__items">{activityList}</div>
+          </SectionCard>
 
-        </SectionCard>
-      </div>
+          {isComposerOpen ? (
+            <div className="event-sheet-backdrop" role="presentation" onMouseDown={() => setIsComposerOpen(false)}>
+              <section aria-labelledby="life-activity-composer-title" aria-modal="true" className="event-sheet planner-sheet life-activity-mobile__sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+                <div className="event-sheet__grabber" aria-hidden />
+                <header className="event-sheet__header planner-sheet__header">
+                  <button className="event-sheet__text-button" onClick={() => setIsComposerOpen(false)} type="button">
+                    닫기
+                  </button>
+                  <div>
+                    <h2 id="life-activity-composer-title">{editing ? "활동 수정" : inputPanelMode === "media" ? "사진 · 영상 업로드" : "활동 추가"}</h2>
+                    <p>{formatFullDate(date)} 기준으로 바로 기록합니다.</p>
+                  </div>
+                  <button className="event-sheet__done-button" onClick={() => setIsComposerOpen(false)} type="button">
+                    완료
+                  </button>
+                </header>
+                <div className="event-sheet__body planner-sheet__body">
+                  <div className="life-activity-mobile__sheet-body">
+                    {inputPanelHeader}
+                    {formPanelContent}
+                    {formFeedback}
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="life-activity-layout ui-workspace-grid ui-workspace-grid--form-detail">
+          <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
+            {inputPanelHeader}
+            {formPanelContent}
+            {formFeedback}
+          </SectionCard>
+
+          <SectionCard className="life-activity-list life-selected-day-panel ui-workspace-panel ui-workspace-panel--tall ui-sticky-side-panel">
+            <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
+              <div className="ui-panel-heading__intro">
+                <p className="eyebrow">선택한 날짜</p>
+                <h2 className="life-selected-day-title">
+                  <span>{formatFullDate(date)}</span>
+                  <i aria-hidden />
+                  <span>활동 <b>{selectedActivities.length}</b>건</span>
+                </h2>
+              </div>
+            </div>
+            {calendarPanel}
+            {activitySummaryCards}
+            {activityList}
+          </SectionCard>
+        </div>
+      )}
     </div>
   );
 }

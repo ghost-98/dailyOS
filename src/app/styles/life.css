@@ -4223,6 +4223,112 @@ button:disabled {
   gap: 10px;
 }
 
+.life-activity-mobile {
+  display: grid;
+  gap: 14px;
+}
+
+.life-activity-mobile__hero,
+.life-activity-mobile__list {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.life-activity-mobile__topbar {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto 38px;
+  align-items: center;
+  gap: 10px;
+}
+
+.life-activity-mobile__nav {
+  flex: 0 0 auto;
+}
+
+.life-activity-mobile__date {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  text-align: center;
+}
+
+.life-activity-mobile__date strong {
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-activity-mobile__date span,
+.life-activity-mobile__list-head span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.life-activity-mobile__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.life-activity-mobile__add {
+  background: rgba(201, 184, 255, 0.16) !important;
+  color: var(--violet) !important;
+}
+
+.life-activity-mobile__calendar {
+  display: grid;
+}
+
+.life-activity-mobile__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-activity-mobile__list-head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.life-activity-mobile__inline-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid rgba(201, 184, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 0 12px;
+}
+
+.life-activity-mobile__items {
+  display: grid;
+  gap: 10px;
+}
+
+.life-activity-mobile__sheet {
+  width: min(760px, 100%);
+}
+
+.life-activity-mobile__sheet-body {
+  display: grid;
+  gap: 16px;
+}
+
 .life-activity-calendar {
   display: grid;
   gap: 12px;
