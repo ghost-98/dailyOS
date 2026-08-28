@@ -141,6 +141,88 @@
   animation: detail-slide-in 220ms ease-out both;
 }
 
+.calendar-mobile-bar {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.calendar-mobile-bar__top {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-mobile-bar__date {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  text-align: center;
+}
+
+.calendar-mobile-bar__date strong {
+  overflow: hidden;
+  font-size: 0.98rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-mobile-bar__date span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.calendar-mobile-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-mobile-bar__add {
+  background: rgba(201, 184, 255, 0.16) !important;
+  color: var(--violet) !important;
+}
+
+.calendar-mobile-bar__menu {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px;
+}
+
+.calendar-mobile-bar__menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.calendar-mobile-bar__menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.calendar-board--collapsed-mobile {
+  display: none;
+}
+
 .date-detail-card {
   display: grid;
   align-content: start;

@@ -156,7 +156,6 @@ export function LifeActivitiesView({
   }, [activities]);
   const selectedExpenseTotal = selectedActivities.reduce((sum, activity) => sum + (activity.expenseAmount ?? 0), 0);
   const selectedCoveredMinutes = selectedActivities.reduce((sum, activity) => sum + getActivityDurationMinutes(activity), 0);
-  const connectedCount = selectedActivities.filter((activity) => hasActivityContext(activity)).length;
   const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
   const availableYears = useMemo(() => {
@@ -788,10 +787,6 @@ export function LifeActivitiesView({
         <span>기록 수</span>
         <strong>{selectedActivities.length > 0 ? `${selectedActivities.length}건` : "-"}</strong>
       </article>
-      <article>
-        <span>연결됨</span>
-        <strong>{selectedActivities.length > 0 ? `${connectedCount}건` : "-"}</strong>
-      </article>
     </div>
   );
 
@@ -821,7 +816,9 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="활동 기록" description={isMobile ? "모바일에서는 날짜 확인과 추가를 빠르게 처리하고, 상세 입력은 drawer에서 이어서 작성해요." : "PC에서는 입력 패널과 날짜별 목록을 한 화면에서 함께 다루도록 유지합니다."} />
+      {isMobile ? null : (
+        <LifeTabHeading title="활동 기록" description="PC에서는 입력 패널과 날짜별 목록을 한 화면에서 함께 다루도록 유지합니다." />
+      )}
       {isMobile ? (
         <div className="life-activity-mobile">
           <SectionCard className="life-activity-mobile__hero">
@@ -834,6 +831,9 @@ export function LifeActivitiesView({
                 <span>{selectedActivities.length}개 기록</span>
               </button>
               <div className="life-activity-mobile__actions">
+                <IconButton className="life-activity-mobile__nav" label="다음 날짜" onClick={() => selectDate(shiftDateKey(date, 1))} size="sm" tone="outline">
+                  <ChevronRight aria-hidden size={16} />
+                </IconButton>
                 <IconButton label={isCalendarExpanded ? "달력 접기" : "달력 펼치기"} onClick={() => setIsCalendarExpanded((current) => !current)} size="sm" tone="outline">
                   <CalendarDays aria-hidden size={16} />
                 </IconButton>
@@ -850,9 +850,6 @@ export function LifeActivitiesView({
                   <Plus aria-hidden size={16} />
                 </IconButton>
               </div>
-              <IconButton className="life-activity-mobile__nav" label="다음 날짜" onClick={() => selectDate(shiftDateKey(date, 1))} size="sm" tone="outline">
-                <ChevronRight aria-hidden size={16} />
-              </IconButton>
             </div>
             {isCalendarExpanded ? <div className="life-activity-mobile__calendar">{calendarPanel}</div> : null}
             {activitySummaryCards}
@@ -962,19 +959,6 @@ function createActivityPlace(name?: string, address?: string): PlanPlace | undef
     longitude: 0,
     name,
   };
-}
-
-function hasActivityContext(activity: LifeActivityRecord) {
-  return Boolean(
-    activity.placeName ||
-      activity.startPlaceName ||
-      activity.endPlaceName ||
-      activity.transportMode ||
-      activity.companions ||
-      activity.food ||
-      activity.memo ||
-      activity.sourceId,
-  );
 }
 
 function formatActivitySummary(activity: LifeActivityRecord) {

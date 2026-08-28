@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
+  CalendarDays,
   Camera,
   ChevronLeft,
   ChevronRight,
@@ -20,6 +21,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { EventCreateSheet, TaskCreateSheet } from "@/features/calendar/CalendarSheets";
 import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
@@ -63,6 +65,7 @@ export function CalendarView({
 }: CalendarViewProps) {
   type CalendarVisualFilter = CalendarCategory | "record";
   const isDatabaseView = viewMode === "database";
+  const { isMobile } = useResponsiveMode();
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
   const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarVisualFilter[]>([]);
@@ -85,6 +88,7 @@ export function CalendarView({
   const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
   const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
   const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
+  const [isCalendarCollapsedOnMobile, setIsCalendarCollapsedOnMobile] = useState(false);
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
   const visibleCalendarCategories = calendarCategoryFilters.length > 0
@@ -179,6 +183,7 @@ export function CalendarView({
 
   const handleDateClick = (date: string) => {
     setSelectedDate(date);
+    if (isMobile && !isDatabaseView) setIsCalendarCollapsedOnMobile(true);
   };
 
   const toggleCalendarCategoryFilter = (type: CalendarVisualFilter) => {
@@ -498,8 +503,69 @@ export function CalendarView({
         </div> : null}
       </header>
 
+      {isMobile && !isDatabaseView ? (
+        <SectionCard className="calendar-mobile-bar">
+          <div className="calendar-mobile-bar__top">
+            <IconButton
+              className="calendar-mobile-bar__nav"
+              label="이전 날짜"
+              onClick={() => {
+                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
+                base.setDate(base.getDate() - 1);
+                setSelectedDate(formatDateKey(base));
+              }}
+              size="sm"
+              tone="outline"
+            >
+              <ChevronLeft aria-hidden size={16} />
+            </IconButton>
+            <button className="calendar-mobile-bar__date" onClick={() => setIsCalendarCollapsedOnMobile((current) => !current)} type="button">
+              <strong>{formatSelectedDate(selectedDate ?? detailAnchorDate)}</strong>
+              <span>할 일 {countsByCategory.todo} · 이벤트 {countsByCategory.event}</span>
+            </button>
+            <div className="calendar-mobile-bar__actions">
+              <IconButton label={isCalendarCollapsedOnMobile ? "달력 펼치기" : "달력 접기"} onClick={() => setIsCalendarCollapsedOnMobile((current) => !current)} size="sm" tone="outline">
+                <CalendarDays aria-hidden size={16} />
+              </IconButton>
+              <IconButton className="calendar-mobile-bar__add" label="새 일정 추가" onClick={() => setIsAddMenuOpen((current) => !current)} size="sm">
+                <Plus aria-hidden size={16} />
+              </IconButton>
+            </div>
+            <IconButton
+              className="calendar-mobile-bar__nav"
+              label="다음 날짜"
+              onClick={() => {
+                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
+                base.setDate(base.getDate() + 1);
+                setSelectedDate(formatDateKey(base));
+              }}
+              size="sm"
+              tone="outline"
+            >
+              <ChevronRight aria-hidden size={16} />
+            </IconButton>
+          </div>
+          {isAddMenuOpen ? (
+            <div className="calendar-mobile-bar__menu" role="menu">
+              {showEventAddButton && categories.includes("event") ? (
+                <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
+                  <span className="calendar-dot calendar-dot--event" />
+                  이벤트 추가
+                </button>
+              ) : null}
+              {categories.includes("todo") ? (
+                <button onClick={() => openCreateEventSheet("todo")} role="menuitem" type="button">
+                  <span className="calendar-dot calendar-dot--todo" />
+                  할 일 추가
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </SectionCard>
+      ) : null}
+
       <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""} ui-workspace-grid ${isDatabaseView ? "ui-workspace-grid--balanced" : "ui-workspace-grid--sidebar"}`}>
-        <SectionCard className="calendar-board ui-workspace-panel ui-workspace-panel--tall">
+        <SectionCard className={`calendar-board ui-workspace-panel ui-workspace-panel--tall ${isMobile && !isDatabaseView && isCalendarCollapsedOnMobile ? "calendar-board--collapsed-mobile" : ""}`}>
           <div className="calendar-toolbar">
             <IconButton label="이전 달" onClick={() => moveMonth(-1)} tone="outline">
               <ChevronLeft aria-hidden size={20} />

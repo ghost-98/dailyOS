@@ -4237,7 +4237,7 @@ button:disabled {
 
 .life-activity-mobile__topbar {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto 38px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
 }
