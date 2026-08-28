@@ -1,7 +1,12 @@
 @import "./styles/auth.css";
+@import "./styles/life-layout.css";
+@import "./styles/life-database.css";
 @import "./styles/life.css";
 @import "./styles/places.css";
+@import "./styles/documents.css";
 @import "./styles/layout.css";
+@import "./styles/calendar-shell.css";
+@import "./styles/calendar-markers.css";
 @import "./styles/calendar.css";
 @import "./styles/health.css";
 @import "./styles/settings.css";
@@ -30,6 +35,16 @@
   --green: #65c9a4;
   --amber: #d9ad63;
   --blue: #8db5ff;
+  --tone-violet-bg: rgba(201, 184, 255, 0.12);
+  --tone-violet-bg-strong: rgba(201, 184, 255, 0.16);
+  --tone-violet-border: rgba(201, 184, 255, 0.28);
+  --tone-green-bg: rgba(110, 231, 183, 0.12);
+  --tone-green-border: rgba(110, 231, 183, 0.3);
+  --tone-pink-bg: rgba(244, 114, 182, 0.12);
+  --tone-pink-border: rgba(244, 114, 182, 0.3);
+  --tone-amber-bg: rgba(246, 173, 69, 0.18);
+  --tone-muted-bg: rgba(255, 255, 255, 0.1);
+  --tone-muted-border: rgba(255, 255, 255, 0.1);
   --shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   --radius: 10px;
   --radius-sm: 10px;
@@ -61,6 +76,28 @@
   --card-padding: 16px;
   --card-padding-lg: 20px;
   --card-gap: 16px;
+  --panel-gap: 14px;
+  --panel-padding: 22px;
+  --panel-padding-compact: 18px 20px;
+  --panel-min-height: 420px;
+  --panel-min-height-tall: 720px;
+  --panel-border: 1px solid rgba(255, 255, 255, 0.11);
+  --panel-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+  --panel-heading-gap: 18px;
+  --panel-heading-actions-gap: 10px;
+  --panel-heading-min-height: 104px;
+  --panel-heading-compact-gap: 12px;
+  --planner-card-radius: 13px;
+  --planner-card-bg: rgba(255, 255, 255, 0.048);
+  --planner-card-gap: 12px;
+  --planner-card-padding: 15px;
+  --planner-section-gap: 10px;
+  --planner-section-title-size: 0.86rem;
+  --planner-section-body-size: 0.74rem;
+  --planner-toggle-height: 34px;
+  --planner-toggle-padding-x: 11px;
+  --planner-search-padding-y: 9px;
+  --planner-result-padding-y: 11px;
   --toolbar-gap: 10px;
   --chip-height: 38px;
   --chip-radius: 14px;
@@ -96,3 +133,4 @@ select {
 button {
   cursor: pointer;
 }
+

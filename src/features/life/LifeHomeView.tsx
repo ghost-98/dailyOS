@@ -1,30 +1,14 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Activity, CalendarDays, Camera, HeartPulse, LoaderCircle, NotebookPen, Sparkles, Target, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, CalendarDays, Camera, HeartPulse, LoaderCircle, NotebookPen, Sparkles, Target } from "lucide-react";
+import { useMemo } from "react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import type { CalendarEvent } from "@/features/calendar/data";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import { formatDateKey } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { buildPeopleSummaries, getTopCounts, getTopExpenseCategories } from "@/features/life/insights";
-import { fetchExpenseRecordsFromDb } from "@/features/ledger/api";
-import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotoMetadataFromDb } from "@/features/life/api";
-import { fetchTasksFromDb } from "@/features/tasks/api";
-import type { DailyLogRecord, ExpenseRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
-import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "../health/api";
-
-type LifeHomeSnapshot = {
-  activities: LifeActivityRecord[];
-  events: CalendarEvent[];
-  expenses: ExpenseRecord[];
-  logs: DailyLogRecord[];
-  photos: LifePhotoRecord[];
-  tasks: TaskItem[];
-  weights: WeightRecord[];
-  workouts: WorkoutSession[];
-};
+import { emptyLifeDataSnapshot, loadLifeDataForMode, type LifeDataSnapshot } from "@/features/life/dataLoader";
 
 const dashboardCards = [
   {
@@ -49,100 +33,39 @@ const dashboardCards = [
     title: "관계 축",
   },
   {
-    description: "누구와 시간을 썼는지, 어떤 장소와 지출 맥락이 붙는지 확인합니다.",
-    href: "/life/people",
-    icon: UserRound,
-    label: "관계",
-    title: "사람",
+    description: "사진과 영상을 시간순으로 훑고, 기간을 잘라보며 장면 흐름을 복원합니다.",
+    href: "/life/gallery",
+    icon: Camera,
+    label: "미디어",
+    title: "갤러리",
   },
 ];
 
 const captureLinks = [
   { href: "/life/activities", icon: Activity, label: "활동 기록", title: "실제 삶을 남기는 기본 입력" },
-  { href: "/life/plans", icon: CalendarDays, label: "계획 입력", title: "일정·할 일·이벤트 정리" },
+  { href: "/life/plans", icon: CalendarDays, label: "계획 입력", title: "할 일·이벤트 정리" },
   { href: "/life/logs", icon: NotebookPen, label: "하루기록", title: "의미와 감정, 메모 보강" },
-  { href: "/life/photos", icon: Camera, label: "사진·영상", title: "증거와 장면 연결" },
   { href: "/life/health", icon: HeartPulse, label: "건강", title: "몸 상태와 운동 축 보강" },
 ];
 
-async function loadLifeHomeSnapshot(): Promise<LifeHomeSnapshot> {
-  const [events, tasks, expenses, activities, logs, photos, weights, workouts] = await Promise.all([
-    fetchCalendarEventsFromDb(),
-    fetchTasksFromDb(),
-    fetchExpenseRecordsFromDb(),
-    fetchLifeActivitiesFromDb(),
-    fetchDailyLogsFromDb(),
-    fetchLifePhotoMetadataFromDb(),
-    fetchWeightRecordsFromDb(),
-    fetchWorkoutSessionsFromDb(),
-  ]);
-
-  return {
-    activities: activities ?? [],
-    events: events ?? [],
-    expenses: expenses ?? [],
-    logs: logs ?? [],
-    photos: photos ?? [],
-    tasks: tasks ?? [],
-    weights: weights ?? [],
-    workouts: workouts ?? [],
-  };
-}
-
 export function LifeHomeView() {
-  const [snapshot, setSnapshot] = useState<LifeHomeSnapshot | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    loadLifeHomeSnapshot()
-      .then((data) => {
-        if (isMounted) setSnapshot(data);
-      })
-      .catch((error) => console.error("Failed to load life home snapshot", error))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { data: snapshot, isLoading } = useAsyncData<LifeDataSnapshot>({
+    deps: [],
+    initialData: emptyLifeDataSnapshot,
+    load: () => loadLifeDataForMode("search"),
+    onError: (error) => console.error("Failed to load life home snapshot", error),
+  });
 
   const summary = useMemo(() => {
-    const empty: LifeHomeSummary = {
-      activityEvidenceRate: 0,
-      activityPlaceRate: 0,
-      categorySummaries: [],
-      daysRecoveredLast30: 0,
-      latestRecordDate: undefined,
-      linkedLogRate: 0,
-      linkedPhotoRate: 0,
-      orphanLogs: 0,
-      orphanPhotos: 0,
-      overduePlanCount: 0,
-      peopleSummaries: [],
-      placeSummaries: [],
-      recordsLast30: 0,
-      totalActivities: 0,
-      totalRecords: 0,
-      uncoveredActivities: 0,
-      weekActivityCount: 0,
-      weekExpenseTotal: 0,
-    };
-
-    if (!snapshot) return empty;
-
-    const { activities, events, expenses, logs, photos, tasks, weights, workouts } = snapshot;
+    const { activities, dailyLogs, events, expenses, lifePhotos, tasks, weights, workouts } = snapshot;
     const today = new Date();
     const last30DateKey = shiftDateKey(today, -29);
     const last7DateKey = shiftDateKey(today, -6);
 
     const actualRecordDates = new Set<string>([
       ...activities.map((item) => item.date),
-      ...logs.map((item) => item.date),
-      ...photos.map((item) => item.date),
+      ...dailyLogs.map((item) => item.date),
+      ...lifePhotos.map((item) => item.date),
       ...expenses.map((item) => item.date),
       ...weights.map((item) => item.date),
       ...workouts.map((item) => item.date),
@@ -159,7 +82,7 @@ export function LifeHomeView() {
     const weekActivityCount = activities.filter((item) => item.date >= last7DateKey).length;
     const weekExpenseTotal = expenses.filter((item) => item.date >= last7DateKey).reduce((sum, item) => sum + item.amount, 0);
 
-    const peopleSummaries = buildPeopleSummaries(events, tasks, activities, expenses, logs, photos).slice(0, 4);
+    const peopleSummaries = buildPeopleSummaries(events, tasks, activities, expenses, dailyLogs, lifePhotos).slice(0, 4);
     const placeSummaries = getTopCounts(
       [
         ...activities.map((item) => item.placeName),
@@ -176,12 +99,12 @@ export function LifeHomeView() {
         Boolean(item.food?.trim()) ||
         Boolean(item.companions?.trim()) ||
         Boolean(item.expenseAmount && item.expenseAmount > 0) ||
-        logs.some((log) => log.linkedTargetType === "activity" && log.linkedTargetId === item.id) ||
-        photos.some((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === item.id),
+        dailyLogs.some((log) => log.linkedTargetType === "activity" && log.linkedTargetId === item.id) ||
+        lifePhotos.some((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === item.id),
     ).length;
 
-    const orphanLogs = logs.filter((item) => !item.linkedTargetId || !item.linkedTargetType).length;
-    const orphanPhotos = photos.filter((item) => !item.linkedTargetId || !item.linkedTargetType).length;
+    const orphanLogs = dailyLogs.filter((item) => !item.linkedTargetId || !item.linkedTargetType).length;
+    const orphanPhotos = lifePhotos.filter((item) => !item.linkedTargetId || !item.linkedTargetType).length;
     const uncoveredActivities = activities.filter(
       (item) =>
         !item.placeName &&
@@ -189,8 +112,8 @@ export function LifeHomeView() {
         !item.food?.trim() &&
         !item.companions?.trim() &&
         !item.expenseAmount &&
-        !logs.some((log) => log.linkedTargetType === "activity" && log.linkedTargetId === item.id) &&
-        !photos.some((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === item.id),
+        !dailyLogs.some((log) => log.linkedTargetType === "activity" && log.linkedTargetId === item.id) &&
+        !lifePhotos.some((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === item.id),
     ).length;
 
     const overduePlanCount =
@@ -203,8 +126,8 @@ export function LifeHomeView() {
       categorySummaries,
       daysRecoveredLast30: recordsLast30,
       latestRecordDate,
-      linkedLogRate: getRate(logs.length - orphanLogs, logs.length),
-      linkedPhotoRate: getRate(photos.length - orphanPhotos, photos.length),
+      linkedLogRate: getRate(dailyLogs.length - orphanLogs, dailyLogs.length),
+      linkedPhotoRate: getRate(lifePhotos.length - orphanPhotos, lifePhotos.length),
       orphanLogs,
       orphanPhotos,
       overduePlanCount,
@@ -212,7 +135,7 @@ export function LifeHomeView() {
       placeSummaries,
       recordsLast30,
       totalActivities: activities.length,
-      totalRecords: activities.length + events.length + tasks.length + expenses.length + logs.length + photos.length + weights.length + workouts.length,
+      totalRecords: activities.length + events.length + tasks.length + expenses.length + dailyLogs.length + lifePhotos.length + weights.length + workouts.length,
       uncoveredActivities,
       weekActivityCount,
       weekExpenseTotal,
@@ -238,8 +161,8 @@ export function LifeHomeView() {
           title: "하루기록 연결하기",
         },
         {
-          description: summary.orphanPhotos > 0 ? `연결되지 않은 사진 ${summary.orphanPhotos}개가 있습니다.` : "사진은 활동이나 일정에 붙여야 나중에 기억 복원이 쉬워집니다.",
-          href: "/life/photos",
+          description: summary.orphanPhotos > 0 ? `연결되지 않은 사진 ${summary.orphanPhotos}개가 있습니다.` : "사진은 활동이나 이벤트에 붙여야 나중에 기억 복원이 쉬워집니다.",
+          href: "/life/gallery",
           title: "사진 맥락 보강",
         },
       ].slice(0, 4),
@@ -463,27 +386,6 @@ function InsightList({ empty, items }: { empty: string; items: Array<{ meta: str
     </div>
   );
 }
-
-type LifeHomeSummary = {
-  activityEvidenceRate: number;
-  activityPlaceRate: number;
-  categorySummaries: Array<{ amount: number; name: string }>;
-  daysRecoveredLast30: number;
-  latestRecordDate?: string;
-  linkedLogRate: number;
-  linkedPhotoRate: number;
-  orphanLogs: number;
-  orphanPhotos: number;
-  overduePlanCount: number;
-  peopleSummaries: ReturnType<typeof buildPeopleSummaries>;
-  placeSummaries: Array<{ count: number; name: string }>;
-  recordsLast30: number;
-  totalActivities: number;
-  totalRecords: number;
-  uncoveredActivities: number;
-  weekActivityCount: number;
-  weekExpenseTotal: number;
-};
 
 function getRate(value: number, total: number) {
   if (!total) return 0;

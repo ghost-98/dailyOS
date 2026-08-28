@@ -10,7 +10,7 @@ type CalendarEventRow = {
   event_time: string | null;
   end_time: string | null;
   is_all_day: boolean | null;
-  type: EventType;
+  type: EventType | "schedule";
   title: string;
   meta: string;
   expense_amount: number | string | null;
@@ -39,7 +39,7 @@ function mapRowToEvent(row: CalendarEventRow): CalendarEvent {
     id: row.id,
     date: row.event_date,
     endDate: row.end_date ?? undefined,
-    type: row.type,
+    type: row.type === "schedule" ? "event" : row.type,
     title: row.title,
     time: row.event_time?.slice(0, 5) || undefined,
     endTime: row.end_time?.slice(0, 5) || undefined,

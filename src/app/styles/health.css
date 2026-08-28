@@ -283,35 +283,20 @@
 }
 
 .health-empty {
-  display: grid;
-  min-height: 240px;
   place-items: center;
-  border: 1px dashed var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
-  padding: 24px;
-  text-align: center;
 }
 
 .health-empty--compact {
-  min-height: 150px;
-}
-
-.health-empty svg {
-  color: var(--violet);
+  padding: var(--card-padding);
 }
 
 .health-empty strong {
   margin-top: 8px;
-  font-size: 18px;
 }
 
 .health-empty p {
   max-width: 260px;
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.45;
+  margin-top: 6px;
 }
 
 .health-sheet {

@@ -1,4 +1,5 @@
 import { ListFilter, MapPin, Plus, UsersRound, WalletCards } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { formatCurrency } from "@/features/calendar/utils";
 import type { PlanPlace } from "@/types/domain";
 
@@ -9,10 +10,10 @@ export function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean
       <strong>{label} 항목이 없습니다.</strong>
       <p>{isLoading ? "불러오는 중입니다." : "상단 추가 버튼으로 새 항목을 등록할 수 있습니다."}</p>
       {!isLoading && onAdd ? (
-        <button className="date-empty-state__add" onClick={onAdd} type="button">
+        <ActionButton className="ui-empty-state__action ui-empty-state__action--primary" onClick={onAdd}>
           <Plus aria-hidden size={15} />
           {label} 추가
-        </button>
+        </ActionButton>
       ) : null}
     </div>
   );
@@ -48,7 +49,7 @@ export function ExpenseLine({ amount }: { amount: number }) {
 
 export function FormSectionTitle({ description, title }: { description: string; title: string }) {
   return (
-    <div className="schedule-form-section-title">
+    <div className="planner-form-section-title">
       <strong>{title}</strong>
       <span>{description}</span>
     </div>

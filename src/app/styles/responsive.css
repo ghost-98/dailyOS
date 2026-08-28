@@ -30,12 +30,23 @@
     grid-template-columns: 1fr;
   }
 
+  .ui-workspace-grid--form-detail,
+  .ui-workspace-grid--balanced,
+  .ui-workspace-grid--sidebar {
+    grid-template-columns: 1fr;
+  }
+
   .life-activity-quick-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .calendar-detail {
     animation: detail-slide-up 220ms ease-out both;
+  }
+
+  .ui-sticky-side-panel {
+    position: static;
+    top: auto;
   }
 
 }
@@ -130,7 +141,7 @@
     font-size: 40px;
   }
 
-  .schedule-card,
+  .dashboard-card,
   .todo-card,
   .system-log,
   .vitals-card,
@@ -194,8 +205,7 @@
     flex-wrap: wrap;
   }
 
-  .todo-item,
-  .schedule-item {
+  .todo-item {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -271,13 +281,13 @@
     border-left: 0;
   }
 
-  .schedule-form-card--primary,
-  .schedule-form-card--grid,
-  .task-sheet .schedule-form-card--grid {
+  .planner-form-card--primary,
+  .planner-form-card--grid,
+  .task-sheet .planner-form-card--grid {
     grid-template-columns: 1fr;
   }
 
-  .schedule-form-card--primary .schedule-field + .schedule-field {
+  .planner-form-card--primary .planner-field + .planner-field {
     border-top: 1px solid rgba(255, 255, 255, 0.09);
     border-left: 0;
   }
@@ -414,8 +424,8 @@
     text-align: left;
   }
 
-  .schedule-date-row,
-  .schedule-time-row {
+  .planner-date-row,
+  .planner-time-row {
     grid-template-columns: 1fr;
   }
 
@@ -424,9 +434,15 @@
     padding: 16px;
   }
 
-  .life-activity-form .section-heading {
-    align-items: stretch;
-    flex-direction: column;
+  .ui-workspace-panel,
+  .ui-toolbar-panel {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .ui-panel-heading {
+    grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .life-activity-form .life-record-actions,
@@ -439,6 +455,7 @@
     flex: 1 1 auto;
   }
 
+  .ui-panel-heading__actions,
   .life-activity-form__actions,
   .life-activity-quick-panel__actions,
   .life-activity-tag-editor {
@@ -457,6 +474,19 @@
 
   .life-activity-day-summary {
     grid-template-columns: 1fr;
+  }
+
+  .life-gallery-toolbar__filters,
+  .life-gallery-grid,
+  .life-activity-calendar__month-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .life-gallery-pagination,
+  .life-gallery-toolbar__summary,
+  .life-media-upload-panel__actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .progress-meter {

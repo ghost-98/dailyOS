@@ -16,25 +16,10 @@
   padding: 24px;
 }
 
-.settings-card label {
-  display: grid;
-  gap: 8px;
-}
-
-.settings-card label > span,
 .settings-toggle > span {
   color: var(--muted);
   font-size: 14px;
   font-weight: 750;
-}
-
-.settings-card input {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  padding: 12px;
 }
 
 .settings-account-row {
@@ -45,6 +30,10 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   padding: 13px;
+}
+
+.settings-card .ui-form-field > input {
+  min-height: 46px;
 }
 
 .settings-account-row svg {
@@ -88,28 +77,6 @@
   padding: 12px;
 }
 
-.settings-command {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-weight: 800;
-}
-
-.settings-command:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.settings-command--danger {
-  color: var(--pink);
-}
-
 .date-picker-sheet {
   width: min(520px, 100%);
 }
@@ -141,7 +108,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.date-picker-grid label {
+.date-picker-grid .ui-form-field {
   display: grid;
   gap: 8px;
   border: 1px solid var(--line);
@@ -150,13 +117,13 @@
   padding: 14px;
 }
 
-.date-picker-grid span {
+.date-picker-grid .ui-form-field__label {
   color: var(--muted);
   font-size: 13px;
   font-weight: 750;
 }
 
-.date-picker-grid select {
+.date-picker-grid .ui-form-field > select {
   width: 100%;
   border: 0;
   outline: 0;

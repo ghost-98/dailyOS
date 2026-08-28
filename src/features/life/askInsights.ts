@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@/features/calendar/data";
+﻿import type { CalendarEvent } from "@/features/calendar/data";
 import { formatWon } from "@/features/life/formatters";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
@@ -24,6 +24,23 @@ type NamedCount = {
   count: number;
   name: string;
 };
+
+const POSITIVE_SIGNAL_KEYWORDS = [
+  "좋",
+  "즐거",
+  "행복",
+  "재밌",
+  "재미",
+  "신났",
+  "기뻤",
+  "설렜",
+  "웃",
+  "선물",
+  "축하",
+  "생일",
+  "여행",
+  "맛있",
+];
 
 type AskAnalysisInput = {
   activities: LifeActivityRecord[];
@@ -98,17 +115,34 @@ export type LifeAskBreakdown = {
   title: string;
 };
 
+export type LifeAskLinkItem = {
+  date: string;
+  label: string;
+  meta?: string;
+};
+
+export type LifeAskLinkGroup = {
+  items: LifeAskLinkItem[];
+  title: string;
+};
+
 export type LifeAskAnalysis = {
   breakdowns: LifeAskBreakdown[];
   cards: LifeAskInsightCard[];
+  dateRange: string;
   evidence: LifeAskEvidenceItem[];
+  followUpQuestions: string[];
   focus: AskFocus;
   focusDescription: string;
   focusTitle: string;
+  inferenceHints: string[];
+  linkGroups: LifeAskLinkGroup[];
+  narrative: string;
   overview: string;
   patterns: string[];
   promptContext: string;
   suggestions: string[];
+  windowLabel: string;
 };
 
 export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
@@ -139,18 +173,34 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     topPlaces,
     windowLabel: effectiveWindow.label,
   });
+  const narrative = buildAskNarrative({
+    comparison,
+    dateRange: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
+    filtered,
+    focus,
+    focusEntity,
+    topActivityTypes,
+    topExpenseCategories,
+    topPeople,
+    topPlaces,
+    windowLabel: effectiveWindow.label,
+  });
 
   const evidence = filtered.records.slice(0, 8).map((record) => ({
     date: record.date,
     description: record.description || record.tags.join(" · ") || record.label,
     title: record.title,
   }));
+  const linkGroups = buildAskLinkGroups(filtered, effectiveWindow, topPeople, topPlaces);
+  const followUpQuestions = buildFollowUpQuestions(focus, effectiveWindow.label, topPeople, topPlaces, topActivityTypes, topExpenseCategories);
+  const inferenceHints = buildInferenceHints(input.question, filtered, effectiveWindow.label);
 
   const promptContext = [
     `질문 초점: ${focus}`,
     `해석 기간: ${effectiveWindow.label} (${effectiveWindow.start} ~ ${effectiveWindow.end})`,
     `핵심 제목: ${focusData.focusTitle}`,
     `핵심 요약: ${focusData.overview}`,
+    `기간 서사: ${narrative}`,
     comparison
       ? `비교 기준: ${comparison.label} / 현재 ${comparison.current.recordCount}건 vs 이전 ${comparison.previous.recordCount}건`
       : "비교 기준: 단일 기간 해석",
@@ -158,20 +208,81 @@ export function buildLifeAskAnalysis(input: AskAnalysisInput): LifeAskAnalysis {
     `패턴: ${focusData.patterns.join(" / ") || "패턴 부족"}`,
     `제안: ${focusData.suggestions.join(" / ") || "제안 없음"}`,
     `브레이크다운: ${focusData.breakdowns.map((section) => `${section.title}: ${section.items.join(" | ")}`).join(" || ")}`,
+    inferenceHints.length > 0 ? `추론 힌트: ${inferenceHints.join(" / ")}` : "",
   ].join("\n");
 
   return {
     breakdowns: focusData.breakdowns,
     cards: focusData.cards,
+    dateRange: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
     evidence,
+    followUpQuestions,
     focus,
     focusDescription: focusData.focusDescription,
     focusTitle: focusData.focusTitle,
+    inferenceHints,
+    linkGroups,
+    narrative,
     overview: focusData.overview,
     patterns: focusData.patterns,
     promptContext,
     suggestions: focusData.suggestions,
+    windowLabel: effectiveWindow.label,
   };
+}
+
+function buildFollowUpQuestions(
+  focus: AskFocus,
+  windowLabel: string,
+  topPeople: NamedCount[],
+  topPlaces: NamedCount[],
+  topActivityTypes: NamedCount[],
+  topExpenseCategories: Array<{ amount: number; name: string }>,
+) {
+  const questions = new Set<string>();
+  questions.add(`${windowLabel}에 가장 두드러진 흐름 한 가지만 짚어줘`);
+
+  if (topPeople[0]) questions.add(`${windowLabel}에 ${topPeople[0].name}와의 기록을 더 자세히 풀어줘`);
+  if (topPlaces[0]) questions.add(`${windowLabel}에 ${topPlaces[0].name}이 왜 중요했는지 설명해줘`);
+  if (topActivityTypes[0]) questions.add(`${windowLabel}에 ${topActivityTypes[0].name} 패턴이 왜 많았는지 정리해줘`);
+  if (topExpenseCategories[0]) questions.add(`${windowLabel}에 ${topExpenseCategories[0].name} 지출이 커진 이유를 알려줘`);
+
+  if (focus !== "compare") {
+    questions.add(`${windowLabel}과 직전 기간을 비교하면 뭐가 가장 달라?`);
+  }
+
+  return [...questions].slice(0, 5);
+}
+
+function buildAskNarrative(args: FocusAnalysisArgs) {
+  const recordCount = args.filtered.records.length;
+  const activityCount = args.filtered.activities.length;
+  const photoCount = args.filtered.photos.length;
+  const logCount = args.filtered.logs.length;
+  const expenseTotal = sumAmounts(args.filtered.expenses.map((item) => item.amount));
+  const incomeTotal = sumAmounts(args.filtered.incomes.map((item) => item.amount));
+  const net = incomeTotal - expenseTotal;
+  const people = args.topPeople[0]?.name;
+  const place = args.topPlaces[0]?.name;
+  const activity = args.topActivityTypes[0]?.name;
+  const density =
+    recordCount >= 40 ? "기록 밀도가 높은 기간" :
+    recordCount >= 16 ? "기록이 비교적 꾸준히 남은 기간" :
+    "비교적 잔잔한 기간";
+  const axis = [people ? `${people} 관계축` : null, place ? `${place} 장소축` : null, activity ? `${activity} 활동축` : null].filter(Boolean).join(", ");
+  const memoryTone =
+    photoCount + logCount > activityCount
+      ? `사진과 기록 회고(${photoCount + logCount}건)가 활동 기록(${activityCount}건)과 비슷하거나 더 강하게 남아 있어요.`
+      : `활동 기록(${activityCount}건)이 회고 기록(${photoCount + logCount}건)보다 앞서며 움직임이 더 또렷해요.`;
+  const financeTone =
+    net > 0 ? `자금 흐름은 ${formatWon(net)} 순유입이에요.` :
+    net < 0 ? `자금 흐름은 ${formatWon(net)} 순지출이에요.` :
+    "자금 흐름은 대체로 균형적이에요.";
+  const compareTone = args.comparison
+    ? `${args.comparison.label} 비교도 가능해서 변화 방향까지 읽을 수 있어요.`
+    : "현재는 단일 기간 흐름에 집중한 해석이 적합해요.";
+
+  return `${args.windowLabel}은(는) ${density}예요. ${axis ? `${axis}이(가) 중심으로 보이고, ` : ""}${memoryTone} ${financeTone} ${compareTone}`;
 }
 
 function buildFocusData(args: FocusAnalysisArgs): LifeAskFocusData {
@@ -538,6 +649,89 @@ function buildGeneralFocus(args: FocusAnalysisArgs): LifeAskFocusData {
   };
 }
 
+function buildInferenceHints(question: string, filtered: FilteredLifeData, windowLabel: string) {
+  const hints: string[] = [];
+
+  if (isEnjoymentQuestion(question)) {
+    const candidates = rankEnjoymentCandidates(filtered).slice(0, 3);
+    if (candidates[0]) {
+      hints.push(
+        `${windowLabel} 즐거움 추정 1위는 ${candidates[0].title} (${candidates[0].date})이며 근거는 ${candidates[0].reasons.join(", ")}`,
+      );
+    }
+    if (candidates[1]) {
+      hints.push(`${windowLabel} 차선 후보는 ${candidates[1].title} (${candidates[1].date})`);
+    }
+    if (candidates.length === 0) {
+      hints.push("즐거움을 직접 추정할 명시적 감정 표현이 부족하므로 사진, 메모, 함께한 사람, 음식/문화 맥락을 약한 근거로만 해석해야 함");
+    }
+  }
+
+  return hints;
+}
+
+function isEnjoymentQuestion(question: string) {
+  const normalized = question.toLowerCase();
+  return ["즐겁", "재밌", "재미", "행복", "좋았", "기뻤", "신났", "설렜", "가장 좋", "best"].some((keyword) => normalized.includes(keyword));
+}
+
+function rankEnjoymentCandidates(filtered: FilteredLifeData) {
+  const candidates = [
+    ...filtered.activities.map((activity) => {
+      const text = [activity.title, activity.memo, activity.food, activity.placeName, activity.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const photoCount = filtered.photos.filter((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id).length;
+      const logCount = filtered.logs.filter((log) => log.linkedTargetType === "activity" && log.linkedTargetId === activity.id).length;
+      const companionCount = splitCompanions(activity.companions).length;
+      const score = positiveScore + photoCount * 2 + logCount * 2 + companionCount + (activity.food ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        photoCount > 0 ? `연결 사진 ${photoCount}장` : null,
+        logCount > 0 ? `연결 하루기록 ${logCount}건` : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        activity.food ? `음식 기록 ${activity.food}` : null,
+      ].filter(Boolean) as string[];
+
+      return { date: activity.date, reasons, score, title: activity.title };
+    }),
+    ...filtered.events.map((event) => {
+      const text = [event.title, event.meta, event.place?.name, event.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const companionCount = splitCompanions(event.companions).length;
+      const score = positiveScore + companionCount + (event.place?.name ? 1 : 0) + (event.expenseAmount ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        event.place?.name ? `장소 ${event.place.name}` : null,
+      ].filter(Boolean) as string[];
+
+      return { date: event.date, reasons, score, title: event.title };
+    }),
+    ...filtered.tasks.map((task) => {
+      const text = [task.title, task.memo, task.place?.name, task.companions].filter(Boolean).join(" ");
+      const positiveScore = countKeywordHits(text, POSITIVE_SIGNAL_KEYWORDS) * 4;
+      const companionCount = splitCompanions(task.companions).length;
+      const score = positiveScore + companionCount + (task.status === "done" ? 1 : 0);
+      const reasons = [
+        positiveScore > 0 ? "긍정 표현" : null,
+        companionCount > 0 ? `함께한 사람 ${companionCount}명` : null,
+        task.status === "done" ? "완료된 기록" : null,
+      ].filter(Boolean) as string[];
+
+      return { date: task.scheduledDate, reasons, score, title: task.title };
+    }),
+  ];
+
+  return candidates
+    .filter((candidate) => candidate.score > 0)
+    .sort((left, right) => right.score - left.score || right.date.localeCompare(left.date));
+}
+
+function countKeywordHits(text: string, keywords: string[]) {
+  const normalized = text.toLowerCase();
+  return keywords.reduce((count, keyword) => (normalized.includes(keyword) ? count + 1 : count), 0);
+}
+
 function buildComparisonContext(input: AskAnalysisInput, detectedWindows: DateWindow[], effectiveWindow: DateWindow) {
   const explicitComparison = detectedWindows.length >= 2 ? detectedWindows.slice(0, 2) : undefined;
   if (explicitComparison) {
@@ -737,6 +931,126 @@ function collectTopPlaces(input: Pick<FilteredLifeData, "activities" | "events" 
     ...input.events.map((event) => event.place?.name).filter(Boolean),
     ...input.tasks.map((task) => task.place?.name).filter(Boolean),
   ] as string[]);
+}
+
+function buildAskLinkGroups(
+  filtered: FilteredLifeData,
+  effectiveWindow: DateWindow,
+  topPeople: NamedCount[],
+  topPlaces: NamedCount[],
+): LifeAskLinkGroup[] {
+  const recordGroups = new Map<string, AskRecord[]>();
+  filtered.records.forEach((record) => {
+    const list = recordGroups.get(record.date) ?? [];
+    list.push(record);
+    recordGroups.set(record.date, list);
+  });
+
+  const periodItems = Array.from(recordGroups.entries())
+    .sort(([leftDate], [rightDate]) => rightDate.localeCompare(leftDate))
+    .slice(0, 3)
+    .map(([date, records]) => ({
+      date,
+      label: `${date} 기록 보기`,
+      meta: `${records.length}건`,
+    }));
+
+  const peopleItems = topPeople
+    .map((person) => findPersonAnchorDate(person.name, filtered))
+    .filter((item): item is LifeAskLinkItem => Boolean(item))
+    .slice(0, 3);
+
+  const placeItems = topPlaces
+    .map((place) => findPlaceAnchorDate(place.name, filtered))
+    .filter((item): item is LifeAskLinkItem => Boolean(item))
+    .slice(0, 3);
+
+  const evidenceItems = filtered.records.slice(0, 3).map((record) => ({
+    date: record.date,
+    label: record.title,
+    meta: record.description || record.label,
+  }));
+
+  return [
+    {
+      title: "기간 바로가기",
+      items:
+        periodItems.length > 0
+          ? periodItems
+          : [
+              {
+                date: effectiveWindow.start,
+                label: effectiveWindow.label,
+                meta: `${effectiveWindow.start} ~ ${effectiveWindow.end}`,
+              },
+            ],
+    },
+    ...(peopleItems.length > 0 ? [{ title: "사람 기준", items: peopleItems }] : []),
+    ...(placeItems.length > 0 ? [{ title: "장소 기준", items: placeItems }] : []),
+    ...(evidenceItems.length > 0 ? [{ title: "기록 근거", items: evidenceItems }] : []),
+  ];
+}
+
+function findPersonAnchorDate(name: string, filtered: FilteredLifeData): LifeAskLinkItem | null {
+  const activity = filtered.activities.find((item) => splitCompanions(item.companions).includes(name));
+  if (activity) {
+    return {
+      date: activity.date,
+      label: name,
+      meta: activity.title || activity.category || "활동 기록",
+    };
+  }
+
+  const event = filtered.events.find((item) => splitCompanions(item.companions).includes(name));
+  if (event) {
+    return {
+      date: event.date,
+      label: name,
+      meta: event.title || "이벤트 기록",
+    };
+  }
+
+  const task = filtered.tasks.find((item) => splitCompanions(item.companions).includes(name));
+  if (task) {
+    return {
+      date: task.scheduledDate,
+      label: name,
+      meta: task.title || "할 일 기록",
+    };
+  }
+
+  return null;
+}
+
+function findPlaceAnchorDate(name: string, filtered: FilteredLifeData): LifeAskLinkItem | null {
+  const activity = filtered.activities.find((item) => item.placeName === name);
+  if (activity) {
+    return {
+      date: activity.date,
+      label: name,
+      meta: activity.title || activity.category || "활동 기록",
+    };
+  }
+
+  const event = filtered.events.find((item) => item.place?.name === name);
+  if (event) {
+    return {
+      date: event.date,
+      label: name,
+      meta: event.title || "이벤트 기록",
+    };
+  }
+
+  const task = filtered.tasks.find((item) => item.place?.name === name);
+  if (task) {
+    return {
+      date: task.scheduledDate,
+      label: name,
+      meta: task.title || "할 일 기록",
+    };
+  }
+
+  return null;
 }
 
 function splitCompanions(value?: string) {

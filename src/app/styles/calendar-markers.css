@@ -1,0 +1,43 @@
+.calendar-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.calendar-dot--todo {
+  background: var(--green);
+}
+
+.calendar-dot--event {
+  background: var(--pink);
+}
+
+.calendar-dot--record {
+  background: #60a5fa;
+}
+
+.calendar-dot--health {
+  background: var(--pink);
+}
+
+.calendar-dot--weight {
+  background: #60a5fa;
+}
+
+.calendar-dot--expense {
+  background: var(--green);
+}
+
+.calendar-dot--workout {
+  background: #2dd4bf;
+}
+
+.calendar-dot--daily_log {
+  background: #c084fc;
+}
+
+.calendar-dot--photo {
+  background: #f472b6;
+}

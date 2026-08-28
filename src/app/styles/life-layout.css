@@ -1,0 +1,58 @@
+.life-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.life-header {
+  align-items: flex-start;
+}
+
+.life-axis-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.life-axis-view .calendar-page,
+.life-axis-view .ledger-page {
+  gap: var(--space-4);
+}
+
+.life-tab-panel,
+.life-axis-view .calendar-page,
+.life-axis-view .ledger-page {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.life-axis-view .calendar-layout--detail-open,
+.life-axis-view .ledger-layout {
+  align-items: flex-start;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
+}
+
+.life-axis-view .calendar-layout--database.calendar-layout--detail-open {
+  grid-template-columns: minmax(0, 0.96fr) minmax(460px, 1.14fr);
+}
+
+.life-axis-view .calendar-board,
+.life-axis-view .ledger-calendar-card,
+.life-axis-view .date-detail-card {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: var(--radius-xl);
+  background: var(--panel-elevated);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
+}
+
+.life-axis-view .calendar-board,
+.life-axis-view .ledger-calendar-card {
+  min-height: 720px;
+  padding: 28px;
+}
+
+.life-axis-view .date-detail-card {
+  min-height: 720px;
+  padding: 24px;
+}

@@ -37,7 +37,7 @@ export function buildDayReconstructionItems(
       .filter((activity) => activity.sourceId && activity.sourceType)
       .map((activity) => `${activity.sourceType}:${activity.sourceId}`),
   );
-  const visibleEvents = events.filter((event) => !linkedActivitySourceKeys.has(`${event.type === "event" ? "event" : "schedule"}:${event.id}`));
+  const visibleEvents = events.filter((event) => !linkedActivitySourceKeys.has(`event:${event.id}`));
   const visibleTasks = tasks.filter((task) => !linkedActivitySourceKeys.has(`todo:${task.id}`));
 
   return [
@@ -45,7 +45,7 @@ export function buildDayReconstructionItems(
       description: [event.meta, event.place?.name, event.companions ? `함께 · ${event.companions}` : null, event.expenseAmount ? formatWon(event.expenseAmount) : null].filter(Boolean).join(" · "),
       endMinutes: parseTimeToMinutes(event.endTime),
       id: `event-${event.id}`,
-      label: event.type === "event" ? "이벤트" : "일정",
+      label: "이벤트",
       startMinutes: parseTimeToMinutes(event.time),
       timeLabel: formatContextMeta(date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions) || "시간 미정",
       title: event.title,

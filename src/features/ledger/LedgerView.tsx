@@ -1,13 +1,16 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { MonthPickerSheet } from "@/features/calendar/CalendarView";
+import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
+import { useAsyncData } from "@/hooks/useAsyncData";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
+import { confirmAction } from "@/lib/actionGuards";
 import type { ExpenseCategory, ExpenseRecord, IncomeCategory, IncomeRecord } from "@/types/domain";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
@@ -37,7 +40,6 @@ const incomeCategoryLabels: Record<IncomeCategory, string> = {
 const targetTypeLabels: Record<NonNullable<ExpenseRecord["targetType"]>, string> = {
   activity: "활동",
   event: "이벤트",
-  schedule: "일정",
   todo: "할 일",
 };
 
@@ -46,11 +48,17 @@ type LedgerViewProps = {
 };
 
 export function LedgerView({ variant = "page" }: LedgerViewProps) {
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
-  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
+  const { data, isLoading, setData } = useAsyncData({
+    deps: [],
+    initialData: { expenses: [] as ExpenseRecord[], incomes: [] as IncomeRecord[] },
+    load: async () => {
+      const [expenses, incomes] = await Promise.all([fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()]);
+      return { expenses: expenses ?? [], incomes: incomes ?? [] };
+    },
+    onError: (error) => console.error("Failed to load ledger records", error),
+  });
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
-  const [isLoading, setIsLoading] = useState(true);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [incomeTitle, setIncomeTitle] = useState("");
   const [incomeAmount, setIncomeAmount] = useState("");
@@ -60,24 +68,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
   const [isIncomeCaptureExpanded, setIsIncomeCaptureExpanded] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([fetchExpenseRecordsFromDb(), fetchIncomeRecordsFromDb()])
-      .then(([nextExpenses, nextIncomes]) => {
-        if (!isMounted) return;
-        setExpenses(nextExpenses ?? []);
-        setIncomes(nextIncomes ?? []);
-      })
-      .catch((error) => console.error("Failed to load ledger records", error))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { expenses, incomes } = data;
 
   const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}`;
   const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
@@ -95,7 +86,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   const selectedIncomeTotal = sumRecords(selectedIncomes);
   const selectedNet = selectedIncomeTotal - selectedExpenseTotal;
   const activeDays = new Set([...monthExpenses.map((record) => record.date), ...monthIncomes.map((record) => record.date)]).size;
-  const dailyNetAverage = activeDays > 0 ? Math.round(monthNet / activeDays) : 0;
+  const dailyExpenseAverage = activeDays > 0 ? Math.round(monthExpenseTotal / activeDays) : 0;
   const topExpenseCategory = getTopCategory<ExpenseCategory, ExpenseRecord>(monthExpenses, (category) => expenseCategoryLabels[category]);
   const topIncomeCategory = getTopCategory<IncomeCategory, IncomeRecord>(monthIncomes, (category) => incomeCategoryLabels[category]);
 
@@ -109,6 +100,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
     const trimmedTitle = incomeTitle.trim();
     const amount = Number(incomeAmount);
     if (!trimmedTitle || !Number.isFinite(amount) || amount <= 0 || isSavingIncome) return;
+    if (!confirmAction("수입 기록을 저장할까요?")) return;
 
     setIsSavingIncome(true);
     try {
@@ -121,7 +113,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         title: trimmedTitle,
       });
       if (saved) {
-        setIncomes((current) => [saved, ...current]);
+        setData((current) => ({ ...current, incomes: [saved, ...current.incomes] }));
         setIncomeTitle("");
         setIncomeAmount("");
         setIncomeMemo("");
@@ -133,10 +125,11 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
   };
 
   const removeIncome = async (id: string) => {
+    if (!confirmAction("이 수입 기록을 삭제할까요?")) return;
     setDeletingIncomeId(id);
     try {
       await deleteIncomeRecordFromDb(id);
-      setIncomes((current) => current.filter((record) => record.id !== id));
+      setData((current) => ({ ...current, incomes: current.incomes.filter((record) => record.id !== id) }));
     } finally {
       setDeletingIncomeId(null);
     }
@@ -144,10 +137,10 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
 
   return (
     <div className="ledger-page">
-      <header className={variant === "tab" ? "life-tab-heading ledger-header" : "page-header ledger-header"}>
+      <header className={variant === "tab" ? "life-tab-heading ledger-header ui-toolbar-panel" : "page-header ledger-header ui-toolbar-panel"}>
         <div>
           <h1>가계부</h1>
-          <p className="ledger-header__note">지출은 일정·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
+          <p className="ledger-header__note">지출은 이벤트·할 일·활동과 연결되고, 수입은 이곳에서 직접 기록해 월별 현금 흐름을 함께 봅니다.</p>
         </div>
       </header>
 
@@ -168,25 +161,25 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
           <p>{topExpenseCategory ? `가장 큰 지출 축 · ${topExpenseCategory}` : "아직 지출 기록 없음"}</p>
         </SectionCard>
         <SectionCard className="ledger-metric">
-          <span>하루 평균 순흐름</span>
-          <strong>{formatCurrency(dailyNetAverage)}</strong>
+          <span>하루 평균 지출</span>
+          <strong>{formatExpenseCurrency(dailyExpenseAverage)}</strong>
           <p>{formatFullMonth(currentMonth)}</p>
         </SectionCard>
       </section>
 
-      <div className="ledger-layout">
-        <SectionCard className="ledger-calendar-card">
+      <div className="ledger-layout ui-workspace-grid ui-workspace-grid--sidebar">
+        <SectionCard className="ledger-calendar-card ui-workspace-panel ui-workspace-panel--tall">
           <div className="calendar-toolbar">
-            <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
+            <IconButton label="이전 달" onClick={() => moveMonth(-1)} tone="outline">
               <ChevronLeft aria-hidden size={20} />
-            </button>
+            </IconButton>
             <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
               <span>{currentMonth.getFullYear()}</span>
               <strong>{currentMonth.getMonth() + 1}월</strong>
             </button>
-            <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
+            <IconButton label="다음 달" onClick={() => moveMonth(1)} tone="outline">
               <ChevronRight aria-hidden size={20} />
-            </button>
+            </IconButton>
           </div>
 
           <div className="calendar-weekdays">
@@ -226,9 +219,9 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
         </SectionCard>
 
         <aside className="ledger-detail">
-          <SectionCard className="date-detail-card">
-            <div className="section-heading ledger-detail-heading">
-              <div>
+          <SectionCard className="date-detail-card ui-workspace-panel ui-workspace-panel--tall">
+            <div className="section-heading ledger-detail-heading ui-panel-heading">
+              <div className="ui-panel-heading__intro">
                 <p className="eyebrow">선택 날짜 자금 흐름</p>
                 <h2>{formatFullDate(selectedDate)}</h2>
               </div>
@@ -250,9 +243,9 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
             </div>
 
             <div className={`ledger-capture-panel${isIncomeCaptureExpanded ? "" : " ledger-capture-panel--collapsed"}`}>
-              <div className="section-heading ledger-capture-panel__heading">
-                <div>
-                  <p className="eyebrow">Income Capture</p>
+              <div className="section-heading ledger-capture-panel__heading ui-panel-heading">
+                <div className="ui-panel-heading__intro">
+                  <p className="eyebrow">수입 입력</p>
                   <h3>수입 추가</h3>
                 </div>
                 <IconButton
@@ -266,17 +259,14 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
               </div>
 
               {isIncomeCaptureExpanded ? (
-              <div className="ledger-income-form">
-                <label>
-                  <span>제목</span>
+              <div className="ledger-income-form ui-form-grid">
+                <FormField label="제목">
                   <input placeholder="예: 월급, 환급, 사이드 프로젝트" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} />
-                </label>
-                <label>
-                  <span>금액</span>
+                </FormField>
+                <FormField label="금액">
                   <input inputMode="numeric" placeholder="0" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value.replace(/[^\d]/g, ""))} />
-                </label>
-                <label>
-                  <span>카테고리</span>
+                </FormField>
+                <FormField label="카테고리">
                   <select value={incomeCategory} onChange={(event) => setIncomeCategory(event.target.value as IncomeCategory)}>
                     {Object.entries(incomeCategoryLabels).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -284,11 +274,10 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label>
-                  <span>메모</span>
+                </FormField>
+                <FormField label="메모">
                   <textarea placeholder="입금 경로나 설명" rows={3} value={incomeMemo} onChange={(event) => setIncomeMemo(event.target.value)} />
-                </label>
+                </FormField>
                 <ActionButton disabled={isSavingIncome || !incomeTitle.trim() || !incomeAmount} onClick={() => void createIncome()}>
                   {isSavingIncome ? "저장 중..." : "수입 저장"}
                 </ActionButton>
@@ -311,9 +300,9 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                     <div className="ledger-record__side">
                       <b>{formatIncomeCurrency(record.amount)}</b>
                       <div>
-                        <button aria-label="수입 삭제" disabled={deletingIncomeId === record.id} onClick={() => void removeIncome(record.id)} type="button">
+                        <IconButton disabled={deletingIncomeId === record.id} label="수입 삭제" onClick={() => void removeIncome(record.id)} size="sm" tone="danger">
                           <Trash2 aria-hidden size={14} />
-                        </button>
+                        </IconButton>
                       </div>
                     </div>
                   </article>
@@ -343,7 +332,7 @@ export function LedgerView({ variant = "page" }: LedgerViewProps) {
                 <div className="health-empty health-empty--compact">
                   <ReceiptText aria-hidden size={30} />
                   <strong>{isLoading ? "가계부를 불러오는 중입니다." : "이 날짜에는 자금 흐름이 없어요."}</strong>
-                  <p>지출은 일정·할 일·활동에서 연결되고, 수입은 여기서 직접 남길 수 있습니다.</p>
+                  <p>지출은 이벤트·할 일·활동에서 연결되고, 수입은 여기서 직접 남길 수 있습니다.</p>
                 </div>
               ) : null}
             </div>
@@ -441,3 +430,4 @@ function formatCompactCurrency(value: number) {
   if (value >= 10000) return `${Math.round(value / 10000).toLocaleString("ko-KR")}만`;
   return value.toLocaleString("ko-KR");
 }
+

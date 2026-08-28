@@ -1,16 +1,22 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
-import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays, parseTimeToMinutes } from "@/features/life/dateTime";
+import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
+import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
-import type { LifeActivityRecord, PersonRecord, PlanPlace } from "@/types/domain";
+import { confirmAction } from "@/lib/actionGuards";
+import type { LifeActivityRecord, LifeMediaUploadInput, PersonRecord, PlanPlace } from "@/types/domain";
+import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 
 export type LifeActivityDraft = {
   date?: string;
@@ -20,6 +26,7 @@ export type LifeActivityDraft = {
 };
 
 type EntryMode = "activity" | "wake" | "sleep";
+type InputPanelMode = "activity" | "media";
 type SleepDateMode = "selected" | "next";
 
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
@@ -31,15 +38,18 @@ export function LifeActivitiesView({
   activities,
   initialDraft,
   onDeleteActivity,
+  onUploadPhotos,
   onSaveActivity,
 }: {
   activities: LifeActivityRecord[];
   initialDraft?: LifeActivityDraft;
   onDeleteActivity: (id: string) => Promise<void> | void;
+  onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: LifeLinkedTarget) => Promise<void> | void;
   onSaveActivity: (activity: LifeActivityRecord) => Promise<void> | void;
 }) {
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [entryMode, setEntryMode] = useState<EntryMode>("activity");
+  const [inputPanelMode, setInputPanelMode] = useState<InputPanelMode>("activity");
   const [date, setDate] = useState(initialDraft?.date ?? formatDateKey(new Date()));
   const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(initialDraft?.date ?? formatDateKey(new Date())));
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
@@ -62,7 +72,6 @@ export function LifeActivitiesView({
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-  const [isDayPanelOpen, setIsDayPanelOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [sleepDateMode, setSleepDateMode] = useState<SleepDateMode>("selected");
@@ -70,6 +79,9 @@ export function LifeActivitiesView({
   const [wakeTime, setWakeTime] = useState("07:00");
   const [sleepPlace, setSleepPlace] = useState<PlanPlace | undefined>();
   const [wakePlace, setWakePlace] = useState<PlanPlace | undefined>();
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+  const [pickerMonth, setPickerMonth] = useState(new Date().getMonth() + 1);
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -96,6 +108,7 @@ export function LifeActivitiesView({
     const draftDate = initialDraft.date ?? formatDateKey(new Date());
     setEditing(null);
     setEntryMode("activity");
+    setInputPanelMode("activity");
     setDate(draftDate);
     setMonthCursor(createMonthCursor(draftDate));
     setHasTime(Boolean(initialDraft.startTime || initialDraft.endTime));
@@ -141,6 +154,15 @@ export function LifeActivitiesView({
   const connectedCount = selectedActivities.filter((activity) => hasActivityContext(activity)).length;
   const calendarDays = useMemo(() => getMonthDays(monthCursor.getFullYear(), monthCursor.getMonth()), [monthCursor]);
   const monthLabel = new Intl.DateTimeFormat("ko-KR", { month: "long", year: "numeric" }).format(monthCursor);
+  const availableYears = useMemo(() => {
+    const years = [
+      new Date().getFullYear(),
+      ...activities.map((activity) => Number(activity.date.slice(0, 4))).filter((year) => Number.isFinite(year)),
+    ];
+    const minYear = Math.min(...years, new Date().getFullYear() - 2);
+    const maxYear = Math.max(...years, new Date().getFullYear() + 2);
+    return Array.from({ length: maxYear - minYear + 1 }, (_, index) => minYear + index);
+  }, [activities]);
   const sameDaySleepActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [selectedActivities]);
   const nextDaySleepActivity = useMemo(() => nextDateActivities.find((activity) => matchesSleepWakeActivity(activity, "sleep")), [nextDateActivities]);
   const wakeActivity = useMemo(() => selectedActivities.find((activity) => matchesSleepWakeActivity(activity, "wake")), [selectedActivities]);
@@ -196,6 +218,7 @@ export function LifeActivitiesView({
 
   const editActivity = (activity: LifeActivityRecord) => {
     setEditing(activity);
+    setInputPanelMode("activity");
     setEntryMode("activity");
     selectDate(activity.date);
     setCategory(activity.category ?? DEFAULT_CATEGORY);
@@ -216,27 +239,6 @@ export function LifeActivitiesView({
     setMessage("활동 기록을 불러왔어요.");
   };
 
-  const startNow = () => {
-    const today = formatDateKey(new Date());
-    selectDate(today);
-    setHasTime(true);
-    setHasEndTime(false);
-    setStartTime(getDefaultActivityTime());
-    setEndTime("");
-    setMessage("지금 시작한 활동 기준으로 시간을 맞췄어요.");
-  };
-
-  const finishRecent = () => {
-    const endMinutes = parseTimeToMinutes(getDefaultActivityTime()) ?? 0;
-    const today = formatDateKey(new Date());
-    selectDate(today);
-    setHasTime(true);
-    setHasEndTime(true);
-    setStartTime(formatMinutesLabel(Math.max(0, endMinutes - 60)));
-    setEndTime(formatMinutesLabel(endMinutes));
-    setMessage("최근 1시간 활동 기준으로 시간을 맞췄어요.");
-  };
-
   const saveActivity = async () => {
     if (saveLockRef.current || isSaving) return;
     if (!title.trim()) return;
@@ -244,6 +246,7 @@ export function LifeActivitiesView({
       setFormError("종료 시간은 시작 시간보다 뒤여야 합니다.");
       return;
     }
+    if (!confirmAction(editing ? "활동 수정을 저장할까요?" : "활동을 저장할까요?")) return;
 
     saveLockRef.current = true;
     setIsSaving(true);
@@ -298,6 +301,7 @@ export function LifeActivitiesView({
       setFormError(`${label} 시간은 비워둘 수 없어요.`);
       return;
     }
+    if (!confirmAction(`${label} 기록을 저장할까요?`)) return;
 
     saveLockRef.current = true;
     setIsSaving(true);
@@ -347,6 +351,7 @@ export function LifeActivitiesView({
   };
 
   const removeCustomCategory = (target: string) => {
+    if (!confirmAction(`"${target}" 태그를 삭제할까요?`)) return;
     setCustomCategories((current) => current.filter((item) => item !== target));
     if (category === target) setCategory(DEFAULT_CATEGORY);
   };
@@ -359,7 +364,7 @@ export function LifeActivitiesView({
 
   const deleteActivity = async (activity: LifeActivityRecord) => {
     if (deletingActivityId) return;
-    const confirmed = window.confirm(`"${activity.title}" 활동 기록을 삭제할까요? 연결된 지출도 함께 정리됩니다.`);
+    const confirmed = confirmAction(`"${activity.title}" 활동 기록을 삭제할까요? 연결된 지출도 함께 정리됩니다.`);
     if (!confirmed) return;
 
     setDeletingActivityId(activity.id);
@@ -381,31 +386,93 @@ export function LifeActivitiesView({
     setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
   };
 
+  const toggleMonthPicker = () => {
+    setPickerYear(monthCursor.getFullYear());
+    setPickerMonth(monthCursor.getMonth() + 1);
+    setIsMonthPickerOpen((current) => !current);
+  };
+
+  const applyMonthPicker = () => {
+    const targetMonthCursor = new Date(pickerYear, pickerMonth - 1, 1);
+    const currentDate = new Date(`${date}T00:00:00`);
+    const lastDayOfMonth = new Date(pickerYear, pickerMonth, 0).getDate();
+    const nextSelectedDate = new Date(pickerYear, pickerMonth - 1, Math.min(currentDate.getDate(), lastDayOfMonth));
+    setMonthCursor(targetMonthCursor);
+    setDate(formatDateKey(nextSelectedDate));
+    setIsMonthPickerOpen(false);
+  };
+
   return (
     <div className="life-tab-panel">
       <LifeTabHeading title="활동 기록" description="활동을 입력하다가 바로 기상·취침 기록으로 전환할 수 있게 흐름을 정리했어요." />
-      <div className={isDayPanelOpen ? "life-activity-layout" : "life-activity-layout life-activity-layout--panel-closed"}>
-        <SectionCard className="life-activity-form">
-          <div className="section-heading life-activity-form__heading">
-            <div>
-              <p className="eyebrow">Core Life Block</p>
-              <h2>{entryMode === "activity" ? (editing ? "활동 수정" : "활동 추가") : entryMode === "wake" ? "기상 기록" : "취침 기록"}</h2>
+      <div className="life-activity-layout ui-workspace-grid ui-workspace-grid--form-detail">
+        <SectionCard className="life-activity-form ui-workspace-panel ui-workspace-panel--tall">
+          <div className="section-heading life-activity-form__heading ui-panel-heading">
+            <div className="ui-panel-heading__intro">
+              <p className="eyebrow">{inputPanelMode === "activity" ? "활동 입력" : "미디어 업로드"}</p>
+              <h2>
+                {inputPanelMode === "media"
+                  ? "사진 · 영상 업로드"
+                  : entryMode === "activity"
+                    ? (editing ? "활동 수정" : "활동 추가")
+                    : entryMode === "wake"
+                      ? "기상 기록"
+                      : "취침 기록"}
+              </h2>
             </div>
-            <div className="life-record-actions life-activity-form__actions">
-              <div className="life-activity-action-group">
-                <button disabled={isSaving} onClick={startNow} type="button">지금 시작</button>
-                <button disabled={isSaving} onClick={finishRecent} type="button">방금 끝남</button>
+            <div className="life-record-actions life-activity-form__actions ui-panel-heading__actions">
+              {inputPanelMode === "activity" ? (
+                <div className="life-activity-action-group life-activity-action-group--state">
+                  <button
+                    aria-label="기상 기록"
+                    className={entryMode === "wake" ? "life-activity-state-toggle life-activity-state-toggle--wake life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--wake"}
+                    disabled={isSaving}
+                    onClick={() => setEntryMode("wake")}
+                    type="button"
+                  >
+                    <Sunrise aria-hidden size={15} />
+                  </button>
+                  <button
+                    aria-label="취침 기록"
+                    className={entryMode === "sleep" ? "life-activity-state-toggle life-activity-state-toggle--sleep life-activity-state-toggle--active" : "life-activity-state-toggle life-activity-state-toggle--sleep"}
+                    disabled={isSaving}
+                    onClick={() => setEntryMode("sleep")}
+                    type="button"
+                  >
+                    <BedDouble aria-hidden size={15} />
+                  </button>
+                  {entryMode !== "activity" ? (
+                    <button className="life-activity-state-reset" disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">
+                      활동 입력
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="life-activity-action-group life-activity-action-group--mode">
+                <button
+                  className={inputPanelMode === "activity" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("activity")}
+                  type="button"
+                >
+                  활동 기록
+                </button>
+                <button
+                  className={inputPanelMode === "media" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"}
+                  disabled={isSaving}
+                  onClick={() => setInputPanelMode("media")}
+                  type="button"
+                >
+                  사진 · 영상
+                </button>
               </div>
-              <div className="life-activity-action-group life-activity-action-group--accent">
-                <button className={entryMode === "wake" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("wake")} type="button">기상</button>
-                <button className={entryMode === "sleep" ? "life-activity-quick-toggle life-activity-quick-toggle--active" : "life-activity-quick-toggle"} disabled={isSaving} onClick={() => setEntryMode("sleep")} type="button">취침</button>
-                {entryMode !== "activity" ? <button disabled={isSaving} onClick={() => setEntryMode("activity")} type="button">활동 입력</button> : null}
-              </div>
-              {editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
+              {inputPanelMode === "activity" && editing ? <button disabled={isSaving} onClick={resetForm} type="button">새 기록</button> : null}
             </div>
           </div>
 
-          {entryMode === "activity" ? (
+          {inputPanelMode === "media" ? (
+            <LifeMediaUploadPanel activities={activities} date={date} onDateChange={selectDate} onUploadPhotos={onUploadPhotos} />
+          ) : entryMode === "activity" ? (
             <>
               <div className="life-activity-form-card">
                 <label className="life-activity-title-field">
@@ -415,7 +482,7 @@ export function LifeActivitiesView({
               </div>
 
               <div className="life-activity-form-card">
-                <div className="schedule-form-section-title life-activity-form-card__title">
+                <div className="planner-form-section-title life-activity-form-card__title">
                   <strong>활동 유형</strong>
                 </div>
                 <div className="life-activity-tag-row">
@@ -446,28 +513,28 @@ export function LifeActivitiesView({
               </div>
 
               <div className="life-activity-form-card">
-                <div className="schedule-form-section-title life-activity-form-card__title">
+                <div className="planner-form-section-title life-activity-form-card__title">
                   <strong>날짜와 시간</strong>
                 </div>
-                <div className="event-form-card schedule-form-card schedule-form-card--grid schedule-time-grid">
-                  <label className="event-form-row event-form-row--field schedule-field">
+                <div className="event-form-card planner-form-card planner-form-card--grid planner-time-grid">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>기록 날짜</span>
                     <input type="date" value={date} onChange={(event) => selectDate(event.target.value)} />
                   </label>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>시작 시간</span>
                     <input disabled={!hasTime} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
                   </label>
                   {hasEndTime ? (
-                    <label className="event-form-row event-form-row--field schedule-field">
+                    <label className="event-form-row event-form-row--field planner-field">
                       <span>종료 시간</span>
                       <input disabled={!hasTime} type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
                     </label>
                   ) : null}
-                  <div className="event-form-row event-form-row--field schedule-field schedule-toggle-row">
+                  <div className="event-form-row event-form-row--field planner-field planner-toggle-row">
                     <span>시간 옵션</span>
-                    <div className="schedule-option-toggle-group">
-                      <label className="schedule-option-toggle">
+                    <div className="planner-option-toggle-group">
+                      <label className="planner-option-toggle">
                         <input
                           checked={!hasTime}
                           type="checkbox"
@@ -481,7 +548,7 @@ export function LifeActivitiesView({
                         />
                         시간 미정
                       </label>
-                      <label className="schedule-option-toggle">
+                      <label className="planner-option-toggle">
                         <input
                           checked={hasEndTime}
                           disabled={!hasTime}
@@ -500,7 +567,7 @@ export function LifeActivitiesView({
 
               {category === "이동" ? (
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>이동 정보</strong>
                   </div>
                   <div className="life-activity-form-grid">
@@ -519,14 +586,14 @@ export function LifeActivitiesView({
                       <PlaceSearchField selectedPlace={endPlace} onSelect={setEndPlace} />
                     </div>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <span>이동 수단</span>
                     <input placeholder="예: 도보, 지하철, 버스, 택시, 자차" value={transportMode} onChange={(event) => setTransportMode(event.target.value)} />
                   </label>
                 </div>
               ) : (
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>장소</strong>
                   </div>
                   <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
@@ -535,20 +602,20 @@ export function LifeActivitiesView({
 
               <div className={category === "식사" ? "life-activity-form-grid life-activity-form-grid--people-meal" : "life-activity-form-grid life-activity-form-grid--single-wide"}>
                 <div className="life-activity-form-card life-activity-form-card--wide">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>함께한 사람</strong>
                   </div>
-                  <div className="event-form-row event-form-row--field schedule-field schedule-field--stack">
+                  <div className="event-form-row event-form-row--field planner-field planner-field--stack">
                     <PeoplePickerField onChange={setCompanions} onCreatePerson={createPerson} people={people} selectedNames={companions} />
                   </div>
                 </div>
 
                 {category === "식사" ? (
                   <div className="life-activity-form-card">
-                    <div className="schedule-form-section-title life-activity-form-card__title">
+                    <div className="planner-form-section-title life-activity-form-card__title">
                       <strong>식사 메모</strong>
                     </div>
-                    <label className="event-form-row event-form-row--field schedule-field">
+                    <label className="event-form-row event-form-row--field planner-field">
                       <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
                     </label>
                   </div>
@@ -557,19 +624,19 @@ export function LifeActivitiesView({
 
               <div className="life-activity-form-grid">
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>금액</strong>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} />
                   </label>
                 </div>
 
                 <div className="life-activity-form-card">
-                  <div className="schedule-form-section-title life-activity-form-card__title">
+                  <div className="planner-form-section-title life-activity-form-card__title">
                     <strong>메모</strong>
                   </div>
-                  <label className="event-form-row event-form-row--field schedule-field">
+                  <label className="event-form-row event-form-row--field planner-field">
                     <textarea placeholder="예: 대화가 길어져 예상보다 늦게 끝남" value={memo} onChange={(event) => setMemo(event.target.value)} />
                   </label>
                 </div>
@@ -597,7 +664,7 @@ export function LifeActivitiesView({
                 null
               )}
               <div className="life-activity-quick-panel__grid">
-                <label className="event-form-row event-form-row--field schedule-field">
+                <label className="event-form-row event-form-row--field planner-field">
                   <span><Clock3 aria-hidden size={14} />시간</span>
                   <input type="time" value={entryMode === "wake" ? wakeTime : sleepTime} onChange={(event) => (entryMode === "wake" ? setWakeTime(event.target.value) : setSleepTime(event.target.value))} />
                 </label>
@@ -615,100 +682,140 @@ export function LifeActivitiesView({
             </div>
           )}
 
-          {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
-          {message ? <p className="life-health-message">{message}</p> : null}
-          {entryMode === "activity" ? (
+          {inputPanelMode === "activity" && formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+          {inputPanelMode === "activity" && message ? <p className="life-health-message">{message}</p> : null}
+          {inputPanelMode === "activity" && entryMode === "activity" ? (
             <button className="life-ask-submit" disabled={!title.trim() || isSaving} onClick={() => void saveActivity()} type="button">
               {isSaving ? "저장 중..." : editing ? "활동 수정 저장" : "활동 추가"}
             </button>
           ) : null}
+
         </SectionCard>
 
-        <SectionCard className={isDayPanelOpen ? "life-activity-list life-selected-day-panel" : "life-activity-list life-selected-day-panel life-selected-day-panel--closed"}>
-          <div className="section-heading life-selected-day-panel__heading">
-            <div>
-              <p className="eyebrow">Selected Day</p>
-              <h2>{formatFullDate(date)} 활동 {selectedActivities.length}건</h2>
+        <SectionCard className="life-activity-list life-selected-day-panel ui-workspace-panel ui-workspace-panel--tall ui-sticky-side-panel">
+          <div className="section-heading life-selected-day-panel__heading ui-panel-heading">
+            <div className="ui-panel-heading__intro">
+              <p className="eyebrow">선택한 날짜</p>
+              <h2 className="life-selected-day-title">
+                <span>{formatFullDate(date)}</span>
+                <i aria-hidden />
+                <span>활동 <b>{selectedActivities.length}</b>건</span>
+              </h2>
             </div>
-            <button className="life-selected-day-toggle" onClick={() => setIsDayPanelOpen((current) => !current)} type="button">
-              {isDayPanelOpen ? "접기" : "열기"}
-            </button>
           </div>
 
-          {isDayPanelOpen ? (
-            <>
-              <div className="life-activity-calendar">
-                <div className="life-activity-calendar__header">
-                  <button aria-label="이전 달" onClick={() => moveMonth(-1)} type="button">
-                    <ChevronLeft aria-hidden size={16} />
-                  </button>
-                  <strong>{monthLabel}</strong>
-                  <button aria-label="다음 달" onClick={() => moveMonth(1)} type="button">
-                    <ChevronRight aria-hidden size={16} />
-                  </button>
-                </div>
-                <div className="life-activity-calendar__weekdays">
-                  {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
-                </div>
-                <div className="life-activity-calendar__grid">
-                  {calendarDays.map((day) => {
-                    const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
-                    return (
-                      <button
-                        aria-pressed={day.date === date}
-                        className={day.date === date ? "life-activity-calendar__day life-activity-calendar__day--selected" : "life-activity-calendar__day"}
-                        disabled={!day.date}
-                        key={day.key}
-                        onClick={() => day.date && selectDate(day.date)}
-                        type="button"
-                      >
-                        <span>{day.day}</span>
-                        {count > 0 ? <em>{count}</em> : null}
-                      </button>
-                    );
-                  })}
-                </div>
+          <div className="life-activity-calendar">
+            <div className="life-activity-calendar__header">
+              <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
+                <ChevronLeft aria-hidden size={16} />
+              </IconButton>
+              <div className="life-activity-calendar__month-picker">
+                <button className="life-activity-calendar__month-button" onClick={toggleMonthPicker} type="button">
+                  {monthLabel}
+                </button>
+                {isMonthPickerOpen ? (
+                  <div className="life-activity-calendar__month-popover">
+                    <select value={pickerYear} onChange={(event) => setPickerYear(Number(event.target.value))}>
+                      {availableYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}년
+                        </option>
+                      ))}
+                    </select>
+                    <select value={pickerMonth} onChange={(event) => setPickerMonth(Number(event.target.value))}>
+                      {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                        <option key={month} value={month}>
+                          {month}월
+                        </option>
+                      ))}
+                    </select>
+                    <div className="life-activity-calendar__month-actions">
+                      <ActionButton onClick={() => setIsMonthPickerOpen(false)} variant="secondary">닫기</ActionButton>
+                      <ActionButton onClick={applyMonthPicker}>이동</ActionButton>
+                    </div>
+                  </div>
+                ) : null}
               </div>
+              <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
+                <ChevronRight aria-hidden size={16} />
+              </IconButton>
+            </div>
+            <div className="life-activity-calendar__weekdays">
+              {WEEKDAYS.map((weekday, index) => (
+                <span
+                  className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
+                  key={weekday}
+                >
+                  {weekday}
+                </span>
+              ))}
+            </div>
+            <div className="life-activity-calendar__grid">
+              {calendarDays.map((day) => {
+                const count = day.date ? activityCountsByDate.get(day.date) ?? 0 : 0;
+                const weekday = day.date ? new Date(`${day.date}T00:00:00`).getDay() : -1;
+                return (
+                  <button
+                    aria-pressed={day.date === date}
+                    className={
+                      [
+                        "life-activity-calendar__day",
+                        day.date === date ? "life-activity-calendar__day--selected" : "",
+                        weekday === 0 ? "life-activity-calendar__day--sun" : "",
+                        weekday === 6 ? "life-activity-calendar__day--sat" : "",
+                      ].filter(Boolean).join(" ")
+                    }
+                    disabled={!day.date}
+                    key={day.key}
+                    onClick={() => day.date && selectDate(day.date)}
+                    type="button"
+                  >
+                    <span>{day.day}</span>
+                    {count > 0 ? <em>{count}</em> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              <div className="life-activity-day-summary">
-                <article>
-                  <span>기록 시간</span>
-                  <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
-                </article>
-                <article>
-                  <span>활동 지출</span>
-                  <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
-                </article>
-                <article>
-                  <span>연결 정보</span>
-                  <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
-                </article>
-              </div>
-              {selectedActivities.length > 0 ? (
-                selectedActivities.map((activity) => (
-                  <article className="life-activity-item" key={activity.id}>
-                    <div>
-                      <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
-                      <strong>{activity.title}</strong>
-                      <p>{formatActivitySummary(activity)}</p>
-                    </div>
-                    <div className="life-record-actions">
-                      <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
-                      <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
-                        {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
-                      </button>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="life-map-empty life-map-empty--compact">
-                  <NotebookPen aria-hidden size={28} />
-                  <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
-                  <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
+          <div className="life-activity-day-summary">
+            <article>
+              <span>기록 시간</span>
+              <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
+            </article>
+            <article>
+              <span>활동 지출</span>
+              <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
+            </article>
+            <article>
+              <span>연결 정보</span>
+              <strong>{selectedActivities.length > 0 ? `${connectedCount}/${selectedActivities.length}` : "-"}</strong>
+            </article>
+          </div>
+          {selectedActivities.length > 0 ? (
+            selectedActivities.map((activity) => (
+              <article className="life-activity-item" key={activity.id}>
+                <div className="life-activity-item__body">
+                  <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
+                  <strong>{activity.title}</strong>
+                  <p>{formatActivitySummary(activity)}</p>
                 </div>
-              )}
-            </>
-          ) : null}
+                <div className="life-record-actions life-record-actions--activity-item">
+                  <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
+                  <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
+                    {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="life-map-empty life-map-empty--compact">
+              <NotebookPen aria-hidden size={28} />
+              <strong>이 날짜에는 활동 기록이 아직 없어요.</strong>
+              <p>오른쪽 달력에서 날짜를 고르거나 왼쪽 입력 폼에서 활동을 하나 추가해보세요.</p>
+            </div>
+          )}
+
         </SectionCard>
       </div>
     </div>
@@ -775,11 +882,6 @@ function formatActivitySummary(activity: LifeActivityRecord) {
   ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음";
 }
 
-function getLifeActionErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-}
-
 function parseCompanionNames(value?: string) {
   return (value ?? "")
     .split(",")
@@ -791,3 +893,4 @@ function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | 
   if ((activity.category ?? "").trim() !== "수면") return false;
   return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
 }
+

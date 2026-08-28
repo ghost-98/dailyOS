@@ -5,8 +5,13 @@ import type { ReactNode } from "react";
 import { ArrowLeft, Check, Folder, MapPin, Pencil, Plus, Search, Star, Trash2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Badge } from "@/components/ui/Badge";
+import { FormField } from "@/components/ui/FormField";
+import { FormActionBar } from "@/components/ui/FormActionBar";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { confirmAction } from "@/lib/actionGuards";
+import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
+import type { NaverMap, NaverMarker } from "@/lib/naverMap";
 import type { PlaceFolder, PlaceRecord } from "@/types/domain";
 import {
   createPlaceFolderInDb,
@@ -25,41 +30,7 @@ type SearchResponse = {
 };
 type PlacesViewMode = "folder" | "search" | "none";
 
-type NaverLatLng = unknown;
-type NaverLatLngBounds = {
-  extend: (latLng: NaverLatLng) => void;
-};
-type NaverMap = {
-  fitBounds: (bounds: NaverLatLngBounds, padding?: number | Record<string, number>) => void;
-  setCenter: (latLng: NaverLatLng) => void;
-  setZoom: (zoom: number) => void;
-};
-type NaverMarker = {
-  setMap: (map: NaverMap | null) => void;
-};
-type NaverPolyline = {
-  setMap: (map: NaverMap | null) => void;
-};
-
-declare global {
-  interface Window {
-    naver?: {
-      maps: {
-        Event: {
-          addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
-        };
-        LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-        LatLngBounds: new () => NaverLatLngBounds;
-        Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap;
-        Marker: new (options: Record<string, unknown>) => NaverMarker;
-        Polyline: new (options: Record<string, unknown>) => NaverPolyline;
-        Point: new (x: number, y: number) => unknown;
-      };
-    };
-  }
-}
-
-const naverMapClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID ?? process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+const naverMapClientId = getNaverMapClientId();
 const defaultCenter = { latitude: 37.5666103, longitude: 126.9783882 };
 const allFolderId = "all";
 
@@ -112,25 +83,15 @@ export function PlacesView() {
       return;
     }
 
-    if (window.naver?.maps) {
+    if (isNaverMapReady()) {
       setMapStatus("ready");
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>("script[data-dailyos-naver-map]");
-    if (existingScript) {
-      existingScript.addEventListener("load", () => setMapStatus("ready"), { once: true });
-      existingScript.addEventListener("error", () => setMapStatus("error"), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.async = true;
-    script.dataset.dailyosNaverMap = "true";
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(naverMapClientId)}`;
-    script.onload = () => setMapStatus("ready");
-    script.onerror = () => setMapStatus("error");
-    document.head.appendChild(script);
+    loadNaverMapScript().then(
+      () => setMapStatus("ready"),
+      () => setMapStatus("error"),
+    );
   }, []);
 
   const filteredSavedPlaces = useMemo(
@@ -210,6 +171,7 @@ export function PlacesView() {
   };
 
   const savePlaceFolders = async (place: PlaceRecord, folderIds: string[]) => {
+    if (!confirmAction("장소 저장 내용을 적용할까요?")) return;
     const uniqueFolderIds = [...new Set(folderIds)];
     const existingPlace = places.find((item) => isSamePlace(item, place));
 
@@ -253,6 +215,7 @@ export function PlacesView() {
   };
 
   const deletePlace = async (id: string) => {
+    if (!confirmAction("이 장소를 삭제할까요?")) return;
     const targetPlace = places.find((place) => place.id === id || place.sourceIds?.includes(id));
     const targetIds = targetPlace?.sourceIds ?? [id];
 
@@ -274,6 +237,7 @@ export function PlacesView() {
   };
 
   const saveFolder = async (folder: PlaceFolder) => {
+    if (!confirmAction(folder.id ? "폴더 수정을 저장할까요?" : "폴더를 저장할까요?")) return false;
     try {
       const savedFolder = folder.id ? await updatePlaceFolderInDb(folder) : await createPlaceFolderInDb({ color: folder.color, icon: folder.icon, name: folder.name, sortOrder: folder.sortOrder });
       if (!savedFolder) return false;
@@ -292,6 +256,7 @@ export function PlacesView() {
   };
 
   const deleteFolder = async (folderId: string) => {
+    if (!confirmAction("이 폴더를 삭제할까요? 연결된 장소 분류도 함께 정리됩니다.")) return;
     const targetFolder = folders.find((folder) => folder.id === folderId);
     try {
       const didDelete = await deletePlaceFolderFromDb(folderId);
@@ -632,35 +597,32 @@ function FolderManagerSheet({
                 <span style={{ backgroundColor: folder.color }} />
                 <strong>{folder.name}</strong>
                 <div>
-                  <button aria-label="폴더 수정" onClick={() => setEditingFolder(folder)} type="button">
+                  <IconButton label="폴더 수정" onClick={() => setEditingFolder(folder)} size="sm" tone="soft">
                     <Pencil aria-hidden size={14} />
-                  </button>
-                  <button aria-label="폴더 삭제" disabled={deletingFolderId === folder.id} onClick={() => void remove(folder.id)} type="button">
+                  </IconButton>
+                  <IconButton label="폴더 삭제" disabled={deletingFolderId === folder.id} onClick={() => void remove(folder.id)} size="sm" tone="danger">
                     <Trash2 aria-hidden size={14} />
-                  </button>
+                  </IconButton>
                 </div>
               </article>
             ))}
           </div>
 
           {editingFolder ? (
-            <div className="places-folder-form">
-              <label>
-                <span>폴더명</span>
+            <div className="places-folder-form ui-form-grid">
+              <FormField label="폴더명">
                 <input value={editingFolder.name} onChange={(event) => setEditingFolder((current) => (current ? { ...current, name: event.target.value } : current))} />
-              </label>
-              <label>
-                <span>색상</span>
+              </FormField>
+              <FormField label="색상">
                 <input type="color" value={editingFolder.color} onChange={(event) => setEditingFolder((current) => (current ? { ...current, color: event.target.value } : current))} />
-              </label>
-              <footer>
-                <ActionButton disabled={isSaving} onClick={() => setEditingFolder(null)} variant="secondary">
-                  취소
-                </ActionButton>
-                <ActionButton disabled={isSaving || editingFolder.name.trim().length === 0} onClick={() => void save()}>
-                  {isSaving ? "저장 중" : "확인"}
-                </ActionButton>
-              </footer>
+              </FormField>
+              <FormActionBar
+                cancelDisabled={isSaving}
+                onCancel={() => setEditingFolder(null)}
+                onSubmit={() => void save()}
+                submitDisabled={isSaving || editingFolder.name.trim().length === 0}
+                submitLabel={isSaving ? "저장 중" : "확인"}
+              />
             </div>
           ) : (
             <ActionButton onClick={startCreate}>
@@ -670,14 +632,15 @@ function FolderManagerSheet({
           )}
         </div>
 
-        <footer className="event-sheet__footer">
-          <ActionButton disabled={isSaving || Boolean(deletingFolderId)} onClick={onClose} variant="secondary">
-            닫기
-          </ActionButton>
-          <ActionButton disabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)} onClick={() => void confirm()}>
-            {isSaving ? "저장 중" : "확인"}
-          </ActionButton>
-        </footer>
+        <FormActionBar
+          cancelDisabled={isSaving || Boolean(deletingFolderId)}
+          cancelLabel="닫기"
+          className="event-sheet__footer"
+          onCancel={onClose}
+          onSubmit={() => void confirm()}
+          submitDisabled={isSaving || Boolean(deletingFolderId) || Boolean(editingFolder && editingFolder.name.trim().length === 0)}
+          submitLabel={isSaving ? "저장 중" : "확인"}
+        />
       </section>
     </div>
   );
@@ -736,14 +699,13 @@ function SavePlaceSheet({
           ))}
         </div>
 
-        <footer className="event-sheet__footer">
-          <ActionButton onClick={onClose} variant="secondary">
-            취소
-          </ActionButton>
-          <ActionButton onClick={() => onSave(checkedFolderIds)}>
-            적용
-          </ActionButton>
-        </footer>
+        <FormActionBar
+          cancelLabel="취소"
+          className="event-sheet__footer"
+          onCancel={onClose}
+          onSubmit={() => onSave(checkedFolderIds)}
+          submitLabel="적용"
+        />
       </section>
     </div>
   );
@@ -767,9 +729,9 @@ function SelectedPlacePanel({
   return (
     <section className="places-selected-panel" aria-label="선택 장소 정보">
       <div className="places-selected-panel__head">
-        <button className="places-selected-panel__back" aria-label="선택 장소 닫기" onClick={onBack} type="button">
+        <IconButton className="places-selected-panel__back" label="선택 장소 닫기" onClick={onBack} size="sm" tone="soft">
           <ArrowLeft aria-hidden size={17} />
-        </button>
+        </IconButton>
         <div className="places-selected-panel__mark" style={{ backgroundColor: folders[0]?.color ?? "var(--violet)" }}>
           {isSaved ? <Star aria-hidden size={17} /> : <MapPin aria-hidden size={17} />}
         </div>
@@ -790,20 +752,20 @@ function SelectedPlacePanel({
       </div>
       <div className="places-selected-panel__actions">
         {isSaved ? (
-          <button className="places-selected-panel__button places-selected-panel__button--muted" onClick={onSave} type="button">
+          <ActionButton className="places-selected-panel__button places-selected-panel__button--muted" onClick={onSave} variant="secondary">
             <Check aria-hidden size={15} />
             저장 폴더 편집
-          </button>
+          </ActionButton>
         ) : (
-          <button className="places-selected-panel__button" onClick={onSave} type="button">
+          <ActionButton className="places-selected-panel__button" onClick={onSave}>
             <Star aria-hidden size={15} />
             폴더에 저장
-          </button>
+          </ActionButton>
         )}
         {onDelete ? (
-          <button className="places-selected-panel__icon" aria-label="장소 삭제" onClick={onDelete} type="button">
+          <IconButton className="places-selected-panel__icon" label="장소 삭제" onClick={onDelete} tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         ) : null}
       </div>
     </section>

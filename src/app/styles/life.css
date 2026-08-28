@@ -1,227 +1,3 @@
-.life-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.life-header {
-  align-items: flex-start;
-}
-
-.life-axis-view {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
-  gap: var(--space-4);
-}
-
-.life-tab-panel,
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.life-axis-view .calendar-layout--detail-open,
-.life-axis-view .ledger-layout {
-  align-items: flex-start;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
-}
-
-.life-axis-view .calendar-layout--database.calendar-layout--detail-open {
-  grid-template-columns: minmax(0, 0.96fr) minmax(460px, 1.14fr);
-}
-
-.life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card,
-.life-axis-view .date-detail-card {
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: var(--radius-xl);
-  background: var(--panel-elevated);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
-}
-
-.life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card {
-  min-height: 720px;
-  padding: 28px;
-}
-
-.life-axis-view .date-detail-card {
-  min-height: 720px;
-  padding: 24px;
-}
-
-.life-calendar-db-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.life-calendar-db-panel {
-  display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.life-calendar-db-scopes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.life-calendar-db-chip,
-.life-calendar-db-summary__card {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  color: var(--text);
-  font: inherit;
-}
-
-.life-calendar-db-chip {
-  min-height: var(--chip-height);
-  border-radius: var(--radius-pill);
-  background: var(--field-bg-strong);
-  padding: 0 var(--chip-padding-x);
-}
-
-.life-calendar-db-chip--active {
-  border-color: rgba(201, 184, 255, 0.35);
-  background: rgba(201, 184, 255, 0.14);
-}
-
-.life-calendar-db-range {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.life-calendar-db-range label {
-  display: grid;
-  gap: 6px;
-}
-
-.life-calendar-db-range span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.life-calendar-db-summary__card {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: var(--radius-md);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.11), transparent 34%),
-    var(--surface-soft);
-  padding: 12px;
-  text-align: left;
-}
-
-.life-calendar-db-summary__card--active {
-  border-color: rgba(201, 184, 255, 0.34);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.18), transparent 38%),
-    rgba(255, 255, 255, 0.07);
-}
-
-.life-calendar-db-summary span {
-  display: block;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 850;
-}
-
-.life-calendar-db-summary strong {
-  display: block;
-  margin-top: 5px;
-  color: var(--text);
-  font-size: 1.15rem;
-  font-weight: 950;
-}
-
-.life-calendar-db-overview {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.life-calendar-db-overview article,
-.life-calendar-db-day-grid article,
-.life-calendar-db-hero article,
-.life-calendar-db-brief-item {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  background: var(--panel-frost);
-  padding: 14px;
-}
-
-.life-calendar-db-overview span,
-.life-calendar-db-day-grid span,
-.life-calendar-db-hero span,
-.life-calendar-db-brief-item span,
-.life-calendar-db-meta article > span,
-.life-calendar-db-section__head .eyebrow {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-calendar-db-overview strong,
-.life-calendar-db-day-grid strong,
-.life-calendar-db-hero strong,
-.life-calendar-db-brief-item strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.life-calendar-db-overview p,
-.life-calendar-db-period-card p,
-.life-calendar-db-busy-item span,
-.life-calendar-db-meta p,
-.life-calendar-db-hero p,
-.life-calendar-db-brief-item p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.life-calendar-db-content {
-  display: grid;
-  gap: var(--space-4);
-  min-height: 620px;
-}
-
-.life-calendar-db-story {
-  display: grid;
-  gap: var(--space-2);
-  border: 1px solid rgba(201, 184, 255, 0.16);
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(201, 184, 255, 0.12), transparent 38%),
-    var(--field-bg-strong);
-  padding: var(--card-padding);
-}
-
-.life-calendar-db-story span,
-.life-calendar-db-rhythm__card span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-calendar-db-story strong {
-  color: var(--text);
-  font-size: 0.98rem;
-  line-height: 1.6;
-}
-
 .life-calendar-day-panel {
   display: grid;
   gap: var(--space-3);
@@ -845,6 +621,29 @@
   padding: 16px;
 }
 
+.life-calendar-db-day-summary {
+  display: grid;
+  gap: 16px;
+}
+
+.life-calendar-db-section--empty {
+  min-height: 148px;
+}
+
+.life-calendar-db-section--plain {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.life-calendar-db-divider {
+  height: 1px;
+  margin: 10px 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(201, 184, 255, 0.42), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(201, 184, 255, 0.08);
+}
+
 .life-calendar-db-section__head h3 {
   margin: 2px 0 0;
   font-size: 1.04rem;
@@ -1227,7 +1026,7 @@
 }
 
 .life-calendar-header-modes__button {
-  min-height: 38px;
+  min-height: var(--chip-height);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -1235,35 +1034,28 @@
   font: inherit;
   font-size: 0.84rem;
   font-weight: 820;
-  padding: 0 14px;
+  padding: 0 var(--chip-padding-x);
 }
 
 .life-calendar-header-modes__button--active {
-  border-color: rgba(201, 184, 255, 0.32);
-  background: rgba(201, 184, 255, 0.14);
+  border-color: var(--tone-violet-border);
+  background: var(--tone-violet-bg);
 }
 
 .life-calendar-header-modes__range {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  align-items: end;
+  gap: 10px;
   margin-left: 6px;
 }
 
-.life-calendar-header-modes__range input {
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font: inherit;
-  padding: 0 12px;
+.life-calendar-header-modes__range .ui-form-field {
+  min-width: 0;
 }
 
-.life-calendar-header-modes__range span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
+.life-calendar-header-modes__range input {
+  min-height: var(--chip-height);
 }
 
 .life-db-hero--dashboard {
@@ -1547,13 +1339,7 @@
 
 .life-map-empty {
   align-items: center;
-  gap: 12px;
   min-height: 260px;
-  text-align: center;
-}
-
-.life-map-empty svg {
-  color: var(--violet);
 }
 
 .ledger-page {
@@ -1873,35 +1659,8 @@
   padding: 0 11px;
 }
 
-.life-capture-date {
-  display: grid;
-  gap: 8px;
-}
-
-.life-capture-date span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.life-capture-primary {
-  min-height: 44px;
-  border: 1px solid rgba(201, 184, 255, 0.25);
-  border-radius: 13px;
-  background: rgba(201, 184, 255, 0.13);
-  color: var(--violet);
-  cursor: pointer;
-  font-weight: 900;
-}
-
-.life-capture-primary:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.life-capture-secondary,
 .life-record-actions button {
-  min-height: 34px;
+  min-height: var(--planner-toggle-height);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.05);
@@ -1909,10 +1668,9 @@
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 850;
-  padding: 0 11px;
+  padding: 0 var(--planner-toggle-padding-x);
 }
 
-.life-capture-secondary:hover,
 .life-record-actions button:hover {
   border-color: rgba(201, 184, 255, 0.28);
   color: var(--text);
@@ -2623,82 +2381,15 @@
   gap: 12px;
 }
 
-.ledger-income-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.ledger-income-form span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.ledger-income-form input,
-.ledger-income-form select,
-.ledger-income-form textarea {
-  width: 100%;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  outline: 0;
-  background: var(--field-bg);
-  color: var(--text);
-  font: inherit;
-  padding: var(--field-padding-y) var(--field-padding-x);
-}
-
-.life-people-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  padding: 0 var(--field-padding-x);
-}
-
-.life-people-search input,
-.life-people-form input,
-.life-people-form textarea,
-.life-people-sort select {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-}
-
 .life-people-form {
   display: grid;
   gap: 14px;
 }
 
-.life-people-form label {
-  display: grid;
-  gap: 8px;
-}
-
-.life-people-form span,
 .life-people-suggestions strong {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
-}
-
-.life-people-form textarea {
-  min-height: 96px;
-  resize: vertical;
-}
-
-.life-people-form label input,
-.life-people-form label textarea {
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  padding: var(--field-padding-y) var(--field-padding-x);
 }
 
 .life-people-form__actions,
@@ -2722,18 +2413,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-}
-
-.life-people-sort {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--field-min-height);
-  border: var(--field-border);
-  border-radius: var(--field-radius);
-  background: var(--field-bg);
-  color: var(--muted);
-  padding: 0 var(--field-padding-x);
 }
 
 .life-person-buttons--scroll {
@@ -3052,6 +2731,53 @@
   resize: vertical;
 }
 
+.life-ask-interpretation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-ask-interpretation article,
+.life-ask-breakdown-card,
+.life-ask-followups {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px 16px;
+}
+
+.life-ask-interpretation article {
+  display: grid;
+  gap: 6px;
+}
+
+.life-ask-interpretation span,
+.life-ask-breakdown-card span,
+.life-ask-followups__head span,
+.life-ask-followups .eyebrow {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-ask-interpretation strong,
+.life-ask-breakdown-card p {
+  color: var(--text);
+}
+
+.life-ask-interpretation strong {
+  font-size: 0.98rem;
+}
+
+.life-ask-interpretation p,
+.life-ask-breakdown-card div,
+.life-ask-followups__items button {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
 .life-ask-examples {
   display: flex;
   flex-wrap: wrap;
@@ -3094,11 +2820,17 @@
 }
 
 .life-ask-answer__body {
+  min-height: 360px;
+  max-height: 640px;
+  overflow: auto;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
   color: var(--text);
   font-size: 0.96rem;
   font-weight: 650;
   line-height: 1.75;
+  padding-right: 6px;
 }
 
 .life-ask-brief {
@@ -3108,7 +2840,7 @@
 
 .life-ask-overview-card,
 .life-ask-metric-grid article,
-.life-ask-detail-card {
+.life-ask-answer-block {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.035);
@@ -3122,8 +2854,8 @@
 
 .life-ask-overview-card span,
 .life-ask-metric-grid span,
-.life-ask-detail-card span,
-.life-ask-answer-block .eyebrow {
+.life-ask-answer-block .eyebrow,
+.life-ask-answer-block__head span {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 820;
@@ -3164,43 +2896,80 @@
   font-size: 0.78rem;
 }
 
-.life-ask-detail-grid {
+.life-ask-link-groups {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.life-ask-detail-card {
+.life-ask-breakdowns {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  align-content: start;
 }
 
-.life-ask-detail-card ul {
+.life-ask-breakdown-card {
+  display: grid;
+  gap: 10px;
+}
+
+.life-ask-breakdown-card div {
+  display: grid;
+  gap: 6px;
+}
+
+.life-ask-breakdown-card p {
+  margin: 0;
+}
+
+.life-ask-link-group {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.life-ask-link-group__head span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-ask-link-group__items {
   display: grid;
   gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.life-ask-detail-card li {
+.life-ask-link-item {
   display: grid;
   gap: 4px;
+  text-align: left;
+  border: 1px solid rgba(201, 184, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.life-ask-link-item strong {
   color: var(--text);
   font-size: 0.84rem;
-  line-height: 1.5;
+  font-weight: 850;
 }
 
-.life-ask-detail-card li b {
-  color: var(--violet);
-  font-size: 0.74rem;
-}
-
-.life-ask-detail-card li small {
+.life-ask-link-item span {
   color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.45;
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
+.life-ask-link-item:hover {
+  border-color: rgba(201, 184, 255, 0.32);
+  background: rgba(201, 184, 255, 0.12);
 }
 
 .life-ask-answer-block {
@@ -3208,15 +2977,53 @@
   gap: 10px;
 }
 
+.life-ask-followups {
+  display: grid;
+  gap: 12px;
+}
+
+.life-ask-followups__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-ask-followups__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-ask-followups__items button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 760;
+  padding: 8px 12px;
+}
+
+.life-ask-followups__items button:hover,
+.life-ask-examples button:hover {
+  border-color: rgba(201, 184, 255, 0.26);
+  background: rgba(201, 184, 255, 0.08);
+}
+
+.life-ask-answer-block__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .life-activity-layout {
   display: grid;
   grid-template-columns: minmax(420px, 1.1fr) minmax(320px, 0.9fr);
   gap: 18px;
   align-items: start;
-}
-
-.life-activity-layout--panel-closed {
-  grid-template-columns: minmax(420px, 1fr) minmax(96px, 0.12fr);
 }
 
 .life-report-layout {
@@ -3242,78 +3049,27 @@
   padding: 22px;
 }
 
-.life-activity-form > .section-heading,
-.life-selected-day-panel > .section-heading {
-  min-height: 96px;
-  align-items: flex-start;
-  padding-top: 2px;
+.life-selected-day-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.life-activity-form > .section-heading > div:first-child,
-.life-selected-day-panel > .section-heading > div:first-child {
-  display: grid;
-  align-content: start;
-  gap: 6px;
+.life-selected-day-title i {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.life-selected-day-panel {
-  position: sticky;
-  top: 18px;
-  overflow: hidden;
-  transition:
-    max-width 180ms ease,
-    padding 180ms ease;
-}
-
-.life-selected-day-panel--closed {
-  align-content: start;
-  min-height: 132px;
-  padding: 14px 10px;
-}
-
-.life-selected-day-panel--closed .section-heading {
-  display: grid;
-  grid-template-columns: 1fr;
-  justify-items: center;
-  text-align: center;
-}
-
-.life-selected-day-panel--closed .section-heading h2 {
-  writing-mode: vertical-rl;
-  max-height: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.life-selected-day-panel--closed .section-heading .eyebrow {
-  display: none;
-}
-
-.life-selected-day-panel--closed .life-selected-day-toggle {
-  width: 100%;
-  margin-top: 10px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(16, 185, 129, 0.16));
-  color: var(--text);
-}
-
-.life-selected-day-toggle {
-  border: 1px solid rgba(201, 184, 255, 0.24);
-  border-radius: 999px;
-  background: rgba(201, 184, 255, 0.12);
+.life-selected-day-title b {
   color: var(--violet);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 900;
-  padding: 8px 11px;
+  font-weight: 950;
 }
 
 button:disabled {
   cursor: default;
   opacity: 0.58;
-}
-
-button:disabled {
   filter: saturate(0.82);
 }
 
@@ -3345,35 +3101,80 @@ button:disabled {
 
 .life-activity-form__actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  align-items: flex-start;
-  gap: 10px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 .life-activity-action-group {
   display: inline-flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.035);
 }
 
-.life-activity-action-group--accent {
-  border-color: rgba(201, 184, 255, 0.22);
-  background: rgba(201, 184, 255, 0.08);
+.life-activity-action-group--mode {
+  justify-content: flex-start;
+}
+
+.life-activity-action-group--state {
+  order: 1;
+  margin-right: 4px;
+}
+
+.life-activity-action-group--mode {
+  order: 2;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .life-selected-day-panel__heading {
-  padding-top: 0;
+  gap: 18px;
 }
 
 .life-activity-quick-toggle--active {
   border-color: rgba(201, 184, 255, 0.42) !important;
   background: rgba(201, 184, 255, 0.18) !important;
   color: var(--text) !important;
+}
+
+.life-activity-state-toggle {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px !important;
+  padding: 0 !important;
+}
+
+.life-activity-state-toggle--wake {
+  border-color: rgba(125, 211, 252, 0.28) !important;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.08)) !important;
+  color: #c8f1ff !important;
+}
+
+.life-activity-state-toggle--sleep {
+  border-color: rgba(196, 181, 253, 0.28) !important;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.08)) !important;
+  color: #e7ddff !important;
+}
+
+.life-activity-state-toggle--active.life-activity-state-toggle--wake {
+  border-color: rgba(125, 211, 252, 0.48) !important;
+  background: rgba(56, 189, 248, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.life-activity-state-toggle--active.life-activity-state-toggle--sleep {
+  border-color: rgba(196, 181, 253, 0.5) !important;
+  background: rgba(139, 92, 246, 0.24) !important;
+  color: #ffffff !important;
+}
+
+.life-activity-state-reset {
+  min-height: 38px;
+  border-style: dashed !important;
 }
 
 .life-activity-quick-panel {
@@ -3938,8 +3739,8 @@ button:disabled {
 }
 
 .life-places-manager__buttons button,
-.schedule-place-search button,
-.schedule-place-results button {
+.life-places-mapping-search button,
+.life-places-mapping-results button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3951,7 +3752,8 @@ button:disabled {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  padding: 10px 12px;
+  min-height: var(--chip-height);
+  padding: 0 var(--chip-padding-x);
 }
 
 .life-places-manager__buttons button {
@@ -4099,7 +3901,7 @@ button:disabled {
   resize: vertical;
 }
 
-.schedule-place-search {
+.life-places-mapping-search {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
@@ -4108,10 +3910,10 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--field-radius);
   background: rgba(255, 255, 255, 0.7);
-  padding: 8px var(--field-padding-x);
+  padding: var(--planner-search-padding-y) var(--field-padding-x);
 }
 
-.schedule-place-search input {
+.life-places-mapping-search input {
   min-width: 0;
   border: 0 !important;
   background: transparent !important;
@@ -4135,7 +3937,7 @@ button:disabled {
   align-content: start;
 }
 
-.schedule-place-results {
+.life-places-mapping-results {
   display: grid;
   gap: 8px;
   max-height: 220px;
@@ -4143,19 +3945,19 @@ button:disabled {
   padding: 2px 4px 2px 2px;
 }
 
-.schedule-place-results button {
+.life-places-mapping-results button {
   justify-content: flex-start;
   text-align: left;
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-strong);
 }
 
-.schedule-place-results button strong,
-.schedule-place-results button span {
+.life-places-mapping-results button strong,
+.life-places-mapping-results button span {
   display: block;
 }
 
-.schedule-place-results button span {
+.life-places-mapping-results button span {
   color: var(--text-muted);
   font-size: 12px;
 }
@@ -4439,12 +4241,72 @@ button:disabled {
   gap: 8px;
 }
 
-.life-activity-calendar__header strong {
-  color: var(--text);
+.life-activity-calendar__month-picker {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.life-activity-calendar__month-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  cursor: pointer;
+  font: inherit;
   font-size: 0.98rem;
   font-weight: 900;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   text-align: center;
+  white-space: nowrap;
+  margin: 0 auto;
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.life-activity-calendar__month-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  min-width: 190px;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 16px;
+  background: rgba(12, 18, 32, 0.96);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.28);
+  padding: 12px;
+  transform: translateX(-50%);
+}
+
+.life-activity-calendar__month-popover select {
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.life-activity-calendar__month-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-activity-calendar__month-actions button {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 800;
 }
 
 .life-activity-calendar__header button,
@@ -4491,6 +4353,14 @@ button:disabled {
   text-align: center;
 }
 
+.life-activity-calendar__weekday--sun {
+  color: #fda4af !important;
+}
+
+.life-activity-calendar__weekday--sat {
+  color: #93c5fd !important;
+}
+
 .life-activity-calendar__day {
   position: relative;
   display: grid;
@@ -4511,6 +4381,14 @@ button:disabled {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(99, 102, 241, 0.17));
   color: var(--text);
   box-shadow: 0 12px 32px rgba(99, 102, 241, 0.18);
+}
+
+.life-activity-calendar__day--sun span {
+  color: #fecdd3;
+}
+
+.life-activity-calendar__day--sat span {
+  color: #bfdbfe;
 }
 
 .life-activity-calendar__day em {
@@ -4550,14 +4428,25 @@ button:disabled {
 }
 
 .life-activity-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   padding: 14px;
+}
+
+.life-activity-item__body {
+  min-width: 0;
+}
+
+.life-record-actions--activity-item {
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  align-self: start;
+  margin-top: 0;
 }
 
 .life-activity-item .life-record-actions button:disabled,
@@ -4775,27 +4664,6 @@ button:disabled {
   width: 100%;
 }
 
-.life-photo-link-field {
-  display: grid;
-  gap: 8px;
-}
-
-.life-photo-link-field span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.life-photo-link-field select {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  min-height: 42px;
-  padding: 0 12px;
-}
-
 .life-photo-upload-error {
   margin: -4px 0 2px;
   border: 1px solid rgba(255, 107, 149, 0.28);
@@ -4868,56 +4736,9 @@ button:disabled {
   font-weight: 900;
 }
 
-.life-section-edit,
-.life-section-save {
-  min-height: 34px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 900;
-  padding: 0 13px;
-}
-
-.life-section-edit {
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--muted);
-}
-
-.life-section-save {
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.13);
-  color: var(--violet);
-}
-
-.life-section-edit:disabled,
-.life-section-save:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
 .life-health-editor {
   display: grid;
   gap: 10px;
-}
-
-.life-health-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.life-health-fields label,
-.life-health-weight-field {
-  display: grid;
-  gap: 8px;
-}
-
-.life-health-fields span,
-.life-health-weight-field span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
 }
 
 .life-health-message {
@@ -5088,4 +4909,189 @@ button:disabled {
 
 .life-photo-gallery--grid .life-photo-media-frame {
   min-height: 220px;
+}
+
+.life-gallery-layout {
+  align-items: start;
+}
+
+.life-gallery-toolbar,
+.life-gallery-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.life-gallery-toolbar__filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.life-gallery-toolbar__filters--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.life-gallery-toolbar__filters--compact .ui-action-button {
+  min-height: var(--chip-height);
+}
+
+.life-gallery-toolbar__filters--compact .ui-form-field > input {
+  min-height: var(--chip-height);
+}
+
+.life-gallery-toolbar__summary,
+.life-gallery-pagination,
+.life-media-upload-panel__actions,
+.life-gallery-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-gallery-pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.life-gallery-pagination span,
+.life-gallery-toolbar__summary span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.life-gallery-toolbar__summary strong {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.life-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.life-gallery-card {
+  display: grid;
+  align-content: start;
+  overflow: clip;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  margin: 0;
+}
+
+.life-gallery-card__media {
+  position: relative;
+  min-height: 220px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.life-gallery-card__media img,
+.life-gallery-card__media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+}
+
+.life-gallery-card figcaption {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.life-gallery-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.life-gallery-card__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 850;
+  padding: 7px 10px;
+}
+
+.life-gallery-card__toggle--open {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+}
+
+.life-gallery-card__chevron {
+  transition: transform 160ms ease;
+}
+
+.life-gallery-card__toggle--open .life-gallery-card__chevron {
+  transform: rotate(180deg);
+}
+
+.life-gallery-card__head span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.life-gallery-card__head strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.life-gallery-card figcaption button {
+  width: fit-content;
+  border: 1px solid rgba(255, 107, 149, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 107, 149, 0.08);
+  color: var(--pink);
+  font-size: 0.76rem;
+  font-weight: 850;
+  padding: 6px 10px;
+}
+
+.life-gallery-card__toggle,
+.life-gallery-card__actions button {
+  min-height: 34px;
+}
+
+@media (max-width: 1180px) {
+  .life-ask-interpretation,
+  .life-ask-breakdowns,
+  .life-ask-link-groups,
+  .life-ask-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .life-ask-interpretation,
+  .life-ask-breakdowns,
+  .life-ask-link-groups,
+  .life-ask-metric-grid {
+    grid-template-columns: 1fr;
+  }
 }

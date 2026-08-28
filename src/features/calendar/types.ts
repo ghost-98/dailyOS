@@ -1,7 +1,7 @@
 import type { TaskItem } from "@/types/domain";
 import type { CalendarEvent } from "@/features/calendar/data";
 
-export type CalendarCategory = "schedule" | "event" | "todo";
+export type CalendarCategory = "event" | "todo";
 export type ExternalCalendarCategory = "activity" | "expense" | "income" | "workout" | "weight" | "daily_log" | "photo";
 export type ExternalCalendarItem = {
   amount?: number;
@@ -17,7 +17,7 @@ export type ExternalCalendarItem = {
   isAllDay?: boolean;
   linkedTargetId?: string;
   linkedTargetTitle?: string;
-  linkedTargetType?: "schedule" | "todo" | "event" | "activity";
+  linkedTargetType?: "todo" | "event" | "activity";
   meta?: string;
   mimeType?: string;
   placeAddress?: string;
@@ -31,7 +31,7 @@ export type ExternalCalendarItem = {
   width?: number;
 };
 export type DayTimelineItem =
-  | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "schedule" | "event" }
+  | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "event" }
   | { id: string; sortMinutes: number; task: TaskItem; timeLabel: string; type: "todo" }
   | { external: ExternalCalendarItem; id: string; sortMinutes: number; timeLabel: string; type: ExternalCalendarCategory };
 export type DragPlacement = "before" | "after";

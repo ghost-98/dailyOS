@@ -40,14 +40,20 @@ dailyOS는 세 계층으로 나눈다.
 - `src/app`: Next.js 라우트 진입점. 대부분 `AppShell` + feature view만 연결한다.
 - `src/components`: 인증, 레이아웃, 공통 UI.
 - `src/features/calendar`: 일정·할일·이벤트 입력과 캘린더 UI.
-- `src/features/life`: 라이프 DB 홈, 하루 리포트, 월간 회고, 검색, AI 질문, 활동/기록/사진/건강/장소 흐름.
+- `src/features/life`: 라이프 DB 홈, 검색, AI 질문, 활동/기록/사진/건강/장소 흐름.
 - `src/features/ledger`: 파생 지출 조회.
 - `src/features/places`: 장소 보관함.
-- `src/features/career`: 커리어 관리.
 - `src/features/settings`: 계정, 백업, 데이터 관리.
 - `src/lib`: Supabase 클라이언트와 인증 사용자 헬퍼.
 - `src/types/domain.ts`: 앱에서 공유하는 핵심 도메인 타입.
 - `supabase/schema.sql`: DB 테이블, RLS, 스토리지 정책의 단일 기준.
+
+## 현재 리팩터링 기준
+
+- 화면 데이터 로딩은 가능한 한 공통 훅으로 묶고, feature 내부에서 스냅샷 단위로 다룬다.
+- `LifeView.tsx`, `CalendarView.tsx` 같은 대형 파일은 화면 라우팅/조합과 데이터 로딩을 분리하고, 탭 화면과 시트/패널은 별도 파일로 분리한다.
+- AI 질문은 `질문 UI`, `질문 분석`, `API 호출` 계층을 분리한다.
+- 스타일은 `life.css`, `calendar.css` 같은 대형 파일에 계속 누적하지 않고, 레이아웃/DB 패널/셸 단위로 쪼갠다.
 
 ## 유지보수 기준
 

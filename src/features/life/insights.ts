@@ -14,7 +14,7 @@ export type LifeContextBundle = {
   photos: LifePhotoRecord[];
   place?: LifePlaceRef;
   targetId: string;
-  targetType: "schedule" | "todo" | "event" | "activity";
+  targetType: "todo" | "event" | "activity";
   title: string;
 };
 
@@ -26,7 +26,7 @@ export type LifeSearchItem = {
   label: string;
   tags: string[];
   title: string;
-  type: "schedule" | "todo" | "event" | "activity" | "expense" | "income" | "daily_log" | "photo" | "workout" | "weight";
+  type: "todo" | "event" | "activity" | "expense" | "income" | "daily_log" | "photo" | "workout" | "weight";
 };
 
 const LIFE_ASK_RECORD_LIMIT = 220;
@@ -51,9 +51,9 @@ export function buildLifeContextBundles(
   photos: LifePhotoRecord[],
 ): LifeContextBundle[] {
   const eventBundles = events
-    .filter((event) => event.type === "schedule" || event.type === "event")
+    .filter((event) => event.type === "event")
     .map((event) => {
-      const targetType = event.type === "event" ? "event" : "schedule";
+      const targetType = "event";
       return {
         expenses: expenses.filter((expense) => expense.targetType === targetType && expense.targetId === event.id),
         date,
@@ -154,8 +154,8 @@ export function buildPeopleSummaries(events: CalendarEvent[], tasks: TaskItem[],
     return nextPerson;
   };
 
-  for (const event of events.filter((item) => item.type === "schedule" || item.type === "event")) {
-    const targetType = event.type === "event" ? "event" : "schedule";
+  for (const event of events.filter((item) => item.type === "event")) {
+    const targetType = "event";
     for (const name of parseCompanions(event.companions)) {
       const person = ensurePerson(name);
       const linkedExpenses = expenses.filter((expense) => expense.targetType === targetType && expense.targetId === event.id);
@@ -165,7 +165,7 @@ export function buildPeopleSummaries(events: CalendarEvent[], tasks: TaskItem[],
         date: event.date,
         description: formatContextMeta(event.date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
         id: `${name}-${targetType}-${event.id}`,
-        label: targetType === "event" ? "이벤트" : "일정",
+        label: "이벤트",
         tags: [event.place?.name, event.meta].filter(Boolean) as string[],
         title: event.title,
         type: targetType,
@@ -244,15 +244,15 @@ export function buildLifeSearchItems(
 ): LifeSearchItem[] {
   return [
     ...events
-      .filter((event) => event.type === "schedule" || event.type === "event")
+      .filter((event) => event.type === "event")
       .map((event) => ({
         date: event.date,
         description: formatContextMeta(event.date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
         id: `${event.type}-${event.id}`,
-        label: event.type === "event" ? "이벤트" : "일정",
+        label: "이벤트",
         tags: [event.meta, event.place?.name, event.place?.address, event.companions, event.expenseAmount ? formatWon(event.expenseAmount) : ""].filter(Boolean) as string[],
         title: event.title,
-        type: event.type === "event" ? ("event" as const) : ("schedule" as const),
+        type: "event" as const,
       })),
     ...tasks.map((task) => ({
       date: task.scheduledDate,
@@ -390,18 +390,16 @@ function getLifeAskTypeScore(question: string, type: LifeSearchItem["type"]) {
   if ((question.includes("소비") || question.includes("지출") || question.includes("돈")) && type === "expense") return 4;
   if ((question.includes("수입") || question.includes("월급") || question.includes("입금")) && type === "income") return 4;
   if ((question.includes("운동") || question.includes("러닝") || question.includes("건강")) && (type === "workout" || type === "weight")) return 4;
-  if ((question.includes("누구") || question.includes("사람") || question.includes("친구")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
-  if ((question.includes("장소") || question.includes("어디")) && (type === "schedule" || type === "todo" || type === "event" || type === "activity")) return 3;
+  if ((question.includes("누구") || question.includes("사람") || question.includes("친구")) && (type === "todo" || type === "event" || type === "activity")) return 3;
+  if ((question.includes("장소") || question.includes("어디")) && (type === "todo" || type === "event" || type === "activity")) return 3;
   if ((question.includes("활동") || question.includes("뭐했") || question.includes("무엇")) && type === "activity") return 4;
   return 0;
 }
 
 function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
-  if (type === "schedule") return "일정";
   if (type === "todo") return "할 일";
   if (type === "event") return "이벤트";
   if (type === "activity") return "활동";
-  if (type === "income") return "수입";
   return "날짜";
 }
 

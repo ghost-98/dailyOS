@@ -3,7 +3,9 @@
 import type { DragEvent } from "react";
 import { useMemo, useState } from "react";
 import { Activity, Check, Pencil, Trash2 } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import { Badge } from "@/components/ui/Badge";
+import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
 import { categoryLabels, eventTone, formatPlanDateTime, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
@@ -11,7 +13,7 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
 
 type ActivityConversionState = { id: string; type: "event" | "task" } | null;
-type TimelineFilter = "event" | "schedule" | "todo";
+type TimelineFilter = "event" | "todo";
 
 export function DayTimelineSection({
   countsByCategory,
@@ -36,11 +38,10 @@ export function DayTimelineSection({
   onToggleDone,
   readOnly = false,
 }: {
-  countsByCategory?: { event: number; schedule: number; todo: number };
+  countsByCategory?: { event: number; todo: number };
   deletingPlan?: { id: string; type: "event" | "task" } | null;
-  draggingItem: { id: string; type: "schedule" | "event" | "todo" } | null;
+  draggingItem: { id: string; type: "event" | "todo" } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
-  externalCount?: number;
   isConvertingToActivity?: ActivityConversionState;
   isLoading: boolean;
   items: DayTimelineItem[];
@@ -49,13 +50,13 @@ export function DayTimelineSection({
   onCreateActivityFromTask: (task: TaskItem) => void;
   onDeleteEvent: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: "schedule" | "event" | "todo") => void;
+  onDragOverItem: (event: DragEvent<HTMLElement>, targetId: string, targetType: "event" | "todo") => void;
   onEditEvent: (event: CalendarEvent) => void;
   onEditTask: (task: TaskItem) => void;
   onReorderEvent: (targetId: string, placement?: DragPlacement) => void;
   onReorderTask: (targetId: string, placement?: DragPlacement) => void;
   onResolveDropPlacement: (event: DragEvent<HTMLElement>) => DragPlacement;
-  onSetDragging: (item: { id: string; type: "schedule" | "event" | "todo" }) => void;
+  onSetDragging: (item: { id: string; type: "event" | "todo" }) => void;
   onToggleDone: (task: TaskItem) => void;
   readOnly?: boolean;
 }) {
@@ -67,7 +68,7 @@ export function DayTimelineSection({
         ? items
         : items.filter((item) => {
             if ("task" in item) return activeFilters.includes("todo");
-            if ("event" in item) return activeFilters.includes(item.event.type as "event" | "schedule");
+            if ("event" in item) return activeFilters.includes("event");
             return true;
           }),
     [activeFilters, items],
@@ -87,20 +88,18 @@ export function DayTimelineSection({
         {countsByCategory ? (
           <div className="day-timeline__filters" aria-label="타임라인 필터">
             {([
-              ["schedule", "일정", countsByCategory.schedule],
               ["todo", "할 일", countsByCategory.todo],
               ["event", "이벤트", countsByCategory.event],
             ] as const).map(([type, label, count]) => (
-              <button
-                className={`calendar-filter calendar-filter--${type} ${activeFilters.includes(type) ? "calendar-filter--active" : ""} ${activeFilters.length > 0 && !activeFilters.includes(type) ? "calendar-filter--muted" : ""}`}
+              <CalendarFilterChip
+                active={activeFilters.includes(type)}
+                count={count}
                 key={type}
+                label={label}
+                muted={activeFilters.length > 0 && !activeFilters.includes(type)}
                 onClick={() => toggleFilter(type)}
-                type="button"
-              >
-                <span className={`calendar-dot calendar-dot--${type}`} />
-                {label}
-                <b>{count}</b>
-              </button>
+                tone={type}
+              />
             ))}
           </div>
         ) : null}
@@ -232,15 +231,15 @@ function EventDateItem({
       </div>
       {!readOnly ? (
         <div className="date-event__actions">
-          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(event)} title="이 항목을 실제 활동으로 기록" type="button">
+          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(event)} size="sm" title="이 항목을 실제 활동으로 기록" tone="outline">
             <Activity aria-hidden size={15} />
-          </button>
-          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(event)} type="button">
+          </IconButton>
+          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(event)} size="sm" tone="outline">
             <Pencil aria-hidden size={15} />
-          </button>
-          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(event.id)} type="button">
+          </IconButton>
+          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(event.id)} size="sm" tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         </div>
       ) : null}
     </article>
@@ -311,15 +310,15 @@ function TaskDateItem({
       </div>
       {!readOnly ? (
         <div className="date-event__actions">
-          <button aria-label="활동으로 기록" disabled={isConverting || isDeleting} onClick={() => onCreateActivity(task)} title="이 할 일을 실제 활동으로 기록" type="button">
+          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(task)} size="sm" title="이 할 일을 실제 활동으로 기록" tone="outline">
             <Activity aria-hidden size={15} />
-          </button>
-          <button aria-label="수정" disabled={isDeleting} onClick={() => onEdit(task)} type="button">
+          </IconButton>
+          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(task)} size="sm" tone="outline">
             <Pencil aria-hidden size={15} />
-          </button>
-          <button aria-label="삭제" disabled={isDeleting} onClick={() => onDelete(task.id)} type="button">
+          </IconButton>
+          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(task.id)} size="sm" tone="danger">
             <Trash2 aria-hidden size={15} />
-          </button>
+          </IconButton>
         </div>
       ) : null}
     </article>

@@ -128,8 +128,8 @@
 }
 
 .today-plan-tab--active {
-  border-color: rgba(157, 178, 255, 0.4);
-  background: rgba(157, 178, 255, 0.14);
+  border-color: var(--tone-violet-border);
+  background: var(--tone-violet-bg);
   color: var(--text);
 }
 
@@ -326,6 +326,7 @@
 }
 
 .today-command-card {
+  gap: 18px;
   padding: var(--card-padding-lg);
 }
 
@@ -402,7 +403,7 @@
 .today-place-item {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--surface-soft);
+  background: var(--panel-frost);
   padding: 15px;
 }
 
@@ -444,7 +445,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--field-bg-strong);
+  background: var(--panel-frost);
   color: var(--muted);
 }
 
