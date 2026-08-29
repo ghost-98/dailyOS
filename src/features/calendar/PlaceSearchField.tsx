@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { MapPin, Search, Star } from "lucide-react";
-import { PlaceLine } from "@/features/calendar/components";
 import { fetchPersonalPlacesFromDb } from "@/features/personalPlaces/api";
 import type { PersonalPlaceRecord, PlanPlace, PlaceRecord } from "@/types/domain";
 
@@ -139,7 +138,13 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
         ) : null}
       </div>
 
-      {selectedPlace ? <PlaceLine place={selectedPlace} /> : null}
+      {selectedPlace ? (
+        <p className="date-event__place">
+          <MapPin aria-hidden size={14} />
+          <span>{selectedPlace.name}</span>
+          {selectedPlace.address ? <em>{selectedPlace.address}</em> : null}
+        </p>
+      ) : null}
       {message ? <p className="planner-place-message">{message}</p> : null}
 
       {searchMode === "saved" ? (

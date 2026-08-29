@@ -8,13 +8,18 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
+import { MobileRecordFrame } from "@/features/life/components/MobileRecordFrame";
+import { MobileRecordSheet } from "@/features/life/components/MobileRecordSheet";
+import { RecordMonthCalendar } from "@/features/life/components/RecordMonthCalendar";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
+import { createMonthCursor, shiftLifeDateKey } from "@/features/life/activityHelpers";
 import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features/life/linkTargets";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import { confirmAction } from "@/lib/actionGuards";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import type { DailyLogRecord, LifeActivityRecord, TaskItem } from "@/types/domain";
 
 export function LifeLogsView({
@@ -33,6 +38,9 @@ export function LifeLogsView({
   const [date, setDate] = useState(formatDateKey(new Date()));
   const [content, setContent] = useState("");
   const [linkedTargetKey, setLinkedTargetKey] = useState("");
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(formatDateKey(new Date())));
+  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -40,7 +48,13 @@ export function LifeLogsView({
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const { isMobile } = useResponsiveMode();
   const selectedLogs = logs.filter((log) => log.date === date);
+  const logCountsByDate = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const log of logs) counts.set(log.date, (counts.get(log.date) ?? 0) + 1);
+    return counts;
+  }, [logs]);
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
   const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
 
@@ -85,6 +99,7 @@ export function LifeLogsView({
       setContent("");
       setLinkedTargetKey("");
       setEditingLogId(null);
+      setIsComposerOpen(false);
       setMessage(editingLogId ? "하루 기록을 수정했어요." : "하루 기록을 저장했어요.");
     } catch (error) {
       console.error("Failed to save daily log", error);
@@ -96,9 +111,11 @@ export function LifeLogsView({
 
   const editLog = (log: DailyLogRecord) => {
     setDate(log.date);
+    setMonthCursor(createMonthCursor(log.date));
     setContent(log.content);
     setEditingLogId(log.id);
     setLinkedTargetKey(log.linkedTargetType && log.linkedTargetId ? `${log.linkedTargetType}:${log.linkedTargetId}` : "");
+    setIsComposerOpen(true);
   };
 
   const deleteLog = async (id: string) => {
@@ -122,91 +139,204 @@ export function LifeLogsView({
     }
   };
 
+  const openComposer = () => {
+    setEditingLogId(null);
+    setContent("");
+    setLinkedTargetKey("");
+    setIsComposerOpen(true);
+  };
+
+  const changeDate = (nextDate: string) => {
+    setDate(nextDate);
+    setMonthCursor(createMonthCursor(nextDate));
+  };
+
   return (
     <div className="life-tab-panel">
-      <LifeTabHeading title="하루 기록" description="하루 전체의 감정, 맥락, 짧은 회고를 날짜 중심으로 남겨두는 공간이에요." />
-      <div className="life-capture-page ui-workspace-grid ui-workspace-grid--form-detail">
-        <SectionCard className="life-capture-editor ui-workspace-panel">
-          <div className="life-capture-card__title ui-card-kicker">
-            <NotebookPen aria-hidden size={17} />
-            <span>오늘의 하루 기록</span>
-          </div>
-          <div className="ui-form-grid">
-            <FormField label="기록 날짜">
-              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-            </FormField>
-            <FormField label="연결할 기록">
-              <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
-                <option value="">날짜에만 연결</option>
-                {linkedTargetOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
+      {isMobile ? null : <LifeTabHeading title="하루 기록" description="하루 전체의 감정, 맥락, 짧은 회고를 날짜 중심으로 남겨두는 공간이에요." />}
+      {isMobile ? (
+        <>
+          <MobileRecordFrame
+            addButtonLabel="하루 기록 추가"
+            calendar={
+              <RecordMonthCalendar
+                countsByDate={logCountsByDate}
+                monthCursor={monthCursor}
+                onNextMonth={() => setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))}
+                onPrevMonth={() => setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
+                onSelectDate={changeDate}
+                selectedDate={date}
+              />
+            }
+            dateLabel={formatFullDate(date)}
+            isCalendarOpen={isCalendarOpen}
+            onAddClick={openComposer}
+            onNextDate={() => changeDate(shiftLifeDateKey(date, 1))}
+            onPrevDate={() => changeDate(shiftLifeDateKey(date, -1))}
+            onToggleCalendar={() => setIsCalendarOpen((current) => !current)}
+          >
+            <div className="life-log-mobile__content">
+            {selectedLogs.length > 0 ? (
+              <div className="life-log-list">
+                {selectedLogs.map((log) => (
+                  <article className="life-log-preview" key={log.id}>
+                    {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
+                    <span>하루 기록</span>
+                    <p>{log.content}</p>
+                    <div className="life-record-actions">
+                      <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
+                        <Pencil aria-hidden size={14} />
+                      </IconButton>
+                      <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
+                        <Trash2 aria-hidden size={14} />
+                      </IconButton>
+                    </div>
+                  </article>
                 ))}
-              </select>
-            </FormField>
-            <FormField label="내용">
-              <textarea placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
-            </FormField>
-          </div>
-          <div className="ui-form-actions">
-            {editingLogId ? (
-              <ActionButton
-                onClick={() => {
-                  setEditingLogId(null);
-                  setContent("");
-                  setLinkedTargetKey("");
-                }}
-                variant="secondary"
-              >
-                수정 취소
+              </div>
+            ) : (
+              <div className="life-map-empty life-map-empty--compact">
+                <NotebookPen aria-hidden size={28} />
+                <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
+                <p>상단의 + 버튼으로 새 기록을 바로 추가할 수 있어요.</p>
+              </div>
+            )}
+            </div>
+          </MobileRecordFrame>
+          {isComposerOpen ? (
+            <MobileRecordSheet
+              className="life-capture-editor life-capture-editor--mobile"
+              description={formatFullDate(date)}
+              onClose={() => {
+                setIsComposerOpen(false);
+                setEditingLogId(null);
+                setContent("");
+                setLinkedTargetKey("");
+              }}
+              title={editingLogId ? "하루 기록 수정" : "오늘의 하루 기록"}
+            >
+              <div className="ui-form-grid">
+                <FormField label="연결할 기록">
+                  <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
+                    <option value="">날짜 전체</option>
+                    {linkedTargetOptions.map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label} · {option.title}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="내용">
+                  <textarea className="life-log-content-textarea" placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+                </FormField>
+              </div>
+              <div className="ui-form-actions">
+                {editingLogId ? (
+                  <ActionButton
+                    onClick={() => {
+                      setEditingLogId(null);
+                      setContent("");
+                      setLinkedTargetKey("");
+                      setIsComposerOpen(false);
+                    }}
+                    variant="secondary"
+                  >
+                    수정 취소
+                  </ActionButton>
+                ) : null}
+                <ActionButton disabled={!content.trim() || isSaving} onClick={saveLog}>
+                  {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
+                </ActionButton>
+              </div>
+              {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+              {message ? <p className="life-health-message">{message}</p> : null}
+            </MobileRecordSheet>
+          ) : null}
+        </>
+      ) : (
+        <div className="life-capture-page ui-workspace-grid ui-workspace-grid--form-detail">
+          <SectionCard className="life-capture-editor ui-workspace-panel">
+            <div className="life-capture-card__title ui-card-kicker">
+              <NotebookPen aria-hidden size={17} />
+              <span>오늘의 하루 기록</span>
+            </div>
+            <div className="ui-form-grid">
+              <FormField label="기록 날짜">
+                <input type="date" value={date} onChange={(event) => changeDate(event.target.value)} />
+              </FormField>
+              <FormField label="연결할 기록">
+                <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
+                  <option value="">날짜 전체</option>
+                  {linkedTargetOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label} · {option.title}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="내용">
+                <textarea className="life-log-content-textarea" placeholder="오늘을 기억하고 싶은 문장, 감정, 사건을 남겨보세요." value={content} onChange={(event) => setContent(event.target.value)} />
+              </FormField>
+            </div>
+            <div className="ui-form-actions">
+              {editingLogId ? (
+                <ActionButton
+                  onClick={() => {
+                    setEditingLogId(null);
+                    setContent("");
+                    setLinkedTargetKey("");
+                  }}
+                  variant="secondary"
+                >
+                  수정 취소
+                </ActionButton>
+              ) : null}
+              <ActionButton disabled={!content.trim() || isSaving} onClick={saveLog}>
+                {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
               </ActionButton>
-            ) : null}
-            <ActionButton disabled={!content.trim() || isSaving} onClick={saveLog}>
-              {isSaving ? "저장 중..." : editingLogId ? "기록 수정" : "기록 저장"}
-            </ActionButton>
-          </div>
-          {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
-          {message ? <p className="life-health-message">{message}</p> : null}
-        </SectionCard>
+            </div>
+            {formError ? <p className="life-photo-upload-error">{formError}</p> : null}
+            {message ? <p className="life-health-message">{message}</p> : null}
+          </SectionCard>
 
-        <SectionCard className="life-capture-list ui-workspace-panel">
-          <div className="section-heading ui-panel-heading ui-panel-heading--compact">
-            <div className="ui-panel-heading__intro">
-              <p className="eyebrow">선택한 날짜</p>
-              <h2>{formatFullDate(date)}</h2>
+          <SectionCard className="life-capture-list ui-workspace-panel">
+            <div className="section-heading ui-panel-heading ui-panel-heading--compact">
+              <div className="ui-panel-heading__intro">
+                <p className="eyebrow">선택한 날짜</p>
+                <h2>{formatFullDate(date)}</h2>
+              </div>
+              <div className="ui-panel-heading__meta">
+                <strong className="life-places-count">{selectedLogs.length}개</strong>
+              </div>
             </div>
-            <div className="ui-panel-heading__meta">
-              <strong className="life-places-count">{selectedLogs.length}개</strong>
-            </div>
-          </div>
-          {selectedLogs.length > 0 ? (
-            <div className="life-log-list">
-              {selectedLogs.map((log) => (
-                <article className="life-log-preview" key={log.id}>
-                  {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
-                  <span>하루 기록</span>
-                  <p>{log.content}</p>
-                  <div className="life-record-actions">
-                    <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
-                      <Pencil aria-hidden size={14} />
-                    </IconButton>
-                    <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
-                      <Trash2 aria-hidden size={14} />
-                    </IconButton>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="life-map-empty life-map-empty--compact">
-              <NotebookPen aria-hidden size={28} />
-              <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
-              <p>왼쪽에서 하루 기록을 남기면 여기에 바로 쌓여요.</p>
-            </div>
-          )}
-        </SectionCard>
-      </div>
+            {selectedLogs.length > 0 ? (
+              <div className="life-log-list">
+                {selectedLogs.map((log) => (
+                  <article className="life-log-preview" key={log.id}>
+                    {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
+                    <span>하루 기록</span>
+                    <p>{log.content}</p>
+                    <div className="life-record-actions">
+                      <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
+                        <Pencil aria-hidden size={14} />
+                      </IconButton>
+                      <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
+                        <Trash2 aria-hidden size={14} />
+                      </IconButton>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="life-map-empty life-map-empty--compact">
+                <NotebookPen aria-hidden size={28} />
+                <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
+                <p>왼쪽에서 하루 기록을 남기면 여기에 바로 쌓여요.</p>
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      )}
     </div>
   );
 }

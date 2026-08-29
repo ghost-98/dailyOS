@@ -142,7 +142,7 @@ export function useDailyOSUser() {
   return context;
 }
 
-export function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
+function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
   const metadataName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
   const displayName = profile?.fullName || metadataName || user?.email?.split("@")[0] || "사용자";
   return displayName.trim() || "사용자";

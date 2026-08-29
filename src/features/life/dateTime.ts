@@ -35,20 +35,6 @@ export function isDateInRange(date: string, startDate: string, endDate?: string)
   return startDate <= date && date <= normalizedEndDate;
 }
 
-export function expandDateRange(startDate: string, endDate?: string) {
-  const dates: string[] = [];
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate || startDate}T00:00:00`);
-
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start > end) return [startDate];
-
-  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    dates.push(formatDateKey(cursor));
-  }
-
-  return dates;
-}
-
 export function parseTimeToMinutes(time?: string) {
   if (!time) return undefined;
 

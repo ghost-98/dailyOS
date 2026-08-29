@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatContextMeta } from "@/features/life/insights";
-import { formatMinutesLabel, parseTimeToMinutes } from "@/features/life/dateTime";
-import { formatWon } from "@/features/life/formatters";
+import { parseTimeToMinutes } from "@/features/life/dateTime";
+import { formatRunDuration, formatWeightMeasurementMeta, formatWon } from "@/features/life/formatters";
 import type { DailyLogRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type LifeDayReconstructionItem = {
@@ -14,13 +14,6 @@ export type LifeDayReconstructionItem = {
   title: string;
   tone: "plan" | "activity" | "record" | "health" | "gap";
 };
-
-export function formatRunDuration(durationSeconds: number) {
-  const minutes = Math.floor(durationSeconds / 60);
-  const seconds = Math.round(durationSeconds % 60);
-  if (minutes <= 0) return `${seconds}초`;
-  return seconds > 0 ? `${minutes}분 ${seconds}초` : `${minutes}분`;
-}
 
 export function buildDayReconstructionItems(
   date: string,
@@ -103,7 +96,7 @@ export function buildDayReconstructionItems(
       tone: "health" as const,
     })),
     ...weights.map((weight) => ({
-      description: [weight.measuredFasted ? "공복 측정" : null, weight.memo].filter(Boolean).join(" · "),
+      description: [formatWeightMeasurementMeta(weight.measuredAtTime, weight.measuredFasted), weight.memo].filter(Boolean).join(" · "),
       id: `weight-${weight.id}`,
       label: "몸무게",
       timeLabel: "아침",
@@ -121,34 +114,7 @@ export function getActivityDurationMinutes(activity: Pick<LifeActivityRecord, "e
   return Math.max(0, endMinutes - startMinutes);
 }
 
-export function buildDayGapItems(items: LifeDayReconstructionItem[]): LifeDayReconstructionItem[] {
-  const timedItems = items
-    .filter((item) => typeof item.startMinutes === "number")
-    .map((item) => ({ ...item, endMinutes: typeof item.endMinutes === "number" ? item.endMinutes : item.startMinutes! + 30 }))
-    .sort((a, b) => a.startMinutes! - b.startMinutes!);
-  const gaps: LifeDayReconstructionItem[] = [];
-
-  for (let index = 1; index < timedItems.length; index += 1) {
-    const previousEnd = timedItems[index - 1].endMinutes!;
-    const nextStart = timedItems[index].startMinutes!;
-    if (nextStart - previousEnd >= 90) {
-      gaps.push({
-        description: "이 구간에 무엇을 했는지 활동 기록으로 보강하면 하루 DB가 더 촘촘해집니다.",
-        endMinutes: nextStart,
-        id: `gap-${previousEnd}-${nextStart}`,
-        label: "빈 시간",
-        startMinutes: previousEnd,
-        timeLabel: `${formatMinutesLabel(previousEnd)}-${formatMinutesLabel(nextStart)}`,
-        title: `${Math.round((nextStart - previousEnd) / 60)}시간 공백`,
-        tone: "gap",
-      });
-    }
-  }
-
-  return gaps;
-}
-
-export function sortReconstructionItems(a: LifeDayReconstructionItem, b: LifeDayReconstructionItem) {
+function sortReconstructionItems(a: LifeDayReconstructionItem, b: LifeDayReconstructionItem) {
   const left = typeof a.startMinutes === "number" ? a.startMinutes : 24 * 60 + toneOrder(a.tone);
   const right = typeof b.startMinutes === "number" ? b.startMinutes : 24 * 60 + toneOrder(b.tone);
   return left - right || a.title.localeCompare(b.title);

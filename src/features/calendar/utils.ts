@@ -32,10 +32,6 @@ export function formatSelectedDate(dateKey: string) {
   }).format(new Date(`${dateKey}T00:00:00`));
 }
 
-export function formatShortDate(dateKey: string) {
-  return `${Number(dateKey.slice(5, 7))}/${Number(dateKey.slice(8, 10))}`;
-}
-
 export function isDateInRange(date: string, startDate: string, endDate?: string) {
   const normalizedEndDate = endDate || startDate;
   return startDate <= date && date <= normalizedEndDate;
@@ -46,11 +42,7 @@ export function parseOptionalAmount(value: string) {
   return Number.isFinite(amount) && amount > 0 ? amount : undefined;
 }
 
-export function formatCurrency(value: number) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
-}
-
-export function getPlanPlaceKey(place: PlanPlace) {
+function getPlanPlaceKey(place: PlanPlace) {
   return `${place.providerPlaceId ?? ""}|${place.name}|${place.latitude}|${place.longitude}`;
 }
 

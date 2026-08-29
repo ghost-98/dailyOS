@@ -1,14 +1,20 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BedDouble, CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
+import { BedDouble, ChevronLeft, ChevronRight, Clock3, MapPin, MoveRight, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { TimelineRail } from "@/components/timeline/TimelineRail";
+import { UnifiedTimelineCard } from "@/components/timeline/UnifiedTimelineCard";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { buildActivityDetailRows, createActivityPlace, createMonthCursor, getDefaultActivityTime, matchesSleepWakeActivity, parseActivityCompanions, shiftLifeDateKey } from "@/features/life/activityHelpers";
+import { MobileRecordFrame } from "@/features/life/components/MobileRecordFrame";
+import { MobileRecordSheet } from "@/features/life/components/MobileRecordSheet";
 import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
+import { RecordMonthCalendar } from "@/features/life/components/RecordMonthCalendar";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
-import { formatDateKey, formatFullDate, formatMinutesLabel, getMonthDays } from "@/features/life/dateTime";
+import { formatDateKey, formatFullDate, getMonthDays } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
@@ -16,6 +22,7 @@ import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
 import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { confirmAction } from "@/lib/actionGuards";
+import { Pencil, Trash2 } from "lucide-react";
 import type { LifeActivityRecord, LifeMediaUploadInput, PersonRecord, PlanPlace } from "@/types/domain";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 
@@ -86,6 +93,7 @@ export function LifeActivitiesView({
   const [pickerMonth, setPickerMonth] = useState(new Date().getMonth() + 1);
   const [isComposerOpen, setIsComposerOpen] = useState(Boolean(initialDraft));
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
+  const [expandedActivityIds, setExpandedActivityIds] = useState<string[]>([]);
   const saveLockRef = useRef(false);
 
   useEffect(() => {
@@ -147,7 +155,7 @@ export function LifeActivitiesView({
     () => activities.filter((activity) => activity.date === date).sort((left, right) => (left.startTime ?? "99:99").localeCompare(right.startTime ?? "99:99")),
     [activities, date],
   );
-  const nextDate = useMemo(() => shiftDateKey(date, 1), [date]);
+  const nextDate = useMemo(() => shiftLifeDateKey(date, 1), [date]);
   const nextDateActivities = useMemo(() => activities.filter((activity) => activity.date === nextDate), [activities, nextDate]);
   const activityCountsByDate = useMemo(() => {
     const counts = new Map<string, number>();
@@ -193,7 +201,6 @@ export function LifeActivitiesView({
       setWakePlace(createActivityPlace(wakeActivity?.placeName, wakeActivity?.placeAddress));
     }
   }, [entryMode, nextDaySleepActivity, sameDaySleepActivity, wakeActivity]);
-
   useEffect(() => {
     if (editing || entryMode !== "activity" || inputPanelMode === "media") {
       setIsComposerOpen(true);
@@ -241,7 +248,7 @@ export function LifeActivitiesView({
     setStartPlace(createActivityPlace(activity.startPlaceName, activity.startPlaceAddress));
     setEndPlace(createActivityPlace(activity.endPlaceName, activity.endPlaceAddress));
     setTransportMode(activity.transportMode ?? "");
-    setCompanions(parseCompanionNames(activity.companions));
+    setCompanions(parseActivityCompanions(activity.companions));
     setFood(activity.food ?? "");
     setExpenseAmount(activity.expenseAmount ? String(activity.expenseAmount) : "");
     setMemo(activity.memo ?? "");
@@ -775,15 +782,15 @@ export function LifeActivitiesView({
 
   const activitySummaryCards = (
     <div className="life-activity-day-summary">
-      <article>
+      <article className="life-activity-day-summary__card life-activity-day-summary__card--time">
         <span>시간</span>
-        <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}시간` : "-"}</strong>
+        <strong>{selectedCoveredMinutes > 0 ? `${Math.round((selectedCoveredMinutes / 60) * 10) / 10}h` : "-"}</strong>
       </article>
-      <article>
+      <article className="life-activity-day-summary__card life-activity-day-summary__card--expense">
         <span>지출</span>
         <strong>{selectedExpenseTotal > 0 ? formatWon(selectedExpenseTotal) : "-"}</strong>
       </article>
-      <article>
+      <article className="life-activity-day-summary__card life-activity-day-summary__card--count">
         <span>기록 수</span>
         <strong>{selectedActivities.length > 0 ? `${selectedActivities.length}건` : "-"}</strong>
       </article>
@@ -792,19 +799,43 @@ export function LifeActivitiesView({
 
   const activityList = selectedActivities.length > 0 ? (
     selectedActivities.map((activity) => (
-      <article className="life-activity-item" key={activity.id}>
-        <div className="life-activity-item__body">
-          <span>{`${formatActivityTime(activity)} · ${activity.category ?? "활동"}`}</span>
-          <strong>{activity.title}</strong>
-          <p>{formatActivitySummary(activity)}</p>
-        </div>
-        <div className="life-record-actions life-record-actions--activity-item">
-          <button disabled={isSaving || Boolean(deletingActivityId)} onClick={() => editActivity(activity)} type="button">수정</button>
-          <button disabled={Boolean(deletingActivityId)} onClick={() => void deleteActivity(activity)} type="button">
-            {deletingActivityId === activity.id ? "삭제 중..." : "삭제"}
-          </button>
-        </div>
-      </article>
+      <UnifiedTimelineCard
+        actions={
+          <>
+            <IconButton aria-label="활동 수정" disabled={isSaving || Boolean(deletingActivityId)} label="활동 수정" onClick={() => editActivity(activity)} size="sm" tone="outline">
+              <Pencil aria-hidden size={14} />
+            </IconButton>
+            <IconButton
+              aria-label={deletingActivityId === activity.id ? "삭제 중" : "활동 삭제"}
+              disabled={Boolean(deletingActivityId)}
+              label={deletingActivityId === activity.id ? "삭제 중" : "활동 삭제"}
+              onClick={() => void deleteActivity(activity)}
+              size="sm"
+              tone="danger"
+            >
+              <Trash2 aria-hidden size={14} />
+            </IconButton>
+          </>
+        }
+        badge={<em className="record-timeline-card__badge record-timeline-card__badge--activity">{activity.category ?? "활동"}</em>}
+        details={buildActivityDetailRows(activity).map((item) => ({ icon: item.icon, value: item.value }))}
+        expanded={expandedActivityIds.includes(activity.id)}
+        key={activity.id}
+        layout={isMobile ? "mobile" : "desktop"}
+        leading={
+          <span className="record-timeline-card__time-badge">
+            <Clock3 aria-hidden size={13} />
+            {formatActivityTime(activity)}
+          </span>
+        }
+        onToggle={() =>
+          setExpandedActivityIds((current) =>
+            current.includes(activity.id) ? current.filter((id) => id !== activity.id) : [...current, activity.id],
+          )
+        }
+        title={activity.title}
+        tone="activity"
+      />
     ))
   ) : (
     <div className="life-map-empty life-map-empty--compact">
@@ -821,87 +852,50 @@ export function LifeActivitiesView({
       )}
       {isMobile ? (
         <div className="life-activity-mobile">
-          <SectionCard className="life-activity-mobile__hero">
-            <div className="life-activity-mobile__topbar">
-              <IconButton className="life-activity-mobile__nav" label="이전 날짜" onClick={() => selectDate(shiftDateKey(date, -1))} size="sm" tone="outline">
-                <ChevronLeft aria-hidden size={16} />
-              </IconButton>
-              <button className="life-activity-mobile__date" onClick={() => setIsCalendarExpanded((current) => !current)} type="button">
-                <strong>{formatFullDate(date)}</strong>
-                <span>{selectedActivities.length}개 기록</span>
-              </button>
-              <div className="life-activity-mobile__actions">
-                <IconButton className="life-activity-mobile__nav" label="다음 날짜" onClick={() => selectDate(shiftDateKey(date, 1))} size="sm" tone="outline">
-                  <ChevronRight aria-hidden size={16} />
-                </IconButton>
-                <IconButton label={isCalendarExpanded ? "달력 접기" : "달력 펼치기"} onClick={() => setIsCalendarExpanded((current) => !current)} size="sm" tone="outline">
-                  <CalendarDays aria-hidden size={16} />
-                </IconButton>
-                <IconButton
-                  className="life-activity-mobile__add"
-                  label="활동 추가"
-                  onClick={() => {
-                    setInputPanelMode("activity");
-                    setEntryMode("activity");
-                    setIsComposerOpen(true);
-                  }}
-                  size="sm"
-                >
-                  <Plus aria-hidden size={16} />
-                </IconButton>
-              </div>
-            </div>
-            {isCalendarExpanded ? <div className="life-activity-mobile__calendar">{calendarPanel}</div> : null}
-            {activitySummaryCards}
-          </SectionCard>
-
-          <SectionCard className="life-activity-list life-activity-mobile__list">
-            <div className="life-activity-mobile__list-head">
-              <div>
-                <span>선택한 날짜</span>
-                <strong>{formatFullDate(date)}</strong>
-              </div>
-              <button
-                className="life-activity-mobile__inline-add"
-                onClick={() => {
-                  setInputPanelMode("activity");
-                  setEntryMode("activity");
-                  setIsComposerOpen(true);
-                }}
-                type="button"
-              >
-                <Plus aria-hidden size={14} />
-                추가
-              </button>
-            </div>
-            <div className="life-activity-mobile__items">{activityList}</div>
-          </SectionCard>
+          <MobileRecordFrame
+            addButtonLabel="활동 추가"
+            calendar={
+              <RecordMonthCalendar
+                countsByDate={activityCountsByDate}
+                monthCursor={monthCursor}
+                onNextMonth={() => moveMonth(1)}
+                onPrevMonth={() => moveMonth(-1)}
+                onSelectDate={selectDate}
+                selectedDate={date}
+              />
+            }
+            countLabel="활동 기록"
+            countValue={`${selectedActivities.length}개`}
+            dateLabel={formatFullDate(date)}
+            isCalendarOpen={isCalendarExpanded}
+            onAddClick={() => {
+              setInputPanelMode("activity");
+              setEntryMode("activity");
+              setIsComposerOpen(true);
+            }}
+            onNextDate={() => selectDate(shiftLifeDateKey(date, 1))}
+            onPrevDate={() => selectDate(shiftLifeDateKey(date, -1))}
+            onToggleCalendar={() => setIsCalendarExpanded((current) => !current)}
+            summary={activitySummaryCards}
+          >
+            <TimelineRail className="life-activity-timeline" headline={`${formatFullDate(date)} 타임라인`} meta={`${selectedActivities.length}개`}>
+              {activityList}
+            </TimelineRail>
+          </MobileRecordFrame>
 
           {isComposerOpen ? (
-            <div className="event-sheet-backdrop" role="presentation" onMouseDown={() => setIsComposerOpen(false)}>
-              <section aria-labelledby="life-activity-composer-title" aria-modal="true" className="event-sheet planner-sheet life-activity-mobile__sheet" role="dialog" onMouseDown={(event) => event.stopPropagation()}>
-                <div className="event-sheet__grabber" aria-hidden />
-                <header className="event-sheet__header planner-sheet__header">
-                  <button className="event-sheet__text-button" onClick={() => setIsComposerOpen(false)} type="button">
-                    닫기
-                  </button>
-                  <div>
-                    <h2 id="life-activity-composer-title">{editing ? "활동 수정" : inputPanelMode === "media" ? "사진 · 영상 업로드" : "활동 추가"}</h2>
-                    <p>{formatFullDate(date)} 기준으로 바로 기록합니다.</p>
-                  </div>
-                  <button className="event-sheet__done-button" onClick={() => setIsComposerOpen(false)} type="button">
-                    완료
-                  </button>
-                </header>
-                <div className="event-sheet__body planner-sheet__body">
-                  <div className="life-activity-mobile__sheet-body">
-                    {inputPanelHeader}
-                    {formPanelContent}
-                    {formFeedback}
-                  </div>
-                </div>
-              </section>
-            </div>
+            <MobileRecordSheet
+              className="life-activity-mobile__sheet life-capture-editor life-capture-editor--mobile"
+              description={`${formatFullDate(date)} 기준으로 바로 기록합니다.`}
+              onClose={() => setIsComposerOpen(false)}
+              title={editing ? "활동 수정" : inputPanelMode === "media" ? "사진 · 영상 업로드" : "활동 추가"}
+            >
+              <div className="life-activity-mobile__sheet-body">
+                {inputPanelHeader}
+                {formPanelContent}
+                {formFeedback}
+              </div>
+            </MobileRecordSheet>
           ) : null}
         </div>
       ) : (
@@ -925,70 +919,13 @@ export function LifeActivitiesView({
             </div>
             {calendarPanel}
             {activitySummaryCards}
-            {activityList}
+            <TimelineRail className="life-activity-timeline" headline={`${formatFullDate(date)} 타임라인`} meta={`${selectedActivities.length}개`}>
+              {activityList}
+            </TimelineRail>
           </SectionCard>
         </div>
       )}
     </div>
   );
-}
-
-function getDefaultActivityTime() {
-  const now = new Date();
-  now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
-  return formatMinutesLabel(now.getHours() * 60 + now.getMinutes());
-}
-
-function createMonthCursor(date: string) {
-  const parsedDate = new Date(`${date}T00:00:00`);
-  if (!Number.isFinite(parsedDate.getTime())) return new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), 1);
-}
-
-function shiftDateKey(date: string, amount: number) {
-  const parsedDate = new Date(`${date}T00:00:00`);
-  parsedDate.setDate(parsedDate.getDate() + amount);
-  return formatDateKey(parsedDate);
-}
-
-function createActivityPlace(name?: string, address?: string): PlanPlace | undefined {
-  if (!name) return undefined;
-  return {
-    address: address ?? "",
-    latitude: 0,
-    longitude: 0,
-    name,
-  };
-}
-
-function formatActivitySummary(activity: LifeActivityRecord) {
-  if (activity.category === "이동") {
-    return [
-      activity.startPlaceName ? `출발 · ${activity.startPlaceName}` : null,
-      activity.endPlaceName ? `도착 · ${activity.endPlaceName}` : null,
-      activity.transportMode ? `수단 · ${activity.transportMode}` : null,
-      activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
-    ].filter(Boolean).join(" · ") || activity.memo || "이동 정보 없음";
-  }
-
-  return [
-    activity.sourceTitle ? `출처 · ${activity.sourceTitle}` : null,
-    activity.placeName,
-    activity.companions ? `함께 · ${activity.companions}` : null,
-    activity.food ? `식사 · ${activity.food}` : null,
-    activity.expenseAmount ? formatWon(activity.expenseAmount) : null,
-  ].filter(Boolean).join(" · ") || activity.memo || "연결 정보 없음";
-}
-
-function parseCompanionNames(value?: string) {
-  return (value ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | "wake") {
-  if ((activity.category ?? "").trim() !== "수면") return false;
-  return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
 }
 

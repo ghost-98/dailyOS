@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { CalendarView } from "@/features/calendar/CalendarView";
+import { MobileRecordNav } from "@/features/life/components/MobileRecordNav";
 import { formatDateKey } from "@/features/life/dateTime";
 import { LifeHomeView } from "@/features/life/LifeHomeView";
 import type { LifeDataMode, LifeViewMode } from "@/features/life/modes";
 import { useLifeDataState } from "@/features/life/useLifeDataState";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { LifeActivitiesView } from "@/features/life/views/LifeActivitiesView";
 import type { LifeActivityDraft } from "@/features/life/views/LifeActivitiesView";
 import { LifeAskView } from "@/features/life/views/LifeAskView";
@@ -23,7 +25,14 @@ type LifeViewProps = {
 };
 
 export function LifeView({ activityDraft, initialDate, mode }: LifeViewProps) {
-  return <div className="life-page">{mode === "home" ? <LifeHomeView /> : <LifeDataRouter activeTab={mode} activityDraft={activityDraft} initialDate={initialDate} />}</div>;
+  const { isMobile } = useResponsiveMode();
+
+  return (
+    <div className="life-page">
+      {mode !== "home" && isMobile && ["activities", "plans", "logs", "health"].includes(mode) ? <MobileRecordNav /> : null}
+      {mode === "home" ? <LifeHomeView /> : <LifeDataRouter activeTab={mode} activityDraft={activityDraft} initialDate={initialDate} />}
+    </div>
+  );
 }
 
 function LifeDataRouter({ activeTab, activityDraft, initialDate }: { activeTab: LifeDataMode; activityDraft?: LifeActivityDraft; initialDate?: string }) {

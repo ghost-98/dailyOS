@@ -137,7 +137,7 @@ export function LifeMediaUploadPanel({
 
       <FormField label="연결할 기록">
         <select value={linkedTargetKey} onChange={(event) => setLinkedTargetKey(event.target.value)}>
-          <option value="">날짜만 연결</option>
+          <option value="">날짜 전체</option>
           {linkedTargetOptions.map((option) => (
             <option key={option.key} value={option.key}>
               {option.label} · {option.title}

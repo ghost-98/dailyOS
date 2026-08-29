@@ -709,7 +709,7 @@
     grid-template-columns: 1fr;
   }
 
-  .day-timeline__summary {
+  .places-page .day-timeline__summary {
     grid-template-columns: 1fr;
   }
 
@@ -717,31 +717,27 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .day-timeline__chips {
+  .places-page .day-timeline__chips {
     justify-content: flex-start;
   }
 
-  .day-timeline__items::before {
-    left: 7px;
-  }
-
-  .day-timeline__row {
+  .places-page .day-timeline__row {
     grid-template-columns: 18px minmax(0, 1fr);
   }
 
-  .day-timeline__time {
+  .places-page .day-timeline__time {
     grid-column: 2;
     grid-row: 1;
     padding-top: 0;
     text-align: left;
   }
 
-  .day-timeline__marker {
+  .places-page .day-timeline__marker {
     grid-column: 1;
     grid-row: 1 / span 2;
   }
 
-  .day-timeline__body {
+  .places-page .day-timeline__body {
     grid-column: 2;
   }
 

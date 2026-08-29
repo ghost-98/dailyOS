@@ -76,8 +76,7 @@
   text-align: center;
 }
 
-.calendar-toolbar .calendar-month-trigger:hover,
-.task-day-switcher .task-date-trigger:hover {
+.calendar-toolbar .calendar-month-trigger:hover {
   background: rgba(201, 184, 255, 0.08);
 }
 
