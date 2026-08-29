@@ -1,5 +1,5 @@
 import type { TaskPriority, TaskStatus } from "@/types/domain";
-import type { CalendarCategory, ExternalCalendarCategory } from "@/features/calendar/types";
+import type { CalendarCategory } from "@/features/calendar/types";
 
 export const categoryDisplayOrder: CalendarCategory[] = ["todo", "event"];
 
@@ -31,7 +31,7 @@ export const taskPriorityTone: Record<TaskPriority, "pink" | "amber" | "muted"> 
   low: "muted",
 };
 
-export function formatShortDate(dateKey: string) {
+function formatShortDate(dateKey: string) {
   return `${Number(dateKey.slice(5, 7))}/${Number(dateKey.slice(8, 10))}`;
 }
 
@@ -43,13 +43,3 @@ export function formatPlanDateTime(startDate: string, endDate?: string, startTim
   return dateLabel;
 }
 
-export function getCalendarSummaryLabel(type: CalendarCategory | ExternalCalendarCategory) {
-  if (type === "activity") return "활동";
-  if (type === "expense") return "지출";
-  if (type === "income") return "수입";
-  if (type === "workout") return "운동";
-  if (type === "weight") return "몸무게";
-  if (type === "daily_log") return "기록";
-  if (type === "photo") return "사진";
-  return categoryLabels[type];
-}

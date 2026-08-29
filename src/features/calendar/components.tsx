@@ -1,7 +1,5 @@
-import { ListFilter, MapPin, Plus, UsersRound, WalletCards } from "lucide-react";
+import { ListFilter, Plus } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { formatCurrency } from "@/features/calendar/utils";
-import type { PlanPlace } from "@/types/domain";
 
 export function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean; label: string; onAdd?: () => void }) {
   return (
@@ -16,34 +14,6 @@ export function EmptyDateState({ isLoading, label, onAdd }: { isLoading: boolean
         </ActionButton>
       ) : null}
     </div>
-  );
-}
-
-export function PlaceLine({ place }: { place: PlanPlace }) {
-  return (
-    <p className="date-event__place">
-      <MapPin aria-hidden size={14} />
-      <span>{place.name}</span>
-      {place.address ? <em>{place.address}</em> : null}
-    </p>
-  );
-}
-
-export function PeopleLine({ companions }: { companions: string }) {
-  return (
-    <p className="date-event__place">
-      <UsersRound aria-hidden size={14} />
-      <span>{companions}</span>
-    </p>
-  );
-}
-
-export function ExpenseLine({ amount }: { amount: number }) {
-  return (
-    <p className="date-event__place">
-      <WalletCards aria-hidden size={14} />
-      <span>{formatCurrency(amount)}</span>
-    </p>
   );
 }
 

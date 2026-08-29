@@ -7,22 +7,21 @@
 dailyOS는 세 계층으로 나눈다.
 
 1. **입력 계층**
-   - 일정·할일·이벤트: `/life/calendar`
+   - 일정·할일·이벤트: `/life/plans`
    - 활동 기록: `/life/activities`
    - 하루기록: `/life/logs`
-   - 사진·영상: `/life/photos`
    - 건강: `/life/health`
 2. **조회·해석 계층**
-   - 오늘: `/`
    - 라이프 DB 홈: `/life`
-   - 하루 리포트: `/life/report`
-   - 월간 회고: `/life/monthly`
+   - 라이프 캘린더: `/life/calendar`
+   - 갤러리: `/life/gallery`
+   - 사람: `/life/people`
+   - 장소: `/life/places`
    - 전체 검색: `/life/search`
    - AI 질문: `/life/ask`
 3. **보조 관리 계층**
    - 가계부: `/ledger`
    - 장소 보관함: `/places`
-   - 커리어: `/career/*`
    - 설정/백업: `/settings`
 
 ## 데이터 연결 원칙
@@ -40,7 +39,7 @@ dailyOS는 세 계층으로 나눈다.
 - `src/app`: Next.js 라우트 진입점. 대부분 `AppShell` + feature view만 연결한다.
 - `src/components`: 인증, 레이아웃, 공통 UI.
 - `src/features/calendar`: 일정·할일·이벤트 입력과 캘린더 UI.
-- `src/features/life`: 라이프 DB 홈, 검색, AI 질문, 활동/기록/사진/건강/장소 흐름.
+- `src/features/life`: 라이프 DB 홈, 검색, AI 질문, 활동/기록/갤러리/건강/장소 흐름.
 - `src/features/ledger`: 파생 지출 조회.
 - `src/features/places`: 장소 보관함.
 - `src/features/settings`: 계정, 백업, 데이터 관리.
@@ -68,7 +67,7 @@ dailyOS는 세 계층으로 나눈다.
 
 - `npm run typecheck`, `npm run lint`, `npm run build` 통과
 - Supabase SQL 최신본 적용
-- `life-media`, `career-files` 스토리지 버킷과 RLS 정책 확인
+- `life-media` 스토리지 버킷과 RLS 정책 확인
 - `.env.local`에 Supabase, Gemini, Naver 키 설정
 - Settings에서 백업 내보내기/가져오기 동작 확인
 - 라즈베리파이 배포 시 `npm run build && npm run start` 또는 PM2 실행 확인

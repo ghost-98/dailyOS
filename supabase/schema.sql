@@ -144,6 +144,7 @@ create table if not exists public.weight_records (
   record_date date not null,
   weight_kg numeric(5, 2) not null check (weight_kg > 0),
   measured_fasted boolean not null default true,
+  measured_at time,
   muscle_mass_kg numeric(5, 2) check (muscle_mass_kg is null or muscle_mass_kg > 0),
   body_fat_percent numeric(5, 2) check (body_fat_percent is null or body_fat_percent >= 0),
   memo text,
@@ -169,6 +170,9 @@ create table if not exists public.workout_sessions (
 alter table public.workout_sessions
   add column if not exists distance_km numeric(7, 2) check (distance_km is null or distance_km > 0),
   add column if not exists duration_seconds integer check (duration_seconds is null or duration_seconds > 0);
+
+alter table public.weight_records
+  add column if not exists measured_at time;
 
 create table if not exists public.daily_logs (
   id uuid primary key default gen_random_uuid(),
@@ -527,7 +531,8 @@ select
   nullif(meta, '') as summary,
   expense_amount as amount,
   place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.calendar_events
 where type in ('schedule', 'event')
 union all
@@ -542,7 +547,8 @@ select
   memo as summary,
   expense_amount as amount,
   place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.tasks
 union all
 select
@@ -556,7 +562,8 @@ select
   concat_ws(' ? ', nullif(category, ''), nullif(food, ''), nullif(memo, '')) as summary,
   expense_amount as amount,
   place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.life_activities
 union all
 select
@@ -570,7 +577,8 @@ select
   memo as summary,
   amount,
   null as place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.expense_records
 union all
 select
@@ -584,7 +592,8 @@ select
   content as summary,
   null as amount,
   null as place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.daily_logs
 union all
 select
@@ -598,7 +607,8 @@ select
   file_name as summary,
   null as amount,
   null as place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.life_photos
 union all
 select
@@ -612,7 +622,8 @@ select
   concat_ws(' · ', case when distance_km is not null then distance_km::text || 'km' end, coalesce(duration_seconds, duration_minutes * 60)::text || '초') as summary,
   null as amount,
   null as place_name,
-  created_at
+  created_at,
+  null::time as measured_at
 from public.workout_sessions
 union all
 select
@@ -623,10 +634,11 @@ select
   null as target_type,
   null as target_id,
   '아침 몸무게' as title,
-  weight_kg::text || 'kg' as summary,
+  concat_ws(' · ', measured_at::text, case when measured_fasted then '6시간 이상 공복' else '공복 미충족' end, weight_kg::text || 'kg') as summary,
   null as amount,
   null as place_name,
-  created_at
+  created_at,
+  measured_at::time
 from public.weight_records;
 
 insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)

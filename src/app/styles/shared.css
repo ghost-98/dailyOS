@@ -4,7 +4,6 @@
 }
 
 .ui-empty-state,
-.today-empty-block,
 .health-empty,
 .date-empty-state,
 .life-map-empty {
@@ -20,7 +19,6 @@
 }
 
 .ui-empty-state--compact,
-.today-empty-block,
 .health-empty--compact,
 .life-map-empty--compact {
   min-height: 150px;
@@ -49,7 +47,6 @@
 .empty-dashboard-card p,
 .empty-dashboard-copy,
 .ui-empty-state p,
-.today-empty-block p,
 .health-empty p,
 .date-empty-state p {
   margin: 0;

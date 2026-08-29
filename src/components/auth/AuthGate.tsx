@@ -142,7 +142,7 @@ export function useDailyOSUser() {
   return context;
 }
 
-export function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
+function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
   const metadataName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
   const displayName = profile?.fullName || metadataName || user?.email?.split("@")[0] || "사용자";
   return displayName.trim() || "사용자";
@@ -339,8 +339,8 @@ function AuthScreen() {
 
         <div className="auth-copy">
           <span className="auth-kicker">개인 워크스페이스</span>
-          <h1>오늘 할 일부터 기록까지</h1>
-          <p>필요한 항목만 직접 등록하고, 오늘 화면에서 바로 확인합니다.</p>
+          <h1>기록부터 관리까지 한곳에서</h1>
+          <p>활동, 할 일, 건강, 문서를 필요한 흐름대로 직접 쌓아가는 개인 워크스페이스입니다.</p>
         </div>
 
         <div className="auth-proof" aria-label="관리 항목">

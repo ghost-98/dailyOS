@@ -1,13 +1,15 @@
 "use client";
 
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Activity, Check, Pencil, Trash2 } from "lucide-react";
+import { Activity, Check, Clock3, MapPin, Pencil, Receipt, Trash2, UserRound } from "lucide-react";
+import { TimelineRail } from "@/components/timeline/TimelineRail";
+import { UnifiedTimelineCard } from "@/components/timeline/UnifiedTimelineCard";
 import { IconButton } from "@/components/ui/IconButton";
-import { Badge } from "@/components/ui/Badge";
 import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
-import { EmptyDateState, ExpenseLine, PeopleLine, PlaceLine } from "@/features/calendar/components";
-import { categoryLabels, eventTone, formatPlanDateTime, taskPriorityLabels, taskPriorityTone, taskStatusLabels } from "@/features/calendar/presentation";
+import { EmptyDateState } from "@/features/calendar/components";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
+import { categoryLabels, taskPriorityLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "@/features/calendar/data";
 import type { TaskItem } from "@/types/domain";
@@ -20,6 +22,7 @@ export function DayTimelineSection({
   deletingPlan,
   draggingItem,
   dropTarget,
+  headerContent,
   isConvertingToActivity,
   isLoading,
   items,
@@ -37,11 +40,14 @@ export function DayTimelineSection({
   onSetDragging,
   onToggleDone,
   readOnly = false,
+  summaryTitle,
+  showSummary = true,
 }: {
   countsByCategory?: { event: number; todo: number };
   deletingPlan?: { id: string; type: "event" | "task" } | null;
   draggingItem: { id: string; type: "event" | "todo" } | null;
   dropTarget: { id: string; placement: DragPlacement } | null;
+  headerContent?: ReactNode;
   isConvertingToActivity?: ActivityConversionState;
   isLoading: boolean;
   items: DayTimelineItem[];
@@ -59,6 +65,8 @@ export function DayTimelineSection({
   onSetDragging: (item: { id: string; type: "event" | "todo" }) => void;
   onToggleDone: (task: TaskItem) => void;
   readOnly?: boolean;
+  summaryTitle?: string;
+  showSummary?: boolean;
 }) {
   const [activeFilters, setActiveFilters] = useState<TimelineFilter[]>([]);
 
@@ -80,82 +88,80 @@ export function DayTimelineSection({
 
   return (
     <section className="day-timeline" aria-label="하루 타임라인">
-      <div className="day-timeline__summary">
-        <div className="day-timeline__summary-copy">
-          <span>하루 타임라인</span>
-          <strong>{filteredItems.length}개 기록</strong>
-        </div>
-        {countsByCategory ? (
-          <div className="day-timeline__filters" aria-label="타임라인 필터">
-            {([
-              ["todo", "할 일", countsByCategory.todo],
-              ["event", "이벤트", countsByCategory.event],
-            ] as const).map(([type, label, count]) => (
-              <CalendarFilterChip
-                active={activeFilters.includes(type)}
-                count={count}
-                key={type}
-                label={label}
-                muted={activeFilters.length > 0 && !activeFilters.includes(type)}
-                onClick={() => toggleFilter(type)}
-                tone={type}
-              />
-            ))}
+      {showSummary ? (
+        <div className="day-timeline__summary">
+          <div className="day-timeline__summary-copy">
+            <span>{summaryTitle ?? "하루 타임라인"}</span>
+            <strong>{filteredItems.length}개</strong>
           </div>
-        ) : null}
-      </div>
+          {countsByCategory ? (
+            <div className="day-timeline__filters" aria-label="타임라인 필터">
+              {([
+                ["todo", "할 일", countsByCategory.todo],
+                ["event", "이벤트", countsByCategory.event],
+              ] as const).map(([type, label, count]) => (
+                <CalendarFilterChip
+                  active={activeFilters.includes(type)}
+                  count={count}
+                  key={type}
+                  label={label}
+                  muted={activeFilters.length > 0 && !activeFilters.includes(type)}
+                  onClick={() => toggleFilter(type)}
+                  tone={type}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : headerContent ? (
+        <div className="day-timeline__embedded-head">
+          {headerContent}
+        </div>
+      ) : null}
 
       {filteredItems.length > 0 ? (
-        <div className="day-timeline__items">
-          {filteredItems.map((item) => (
-            <div className={`day-timeline__row day-timeline__row--${item.type}`} key={item.id}>
-              <div className="day-timeline__time">
-                <span>{item.timeLabel}</span>
-              </div>
-              <div className="day-timeline__marker">
-                <span className={`calendar-dot calendar-dot--${item.type}`} />
-              </div>
-              <div className="day-timeline__body">
-                {item.type === "todo" ? (
-                  <TaskDateItem
-                    dropPlacement={dropTarget?.id === item.task.id && draggingItem?.id !== item.task.id ? dropTarget.placement : null}
-                    isConverting={isConvertingToActivity?.type === "task" && isConvertingToActivity.id === item.task.id}
-                    isDeleting={deletingPlan?.type === "task" && deletingPlan.id === item.task.id}
-                    isDragging={draggingItem?.id === item.task.id}
-                    onCreateActivity={onCreateActivityFromTask}
-                    onDelete={onDeleteTask}
-                    onDragEnd={onClearDrag}
-                    onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.task.id, "todo")}
-                    onDragStart={() => onSetDragging({ id: item.task.id, type: "todo" })}
-                    onDrop={(dragEvent) => onReorderTask(item.task.id, onResolveDropPlacement(dragEvent))}
-                    onEdit={onEditTask}
-                    onToggleDone={onToggleDone}
-                    readOnly={readOnly}
-                    task={item.task}
-                  />
-                ) : "event" in item ? (
-                  <EventDateItem
-                    dropPlacement={dropTarget?.id === item.event.id && draggingItem?.id !== item.event.id ? dropTarget.placement : null}
-                    event={item.event}
-                    isConverting={isConvertingToActivity?.type === "event" && isConvertingToActivity.id === item.event.id}
-                    isDeleting={deletingPlan?.type === "event" && deletingPlan.id === item.event.id}
-                    isDragging={draggingItem?.id === item.event.id}
-                    onCreateActivity={onCreateActivityFromEvent}
-                    onDelete={onDeleteEvent}
-                    onDragEnd={onClearDrag}
-                    onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.event.id, item.event.type as CalendarCategory)}
-                    onDragStart={() => onSetDragging({ id: item.event.id, type: item.event.type as CalendarCategory })}
-                    onDrop={(dragEvent) => onReorderEvent(item.event.id, onResolveDropPlacement(dragEvent))}
-                    onEdit={onEditEvent}
-                    readOnly={readOnly}
-                  />
-                ) : (
-                  <ExternalTimelineItem item={item.external} />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <TimelineRail className="day-timeline__rail" empty={<EmptyDateState isLoading={isLoading} label="타임라인" />}>
+          {filteredItems.map((item) =>
+            item.type === "todo" ? (
+              <TaskTimelineCard
+                dropPlacement={dropTarget?.id === item.task.id && draggingItem?.id !== item.task.id ? dropTarget.placement : null}
+                isConverting={isConvertingToActivity?.type === "task" && isConvertingToActivity.id === item.task.id}
+                isDeleting={deletingPlan?.type === "task" && deletingPlan.id === item.task.id}
+                isDragging={draggingItem?.id === item.task.id}
+                key={item.id}
+                onCreateActivity={onCreateActivityFromTask}
+                onDelete={onDeleteTask}
+                onDragEnd={onClearDrag}
+                onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.task.id, "todo")}
+                onDragStart={() => onSetDragging({ id: item.task.id, type: "todo" })}
+                onDrop={(dragEvent) => onReorderTask(item.task.id, onResolveDropPlacement(dragEvent))}
+                onEdit={onEditTask}
+                onToggleDone={onToggleDone}
+                readOnly={readOnly}
+                task={item.task}
+              />
+            ) : "event" in item ? (
+              <EventTimelineCard
+                dropPlacement={dropTarget?.id === item.event.id && draggingItem?.id !== item.event.id ? dropTarget.placement : null}
+                event={item.event}
+                isConverting={isConvertingToActivity?.type === "event" && isConvertingToActivity.id === item.event.id}
+                isDeleting={deletingPlan?.type === "event" && deletingPlan.id === item.event.id}
+                isDragging={draggingItem?.id === item.event.id}
+                key={item.id}
+                onCreateActivity={onCreateActivityFromEvent}
+                onDelete={onDeleteEvent}
+                onDragEnd={onClearDrag}
+                onDragOver={(dragEvent) => onDragOverItem(dragEvent, item.event.id, item.event.type as CalendarCategory)}
+                onDragStart={() => onSetDragging({ id: item.event.id, type: item.event.type as CalendarCategory })}
+                onDrop={(dragEvent) => onReorderEvent(item.event.id, onResolveDropPlacement(dragEvent))}
+                onEdit={onEditEvent}
+                readOnly={readOnly}
+              />
+            ) : (
+              <ExternalTimelineItem item={item.external} key={item.id} />
+            ),
+          )}
+        </TimelineRail>
       ) : (
         <EmptyDateState isLoading={isLoading} label="타임라인" />
       )}
@@ -175,7 +181,7 @@ function ExternalTimelineItem({ item }: { item: ExternalCalendarItem }) {
   );
 }
 
-function EventDateItem({
+function EventTimelineCard({
   dropPlacement,
   event,
   isConverting,
@@ -204,49 +210,58 @@ function EventDateItem({
   onEdit: (event: CalendarEvent) => void;
   readOnly: boolean;
 }) {
+  const { isMobile } = useResponsiveMode();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const detailRows = getPlanDetailRows({
+    companions: event.companions,
+    expenseAmount: event.expenseAmount,
+    memo: event.meta,
+    placeName: event.place?.name,
+  });
+
   return (
-    <article
-      className={`date-event date-event--${event.type} ${readOnly ? "date-event--readonly" : ""} ${isDragging ? "date-event--dragging" : ""} ${
-        dropPlacement ? `date-event--drop-${dropPlacement}` : ""
+    <div
+      className={`timeline-accordion-card-shell ${readOnly ? "timeline-accordion-card-shell--readonly" : ""} ${isDragging ? "timeline-accordion-card-shell--dragging" : ""} ${
+        dropPlacement ? `timeline-accordion-card-shell--drop-${dropPlacement}` : ""
       }`}
-      draggable={!readOnly}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDragStart={onDragStart}
-      onDrop={(dragEvent) => {
-        dragEvent.preventDefault();
-        onDrop(dragEvent);
-      }}
-    >
-      <div className="date-event__content">
-        <div className="date-event__topline">
-          <Badge tone={eventTone[event.type as CalendarCategory]}>{categoryLabels[event.type as CalendarCategory]}</Badge>
-          <span>{formatPlanDateTime(event.date, event.endDate, event.time, event.endTime, event.isAllDay)}</span>
-        </div>
-        <h3>{event.title}</h3>
-        {event.place ? <PlaceLine place={event.place} /> : null}
-        {event.companions ? <PeopleLine companions={event.companions} /> : null}
-        {event.expenseAmount !== undefined ? <ExpenseLine amount={event.expenseAmount} /> : null}
-        {event.meta ? <p>{event.meta}</p> : null}
-      </div>
-      {!readOnly ? (
-        <div className="date-event__actions">
-          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(event)} size="sm" title="이 항목을 실제 활동으로 기록" tone="outline">
-            <Activity aria-hidden size={15} />
-          </IconButton>
-          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(event)} size="sm" tone="outline">
-            <Pencil aria-hidden size={15} />
-          </IconButton>
-          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(event.id)} size="sm" tone="danger">
-            <Trash2 aria-hidden size={15} />
-          </IconButton>
-        </div>
-      ) : null}
-    </article>
+    draggable={!readOnly}
+    onDragEnd={onDragEnd}
+    onDragOver={onDragOver}
+    onDragStart={onDragStart}
+    onDrop={(dragEvent) => {
+      dragEvent.preventDefault();
+      onDrop(dragEvent);
+    }}
+  >
+      <UnifiedTimelineCard
+        actions={!readOnly ? (
+          <>
+            <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(event)} size="sm" tone="outline">
+              <Activity aria-hidden size={15} />
+            </IconButton>
+            <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(event)} size="sm" tone="outline">
+              <Pencil aria-hidden size={15} />
+            </IconButton>
+            <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(event.id)} size="sm" tone="danger">
+              <Trash2 aria-hidden size={15} />
+            </IconButton>
+          </>
+        ) : null}
+        badge={<em className="record-timeline-card__badge record-timeline-card__badge--event">{categoryLabels[event.type as CalendarCategory]}</em>}
+        details={detailRows.map((item) => ({ icon: item.icon, value: item.value }))}
+        expanded={isExpanded}
+        isDone={false}
+        layout={isMobile ? "mobile" : "desktop"}
+        leading={<span className="record-timeline-card__time-badge"><Clock3 aria-hidden size={13} />{event.isAllDay ? "종일" : event.time || "미정"}</span>}
+        onToggle={() => setIsExpanded((current) => !current)}
+        title={event.title}
+        tone="event"
+      />
+    </div>
   );
 }
 
-function TaskDateItem({
+function TaskTimelineCard({
   dropPlacement,
   isConverting,
   isDeleting,
@@ -277,50 +292,83 @@ function TaskDateItem({
   readOnly: boolean;
   task: TaskItem;
 }) {
+  const { isMobile } = useResponsiveMode();
+  const [isExpanded, setIsExpanded] = useState(false);
   const isDone = task.status === "done";
+  const detailRows = getPlanDetailRows({
+    companions: task.companions,
+    expenseAmount: task.expenseAmount,
+    memo: task.memo,
+    placeName: task.place?.name,
+  });
 
   return (
-    <article
-      className={`date-event date-event--todo date-event--task ${readOnly ? "date-event--readonly" : ""} ${isDone ? "date-event--task-done" : ""} ${isDragging ? "date-event--dragging" : ""} ${
-        dropPlacement ? `date-event--drop-${dropPlacement}` : ""
+    <div
+      className={`timeline-accordion-card-shell ${readOnly ? "timeline-accordion-card-shell--readonly" : ""} ${isDone ? "timeline-accordion-card-shell--done" : ""} ${isDragging ? "timeline-accordion-card-shell--dragging" : ""} ${
+        dropPlacement ? `timeline-accordion-card-shell--drop-${dropPlacement}` : ""
       }`}
       draggable={!readOnly}
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDragStart={onDragStart}
-      onDrop={(dragEvent) => {
-        dragEvent.preventDefault();
-        onDrop(dragEvent);
-      }}
-    >
-      <button className="date-event__check" aria-label={isDone ? "완료 취소" : "완료"} onClick={() => onToggleDone(task)} type="button">
-        {isDone ? <Check aria-hidden size={15} /> : null}
-      </button>
-      <div className="date-event__task-body">
-        <div className="date-event__topline">
-          <Badge tone={taskPriorityTone[task.priority]}>{taskPriorityLabels[task.priority]}</Badge>
-          <span>{taskStatusLabels[task.status]}</span>
-          <span>{formatPlanDateTime(task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay)}</span>
-        </div>
-        <h3>{task.title}</h3>
-        {task.place ? <PlaceLine place={task.place} /> : null}
-        {task.companions ? <PeopleLine companions={task.companions} /> : null}
-        {task.expenseAmount !== undefined ? <ExpenseLine amount={task.expenseAmount} /> : null}
-        {task.memo ? <p>{task.memo}</p> : null}
-      </div>
-      {!readOnly ? (
-        <div className="date-event__actions">
-          <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(task)} size="sm" title="이 할 일을 실제 활동으로 기록" tone="outline">
-            <Activity aria-hidden size={15} />
-          </IconButton>
-          <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(task)} size="sm" tone="outline">
-            <Pencil aria-hidden size={15} />
-          </IconButton>
-          <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(task.id)} size="sm" tone="danger">
-            <Trash2 aria-hidden size={15} />
-          </IconButton>
-        </div>
-      ) : null}
-    </article>
+    onDrop={(dragEvent) => {
+      dragEvent.preventDefault();
+      onDrop(dragEvent);
+    }}
+  >
+      <UnifiedTimelineCard
+        actions={!readOnly ? (
+          <>
+            <IconButton aria-label="활동으로 기록" disabled={isConverting || isDeleting} label="활동으로 기록" onClick={() => onCreateActivity(task)} size="sm" tone="outline">
+              <Activity aria-hidden size={15} />
+            </IconButton>
+            <IconButton aria-label="수정" disabled={isDeleting} label="수정" onClick={() => onEdit(task)} size="sm" tone="outline">
+              <Pencil aria-hidden size={15} />
+            </IconButton>
+            <IconButton aria-label="삭제" disabled={isDeleting} label="삭제" onClick={() => onDelete(task.id)} size="sm" tone="danger">
+              <Trash2 aria-hidden size={15} />
+            </IconButton>
+          </>
+        ) : null}
+        badge={<em className={`record-timeline-card__badge record-timeline-card__badge--priority-${task.priority}`}>{taskPriorityLabels[task.priority]}</em>}
+        details={detailRows.map((item) => ({ icon: item.icon, value: item.value }))}
+        expanded={isExpanded}
+        isDone={isDone}
+        layout={isMobile ? "mobile" : "desktop"}
+        leading={
+          <span className="record-timeline-card__time-badge record-timeline-card__time-badge--todo">
+            <button className={isDone ? "record-timeline-card__check record-timeline-card__check--done" : "record-timeline-card__check"} aria-label={isDone ? "완료 취소" : "완료"} onClick={(event) => {
+              event.stopPropagation();
+              onToggleDone(task);
+            }} type="button">
+              {isDone ? <Check aria-hidden size={14} /> : null}
+            </button>
+            <span>{task.isAllDay ? "종일" : task.startTime || "미정"}</span>
+          </span>
+        }
+        onToggle={() => setIsExpanded((current) => !current)}
+        title={task.title}
+        tone="todo"
+      />
+    </div>
   );
+}
+
+function getPlanDetailRows({
+  companions,
+  expenseAmount,
+  memo,
+  placeName,
+}: {
+  companions?: string;
+  expenseAmount?: number;
+  memo?: string;
+  placeName?: string;
+}) {
+  return [
+    placeName ? { icon: MapPin, value: placeName } : null,
+    companions ? { icon: UserRound, value: companions } : null,
+    expenseAmount !== undefined ? { icon: Receipt, value: `${expenseAmount.toLocaleString("ko-KR")}원` } : null,
+    memo ? { icon: Activity, value: memo, variant: "memo" as const } : null,
+  ].filter(Boolean) as Array<{ icon: typeof MapPin; value: string; variant?: "memo" }>;
 }

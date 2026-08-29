@@ -7,15 +7,8 @@
     padding: 28px 22px;
   }
 
-  .today-summary-grid,
-  .today-work-grid,
-  .today-support-grid,
   .life-health-view {
     grid-template-columns: 1fr;
-  }
-
-  .today-quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .calendar-layout {
@@ -83,24 +76,6 @@
     padding: 28px 16px 34px;
   }
 
-  .today__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .today-mode-tabs {
-    width: 100%;
-  }
-
-  .today-mode-tabs__item {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .today-quick-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .page-header {
     align-items: stretch;
     flex-direction: column;
@@ -113,10 +88,6 @@
 
   .health-actions .header-action {
     flex: 1 1 180px;
-  }
-
-  .today__header h1 {
-    font-size: 42px;
   }
 
   .header-action {
@@ -165,10 +136,6 @@
     grid-template-columns: 1fr;
   }
 
-  .task-day-switcher .task-date-trigger {
-    font-size: 20px;
-  }
-
   .date-picker-grid,
   .date-picker-grid--month {
     grid-template-columns: 1fr;
@@ -176,6 +143,76 @@
 
   .calendar-board {
     min-height: 0;
+  }
+
+  .calendar-header .header-actions {
+    display: none;
+  }
+
+  .mobile-record-nav {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    background: rgba(14, 15, 18, 0.94);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(18px);
+    padding: 7px;
+  }
+
+  .mobile-record-nav__item {
+    display: grid;
+    grid-template-rows: 16px auto;
+    min-width: 0;
+    min-height: 44px;
+    place-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 850;
+    line-height: 1.1;
+    padding: 6px 4px;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .mobile-record-nav__item svg {
+    color: rgba(229, 232, 240, 0.88);
+  }
+
+  .mobile-record-nav__item span {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-record-nav__item--active {
+    border-color: rgba(201, 184, 255, 0.22);
+    background: linear-gradient(180deg, rgba(201, 184, 255, 0.18), rgba(201, 184, 255, 0.08));
+    color: var(--violet);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-record-nav__item--active svg {
+    color: var(--violet);
+  }
+
+  .calendar-board--mobile-shell {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    grid-auto-rows: max-content;
+    min-height: 0 !important;
+    padding: 0;
+    width: 100%;
   }
 
   .date-detail-card {
@@ -292,16 +329,6 @@
     border-left: 0;
   }
 
-  .date-event,
-  .date-event--task {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .date-event__check {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-  }
 }
 
 @keyframes detail-slide-up {
@@ -317,14 +344,6 @@
 }
 
 @media (max-width: 460px) {
-  .today__header h1 {
-    font-size: 34px;
-  }
-
-  .today__date {
-    font-size: 14px;
-  }
-
   .hero-card__time strong {
     font-size: 58px;
   }
@@ -340,10 +359,6 @@
 
   .page-header h1 {
     font-size: 26px;
-  }
-
-  .today__header h1 {
-    font-size: 34px;
   }
 
   .weight-detail-grid,
@@ -369,7 +384,6 @@
     min-height: 58px;
   }
 
-  .manage-calendar-overview__cards,
   .life-calendar-day-panel__layout,
   .life-calendar-week-overview,
   .life-calendar-week-days,
@@ -405,10 +419,31 @@
     font-size: 13px;
   }
 
-  .event-sheet__header {
-    grid-template-columns: 60px minmax(0, 1fr) 60px;
-    padding-right: 14px;
-    padding-left: 14px;
+  .event-sheet__header,
+  .planner-sheet__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 16px 14px;
+  }
+
+  .event-sheet__header h2 {
+    font-size: 1.05rem;
+  }
+
+  .planner-sheet__body,
+  .event-sheet__body {
+    padding: 16px;
+  }
+
+  .planner-form-section-title {
+    display: grid;
+    gap: 4px;
+  }
+
+  .planner-form-section-title span {
+    text-align: left;
   }
 
   .event-form-row {
@@ -434,6 +469,23 @@
     padding: 16px;
   }
 
+  .life-activity-mobile__hero {
+    padding: 14px;
+  }
+
+  .life-activity-mobile__topbar {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .life-activity-mobile__actions {
+    gap: 6px;
+  }
+
+  .life-activity-day-summary {
+    grid-template-columns: 0.8fr 1.2fr 0.72fr;
+  }
+
   .ui-workspace-panel,
   .ui-toolbar-panel {
     min-height: auto;
@@ -445,8 +497,7 @@
     min-height: auto;
   }
 
-  .life-activity-form .life-record-actions,
-  .life-activity-item {
+  .life-activity-form .life-record-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -469,10 +520,6 @@
   .life-activity-quick-panel__grid,
   .life-activity-form-grid,
   .life-activity-form-grid--people-meal {
-    grid-template-columns: 1fr;
-  }
-
-  .life-activity-day-summary {
     grid-template-columns: 1fr;
   }
 

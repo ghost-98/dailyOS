@@ -40,23 +40,6 @@ export function getMediaFigureStyle(media: Pick<LifePhotoRecord, "height" | "wid
   return media.width && media.height ? { aspectRatio: `${media.width} / ${media.height}` } : undefined;
 }
 
-export function formatMediaMeta(
-  media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "takenAt" | "width">,
-) {
-  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
-  const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
-  const takenAtSource = media.takenAt ?? new Date(media.lastModified).toISOString();
-  const takenAt = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(takenAtSource));
-  return [formatMediaTypeLabel(media.mimeType), dimensions, duration, formatFileSize(media.sizeBytes), takenAt].filter(Boolean).join(" · ");
-}
-
-export function formatStoredMediaMeta(media: LifePhotoRecord) {
-  const dimensions = media.width && media.height ? `${media.width}×${media.height}` : null;
-  const duration = typeof media.durationSeconds === "number" ? formatDuration(media.durationSeconds) : null;
-  const takenAt = media.takenAt ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(media.takenAt)) : null;
-  return [formatMediaTypeLabel(media.mimeType), dimensions, duration, typeof media.sizeBytes === "number" ? formatFileSize(media.sizeBytes) : null, takenAt].filter(Boolean).join(" · ");
-}
-
 export function formatMediaMetaLines(
   media: Pick<LifeMediaPreview, "durationSeconds" | "height" | "lastModified" | "mimeType" | "sizeBytes" | "takenAt" | "width">,
 ) {

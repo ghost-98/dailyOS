@@ -1,4 +1,5 @@
 import type { CalendarEvent } from "@/features/calendar/data";
+import { getLinkedTargetTypeLabel } from "@/features/life/formatters";
 import type { LifeActivityRecord, LifePhotoRecord, TaskItem } from "@/types/domain";
 
 export type LifeLinkedTarget = { id: string; title: string; type: "todo" | "event" | "activity" };
@@ -49,8 +50,5 @@ export function getPhotoLinkedTargetOptions(
 }
 
 export function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
-  if (type === "todo") return "할 일";
-  if (type === "event") return "이벤트";
-  if (type === "activity") return "활동";
-  return "날짜";
+  return getLinkedTargetTypeLabel(type);
 }

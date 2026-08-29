@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatWon } from "@/features/life/formatters";
+import { parseCompanions } from "@/features/life/insights";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker } from "@/lib/naverMap";
@@ -1040,13 +1041,6 @@ export function LifePlacesView({ activities, dailyLogs, photos }: LifePlacesView
 
 function getVisitedPlaceKey(name: string, address?: string) {
   return `${name.trim()}|${address?.trim() ?? ""}`.toLowerCase();
-}
-
-function parseCompanions(value?: string) {
-  return (value ?? "")
-    .split(/[,\n/]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function formatActivityTime(startTime?: string, endTime?: string) {

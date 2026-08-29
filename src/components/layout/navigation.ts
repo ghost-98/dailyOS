@@ -1,9 +1,9 @@
-import { Activity, BookOpenCheck, FileText, Grid2X2, Layers3, Map, MapPinned, Settings } from "lucide-react";
+import { Activity, BookOpenCheck, FileText, Layers3, Map, MapPinned, Settings } from "lucide-react";
 
 export type NavItem = {
   children?: Array<Omit<NavItem, "children" | "icon">>;
   href: string;
-  icon: typeof Grid2X2;
+  icon: typeof Activity;
   key: string;
   label: string;
 };
@@ -30,7 +30,6 @@ const placeChildren = [
 ];
 
 export const primaryNav: NavItem[] = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "기록", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
   { label: "DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
   { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
@@ -39,7 +38,6 @@ export const primaryNav: NavItem[] = [
 ];
 
 export const mobileNav: NavItem[] = [
-  { label: "오늘", href: "/", key: "today", icon: Grid2X2 },
   { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
   { label: "DB", href: "/life", key: "life", icon: BookOpenCheck },
   { label: "장소", href: "/places", key: "places", icon: Map },

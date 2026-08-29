@@ -7,6 +7,7 @@ type WeightRow = {
   record_date: string;
   weight_kg: number | string;
   measured_fasted: boolean;
+  measured_at: string | null;
   muscle_mass_kg: number | string | null;
   body_fat_percent: number | string | null;
   memo: string | null;
@@ -34,7 +35,7 @@ type WorkoutInsert = Omit<WorkoutRow, "id"> & {
 type WeightUpdate = Partial<Omit<WeightInsert, "user_id">>;
 type WorkoutUpdate = Partial<Omit<WorkoutInsert, "user_id">>;
 
-const weightColumns = "id,record_date,weight_kg,measured_fasted,muscle_mass_kg,body_fat_percent,memo";
+const weightColumns = "id,record_date,weight_kg,measured_fasted,measured_at,muscle_mass_kg,body_fat_percent,memo";
 const workoutColumns = "id,workout_date,type,condition,duration_minutes,duration_seconds,distance_km,memo";
 
 function toNumber(value: number | string | null) {
@@ -48,6 +49,7 @@ function mapWeightRow(row: WeightRow): WeightRecord {
     date: row.record_date,
     weightKg: Number(row.weight_kg),
     measuredFasted: row.measured_fasted,
+    measuredAtTime: row.measured_at ?? undefined,
     muscleMassKg: toNumber(row.muscle_mass_kg),
     bodyFatPercent: toNumber(row.body_fat_percent),
     memo: row.memo ?? undefined,
@@ -73,6 +75,7 @@ function mapWeightInsert(record: WeightRecord, userId: string): WeightInsert {
     record_date: record.date,
     weight_kg: record.weightKg,
     measured_fasted: record.measuredFasted,
+    measured_at: record.measuredAtTime ?? null,
     muscle_mass_kg: record.muscleMassKg ?? null,
     body_fat_percent: record.bodyFatPercent ?? null,
     memo: record.memo ?? null,
@@ -84,6 +87,7 @@ function mapWeightUpdate(record: WeightRecord): WeightUpdate {
     record_date: record.date,
     weight_kg: record.weightKg,
     measured_fasted: record.measuredFasted,
+    measured_at: record.measuredAtTime ?? null,
     muscle_mass_kg: record.muscleMassKg ?? null,
     body_fat_percent: record.bodyFatPercent ?? null,
     memo: record.memo ?? null,

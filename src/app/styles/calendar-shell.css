@@ -32,20 +32,6 @@
   line-height: 1.15;
 }
 
-.page-header:not(.today__header) .today__date {
-  display: none;
-}
-
-.today__header {
-  min-height: 0;
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.today__header h1 {
-  font-size: clamp(40px, 5vw, 78px);
-}
-
 .calendar-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -90,8 +76,7 @@
   text-align: center;
 }
 
-.calendar-toolbar .calendar-month-trigger:hover,
-.task-day-switcher .task-date-trigger:hover {
+.calendar-toolbar .calendar-month-trigger:hover {
   background: rgba(201, 184, 255, 0.08);
 }
 

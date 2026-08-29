@@ -38,6 +38,7 @@ export type WeightRecord = {
   date: string;
   weightKg: number;
   measuredFasted: boolean;
+  measuredAtTime?: string;
   muscleMassKg?: number;
   bodyFatPercent?: number;
   memo?: string;

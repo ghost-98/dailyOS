@@ -1,6 +1,5 @@
 ﻿import type { ExternalCalendarItem } from "@/features/calendar/types";
-import { formatWon } from "@/features/life/formatters";
-import { formatRunDuration } from "@/features/life/reconstruction";
+import { formatRunDuration, formatWeightMeasurementMeta, formatWon } from "@/features/life/formatters";
 import type { LifeDataSnapshot } from "@/features/life/dataLoader";
 
 export function buildLifeExternalItems(snapshot: Pick<LifeDataSnapshot, "activities" | "dailyLogs" | "expenses" | "incomes" | "lifePhotos" | "weights" | "workouts">): ExternalCalendarItem[] {
@@ -75,7 +74,7 @@ export function buildLifeExternalItems(snapshot: Pick<LifeDataSnapshot, "activit
     ...weights.map((weight) => ({
       date: weight.date,
       id: weight.id,
-      meta: `${weight.weightKg}kg`,
+      meta: [formatWeightMeasurementMeta(weight.measuredAtTime, weight.measuredFasted), `${weight.weightKg}kg`].filter(Boolean).join(" · "),
       title: "아침 몸무게",
       type: "weight" as const,
     })),

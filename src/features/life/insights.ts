@@ -1,6 +1,7 @@
 import type { CalendarEvent } from "@/features/calendar/data";
-import { formatWon } from "@/features/life/formatters";
+import { formatRunDuration, formatWeightMeasurementMeta, formatWon, getLinkedTargetTypeLabel } from "@/features/life/formatters";
 import { getActivityPlaceRef } from "@/features/life/places";
+import { formatActivityTime } from "@/features/life/reconstruction";
 import type { LifePlaceRef } from "@/features/life/places";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
@@ -319,7 +320,7 @@ export function buildLifeSearchItems(
     })),
     ...weights.map((weight) => ({
       date: weight.date,
-      description: [weight.measuredFasted ? "공복" : null, weight.memo].filter(Boolean).join(" · "),
+      description: [formatWeightMeasurementMeta(weight.measuredAtTime, weight.measuredFasted), weight.memo].filter(Boolean).join(" · "),
       id: `weight-${weight.id}`,
       label: "몸무게",
       tags: [String(weight.weightKg), weight.memo].filter(Boolean) as string[],
@@ -397,19 +398,5 @@ function getLifeAskTypeScore(question: string, type: LifeSearchItem["type"]) {
 }
 
 function getPhotoTargetTypeLabel(type?: LifePhotoRecord["linkedTargetType"]) {
-  if (type === "todo") return "할 일";
-  if (type === "event") return "이벤트";
-  if (type === "activity") return "활동";
-  return "날짜";
-}
-
-function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAllDay" | "startTime">) {
-  if (activity.isAllDay || !activity.startTime) return "시간 미정";
-  return activity.endTime ? `${activity.startTime}-${activity.endTime}` : activity.startTime;
-}
-
-function formatRunDuration(durationSeconds: number) {
-  const minutes = Math.floor(durationSeconds / 60);
-  const seconds = Math.round(durationSeconds % 60);
-  return `${minutes}분 ${seconds}초`;
+  return getLinkedTargetTypeLabel(type);
 }

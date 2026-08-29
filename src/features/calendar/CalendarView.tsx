@@ -3,38 +3,50 @@
 import Image from "next/image";
 import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Banknote,
-  Camera,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Plus,
-  UtensilsCrossed,
-  UsersRound,
-  X,
-} from "lucide-react";
+import { Banknote, Camera, ChevronLeft, ChevronRight, MapPin, Plus, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { EventCreateSheet, TaskCreateSheet } from "@/features/calendar/CalendarSheets";
-import { MonthPickerSheet } from "@/features/calendar/MonthPickerSheet";
+import { MobileRecordFrame } from "@/features/life/components/MobileRecordFrame";
+import { RecordMonthCalendar } from "@/features/life/components/RecordMonthCalendar";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
 import type { EventType, PlanPlace, TaskItem } from "@/types/domain";
 import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
 import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
+import { formatWon, getLinkedTargetTypeLabel } from "@/features/life/formatters";
+import { parseCompanions } from "@/features/life/insights";
 import { createPersonInDb } from "@/features/people/api";
 import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/tasks/api";
 import { DayTimelineSection } from "@/features/calendar/DayTimelineSection";
 import { SelectedDatePlacesMap } from "@/features/calendar/SelectedDatePlacesMap";
 import { useCalendarResources } from "@/features/calendar/useCalendarResources";
+import {
+  buildPeriodDaySummaries,
+  createEventTimelineItem,
+  createExternalTimelineItem,
+  createTaskTimelineItem,
+  getCategories,
+  getMonthBounds,
+  getScopeTitle,
+  getTimelineItemDate,
+  getTimelineTimeLabel,
+  getTimelineTypeOrder,
+  getWeekBounds,
+  isRangeOverlapping,
+  type LifeCalendarScope,
+  normalizeRangeBounds,
+  summarizeDay,
+  type PeriodDaySummary,
+} from "@/features/calendar/calendarViewHelpers";
 import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "./api";
 import { categoryDisplayOrder, categoryLabels } from "@/features/calendar/presentation";
-import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
+import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "./data";
 type CalendarViewProps = {
   allowedTypes?: EventType[];
@@ -48,7 +60,6 @@ type CalendarViewProps = {
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
-type LifeCalendarScope = "day" | "week" | "month" | "range";
 const naverMapClientId = getNaverMapClientId();
 const dayRouteGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
@@ -63,6 +74,7 @@ export function CalendarView({
 }: CalendarViewProps) {
   type CalendarVisualFilter = CalendarCategory | "record";
   const isDatabaseView = viewMode === "database";
+  const { isMobile } = useResponsiveMode();
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
   const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarVisualFilter[]>([]);
@@ -72,7 +84,6 @@ export function CalendarView({
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("event");
   const [isSavingEvent, setIsSavingEvent] = useState(false);
@@ -85,6 +96,7 @@ export function CalendarView({
   const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
   const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
   const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
+  const [isCalendarCollapsedOnMobile, setIsCalendarCollapsedOnMobile] = useState(false);
 
   const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
   const visibleCalendarCategories = calendarCategoryFilters.length > 0
@@ -156,6 +168,14 @@ export function CalendarView({
       todo: selectedTasks.length,
     };
   }, [isDatabaseView, periodEvents.length, periodTasks.length, selectedDate, selectedTasks.length, visibleEvents]);
+  const mobileTimelineHeader = !isDatabaseView && isMobile && selectedDate ? (
+    <div className="record-plans-mobile__timeline-head">
+      <div className="record-plans-mobile__timeline-copy">
+        <strong>{formatSelectedDate(selectedDate)} 타임라인</strong>
+        <span>{selectedTimelineItems.length}개</span>
+      </div>
+    </div>
+  ) : null;
   const selectedPlanPlaces = useMemo(() => {
     const sourceItems = isDatabaseView ? [...periodEvents, ...periodTasks] : [...selectedEvents, ...selectedTasks];
     return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
@@ -168,6 +188,18 @@ export function CalendarView({
     if (!isDatabaseView) return selectedTimelineItems;
     return periodTimelineItems;
   }, [isDatabaseView, periodTimelineItems, selectedTimelineItems]);
+  const mobileCalendarCounts = useMemo(() => {
+    if (isDatabaseView) return new Map<string, number>();
+    const counts = new Map<string, number>();
+    monthDays.forEach((cell) => {
+      if (!cell.date) return;
+      const dayEvents = visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory));
+      const dayTasks = visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
+      const dayExternalItems = externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled));
+      counts.set(cell.date, summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems).totalCount);
+    });
+    return counts;
+  }, [externalItems, isDatabaseView, monthDays, orderedVisibleCalendarCategories, recordFilterEnabled, tasks, visibleCalendarCategories, visibleEvents]);
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
@@ -177,8 +209,14 @@ export function CalendarView({
     });
   };
 
+  const toggleMobileCalendar = () => {
+    if (!isMobile || isDatabaseView) return;
+    setIsCalendarCollapsedOnMobile((current) => !current);
+  };
+
   const handleDateClick = (date: string) => {
     setSelectedDate(date);
+    if (isMobile && !isDatabaseView) setIsCalendarCollapsedOnMobile(false);
   };
 
   const toggleCalendarCategoryFilter = (type: CalendarVisualFilter) => {
@@ -438,7 +476,8 @@ export function CalendarView({
 
   return (
     <div className="calendar-page">
-      <header className="life-tab-heading calendar-header ui-toolbar-panel">
+      {isMobile && !isDatabaseView ? null : (
+        <header className="life-tab-heading calendar-header ui-toolbar-panel">
         <div>
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
@@ -496,85 +535,189 @@ export function CalendarView({
             ) : null}
           </div>
         </div> : null}
-      </header>
+        </header>
+      )}
 
       <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""} ui-workspace-grid ${isDatabaseView ? "ui-workspace-grid--balanced" : "ui-workspace-grid--sidebar"}`}>
-        <SectionCard className="calendar-board ui-workspace-panel ui-workspace-panel--tall">
-          <div className="calendar-toolbar">
-            <IconButton label="이전 달" onClick={() => moveMonth(-1)} tone="outline">
-              <ChevronLeft aria-hidden size={20} />
-            </IconButton>
-            <button className="calendar-month-trigger" onClick={() => setIsMonthPickerOpen(true)} type="button">
-              <span>{currentMonth.getFullYear()}</span>
-              <strong>{currentMonth.getMonth() + 1}월</strong>
-            </button>
-            <IconButton label="다음 달" onClick={() => moveMonth(1)} tone="outline">
-              <ChevronRight aria-hidden size={20} />
-            </IconButton>
-          </div>
-
-          <div className="calendar-filters" aria-label="표시 항목">
-            {filterTypes.map((type) => {
-              const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
-              const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
-              return (
-                <CalendarFilterChip
-                  active={isFilterActive}
-                  key={type}
-                  label={type === "record" ? "기록" : categoryLabels[type]}
-                  muted={isFilterMuted}
-                  onClick={() => toggleCalendarCategoryFilter(type)}
-                  tone={type}
+        <div className={isMobile && !isDatabaseView ? "calendar-board--mobile-shell" : "calendar-board ui-workspace-panel ui-workspace-panel--tall"}>
+          {isMobile && !isDatabaseView ? (
+            <MobileRecordFrame
+              addButtonLabel="새 일정 추가"
+              addMenu={
+                <div className="record-plans-mobile__menu" role="menu">
+                  {showEventAddButton && categories.includes("event") ? (
+                    <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
+                      <span className="calendar-dot calendar-dot--event" />
+                      이벤트 추가
+                    </button>
+                  ) : null}
+                  {categories.includes("todo") ? (
+                    <button onClick={() => openCreateEventSheet("todo")} role="menuitem" type="button">
+                      <span className="calendar-dot calendar-dot--todo" />
+                      할 일 추가
+                    </button>
+                  ) : null}
+                </div>
+              }
+              calendar={
+                <RecordMonthCalendar
+                  countsByDate={mobileCalendarCounts}
+                  monthCursor={currentMonth}
+                  onNextMonth={() => moveMonth(1)}
+                  onPrevMonth={() => moveMonth(-1)}
+                  onSelectDate={handleDateClick}
+                  selectedDate={selectedDate ?? detailAnchorDate}
                 />
-              );
-            })}
-          </div>
-
-          <div className="calendar-weekdays">
-            {weekdays.map((weekday, index) => (
-              <span className={index === 0 ? "calendar-weekday calendar-weekday--sun" : "calendar-weekday"} key={weekday}>{weekday}</span>
-            ))}
-          </div>
-
-          <div className="calendar-grid">
-            {monthDays.map((cell) => {
-              const dayEvents = cell.date
-                ? visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory))
-                : [];
-              const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
-              const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled)) : [];
-              const eventSummary = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
-              return (
-                <button
-                  className={`calendar-day ${cell.date === todayKey ? "calendar-day--today" : ""} ${cell.date === selectedDate ? "calendar-day--selected" : ""} ${cell.date && new Date(`${cell.date}T00:00:00`).getDay() === 0 ? "calendar-day--sunday" : ""}`}
-                  disabled={!cell.date}
-                  key={cell.key}
-                  onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
-                  type="button"
-                >
-                  {cell.day ? <span className={`calendar-day__number ${cell.date?.endsWith(`-${String(cell.day).padStart(2, "0")}`) && new Date(`${cell.date}T00:00:00`).getDay() === 0 ? "calendar-day__number--sunday" : ""}`}>{cell.day}</span> : null}
-                  <div className="calendar-day__events">
-                    {eventSummary.totalCount > 0 ? (
-                      <div className="calendar-day__signal-stack">
-                        {eventSummary.todoCount > 0 ? (
-                          <CalendarFilterChip active compact count={eventSummary.todoCount} tone="todo" />
-                        ) : null}
-                        {eventSummary.eventCount > 0 ? (
-                          <CalendarFilterChip active compact count={eventSummary.eventCount} tone="event" />
-                        ) : null}
-                        {eventSummary.recordCount > 0 ? (
-                          <CalendarFilterChip active compact count={eventSummary.recordCount} tone="record" />
-                        ) : null}
-                      </div>
-                    ) : null}
+              }
+              countLabel="할 일·이벤트"
+              countValue={`${countsByCategory.todo + countsByCategory.event}건`}
+              dateLabel={formatSelectedDate(selectedDate ?? detailAnchorDate)}
+              dateSubLabel={`할 일 ${countsByCategory.todo} · 이벤트 ${countsByCategory.event}`}
+              isAddMenuOpen={isAddMenuOpen}
+              isCalendarOpen={!isCalendarCollapsedOnMobile}
+              onAddClick={() => setIsAddMenuOpen((current) => !current)}
+              onNextDate={() => {
+                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
+                base.setDate(base.getDate() + 1);
+                setSelectedDate(formatDateKey(base));
+              }}
+              onPrevDate={() => {
+                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
+                base.setDate(base.getDate() - 1);
+                setSelectedDate(formatDateKey(base));
+              }}
+              onToggleCalendar={toggleMobileCalendar}
+              summary={
+                <div className="record-plans-mobile__summary-cards">
+                  <article>
+                    <span>할 일 / 완료</span>
+                    <strong>{countsByCategory.todo}건</strong>
+                  </article>
+                  <article>
+                    <span>이벤트</span>
+                    <strong>{countsByCategory.event}건</strong>
+                  </article>
+                </div>
+              }
+            >
+              {selectedDate ? (
+                <div className="record-plans-mobile__detail">
+                  <DayTimelineSection
+                    countsByCategory={countsByCategory}
+                    deletingPlan={deletingPlan}
+                    draggingItem={draggingItem}
+                    dropTarget={dropTarget}
+                    headerContent={mobileTimelineHeader}
+                    isConvertingToActivity={convertingToActivity}
+                    isLoading={isLoading}
+                    items={visibleTimelineItems}
+                    onClearDrag={clearDragState}
+                    onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
+                    onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
+                    onDeleteEvent={deleteEvent}
+                    onDeleteTask={deleteTask}
+                    onDragOverItem={handleDragOverItem}
+                    onEditEvent={(event) => {
+                      setEditingEvent(event);
+                      setSheetDefaultType(event.type as CalendarCategory);
+                      setIsEventSheetOpen(true);
+                    }}
+                    onEditTask={(target) => {
+                      setEditingTask(target);
+                      setIsTaskSheetOpen(true);
+                    }}
+                    onReorderEvent={reorderEvent}
+                    onReorderTask={reorderTask}
+                    onResolveDropPlacement={getDropPlacement}
+                    onSetDragging={setDraggingItem}
+                    onToggleDone={toggleTaskDone}
+                    readOnly={false}
+                    showSummary={false}
+                  />
+                  {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
+                </div>
+              ) : null}
+            </MobileRecordFrame>
+          ) : null}
+          {!isMobile || isDatabaseView ? (
+            <>
+              <div className="life-activity-calendar life-activity-calendar--plans">
+                <div className="life-activity-calendar__header">
+                  <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
+                    <ChevronLeft aria-hidden size={16} />
+                  </IconButton>
+                  <div className="life-activity-calendar__month-picker">
+                    <div className="life-activity-calendar__month-button" role="status" aria-live="polite">
+                      {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
+                    </div>
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        </SectionCard>
+                  <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
+                    <ChevronRight aria-hidden size={16} />
+                  </IconButton>
+                </div>
+                {!isMobile || isDatabaseView ? (
+                  <div className="calendar-filters" aria-label="표시 항목">
+                    {filterTypes.map((type) => {
+                      const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
+                      const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
+                      return (
+                        <CalendarFilterChip
+                          active={isFilterActive}
+                          key={type}
+                          label={type === "record" ? "기록" : categoryLabels[type]}
+                          muted={isFilterMuted}
+                          onClick={() => toggleCalendarCategoryFilter(type)}
+                          tone={type}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+                <div className="life-activity-calendar__weekdays">
+                  {weekdays.map((weekday, index) => (
+                    <span
+                      className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
+                      key={weekday}
+                    >
+                      {weekday}
+                    </span>
+                  ))}
+                </div>
+                <div className="life-activity-calendar__grid">
+                  {monthDays.map((cell) => {
+                    const dayEvents = cell.date
+                      ? visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory))
+                      : [];
+                    const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
+                    const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled)) : [];
+                    const eventSummary = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
+                    const weekday = cell.date ? new Date(`${cell.date}T00:00:00`).getDay() : -1;
+                    return (
+                      <button
+                        aria-pressed={cell.date === selectedDate}
+                        className={[
+                          "life-activity-calendar__day",
+                          cell.date === selectedDate ? "life-activity-calendar__day--selected" : "",
+                          weekday === 0 ? "life-activity-calendar__day--sun" : "",
+                          weekday === 6 ? "life-activity-calendar__day--sat" : "",
+                        ].filter(Boolean).join(" ")}
+                        disabled={!cell.date}
+                        key={cell.key}
+                        onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
+                        type="button"
+                      >
+                        {cell.day ? <span>{cell.day}</span> : null}
+                        {eventSummary.totalCount > 0 ? <em>{eventSummary.totalCount}</em> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
 
-        {selectedDate || isDatabaseView ? (
+        {(selectedDate || isDatabaseView) && !(isMobile && !isDatabaseView) ? (
           <aside className="calendar-detail">
             <SectionCard className="date-detail-card ui-workspace-panel ui-workspace-panel--tall">
               <div className="section-heading ui-panel-heading">
@@ -584,7 +727,7 @@ export function CalendarView({
                 </div>
               </div>
 
-              {!isDatabaseView ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
+              {!isDatabaseView && !isMobile ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
 
               <div className="date-event-list">
                 {isDatabaseView ? (
@@ -624,6 +767,7 @@ export function CalendarView({
                     onResolveDropPlacement={getDropPlacement}
                     onSetDragging={setDraggingItem}
                     onToggleDone={toggleTaskDone}
+                    summaryTitle={`${formatSelectedDate(selectedDate ?? detailAnchorDate)} 타임라인`}
                     readOnly={false}
                   />
                 )}
@@ -667,35 +811,9 @@ export function CalendarView({
         />
       ) : null}
 
-      {isMonthPickerOpen ? (
-        <MonthPickerSheet
-          currentMonth={currentMonth}
-          onClose={() => setIsMonthPickerOpen(false)}
-          onSelect={(month) => {
-            setCurrentMonth(month);
-            setSelectedDate(null);
-            setIsMonthPickerOpen(false);
-          }}
-        />
-      ) : null}
     </div>
   );
 }
-
-
-type PeriodDaySummary = {
-  activityCount: number;
-  date: string;
-  expenseCount: number;
-  incomeCount: number;
-  healthCount: number;
-  items: DayTimelineItem[];
-  placeCount: number;
-  planCount: number;
-  recordCount: number;
-  totalCount: number;
-};
-
 function LifeCalendarDatabasePanel({
   daySummaries,
   isLoading,
@@ -712,7 +830,7 @@ function LifeCalendarDatabasePanel({
   const summary = daySummaries[0];
   const finance = getFinanceTotals(items);
   const topCompanions = getTopValues(
-    items.flatMap((item) => ("event" in item ? parseCompanionNames(item.event.companions) : "task" in item ? parseCompanionNames(item.task.companions) : [])),
+    items.flatMap((item) => ("event" in item ? parseCompanions(item.event.companions) : "task" in item ? parseCompanions(item.task.companions) : [])),
   ).slice(0, 4);
   const topPlaces = getTopValues(places.map((place) => place.name)).slice(0, 4);
   const narrative = getDayNarrative(summary, finance, topCompanions, topPlaces);
@@ -861,7 +979,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
     [activityItems, standalonePhotoGroups],
   );
   const companionCounts = useMemo(
-    () => getTopValues(activityItems.flatMap((item) => parseCompanionNames(item.external.companions))).slice(0, 8),
+    () => getTopValues(activityItems.flatMap((item) => parseCompanions(item.external.companions))).slice(0, 8),
     [activityItems],
   );
   const visiblePhotoItems = photoViewer?.items ?? photoItems;
@@ -909,7 +1027,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                         {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
                         {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
                         {item.external.food ? <p><UtensilsCrossed aria-hidden size={14} /> {item.external.food}</p> : null}
-                        {item.external.amount ? <p><Banknote aria-hidden size={14} /> {formatExpenseAmount(item.external.amount)}</p> : null}
+                        {item.external.amount ? <p><Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}</p> : null}
                       </div>
                     </article>
                   );
@@ -1770,114 +1888,9 @@ function getPhotoStopName(photo: ExternalCalendarItem) {
   return `${timeLabel} ${subject}`;
 }
 
-function getLinkedTargetTypeLabel(type?: "todo" | "event" | "activity") {
-  if (type === "todo") return "할 일";
-  if (type === "event") return "이벤트";
-  if (type === "activity") return "활동";
-  return "기록";
-}
-
 function formatExpenseValueWithUnit(value: number, unit: string) {
   if (value === 0) return `0${unit}`;
   return `-${new Intl.NumberFormat("ko-KR").format(Math.abs(value))}${unit}`;
-}
-
-function parseCompanionNames(value?: string) {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function normalizeRangeBounds(start: string, end: string) {
-  if (start <= end) return { end, start };
-  return { end: start, start: end };
-}
-
-function getWeekBounds(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00`);
-  const start = new Date(date);
-  const weekday = date.getDay();
-  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
-  start.setDate(date.getDate() + mondayOffset);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  return { end: formatDateKey(end), start: formatDateKey(start) };
-}
-
-function getMonthBounds(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1);
-  const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  return { end: formatDateKey(end), start: formatDateKey(start) };
-}
-
-function isRangeOverlapping(startDate: string, endDate: string | undefined, filterStart: string, filterEnd: string) {
-  const normalizedEndDate = endDate ?? startDate;
-  return startDate <= filterEnd && normalizedEndDate >= filterStart;
-}
-
-function getTimelineItemDate(item: DayTimelineItem) {
-  if ("event" in item) return item.event.date;
-  if ("task" in item) return item.task.scheduledDate;
-  return item.external.date;
-}
-
-function buildPeriodDaySummaries(start: string, end: string, events: CalendarEvent[], tasks: TaskItem[], externalItems: ExternalCalendarItem[]) {
-  const allDates = enumerateDates(start, end);
-  return allDates
-    .map((date) => {
-      const dayEvents = events.filter((item) => isDateInRange(date, item.date, item.endDate));
-      const dayTasks = tasks.filter((item) => isDateInRange(date, item.scheduledDate, item.dueDate));
-      const dayExternalItems = externalItems.filter((item) => item.date === date);
-      const items = [
-        ...dayTasks.map((item) => createTaskTimelineItem(item)),
-        ...dayEvents.map((item) => createEventTimelineItem(item)),
-        ...dayExternalItems.map((item) => createExternalTimelineItem(item)),
-      ];
-      const places = uniquePlanPlaces(
-        [...dayEvents, ...dayTasks]
-          .map((item) => item.place)
-          .filter((place): place is PlanPlace => Boolean(place)),
-      );
-
-      return {
-        activityCount: dayExternalItems.filter((item) => item.type === "activity").length,
-        date,
-        expenseCount: dayExternalItems.filter((item) => item.type === "expense").length,
-        incomeCount: dayExternalItems.filter((item) => item.type === "income").length,
-        healthCount: dayExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
-        items,
-        placeCount: places.length,
-        planCount: dayEvents.length + dayTasks.length,
-        recordCount: dayExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
-        totalCount: items.length,
-      } satisfies PeriodDaySummary;
-    })
-    .filter((summary) => summary.totalCount > 0);
-}
-
-function enumerateDates(start: string, end: string) {
-  const dates: string[] = [];
-  const cursor = new Date(`${start}T00:00:00`);
-  const endDate = new Date(`${end}T00:00:00`);
-  while (cursor <= endDate) {
-    dates.push(formatDateKey(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return dates;
-}
-
-function getScopeTitle(scope: LifeCalendarScope, start: string, end: string, currentMonth: Date) {
-  if (scope === "day") return formatSelectedDate(start);
-  if (scope === "week") return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
-  if (scope === "month") return `${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`;
-  return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
-}
-
-function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
-  const source = allowedTypes ?? categoryDisplayOrder;
-  return categoryDisplayOrder.filter((type) => source.includes(type));
 }
 
 function createActivitySourceFromEvent(event: CalendarEvent) {
@@ -1916,107 +1929,7 @@ function createActivitySourceFromTask(task: TaskItem) {
   } satisfies Parameters<typeof updateLifeActivitiesBySourceInDb>[0];
 }
 
-function createEventTimelineItem(event: CalendarEvent): DayTimelineItem {
-  return {
-    event,
-    id: `event-${event.id}`,
-    sortMinutes: getTimelineSortMinutes(event.time, event.isAllDay),
-    timeLabel: getTimelineTimeLabel(event.time, event.isAllDay),
-    type: "event",
-  };
-}
-
-function createTaskTimelineItem(task: TaskItem): DayTimelineItem {
-  return {
-    id: `todo-${task.id}`,
-    sortMinutes: getTimelineSortMinutes(task.startTime, task.isAllDay),
-    task,
-    timeLabel: getTimelineTimeLabel(task.startTime, task.isAllDay),
-    type: "todo",
-  };
-}
-
-function createExternalTimelineItem(external: ExternalCalendarItem): DayTimelineItem {
-  const photoTime = external.type === "photo" ? getPhotoTakenTime(external.takenAt) : null;
-  const sortMinutes =
-    photoTime !== null
-      ? photoTime
-      : external.startTime
-        ? getTimelineSortMinutes(external.startTime, external.isAllDay)
-        : 24 * 60 + getTimelineTypeOrder(external.type);
-  const timeLabel =
-    photoTime !== null
-      ? formatMinutesToTimeLabel(photoTime)
-      : external.startTime && !external.isAllDay
-        ? getTimelineTimeLabel(external.startTime, external.isAllDay)
-        : "기록";
-
-  return {
-    external,
-    id: `${external.type}-${external.id}`,
-    sortMinutes,
-    timeLabel,
-    type: external.type,
-  };
-}
-
-function getTimelineSortMinutes(time?: string, isAllDay = true) {
-  if (isAllDay || !time) return 24 * 60;
-  const [hours, minutes] = time.split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 24 * 60;
-  return hours * 60 + minutes;
-}
-
-function getTimelineTimeLabel(time?: string, isAllDay = true) {
-  if (isAllDay) return "하루종일";
-  return time || "시간 미정";
-}
-
-function getPhotoTakenTime(takenAt?: string) {
-  if (!takenAt) return null;
-  const date = new Date(takenAt);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.getHours() * 60 + date.getMinutes();
-}
-
-function formatMinutesToTimeLabel(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-}
-
 function formatTimelineRange(startLabel: string, endTime?: string) {
   if (!endTime || startLabel === "하루종일" || startLabel === "기록" || startLabel === "시간 미정") return startLabel;
   return `${startLabel} ~ ${endTime}`;
-}
-
-function formatExpenseAmount(amount: number) {
-  return `-${new Intl.NumberFormat("ko-KR").format(amount)}원`;
-}
-
-function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCategory) {
-  const order: Record<CalendarCategory | ExternalCalendarCategory, number> = {
-    todo: 1,
-    event: 2,
-    activity: 3,
-    expense: 3,
-    income: 3,
-    workout: 4,
-    weight: 5,
-    daily_log: 6,
-    photo: 7,
-  };
-  return order[type];
-}
-
-function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
-  const eventCount = categories.includes("event") ? events.filter((event) => event.type === "event").length : 0;
-  const todoCount = categories.includes("todo") ? tasks.length : 0;
-  const recordCount = externalItems.filter((item) => item.type === "activity" || item.type === "expense" || item.type === "income" || item.type === "daily_log" || item.type === "photo").length;
-  return {
-    eventCount,
-    recordCount,
-    todoCount,
-    totalCount: eventCount + todoCount + recordCount,
-  };
 }
