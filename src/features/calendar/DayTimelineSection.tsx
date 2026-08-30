@@ -92,26 +92,26 @@ export function DayTimelineSection({
         <div className="day-timeline__summary">
           <div className="day-timeline__summary-copy">
             <span>{summaryTitle ?? "하루 타임라인"}</span>
-            <strong>{filteredItems.length}개</strong>
+            {countsByCategory ? (
+              <div className="day-timeline__summary-filters" aria-label="타임라인 필터">
+                {([
+                  ["todo", "할 일", countsByCategory.todo],
+                  ["event", "이벤트", countsByCategory.event],
+                ] as const).map(([type, label, count]) => (
+                  <CalendarFilterChip
+                    active={activeFilters.includes(type)}
+                    count={count}
+                    key={type}
+                    label={label}
+                    muted={activeFilters.length > 0 && !activeFilters.includes(type)}
+                    onClick={() => toggleFilter(type)}
+                    tone={type}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
-          {countsByCategory ? (
-            <div className="day-timeline__filters" aria-label="타임라인 필터">
-              {([
-                ["todo", "할 일", countsByCategory.todo],
-                ["event", "이벤트", countsByCategory.event],
-              ] as const).map(([type, label, count]) => (
-                <CalendarFilterChip
-                  active={activeFilters.includes(type)}
-                  count={count}
-                  key={type}
-                  label={label}
-                  muted={activeFilters.length > 0 && !activeFilters.includes(type)}
-                  onClick={() => toggleFilter(type)}
-                  tone={type}
-                />
-              ))}
-            </div>
-          ) : null}
+          <strong className="day-timeline__summary-meta">{filteredItems.length}개</strong>
         </div>
       ) : headerContent ? (
         <div className="day-timeline__embedded-head">
@@ -120,7 +120,7 @@ export function DayTimelineSection({
       ) : null}
 
       {filteredItems.length > 0 ? (
-        <TimelineRail className="day-timeline__rail" empty={<EmptyDateState isLoading={isLoading} label="타임라인" />}>
+        <TimelineRail className="day-timeline__rail" empty={<div className="day-timeline__empty"><EmptyDateState isLoading={isLoading} label="타임라인" /></div>}>
           {filteredItems.map((item) =>
             item.type === "todo" ? (
               <TaskTimelineCard

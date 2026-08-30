@@ -56,3 +56,15 @@
   min-height: 720px;
   padding: 24px;
 }
+
+.life-page--responsive-pending {
+  min-height: 100dvh;
+}
+
+.life-capture-workspace--responsive-pending {
+  min-height: 100dvh;
+}
+
+.life-capture-workspace__loading {
+  min-height: 100dvh;
+}
