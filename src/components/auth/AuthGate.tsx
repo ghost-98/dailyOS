@@ -24,15 +24,19 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+let cachedSession: Session | null = null;
+let cachedProfile: DailyOSProfile | null = null;
+let hasResolvedSession = false;
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<DailyOSProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(cachedSession);
+  const [profile, setProfile] = useState<DailyOSProfile | null>(cachedProfile);
+  const [isLoading, setIsLoading] = useState(!hasResolvedSession);
 
   const refreshProfile = async () => {
     if (!supabase || !session?.user) return;
     const nextProfile = await fetchDailyOSProfile(session.user);
+    cachedProfile = nextProfile;
     setProfile(nextProfile);
   };
 
@@ -51,10 +55,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data }) => {
         if (!isMounted) return;
+        cachedSession = data.session;
+        hasResolvedSession = true;
         setSession(data.session);
       })
       .catch(() => {
         if (!isMounted) return;
+        cachedSession = null;
+        hasResolvedSession = true;
         setSession(null);
       })
       .finally(() => {
@@ -64,6 +72,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
       });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      cachedSession = nextSession;
+      hasResolvedSession = true;
       setSession(nextSession);
       setIsLoading(false);
     });
@@ -84,10 +94,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
     let isMounted = true;
     fetchDailyOSProfile(session.user)
       .then((nextProfile) => {
-        if (isMounted) setProfile(nextProfile);
+        if (!isMounted) return;
+        cachedProfile = nextProfile;
+        setProfile(nextProfile);
       })
       .catch(() => {
-        if (isMounted) setProfile(getFallbackProfile(session.user));
+        if (!isMounted) return;
+        const fallback = getFallbackProfile(session.user);
+        cachedProfile = fallback;
+        setProfile(fallback);
       });
 
     return () => {
@@ -105,11 +120,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (isLoading) {
-    return (
-      <AuthShell title="dailyOS를 준비하고 있습니다" description="로그인 상태를 확인하는 중입니다.">
-        <Loader2 className="auth-loader" aria-hidden size={24} />
-      </AuthShell>
-    );
+    return <div className="auth-shell auth-shell--silent" aria-hidden />;
   }
 
   if (!session) {

@@ -31,6 +31,48 @@ export const emptyLifeDataSnapshot: LifeDataSnapshot = {
   workouts: [],
 };
 
+let cachedLifeDataSnapshot: LifeDataSnapshot | null = null;
+let cachedLifeDataPromise: Promise<LifeDataSnapshot> | null = null;
+
+export async function loadLifeDataSnapshot(): Promise<LifeDataSnapshot> {
+  if (cachedLifeDataSnapshot) return cachedLifeDataSnapshot;
+  if (!cachedLifeDataPromise) {
+    cachedLifeDataPromise = (async () => {
+      const [events, tasks, expenses, incomes, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
+        fetchCalendarEventsFromDb(),
+        fetchTasksFromDb(),
+        fetchExpenseRecordsFromDb(),
+        fetchIncomeRecordsFromDb(),
+        fetchLifeActivitiesFromDb(),
+        fetchDailyLogsFromDb(),
+        fetchLifePhotoMetadataFromDb(),
+        fetchWeightRecordsFromDb(),
+        fetchWorkoutSessionsFromDb(),
+      ]);
+
+      return {
+        activities: activities ?? [],
+        dailyLogs: dailyLogs ?? [],
+        events: events ?? [],
+        expenses: expenses ?? [],
+        incomes: incomes ?? [],
+        lifePhotos: lifePhotos ?? [],
+        tasks: tasks ?? [],
+        weights: weights ?? [],
+        workouts: workouts ?? [],
+      };
+    })();
+  }
+
+  cachedLifeDataSnapshot = await cachedLifeDataPromise;
+  cachedLifeDataPromise = null;
+  return cachedLifeDataSnapshot;
+}
+
+export function setLifeDataSnapshotCache(nextSnapshot: LifeDataSnapshot) {
+  cachedLifeDataSnapshot = nextSnapshot;
+}
+
 export async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataSnapshot> {
   if (mode === "plans") return emptyLifeDataSnapshot;
 

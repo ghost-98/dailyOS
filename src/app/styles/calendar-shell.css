@@ -38,6 +38,10 @@
   gap: 28px;
 }
 
+.calendar-page--responsive-pending {
+  min-height: 100dvh;
+}
+
 .calendar-layout--detail-open {
   grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
 }

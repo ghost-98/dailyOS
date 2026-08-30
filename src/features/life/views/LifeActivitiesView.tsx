@@ -13,7 +13,6 @@ import { MobileRecordFrame } from "@/features/life/components/MobileRecordFrame"
 import { MobileRecordSheet } from "@/features/life/components/MobileRecordSheet";
 import { LifeMediaUploadPanel } from "@/features/life/components/LifeMediaUploadPanel";
 import { RecordMonthCalendar } from "@/features/life/components/RecordMonthCalendar";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate, getMonthDays } from "@/features/life/dateTime";
 import { formatWon } from "@/features/life/formatters";
 import { formatActivityTime, getActivityDurationMinutes } from "@/features/life/reconstruction";
@@ -55,7 +54,7 @@ export function LifeActivitiesView({
   onUploadPhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: LifeLinkedTarget) => Promise<void> | void;
   onSaveActivity: (activity: LifeActivityRecord) => Promise<void> | void;
 }) {
-  const { isMobile } = useResponsiveMode();
+  const { isMobile, isReady } = useResponsiveMode();
   const [editing, setEditing] = useState<LifeActivityRecord | null>(null);
   const [entryMode, setEntryMode] = useState<EntryMode>("activity");
   const [inputPanelMode, setInputPanelMode] = useState<InputPanelMode>("activity");
@@ -92,7 +91,7 @@ export function LifeActivitiesView({
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
   const [pickerMonth, setPickerMonth] = useState(new Date().getMonth() + 1);
   const [isComposerOpen, setIsComposerOpen] = useState(Boolean(initialDraft));
-  const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
   const [expandedActivityIds, setExpandedActivityIds] = useState<string[]>([]);
   const saveLockRef = useRef(false);
 
@@ -206,6 +205,10 @@ export function LifeActivitiesView({
       setIsComposerOpen(true);
     }
   }, [editing, entryMode, inputPanelMode]);
+
+  if (!isReady) {
+    return <div className="life-activity-view life-activity-view--pending" aria-hidden />;
+  }
 
   const resetForm = () => {
     setEditing(null);
@@ -824,7 +827,7 @@ export function LifeActivitiesView({
         layout={isMobile ? "mobile" : "desktop"}
         leading={
           <span className="record-timeline-card__time-badge">
-            <Clock3 aria-hidden size={13} />
+            {activity.endTime ? <Clock3 aria-hidden size={13} /> : null}
             {formatActivityTime(activity)}
           </span>
         }
@@ -847,9 +850,6 @@ export function LifeActivitiesView({
 
   return (
     <div className="life-tab-panel">
-      {isMobile ? null : (
-        <LifeTabHeading title="활동 기록" description="PC에서는 입력 패널과 날짜별 목록을 한 화면에서 함께 다루도록 유지합니다." />
-      )}
       {isMobile ? (
         <div className="life-activity-mobile">
           <MobileRecordFrame

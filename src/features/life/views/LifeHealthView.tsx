@@ -20,7 +20,6 @@ import {
 } from "@/features/health/api";
 import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
 import { createMonthCursor, shiftLifeDateKey } from "@/features/life/activityHelpers";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatRunDuration, formatWeightMeasurementMeta } from "@/features/life/formatters";
 import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 import { confirmAction } from "@/lib/actionGuards";
@@ -53,10 +52,10 @@ export function LifeHealthView({
   const [isSavingWeight, setIsSavingWeight] = useState(false);
   const [message, setMessage] = useState("");
   const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(date));
-  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<"running" | "weight">("running");
-  const { isMobile } = useResponsiveMode();
+  const { isMobile, isReady } = useResponsiveMode();
 
   const selectedRuns = workouts.filter((workout) => workout.date === date && workout.type === "running");
   const selectedRun = selectedRuns[0] ?? null;
@@ -68,6 +67,10 @@ export function LifeHealthView({
     return counts;
   }, [weights, workouts]);
   const totalDistanceKm = selectedRuns.reduce((sum, workout) => sum + (workout.distanceKm ?? 0), 0);
+
+  if (!isReady) {
+    return <div className="life-health-view life-health-view--pending" aria-hidden />;
+  }
 
   const changeDate = (nextDate: string) => {
     setDate(nextDate);
@@ -217,7 +220,6 @@ export function LifeHealthView({
 
   const desktopHealthContent = (
     <div className="life-tab-panel">
-      <LifeTabHeading title="건강" description="러닝과 아침 몸무게를 저장하면 건강 축과 라이프 캘린더 기간 기록에 함께 반영됩니다." />
       <div className="life-health-view ui-workspace-stack">
         <SectionCard className="life-capture-list life-health-summary ui-workspace-panel">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">

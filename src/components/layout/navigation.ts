@@ -1,4 +1,4 @@
-import { Activity, BookOpenCheck, FileText, Layers3, Map, MapPinned, Settings } from "lucide-react";
+import { Activity, CalendarDays, FileText, Layers3, Map, MapPinned, Settings } from "lucide-react";
 
 export type NavItem = {
   children?: Array<Omit<NavItem, "children" | "icon">>;
@@ -38,9 +38,9 @@ export const primaryNav: NavItem[] = [
 ];
 
 export const mobileNav: NavItem[] = [
-  { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
-  { label: "DB", href: "/life", key: "life", icon: BookOpenCheck },
   { label: "장소", href: "/places", key: "places", icon: Map },
+  { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
+  { label: "하루", href: "/life", key: "life", icon: CalendarDays },
   { label: "문서", href: "/documents", key: "documents", icon: FileText },
   { label: "설정", href: "/settings", key: "settings", icon: Settings },
 ];

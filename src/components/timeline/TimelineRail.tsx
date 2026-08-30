@@ -19,8 +19,8 @@ export function TimelineRail({ children, className = "", empty, headline, meta }
         <div className="timeline-rail__head">
           <div className="timeline-rail__head-copy">
             {headline ? <span>{headline}</span> : null}
-            {meta ? <strong>{meta}</strong> : null}
           </div>
+          {meta ? <strong className="timeline-rail__meta">{meta}</strong> : null}
         </div>
       ) : null}
 

@@ -1,5 +1,4 @@
 export type LifeViewMode =
-  | "home"
   | "calendar"
   | "gallery"
   | "plans"
@@ -11,4 +10,4 @@ export type LifeViewMode =
   | "logs"
   | "health";
 
-export type LifeDataMode = Exclude<LifeViewMode, "home">;
+export type LifeDataMode = LifeViewMode;

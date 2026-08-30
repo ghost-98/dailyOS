@@ -1,36 +1,38 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { NotebookPen, Pencil, Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
-import type { CalendarEvent } from "@/features/calendar/data";
 import { MobileRecordFrame } from "@/features/life/components/MobileRecordFrame";
 import { MobileRecordSheet } from "@/features/life/components/MobileRecordSheet";
 import { RecordMonthCalendar } from "@/features/life/components/RecordMonthCalendar";
-import { LifeTabHeading } from "@/features/life/components/LifeTabHeading";
 import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
 import { createMonthCursor, shiftLifeDateKey } from "@/features/life/activityHelpers";
-import { getPhotoLinkedTargetOptions, getPhotoTargetTypeLabel } from "@/features/life/linkTargets";
+import { getPhotoLinkedTargetOptions } from "@/features/life/linkTargets";
+import { getLinkedTargetTypeLabel } from "@/features/life/formatters";
 import type { LifeLinkedTarget } from "@/features/life/linkTargets";
 import { getLifeActionErrorMessage } from "@/features/life/views/lifeViewErrors";
-import { fetchTasksFromDb } from "@/features/tasks/api";
 import { confirmAction } from "@/lib/actionGuards";
 import { useResponsiveMode } from "@/hooks/useResponsiveMode";
+import type { CalendarEvent } from "@/features/calendar/data";
 import type { DailyLogRecord, LifeActivityRecord, TaskItem } from "@/types/domain";
 
 export function LifeLogsView({
   activities,
+  events,
   logs,
+  tasks,
   onCreateLog,
   onDeleteLog,
   onUpdateLog,
 }: {
   activities: LifeActivityRecord[];
+  events: CalendarEvent[];
   logs: DailyLogRecord[];
+  tasks: TaskItem[];
   onCreateLog: (date: string, content: string, linkedTarget?: LifeLinkedTarget) => Promise<void> | void;
   onDeleteLog: (id: string) => Promise<void> | void;
   onUpdateLog: (log: DailyLogRecord) => Promise<void> | void;
@@ -40,15 +42,13 @@ export function LifeLogsView({
   const [linkedTargetKey, setLinkedTargetKey] = useState("");
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => createMonthCursor(formatDateKey(new Date())));
-  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const { isMobile } = useResponsiveMode();
+  const { isMobile, isReady } = useResponsiveMode();
   const selectedLogs = logs.filter((log) => log.date === date);
   const logCountsByDate = useMemo(() => {
     const counts = new Map<string, number>();
@@ -58,21 +58,25 @@ export function LifeLogsView({
   const linkedTargetOptions = useMemo(() => getPhotoLinkedTargetOptions(date, events, tasks, activities), [activities, date, events, tasks]);
   const linkedTarget = linkedTargetOptions.find((option) => option.key === linkedTargetKey);
 
-  useEffect(() => {
-    let isMounted = true;
+  if (!isReady) {
+    return <div className="life-log-view life-log-view--pending" aria-hidden />;
+  }
 
-    Promise.all([fetchCalendarEventsFromDb(), fetchTasksFromDb()])
-      .then(([nextEvents, nextTasks]) => {
-        if (!isMounted) return;
-        setEvents(nextEvents ?? []);
-        setTasks(nextTasks ?? []);
-      })
-      .catch((error) => console.error("Failed to load daily log link targets from Supabase", error));
+  const formatCreatedAt = (value?: string) => {
+    if (!value) return "시간 미상";
+    const dateValue = new Date(value);
+    if (Number.isNaN(dateValue.getTime())) return "시간 미상";
+    return new Intl.DateTimeFormat("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(dateValue);
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const getLinkedTargetLabel = (log: DailyLogRecord) => {
+    if (!log.linkedTargetTitle) return "날짜 전체";
+    return `${getLinkedTargetTypeLabel(log.linkedTargetType)} · ${log.linkedTargetTitle}`;
+  };
 
   const saveLog = async () => {
     const trimmedContent = content.trim();
@@ -153,7 +157,6 @@ export function LifeLogsView({
 
   return (
     <div className="life-tab-panel">
-      {isMobile ? null : <LifeTabHeading title="하루 기록" description="하루 전체의 감정, 맥락, 짧은 회고를 날짜 중심으로 남겨두는 공간이에요." />}
       {isMobile ? (
         <>
           <MobileRecordFrame
@@ -169,6 +172,8 @@ export function LifeLogsView({
               />
             }
             dateLabel={formatFullDate(date)}
+            countLabel="하루기록"
+            countValue={`${selectedLogs.length}건`}
             isCalendarOpen={isCalendarOpen}
             onAddClick={openComposer}
             onNextDate={() => changeDate(shiftLifeDateKey(date, 1))}
@@ -176,31 +181,33 @@ export function LifeLogsView({
             onToggleCalendar={() => setIsCalendarOpen((current) => !current)}
           >
             <div className="life-log-mobile__content">
-            {selectedLogs.length > 0 ? (
-              <div className="life-log-list">
-                {selectedLogs.map((log) => (
-                  <article className="life-log-preview" key={log.id}>
-                    {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
-                    <span>하루 기록</span>
-                    <p>{log.content}</p>
-                    <div className="life-record-actions">
-                      <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
-                        <Pencil aria-hidden size={14} />
-                      </IconButton>
-                      <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
-                        <Trash2 aria-hidden size={14} />
-                      </IconButton>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="life-map-empty life-map-empty--compact">
-                <NotebookPen aria-hidden size={28} />
-                <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
-                <p>상단의 + 버튼으로 새 기록을 바로 추가할 수 있어요.</p>
-              </div>
-            )}
+              {selectedLogs.length > 0 ? (
+                <div className="life-log-list">
+                  {selectedLogs.map((log) => (
+                    <article className="life-log-preview" key={log.id}>
+                      <div className="life-log-preview__meta">
+                        <span className="life-log-preview__target">{getLinkedTargetLabel(log)}</span>
+                        <span className="life-log-preview__time">작성 {formatCreatedAt(log.createdAt)}</span>
+                      </div>
+                      <p>{log.content}</p>
+                      <div className="life-record-actions">
+                        <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">
+                          <Pencil aria-hidden size={14} />
+                        </IconButton>
+                        <IconButton disabled={deletingLogId === log.id} label="기록 삭제" onClick={() => void deleteLog(log.id)} size="sm" tone="danger">
+                          <Trash2 aria-hidden size={14} />
+                        </IconButton>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="life-map-empty life-map-empty--compact">
+                  <NotebookPen aria-hidden size={28} />
+                  <strong>이 날짜에는 하루 기록이 아직 없어요.</strong>
+                  <p>상단의 + 버튼으로 새 기록을 바로 추가할 수 있어요.</p>
+                </div>
+              )}
             </div>
           </MobileRecordFrame>
           {isComposerOpen ? (
@@ -313,8 +320,10 @@ export function LifeLogsView({
               <div className="life-log-list">
                 {selectedLogs.map((log) => (
                   <article className="life-log-preview" key={log.id}>
-                    {log.linkedTargetTitle ? <b className="life-photo-link-badge">{getPhotoTargetTypeLabel(log.linkedTargetType)} · {log.linkedTargetTitle}</b> : null}
-                    <span>하루 기록</span>
+                    <div className="life-log-preview__meta">
+                      <span className="life-log-preview__target">{getLinkedTargetLabel(log)}</span>
+                      <span className="life-log-preview__time">작성 {formatCreatedAt(log.createdAt)}</span>
+                    </div>
                     <p>{log.content}</p>
                     <div className="life-record-actions">
                       <IconButton label="기록 수정" onClick={() => editLog(log)} size="sm" tone="soft">

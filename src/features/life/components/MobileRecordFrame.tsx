@@ -10,6 +10,7 @@ type MobileRecordFrameProps = {
   addMenu?: ReactNode;
   calendar?: ReactNode;
   children: ReactNode;
+  className?: string;
   countLabel?: string;
   countValue?: string;
   dateLabel: string;
@@ -21,6 +22,7 @@ type MobileRecordFrameProps = {
   onPrevDate: () => void;
   onToggleCalendar: () => void;
   summary?: ReactNode;
+  showAddButton?: boolean;
   title?: string;
 };
 
@@ -29,6 +31,7 @@ export function MobileRecordFrame({
   addMenu,
   calendar,
   children,
+  className,
   countLabel,
   countValue,
   dateLabel,
@@ -40,10 +43,11 @@ export function MobileRecordFrame({
   onPrevDate,
   onToggleCalendar,
   summary,
+  showAddButton = true,
   title,
 }: MobileRecordFrameProps) {
   return (
-    <SectionCard className="mobile-record-frame">
+    <SectionCard className={className ? `mobile-record-frame ${className}` : "mobile-record-frame"}>
       {title ? <p className="mobile-record-frame__eyebrow">{title}</p> : null}
       <div className="mobile-record-frame__topbar">
         <IconButton className="mobile-record-frame__nav" label="이전 날짜" onClick={onPrevDate} size="sm" tone="outline">
@@ -60,9 +64,11 @@ export function MobileRecordFrame({
           <IconButton label={isCalendarOpen ? "달력 접기" : "달력 펼치기"} onClick={onToggleCalendar} size="sm" tone="outline">
             <CalendarDays aria-hidden size={16} />
           </IconButton>
-          <IconButton className="mobile-record-frame__add" label={addButtonLabel} onClick={onAddClick} size="sm">
-            <Plus aria-hidden size={16} />
-          </IconButton>
+          {showAddButton ? (
+            <IconButton className="mobile-record-frame__add" label={addButtonLabel} onClick={onAddClick} size="sm">
+              <Plus aria-hidden size={16} />
+            </IconButton>
+          ) : null}
         </div>
       </div>
       {isAddMenuOpen && addMenu ? <div className="mobile-record-frame__menu">{addMenu}</div> : null}

@@ -4,7 +4,7 @@ import { LifeView } from "@/features/life/LifeView";
 export default function LifePage() {
   return (
     <AppShell activeKey="life">
-      <LifeView mode="home" />
+      <LifeView mode="calendar" />
     </AppShell>
   );
 }

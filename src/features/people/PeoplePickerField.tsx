@@ -20,7 +20,7 @@ export function PeoplePickerField({ onChange, onCreatePerson, people, selectedNa
     () =>
       people.filter((person) => {
         if (selectedNames.includes(person.name)) return false;
-        if (!normalizedQuery) return true;
+        if (!normalizedQuery) return false;
         return person.name.toLowerCase().includes(normalizedQuery) || person.memo?.toLowerCase().includes(normalizedQuery);
       }),
     [normalizedQuery, people, selectedNames],
