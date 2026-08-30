@@ -516,12 +516,6 @@ function CalendarViewContent({
                 selectedDate={mobileDatabaseDate}
               />
             }
-            children={
-              <div className="record-plans-mobile__detail">
-                <LifeCalendarDayPanel isLoading={isLoading} items={mobileDatabaseTimelineItems} />
-                {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
-              </div>
-            }
             dateLabel={formatSelectedDate(mobileDatabaseDate)}
             isCalendarOpen={!isCalendarCollapsedOnMobile}
             onAddClick={() => {}}
@@ -537,7 +531,12 @@ function CalendarViewContent({
             }}
             onToggleCalendar={toggleMobileCalendar}
             showAddButton={false}
-          />
+          >
+            <div className="record-plans-mobile__detail">
+              <LifeCalendarDayPanel isLoading={isLoading} items={mobileDatabaseTimelineItems} />
+              {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
+            </div>
+          </MobileRecordFrame>
         </div>
       </div>
     );
