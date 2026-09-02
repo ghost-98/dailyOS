@@ -2,7 +2,7 @@ import { fetchCalendarEventsFromDb } from "@/features/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/health/api";
 import { fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/ledger/api";
-import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotoMetadataFromDb, fetchLifePhotosFromDb } from "@/features/life/api";
+import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/life/api";
 import type { LifeDataMode } from "@/features/life/modes";
 import { fetchTasksFromDb } from "@/features/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
@@ -45,7 +45,7 @@ export async function loadLifeDataSnapshot(): Promise<LifeDataSnapshot> {
         fetchIncomeRecordsFromDb(),
         fetchLifeActivitiesFromDb(),
         fetchDailyLogsFromDb(),
-        fetchLifePhotoMetadataFromDb(),
+        fetchLifePhotosFromDb(),
         fetchWeightRecordsFromDb(),
         fetchWorkoutSessionsFromDb(),
       ]);
@@ -87,7 +87,7 @@ export async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataS
   }
 
   if (mode === "places") {
-    const [activities, dailyLogs, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb(), fetchLifePhotoMetadataFromDb()]);
+    const [activities, dailyLogs, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb(), fetchLifePhotosFromDb()]);
     return { ...emptyLifeDataSnapshot, activities: activities ?? [], dailyLogs: dailyLogs ?? [], lifePhotos: lifePhotos ?? [] };
   }
 
@@ -131,7 +131,7 @@ export async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataS
     fetchIncomeRecordsFromDb(),
     fetchLifeActivitiesFromDb(),
     fetchDailyLogsFromDb(),
-    fetchLifePhotoMetadataFromDb(),
+    fetchLifePhotosFromDb(),
     fetchWeightRecordsFromDb(),
     fetchWorkoutSessionsFromDb(),
   ]);
