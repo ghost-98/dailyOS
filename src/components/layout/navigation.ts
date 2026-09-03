@@ -1,47 +1,15 @@
-import { Activity, CalendarDays, FileText, Layers3, Map, MapPinned, Settings } from "lucide-react";
+import { Activity, CalendarDays, Settings } from "lucide-react";
 
 export type NavItem = {
-  children?: Array<Omit<NavItem, "children" | "icon">>;
   href: string;
   icon: typeof Activity;
   key: string;
   label: string;
 };
 
-const captureChildren = [
-  { label: "활동 기록", href: "/life/activities", key: "life-activities" },
-  { label: "할 일·이벤트", href: "/life/plans", key: "life-plans" },
-  { label: "하루기록", href: "/life/logs", key: "life-logs" },
-  { label: "건강", href: "/life/health", key: "life-health" },
-];
-
-const lifeChildren = [
-  { label: "라이프 캘린더", href: "/life/calendar", key: "life-calendar" },
-  { label: "갤러리", href: "/life/gallery", key: "life-gallery" },
-  { label: "전체 검색", href: "/life/search", key: "life-search" },
-  { label: "사람", href: "/life/people", key: "life-people" },
-  { label: "장소", href: "/life/places", key: "life-places" },
-  { label: "AI 질문", href: "/life/ask", key: "life-ask" },
-  { label: "가계부", href: "/ledger", key: "ledger" },
-];
-
-const placeChildren = [
-  { label: "장소 보관함", href: "/places", key: "places-vault" },
-];
-
-export const primaryNav: NavItem[] = [
-  { label: "기록", href: "/life/activities", key: "capture", icon: Activity, children: captureChildren },
-  { label: "DB", href: "/life", key: "life", icon: Layers3, children: lifeChildren },
-  { label: "장소", href: "/places", key: "places", icon: MapPinned, children: placeChildren },
-  { label: "문서", href: "/documents", key: "documents", icon: FileText },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
-];
-
 export const mobileNav: NavItem[] = [
-  { label: "장소", href: "/places", key: "places", icon: Map },
-  { label: "기록", href: "/life/activities", key: "life-activities", icon: Activity },
-  { label: "하루", href: "/life", key: "life", icon: CalendarDays },
-  { label: "문서", href: "/documents", key: "documents", icon: FileText },
-  { label: "설정", href: "/settings", key: "settings", icon: Settings },
+  { label: "기록", href: "/m/life/activities", key: "life-activities", icon: Activity },
+  { label: "하루", href: "/m/life", key: "life", icon: CalendarDays },
+  { label: "설정", href: "/m/settings", key: "settings", icon: Settings },
 ];
 
