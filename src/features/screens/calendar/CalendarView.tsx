@@ -1,144 +1,79 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
-import type { DragEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, Camera, ChevronDown, ChevronLeft, ChevronRight, MapPin, NotebookPen, Plus, UsersRound, UtensilsCrossed, X } from "lucide-react";
-import { FormField } from "@/components/ui/FormField";
+import { Banknote, Camera, ChevronDown, MapPin, NotebookPen, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { DayInsightBar } from "@/components/screens/day/DayInsightBar";
-import { SectionCard } from "@/components/ui/SectionCard";
-import { CalendarFilterChip } from "@/features/calendar/CalendarFilterChip";
 import { EventCreateSheet, TaskCreateSheet } from "@/features/calendar/CalendarSheets";
 import { MobileRecordFrame } from "@/components/screens/record/MobileRecordFrame";
 import { RecordMonthCalendar } from "@/components/screens/record/RecordMonthCalendar";
-import { useResponsiveMode } from "@/hooks/useResponsiveMode";
+import { LifeCalendarDayPanel as DayCalendarPanel } from "@/features/screens/day/DayCalendarPanel";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
-import type { EventType, PlanPlace, TaskItem } from "@/types/domain";
-import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/ledger/api";
-import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, updateLifeActivitiesBySourceInDb } from "@/features/life/api";
-import { formatWon, getLinkedTargetTypeLabel } from "@/features/life/formatters";
-import { parseCompanions } from "@/features/life/insights";
-import { createPersonInDb } from "@/features/people/api";
-import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/tasks/api";
-import { DayTimelineSection } from "@/components/screens/day/DayTimelineSection";
-import { SelectedDatePlacesMap } from "@/components/screens/day/SelectedDatePlacesMap";
+import type { EventType, TaskItem } from "@/types/domain";
+import { createPersonInDb } from "@/features/sources/peopleApi";
+import { createTaskInDb, updateTaskInDb } from "@/features/sources/taskApi";
 import { useCalendarResources } from "@/features/calendar/useCalendarResources";
+import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/sources/ledgerApi";
+import { updateLifeActivitiesBySourceInDb } from "@/features/records/api/recordsApi";
+import { formatWon, getLinkedTargetTypeLabel } from "@/features/records/format/recordFormatters";
+import { parseCompanions } from "@/features/records/search/recordsInsights";
 import {
   createEventTimelineItem,
   createExternalTimelineItem,
   createTaskTimelineItem,
   getCategories,
-  getMonthBounds,
-  getScopeTitle,
-  getTimelineItemDate,
   getTimelineTimeLabel,
   getTimelineTypeOrder,
-  getWeekBounds,
-  isRangeOverlapping,
-  type LifeCalendarScope,
-  normalizeRangeBounds,
   summarizeDay,
 } from "@/features/calendar/calendarViewHelpers";
-import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange, reorderScopedItems, uniquePlanPlaces } from "@/features/calendar/utils";
-import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/calendar/api";
-import { categoryDisplayOrder, categoryLabels } from "@/features/calendar/presentation";
-import type { CalendarCategory, DayTimelineItem, DragPlacement, ExternalCalendarItem } from "@/features/calendar/types";
+import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange } from "@/features/calendar/utils";
+import { createCalendarEventInDb, updateCalendarEventInDb } from "@/features/sources/calendarApi";
+import { categoryLabels } from "@/features/calendar/presentation";
+import type { CalendarCategory, DayTimelineItem, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "@/features/calendar/data";
 type CalendarViewProps = {
   allowedTypes?: EventType[];
   defaultSelectedDate?: string | null;
   externalItems?: ExternalCalendarItem[];
-  showEventAddButton?: boolean;
-  title?: string;
-  viewMode?: "manage" | "database";
 };
 
-const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const initialMonth = new Date();
 const naverMapClientId = getNaverMapClientId();
 const dayRouteGeocodeCache = new Map<string, { latitude: number; longitude: number } | null>();
 
 export function CalendarView(props: CalendarViewProps) {
-  const { isReady } = useResponsiveMode();
-
-  if (!isReady) {
-    return <div className="calendar-page calendar-page--responsive-pending" />;
-  }
-
   return <CalendarViewContent {...props} />;
 }
+
+void LifeCalendarDayPanel;
 
 function CalendarViewContent({
   allowedTypes,
   defaultSelectedDate = null,
   externalItems = [],
-  showEventAddButton = false,
-  viewMode = "manage",
-  title = "이벤트",
 }: CalendarViewProps) {
-  type CalendarVisualFilter = CalendarCategory | "record";
-  const isDatabaseView = viewMode === "database";
-  const { isMobile } = useResponsiveMode();
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
-  const [calendarCategoryFilters, setCalendarCategoryFilters] = useState<CalendarVisualFilter[]>([]);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
-  const [sheetDefaultType, setSheetDefaultType] = useState<CalendarCategory>("event");
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
-  const [deletingPlan, setDeletingPlan] = useState<{ id: string; type: "event" | "task" } | null>(null);
-  const [draggingItem, setDraggingItem] = useState<{ id: string; type: CalendarCategory } | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ id: string; placement: DragPlacement } | null>(null);
-  const [activityConversionMessage, setActivityConversionMessage] = useState("");
-  const [convertingToActivity, setConvertingToActivity] = useState<{ id: string; type: "event" | "task" } | null>(null);
-  const [dbScope, setDbScope] = useState<LifeCalendarScope>("day");
-  const [rangeStart, setRangeStart] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
-  const [rangeEnd, setRangeEnd] = useState(defaultSelectedDate ?? formatDateKey(new Date()));
-  const [isCalendarCollapsedOnMobile, setIsCalendarCollapsedOnMobile] = useState(true);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  const visibleEvents = events.filter((event) => categories.includes(event.type as CalendarCategory));
-  const visibleCalendarCategories = calendarCategoryFilters.length > 0
-    ? categories.filter((type) => calendarCategoryFilters.includes(type))
-    : categories;
-  const recordFilterEnabled = isDatabaseView && (calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes("record"));
-  const orderedVisibleCalendarCategories = categoryDisplayOrder.filter((type) => visibleCalendarCategories.includes(type));
-  const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
   const todayKey = useMemo(() => formatDateKey(new Date()), []);
-  const detailAnchorDate = selectedDate ?? todayKey;
-  const periodBounds = useMemo(() => {
-    if (!isDatabaseView) return { end: detailAnchorDate, start: detailAnchorDate };
-    if (dbScope === "week") return getWeekBounds(detailAnchorDate);
-    if (dbScope === "month") return getMonthBounds(currentMonth);
-    if (dbScope === "range") return normalizeRangeBounds(rangeStart, rangeEnd);
-    return { end: detailAnchorDate, start: detailAnchorDate };
-  }, [currentMonth, dbScope, detailAnchorDate, isDatabaseView, rangeEnd, rangeStart]);
-  const selectedEvents = useMemo(() => (selectedDate ? visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event") : []), [selectedDate, visibleEvents]);
-  const selectedTasks = useMemo(() => (selectedDate ? tasks.filter((task) => isDateInRange(selectedDate, task.scheduledDate, task.dueDate)) : []), [selectedDate, tasks]);
-  const selectedExternalItems = useMemo(
-    () => (selectedDate ? externalItems.filter((item) => item.date === selectedDate && (!isDatabaseView || recordFilterEnabled)) : []),
-    [externalItems, isDatabaseView, recordFilterEnabled, selectedDate],
-  );
-  const periodEvents = useMemo(
-    () => visibleEvents.filter((event) => event.type === "event" && isRangeOverlapping(event.date, event.endDate, periodBounds.start, periodBounds.end)),
-    [periodBounds.end, periodBounds.start, visibleEvents],
-  );
-  const periodTasks = useMemo(
-    () => tasks.filter((task) => isRangeOverlapping(task.scheduledDate, task.dueDate, periodBounds.start, periodBounds.end)),
-    [periodBounds.end, periodBounds.start, tasks],
-  );
-  const periodExternalItems = useMemo(
-    () => externalItems.filter((item) => item.date >= periodBounds.start && item.date <= periodBounds.end && (!isDatabaseView || recordFilterEnabled)),
-    [externalItems, isDatabaseView, periodBounds.end, periodBounds.start, recordFilterEnabled],
-  );
+  const activeDate = selectedDate ?? defaultSelectedDate ?? todayKey;
+  const visibleEvents = useMemo(() => events.filter((event) => categories.includes(event.type as CalendarCategory)), [categories, events]);
+  const monthDays = getMonthDays(currentMonth.getFullYear(), currentMonth.getMonth());
+  const selectedEvents = useMemo(() => visibleEvents.filter((event) => isDateInRange(activeDate, event.date, event.endDate) && event.type === "event"), [activeDate, visibleEvents]);
+  const selectedTasks = useMemo(() => tasks.filter((task) => isDateInRange(activeDate, task.scheduledDate, task.dueDate)), [activeDate, tasks]);
+  const selectedExternalItems = useMemo(() => externalItems.filter((item) => item.date === activeDate), [activeDate, externalItems]);
   const selectedTimelineItems = useMemo(
     () =>
       [
@@ -148,85 +83,17 @@ function CalendarViewContent({
       ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type)),
     [selectedEvents, selectedExternalItems, selectedTasks],
   );
-  const periodTimelineItems = useMemo(
-    () =>
-      [
-        ...periodTasks.map((task) => createTaskTimelineItem(task)),
-        ...periodEvents.map((event) => createEventTimelineItem(event)),
-        ...periodExternalItems.map((external) => createExternalTimelineItem(external)),
-      ].sort((first, second) => {
-        const firstDate = getTimelineItemDate(first);
-        const secondDate = getTimelineItemDate(second);
-        if (firstDate !== secondDate) return firstDate.localeCompare(secondDate);
-        return first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type);
-      }),
-    [periodEvents, periodExternalItems, periodTasks],
-  );
-  const countsByCategory = useMemo(() => {
-    if (isDatabaseView) {
-      return {
-        event: periodEvents.length,
-        todo: periodTasks.length,
-      };
-    }
-    if (!selectedDate) return { event: 0, todo: 0 };
-    return {
-      event: visibleEvents.filter((event) => isDateInRange(selectedDate, event.date, event.endDate) && event.type === "event").length,
-      todo: selectedTasks.length,
-    };
-  }, [isDatabaseView, periodEvents.length, periodTasks.length, selectedDate, selectedTasks.length, visibleEvents]);
-  const mobileTimelineHeader = !isDatabaseView && isMobile && selectedDate ? (
-    <div className="timeline-rail__head">
-      <div className="timeline-rail__head-copy">
-        <span>{formatSelectedDate(selectedDate)} 타임라인</span>
-      </div>
-      <strong className="timeline-rail__meta">{selectedTimelineItems.length}개</strong>
-    </div>
-  ) : null;
-  const mobileDatabaseDate = selectedDate ?? detailAnchorDate;
-  const mobileDatabaseTimelineItems = useMemo(() => {
-    if (!isDatabaseView || !isMobile) return selectedTimelineItems;
-    const dateEvents = visibleEvents.filter((event) => isDateInRange(mobileDatabaseDate, event.date, event.endDate) && event.type === "event");
-    const dateTasks = tasks.filter((task) => isDateInRange(mobileDatabaseDate, task.scheduledDate, task.dueDate));
-    const dateExternalItems = externalItems.filter((item) => item.date === mobileDatabaseDate && (!isDatabaseView || recordFilterEnabled));
-    return [
-      ...dateTasks.map((task) => createTaskTimelineItem(task)),
-      ...dateEvents.map((event) => createEventTimelineItem(event)),
-      ...dateExternalItems.map((external) => createExternalTimelineItem(external)),
-    ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type));
-  }, [detailAnchorDate, externalItems, isDatabaseView, isMobile, mobileDatabaseDate, recordFilterEnabled, selectedTimelineItems, tasks, visibleEvents]);
-  const selectedPlanPlaces = useMemo(() => {
-    const sourceItems = isDatabaseView ? [...periodEvents, ...periodTasks] : [...selectedEvents, ...selectedTasks];
-    return uniquePlanPlaces(sourceItems.map((item) => item.place).filter((place): place is PlanPlace => Boolean(place)));
-  }, [isDatabaseView, periodEvents, periodTasks, selectedEvents, selectedTasks]);
-  const visibleTimelineItems = useMemo(() => {
-    if (!isDatabaseView) return selectedTimelineItems;
-    return periodTimelineItems;
-  }, [isDatabaseView, periodTimelineItems, selectedTimelineItems]);
-  const mobileCalendarCounts = useMemo(() => {
-    if (isDatabaseView) return new Map<string, number>();
+  const monthCalendarCounts = useMemo(() => {
     const counts = new Map<string, number>();
     monthDays.forEach((cell) => {
       if (!cell.date) return;
-      const dayEvents = visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory));
-      const dayTasks = visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
-      const dayExternalItems = externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled));
-      counts.set(cell.date, summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems).totalCount);
+      const dayEvents = visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate));
+      const dayTasks = tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate));
+      const dayExternalItems = externalItems.filter((item) => item.date === cell.date);
+      counts.set(cell.date, summarizeDay(dayEvents, dayTasks, categories, dayExternalItems).totalCount);
     });
     return counts;
-  }, [externalItems, isDatabaseView, monthDays, orderedVisibleCalendarCategories, recordFilterEnabled, tasks, visibleCalendarCategories, visibleEvents]);
-  const mobileDatabaseCalendarCounts = useMemo(() => {
-    if (!isDatabaseView || !isMobile) return mobileCalendarCounts;
-    const counts = new Map<string, number>();
-    monthDays.forEach((cell) => {
-      if (!cell.date) return;
-      const dayEvents = visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory));
-      const dayTasks = visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
-      const dayExternalItems = externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled));
-      counts.set(cell.date, summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems).totalCount);
-    });
-    return counts;
-  }, [externalItems, isDatabaseView, isMobile, monthDays, mobileCalendarCounts, orderedVisibleCalendarCategories, recordFilterEnabled, tasks, visibleCalendarCategories, visibleEvents]);
+  }, [categories, externalItems, monthDays, tasks, visibleEvents]);
 
   const moveMonth = (direction: -1 | 1) => {
     setCurrentMonth((month) => {
@@ -237,36 +104,12 @@ function CalendarViewContent({
   };
 
   const toggleMobileCalendar = () => {
-    if (!isMobile) return;
-    setIsCalendarCollapsedOnMobile((current) => !current);
+    setIsCalendarOpen((current) => !current);
   };
 
   const handleDateClick = (date: string) => {
     setSelectedDate(date);
-    if (isMobile && !isDatabaseView) setIsCalendarCollapsedOnMobile(false);
-  };
-
-  const toggleCalendarCategoryFilter = (type: CalendarVisualFilter) => {
-    setCalendarCategoryFilters((current) => (current.includes(type) ? current.filter((item) => item !== type) : [...current, type]));
-  };
-
-  const filterTypes = useMemo(
-    () => (isDatabaseView ? [...categories, "record"] as CalendarVisualFilter[] : categories),
-    [categories, isDatabaseView],
-  );
-
-  const openCreateEventSheet = (type: CalendarCategory) => {
-    setIsAddMenuOpen(false);
-
-    if (type === "todo") {
-      setEditingTask(null);
-      setIsTaskSheetOpen(true);
-      return;
-    }
-
-    setSheetDefaultType(type);
-    setEditingEvent(null);
-    setIsEventSheetOpen(true);
+    setIsCalendarOpen(true);
   };
 
   const handleCreatePerson = async (name: string) => {
@@ -310,21 +153,6 @@ function CalendarViewContent({
     }
   };
 
-  const deleteEvent = async (id: string) => {
-    if (deletingPlan) return;
-    if (!confirmAction("이 이벤트를 삭제할까요?")) return;
-    setDeletingPlan({ id, type: "event" });
-    try {
-      const targetEvent = events.find((event) => event.id === id);
-      await deleteCalendarEventFromDb(id);
-      if (targetEvent) await deleteLinkedExpenseRecordInDb("event", id);
-      if (targetEvent) await deleteLifeActivitiesBySourceFromDb("event", id);
-      setEvents((current) => current.filter((item) => item.id !== id));
-    } finally {
-      setDeletingPlan(null);
-    }
-  };
-
   const saveTask = async (task: TaskItem) => {
     if (isSavingTask) return;
     if (!confirmAction(editingTask ? "할 일 수정을 저장할까요?" : "할 일을 저장할까요?")) return;
@@ -350,538 +178,47 @@ function CalendarViewContent({
       setIsSavingTask(false);
     }
   };
-
-  const deleteTask = async (id: string) => {
-    if (deletingPlan) return;
-    if (!confirmAction("이 할 일을 삭제할까요?")) return;
-    setDeletingPlan({ id, type: "task" });
-    try {
-      await deleteTaskFromDb(id);
-      await deleteLinkedExpenseRecordInDb("todo", id);
-      await deleteLifeActivitiesBySourceFromDb("todo", id);
-      setTasks((current) => current.filter((item) => item.id !== id));
-    } finally {
-      setDeletingPlan(null);
-    }
-  };
-
-  const toggleTaskDone = async (task: TaskItem) => {
-    if (!confirmAction(task.status === "done" ? "이 할 일을 미완료로 되돌릴까요?" : "이 할 일을 완료 처리할까요?")) return;
-    const nextTask: TaskItem = {
-      ...task,
-      status: task.status === "done" ? "todo" : "done",
-      completedAt: task.status === "done" ? undefined : new Date().toISOString(),
-    };
-    const savedTask = await updateTaskInDb(nextTask);
-    setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
-  };
-
-  const createActivityFromEvent = async (event: CalendarEvent) => {
-    const conversionDate = selectedDate && isDateInRange(selectedDate, event.date, event.endDate) ? selectedDate : event.date;
-    const targetType = "event";
-    setConvertingToActivity({ id: event.id, type: "event" });
-    setActivityConversionMessage("");
-
-    try {
-      const activity = await createLifeActivityInDb({
-        id: `activity-${Date.now()}`,
-        date: conversionDate,
-        startTime: event.isAllDay ? undefined : event.time,
-        endTime: event.isAllDay ? undefined : event.endTime,
-        isAllDay: event.isAllDay,
-        title: event.title,
-        category: "이벤트",
-        companions: event.companions,
-        expenseAmount: event.expenseAmount,
-        memo: event.meta ? `${event.meta} · ${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록` : `${categoryLabels[event.type as CalendarCategory]}에서 활동으로 기록`,
-        placeAddress: event.place?.address,
-        placeName: event.place?.name,
-        sourceId: event.id,
-        sourceTitle: event.title,
-        sourceType: targetType,
-      });
-
-      if (event.expenseAmount) {
-        const nextEvent = { ...event, expenseAmount: undefined } satisfies CalendarEvent;
-        const savedEvent = await updateCalendarEventInDb(nextEvent);
-        await deleteLinkedExpenseRecordInDb(targetType, event.id);
-        setEvents((current) => current.map((item) => (item.id === event.id ? savedEvent ?? nextEvent : item)));
-      }
-
-      setActivityConversionMessage(`${activity?.title ?? event.title}을 활동 기록으로 저장했어요.`);
-    } catch (error) {
-      console.error("Failed to create activity from calendar event", error);
-      setActivityConversionMessage("활동 기록으로 저장하지 못했습니다.");
-    } finally {
-      setConvertingToActivity(null);
-    }
-  };
-
-  const createActivityFromTask = async (task: TaskItem) => {
-    const conversionDate = selectedDate && isDateInRange(selectedDate, task.scheduledDate, task.dueDate) ? selectedDate : task.scheduledDate;
-    setConvertingToActivity({ id: task.id, type: "task" });
-    setActivityConversionMessage("");
-
-    try {
-      const activity = await createLifeActivityInDb({
-        id: `activity-${Date.now()}`,
-        date: conversionDate,
-        startTime: task.isAllDay ? undefined : task.startTime,
-        endTime: task.isAllDay ? undefined : task.endTime,
-        isAllDay: task.isAllDay,
-        title: task.title,
-        category: "할 일",
-        companions: task.companions,
-        expenseAmount: task.expenseAmount,
-        memo: task.memo ? `${task.memo} · 할 일에서 활동으로 기록` : "할 일에서 활동으로 기록",
-        placeAddress: task.place?.address,
-        placeName: task.place?.name,
-        sourceId: task.id,
-        sourceTitle: task.title,
-        sourceType: "todo",
-      });
-
-      const nextTask = {
-        ...task,
-        completedAt: task.completedAt ?? new Date().toISOString(),
-        expenseAmount: undefined,
-        status: "done" as const,
-      };
-      const savedTask = await updateTaskInDb(nextTask);
-      await deleteLinkedExpenseRecordInDb("todo", task.id);
-      setTasks((current) => current.map((item) => (item.id === task.id ? savedTask ?? nextTask : item)));
-      setActivityConversionMessage(`${activity?.title ?? task.title}을 활동 기록으로 저장했어요.`);
-    } catch (error) {
-      console.error("Failed to create activity from task", error);
-      setActivityConversionMessage("활동 기록으로 저장하지 못했습니다.");
-    } finally {
-      setConvertingToActivity(null);
-    }
-  };
-
-  const handleDragOverItem = (dragEvent: DragEvent<HTMLElement>, targetId: string, targetType: CalendarCategory) => {
-    dragEvent.preventDefault();
-    if (!draggingItem || draggingItem.type !== targetType || draggingItem.id === targetId) return;
-
-    const rect = dragEvent.currentTarget.getBoundingClientRect();
-    const placement: DragPlacement = dragEvent.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    setDropTarget({ id: targetId, placement });
-  };
-
-  const clearDragState = () => {
-    setDraggingItem(null);
-    setDropTarget(null);
-  };
-
-  const getDropPlacement = (dragEvent: DragEvent<HTMLElement>) => {
-    const rect = dragEvent.currentTarget.getBoundingClientRect();
-    return dragEvent.clientY < rect.top + rect.height / 2 ? "before" : "after";
-  };
-
-  const reorderEvent = (targetId: string, placementOverride?: DragPlacement) => {
-    const placement = placementOverride ?? dropTarget?.placement;
-    if (!draggingItem || draggingItem.type === "todo" || !selectedDate || draggingItem.id === targetId || !placement) return;
-    const targetType = draggingItem.type;
-    setEvents((current) =>
-      reorderScopedItems(
-        current,
-        (event) => event.date === selectedDate && event.type === targetType,
-        draggingItem.id,
-        targetId,
-        placement,
-      ),
-    );
-    clearDragState();
-  };
-
-  const reorderTask = (targetId: string, placementOverride?: DragPlacement) => {
-    const placement = placementOverride ?? dropTarget?.placement;
-    if (!draggingItem || draggingItem.type !== "todo" || !selectedDate || draggingItem.id === targetId || !placement) return;
-    setTasks((current) => reorderScopedItems(current, (task) => task.scheduledDate === selectedDate, draggingItem.id, targetId, placement));
-    clearDragState();
-  };
-
-  if (isMobile && isDatabaseView) {
-    return (
-      <div className="calendar-page">
-        <div className="calendar-board--mobile-shell">
-          <MobileRecordFrame
-            addButtonLabel="기록 추가"
-            calendar={
-              <RecordMonthCalendar
-                countsByDate={mobileDatabaseCalendarCounts}
-                monthCursor={currentMonth}
-                onNextMonth={() => moveMonth(1)}
-                onPrevMonth={() => moveMonth(-1)}
-                onSelectDate={handleDateClick}
-                selectedDate={mobileDatabaseDate}
-              />
-            }
-            dateLabel={formatSelectedDate(mobileDatabaseDate)}
-            isCalendarOpen={!isCalendarCollapsedOnMobile}
-            onAddClick={() => {}}
-            onNextDate={() => {
-              const base = new Date(`${mobileDatabaseDate}T00:00:00`);
-              base.setDate(base.getDate() + 1);
-              setSelectedDate(formatDateKey(base));
-            }}
-            onPrevDate={() => {
-              const base = new Date(`${mobileDatabaseDate}T00:00:00`);
-              base.setDate(base.getDate() - 1);
-              setSelectedDate(formatDateKey(base));
-            }}
-            onToggleCalendar={toggleMobileCalendar}
-            showAddButton={false}
-          >
-            <div className="record-plans-mobile__detail">
-              <LifeCalendarDayPanel isLoading={isLoading} items={mobileDatabaseTimelineItems} />
-              {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
-            </div>
-          </MobileRecordFrame>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="calendar-page">
-      {isMobile && !isDatabaseView ? null : (
-        <header className="life-tab-heading calendar-header ui-toolbar-panel">
-        <div>
-          <h1>{title}</h1>
-        </div>
-        {isDatabaseView ? (
-          <div className="life-calendar-header-modes">
-            {([
-              ["day", "일간"],
-              ["week", "주간"],
-              ["month", "월간"],
-              ["range", "선택 기간"],
-            ] as const).map(([scope, label]) => (
-              <button
-                className={dbScope === scope ? "life-calendar-header-modes__button life-calendar-header-modes__button--active" : "life-calendar-header-modes__button"}
-                key={scope}
-                onClick={() => setDbScope(scope)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
-            {dbScope === "range" ? (
-              <div className="life-calendar-header-modes__range ui-form-grid ui-form-grid--compact">
-                <FormField label="시작일">
-                  <input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
-                </FormField>
-                <FormField label="종료일">
-                  <input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
-                </FormField>
-              </div>
-            ) : null}
+      <div className="calendar-board--mobile-shell">
+        <MobileRecordFrame
+          calendar={
+            <RecordMonthCalendar
+              countsByDate={monthCalendarCounts}
+              monthCursor={currentMonth}
+              onNextMonth={() => moveMonth(1)}
+              onPrevMonth={() => moveMonth(-1)}
+              onSelectDate={handleDateClick}
+              selectedDate={activeDate}
+            />
+          }
+          dateLabel={formatSelectedDate(activeDate)}
+          isCalendarOpen={isCalendarOpen}
+          onNextDate={() => {
+            const base = new Date(`${activeDate}T00:00:00`);
+            base.setDate(base.getDate() + 1);
+            setSelectedDate(formatDateKey(base));
+          }}
+          onPrevDate={() => {
+            const base = new Date(`${activeDate}T00:00:00`);
+            base.setDate(base.getDate() - 1);
+            setSelectedDate(formatDateKey(base));
+          }}
+          onToggleCalendar={toggleMobileCalendar}
+        >
+          <div className="record-plans-mobile__detail">
+            <DayCalendarPanel isLoading={isLoading} items={selectedTimelineItems} />
           </div>
-        ) : null}
-        {!isDatabaseView ? <div className="header-actions">
-          <div className="add-menu">
-            <button className="header-action" aria-expanded={isAddMenuOpen} onClick={() => setIsAddMenuOpen((current) => !current)} type="button">
-              <Plus aria-hidden size={18} />
-              추가
-            </button>
-            {isAddMenuOpen ? (
-              <div className="add-menu__panel" role="menu">
-                {showEventAddButton && categories.includes("event") ? (
-                  <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
-                    <span className="calendar-dot calendar-dot--event" />
-                    이벤트 추가
-                  </button>
-                ) : null}
-                {categories.includes("todo") ? (
-                  <button onClick={() => openCreateEventSheet("todo")} role="menuitem" type="button">
-                    <span className="calendar-dot calendar-dot--todo" />
-                    할 일 추가
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </div> : null}
-        </header>
-      )}
-
-      <div className={`calendar-layout ${selectedDate || isDatabaseView ? "calendar-layout--detail-open" : ""} ${isDatabaseView ? "calendar-layout--database" : ""} ui-workspace-grid ${isDatabaseView ? "ui-workspace-grid--balanced" : "ui-workspace-grid--sidebar"}`}>
-        <div className={isMobile && !isDatabaseView ? "calendar-board--mobile-shell" : "calendar-board ui-workspace-panel ui-workspace-panel--tall"}>
-          {isMobile && !isDatabaseView ? (
-            <MobileRecordFrame
-              addButtonLabel="새 일정 추가"
-              addMenu={
-                <div className="record-plans-mobile__menu" role="menu">
-                  {showEventAddButton && categories.includes("event") ? (
-                    <button onClick={() => openCreateEventSheet("event")} role="menuitem" type="button">
-                      <span className="calendar-dot calendar-dot--event" />
-                      이벤트 추가
-                    </button>
-                  ) : null}
-                  {categories.includes("todo") ? (
-                    <button onClick={() => openCreateEventSheet("todo")} role="menuitem" type="button">
-                      <span className="calendar-dot calendar-dot--todo" />
-                      할 일 추가
-                    </button>
-                  ) : null}
-                </div>
-              }
-              calendar={
-                <RecordMonthCalendar
-                  countsByDate={mobileCalendarCounts}
-                  monthCursor={currentMonth}
-                  onNextMonth={() => moveMonth(1)}
-                  onPrevMonth={() => moveMonth(-1)}
-                  onSelectDate={handleDateClick}
-                  selectedDate={selectedDate ?? detailAnchorDate}
-                />
-              }
-              countLabel="할 일·이벤트"
-              countValue={`${countsByCategory.todo + countsByCategory.event}건`}
-              dateLabel={formatSelectedDate(selectedDate ?? detailAnchorDate)}
-              dateSubLabel={`할 일 ${countsByCategory.todo} · 이벤트 ${countsByCategory.event}`}
-              isAddMenuOpen={isAddMenuOpen}
-              isCalendarOpen={!isCalendarCollapsedOnMobile}
-              onAddClick={() => setIsAddMenuOpen((current) => !current)}
-              onNextDate={() => {
-                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
-                base.setDate(base.getDate() + 1);
-                setSelectedDate(formatDateKey(base));
-              }}
-              onPrevDate={() => {
-                const base = new Date(`${selectedDate ?? detailAnchorDate}T00:00:00`);
-                base.setDate(base.getDate() - 1);
-                setSelectedDate(formatDateKey(base));
-              }}
-              onToggleCalendar={toggleMobileCalendar}
-              summary={
-                <div className="record-plans-mobile__summary-cards">
-                  <article>
-                    <span>할 일 / 완료</span>
-                    <strong>{countsByCategory.todo}건</strong>
-                  </article>
-                  <article>
-                    <span>이벤트</span>
-                    <strong>{countsByCategory.event}건</strong>
-                  </article>
-                </div>
-              }
-            >
-              {selectedDate ? (
-                <div className="record-plans-mobile__detail">
-                  <DayTimelineSection
-                    countsByCategory={countsByCategory}
-                    deletingPlan={deletingPlan}
-                    draggingItem={draggingItem}
-                    dropTarget={dropTarget}
-                    headerContent={mobileTimelineHeader}
-                    isConvertingToActivity={convertingToActivity}
-                    isLoading={isLoading}
-                    items={visibleTimelineItems}
-                    onClearDrag={clearDragState}
-                    onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
-                    onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
-                    onDeleteEvent={deleteEvent}
-                    onDeleteTask={deleteTask}
-                    onDragOverItem={handleDragOverItem}
-                    onEditEvent={(event) => {
-                      setEditingEvent(event);
-                      setSheetDefaultType(event.type as CalendarCategory);
-                      setIsEventSheetOpen(true);
-                    }}
-                    onEditTask={(target) => {
-                      setEditingTask(target);
-                      setIsTaskSheetOpen(true);
-                    }}
-                    onReorderEvent={reorderEvent}
-                    onReorderTask={reorderTask}
-                    onResolveDropPlacement={getDropPlacement}
-                    onSetDragging={setDraggingItem}
-                    onToggleDone={toggleTaskDone}
-                    readOnly={false}
-                    showSummary={false}
-                  />
-                  {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
-                </div>
-              ) : null}
-            </MobileRecordFrame>
-          ) : null}
-          {!isMobile || isDatabaseView ? (
-            <>
-              <div className="life-activity-calendar life-activity-calendar--plans">
-                <div className="life-activity-calendar__header">
-                  <IconButton label="이전 달" onClick={() => moveMonth(-1)} size="sm" tone="outline">
-                    <ChevronLeft aria-hidden size={16} />
-                  </IconButton>
-                  <div className="life-activity-calendar__month-picker">
-                    <div className="life-activity-calendar__month-button" role="status" aria-live="polite">
-                      {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
-                    </div>
-                  </div>
-                  <IconButton label="다음 달" onClick={() => moveMonth(1)} size="sm" tone="outline">
-                    <ChevronRight aria-hidden size={16} />
-                  </IconButton>
-                </div>
-                {!isMobile || isDatabaseView ? (
-                  <div className="calendar-filters" aria-label="표시 항목">
-                    {filterTypes.map((type) => {
-                      const isFilterActive = calendarCategoryFilters.length === 0 || calendarCategoryFilters.includes(type);
-                      const isFilterMuted = calendarCategoryFilters.length > 0 && !calendarCategoryFilters.includes(type);
-                      return (
-                        <CalendarFilterChip
-                          active={isFilterActive}
-                          key={type}
-                          label={type === "record" ? "기록" : categoryLabels[type]}
-                          muted={isFilterMuted}
-                          onClick={() => toggleCalendarCategoryFilter(type)}
-                          tone={type}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : null}
-                <div className="life-activity-calendar__weekdays">
-                  {weekdays.map((weekday, index) => (
-                    <span
-                      className={index === 0 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sun" : index === 6 ? "life-activity-calendar__weekday life-activity-calendar__weekday--sat" : "life-activity-calendar__weekday"}
-                      key={weekday}
-                    >
-                      {weekday}
-                    </span>
-                  ))}
-                </div>
-                <div className="life-activity-calendar__grid">
-                  {monthDays.map((cell) => {
-                    const dayEvents = cell.date
-                      ? visibleEvents.filter((event) => isDateInRange(cell.date as string, event.date, event.endDate) && visibleCalendarCategories.includes(event.type as CalendarCategory))
-                      : [];
-                    const dayTasks = cell.date && visibleCalendarCategories.includes("todo") ? tasks.filter((task) => isDateInRange(cell.date as string, task.scheduledDate, task.dueDate)) : [];
-                    const dayExternalItems = cell.date ? externalItems.filter((item) => item.date === cell.date && (!isDatabaseView || recordFilterEnabled)) : [];
-                    const eventSummary = summarizeDay(dayEvents, dayTasks, orderedVisibleCalendarCategories, dayExternalItems);
-                    const weekday = cell.date ? new Date(`${cell.date}T00:00:00`).getDay() : -1;
-                    return (
-                      <button
-                        aria-pressed={cell.date === selectedDate}
-                        className={[
-                          "life-activity-calendar__day",
-                          cell.date === selectedDate ? "life-activity-calendar__day--selected" : "",
-                          weekday === 0 ? "life-activity-calendar__day--sun" : "",
-                          weekday === 6 ? "life-activity-calendar__day--sat" : "",
-                        ].filter(Boolean).join(" ")}
-                        disabled={!cell.date}
-                        key={cell.key}
-                        onClick={() => (cell.date ? handleDateClick(cell.date) : undefined)}
-                        type="button"
-                      >
-                        {cell.day ? <span>{cell.day}</span> : null}
-                        {eventSummary.totalCount > 0 ? <em>{eventSummary.totalCount}</em> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        {(selectedDate || isDatabaseView) && !(isMobile && !isDatabaseView) ? (
-          <aside className="calendar-detail">
-            <SectionCard className="date-detail-card ui-workspace-panel ui-workspace-panel--tall">
-              <div className="section-heading ui-panel-heading">
-                <div className="ui-panel-heading__intro">
-                  <p className="eyebrow">{isDatabaseView ? getDatabaseEyebrow(dbScope) : "선택한 날짜"}</p>
-                  <h2>{isDatabaseView ? getScopeTitle(dbScope, periodBounds.start, periodBounds.end, currentMonth) : formatSelectedDate(selectedDate ?? detailAnchorDate)}</h2>
-                </div>
-              </div>
-
-              {!isDatabaseView && !isMobile ? <SelectedDatePlacesMap places={selectedPlanPlaces} /> : null}
-
-              <div className="date-event-list">
-                {isDatabaseView ? (
-                  isMobile ? (
-                    <LifeCalendarDayPanel isLoading={isLoading} items={selectedTimelineItems} />
-                  ) : (
-                    <DayTimelineSection
-                      countsByCategory={countsByCategory}
-                      deletingPlan={deletingPlan}
-                      draggingItem={draggingItem}
-                      dropTarget={dropTarget}
-                      isConvertingToActivity={convertingToActivity}
-                      isLoading={isLoading}
-                      items={visibleTimelineItems}
-                      onClearDrag={clearDragState}
-                      onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
-                      onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
-                      onDeleteEvent={deleteEvent}
-                      onDeleteTask={deleteTask}
-                      onDragOverItem={handleDragOverItem}
-                      onEditEvent={(event) => {
-                        setEditingEvent(event);
-                        setSheetDefaultType(event.type as CalendarCategory);
-                        setIsEventSheetOpen(true);
-                      }}
-                      onEditTask={(target) => {
-                        setEditingTask(target);
-                        setIsTaskSheetOpen(true);
-                      }}
-                      onReorderEvent={reorderEvent}
-                      onReorderTask={reorderTask}
-                      onResolveDropPlacement={getDropPlacement}
-                      onSetDragging={setDraggingItem}
-                      onToggleDone={toggleTaskDone}
-                      summaryTitle={`${formatSelectedDate(selectedDate ?? detailAnchorDate)} 타임라인`}
-                      readOnly={false}
-                    />
-                  )
-                ) : (
-                  <DayTimelineSection
-                    countsByCategory={countsByCategory}
-                    deletingPlan={deletingPlan}
-                    draggingItem={draggingItem}
-                    dropTarget={dropTarget}
-                    isConvertingToActivity={convertingToActivity}
-                    isLoading={isLoading}
-                    items={visibleTimelineItems}
-                    onClearDrag={clearDragState}
-                    onCreateActivityFromEvent={(event) => void createActivityFromEvent(event)}
-                    onCreateActivityFromTask={(task) => void createActivityFromTask(task)}
-                    onDeleteEvent={deleteEvent}
-                    onDeleteTask={deleteTask}
-                    onDragOverItem={handleDragOverItem}
-                    onEditEvent={(event) => {
-                      setEditingEvent(event);
-                      setSheetDefaultType(event.type as CalendarCategory);
-                      setIsEventSheetOpen(true);
-                    }}
-                    onEditTask={(target) => {
-                      setEditingTask(target);
-                      setIsTaskSheetOpen(true);
-                    }}
-                    onReorderEvent={reorderEvent}
-                    onReorderTask={reorderTask}
-                    onResolveDropPlacement={getDropPlacement}
-                    onSetDragging={setDraggingItem}
-                    onToggleDone={toggleTaskDone}
-                    summaryTitle={`${formatSelectedDate(selectedDate ?? detailAnchorDate)} 타임라인`}
-                    readOnly={false}
-                  />
-                )}
-                {activityConversionMessage ? <p className="life-health-message">{activityConversionMessage}</p> : null}
-              </div>
-
-            </SectionCard>
-          </aside>
-        ) : null}
+        </MobileRecordFrame>
       </div>
 
       {isEventSheetOpen ? (
-        <EventCreateSheet
-          allowedTypes={categories.filter((type) => type !== "todo")}
-          defaultDate={selectedDate ?? formatDateKey(currentMonth)}
-          defaultType={sheetDefaultType === "todo" ? "event" : sheetDefaultType}
-          event={editingEvent}
-          isSaving={isSavingEvent}
+      <EventCreateSheet
+        allowedTypes={categories.filter((type) => type !== "todo")}
+        defaultDate={selectedDate ?? formatDateKey(currentMonth)}
+          defaultType="event"
+        event={editingEvent}
+        isSaving={isSavingEvent}
           onClose={() => {
             setIsEventSheetOpen(false);
             setEditingEvent(null);
@@ -931,7 +268,6 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
   const [detailView, setDetailView] = useState<DayDetailView>(null);
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
-  const { isMobile } = useResponsiveMode();
   const activityItems = useMemo(
     () => items.filter((item): item is DayActivityItem => "external" in item && item.external.type === "activity"),
     [items],
@@ -948,6 +284,14 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
   const finance = useMemo(() => getFinanceTotals(items), [items]);
   const linkedPhotosByActivityId = useMemo(() => buildLinkedPhotoMap(photoItems), [photoItems]);
   const standalonePhotoGroups = useMemo(() => buildStandalonePhotoGroups(photoItems), [photoItems]);
+  const companionEntryCount = useMemo(
+    () => activityItems.reduce((sum, item) => sum + getTopValues(parseCompanions(item.external.companions)).reduce((innerSum, value) => innerSum + value.count, 0), 0),
+    [activityItems],
+  );
+  const financeEntryCount = useMemo(
+    () => items.filter((item) => "external" in item && item.external.amount !== undefined).length,
+    [items],
+  );
   const timelineRows = useMemo(
     () =>
       [
@@ -960,8 +304,6 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
     () => getTopValues(activityItems.flatMap((item) => parseCompanions(item.external.companions))).slice(0, 8),
     [activityItems],
   );
-  const companionEntryCount = companionCounts.reduce((sum, item) => sum + item.count, 0);
-  const financeEntryCount = items.filter((item) => "external" in item && item.external.amount !== undefined).length;
   const visiblePhotoItems = photoViewer?.items ?? photoItems;
   const detailMeta =
     detailView === "map"
@@ -1019,207 +361,19 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
     setDetailView(null);
     setPhotoViewer(null);
   };
-
-  if (isMobile) {
-    return (
-      <div className="life-calendar-day-panel life-calendar-day-panel--mobile">
-        <div className="life-calendar-day-panel__layout life-calendar-day-panel__layout--mobile">
-          <DayInsightBar buttons={dayInsightButtons.map((button) => ({ ...button, active: detailView === button.key }))} />
-          <section className={isTimelineOpen ? "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--expanded" : "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--collapsed"}>
-            <button aria-expanded={isTimelineOpen} className="life-calendar-day-card__head life-calendar-day-card__head--toggle" onClick={() => setIsTimelineOpen((current) => !current)} type="button">
-              <span>활동 타임라인</span>
-              <div className="life-calendar-day-card__meta">
-                <b>{activityItems.length}건</b>
-                <ChevronDown aria-hidden className={`life-calendar-day-card__chevron ${isTimelineOpen ? "life-calendar-day-card__chevron--open" : ""}`} size={16} />
-              </div>
-            </button>
-            {isTimelineOpen ? (
-              <div className="life-calendar-day-timeline">
-                {timelineRows.length > 0 ? timelineRows.map((row) => {
-                  if (row.kind === "activity") {
-                    const item = row.item;
-                    const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
-                    return (
-                      <article className="life-calendar-day-timeline__item" key={item.id}>
-                        <div className="life-calendar-day-timeline__time">
-                          <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
-                          <div className="life-calendar-day-timeline__tags">
-                            {linkedPhotos.length > 0 ? (
-                              <button className="life-calendar-day-photo-badge" onClick={() => openPhotoViewer(linkedPhotos, item.external.title)} type="button">
-                                <Camera aria-hidden size={12} />
-                                {linkedPhotos.length}
-                              </button>
-                            ) : null}
-                            {[item.external.category].filter(Boolean).slice(0, 3).map((tag, index) => <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>{tag}</b>)}
-                          </div>
-                        </div>
-                        <div className="life-calendar-day-timeline__body">
-                          <strong>{item.external.title}</strong>
-                          {item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
-                          {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
-                          {item.external.food ? <p><UtensilsCrossed aria-hidden size={14} /> {item.external.food}</p> : null}
-                          {item.external.amount ? <p><Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}</p> : null}
-                        </div>
-                      </article>
-                    );
-                  }
-
-                  const group = row.group;
-                  return (
-                    <article className="life-calendar-day-timeline__item life-calendar-day-timeline__item--photo" key={group.id}>
-                      <div className="life-calendar-day-timeline__time">
-                        <span>{group.timeLabel}</span>
-                        <div className="life-calendar-day-timeline__tags">
-                          <button className="life-calendar-day-photo-badge" onClick={() => openPhotoViewer(group.items, `${group.timeLabel} 사진`)} type="button">
-                            <Camera aria-hidden size={12} />
-                            {group.items.length}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="life-calendar-day-timeline__body">
-                        <strong>날짜에 연결된 사진</strong>
-                        <p>{getStandalonePhotoGroupSummary(group)}</p>
-                      </div>
-                    </article>
-                  );
-                }) : <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
-              </div>
-            ) : null}
-          </section>
-        </div>
-        {detailView ? (
-          <div className="life-detail-overlay" onClick={closeDetail}>
-            <section className="life-detail-drawer life-calendar-day-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
-              <div className="life-detail-drawer__head">
-                <div>
-                  <span>{detailMeta?.tag ?? "상세 보기"}</span>
-                  <h2>{detailMeta?.title ?? "세부 정보"}</h2>
-                  <p>{detailMeta?.description ?? "선택한 항목을 자세히 보여줍니다."}</p>
-                </div>
-                <IconButton label="닫기" onClick={closeDetail} tone="outline">
-                  <X aria-hidden size={18} />
-                </IconButton>
-              </div>
-
-              {detailView === "map" ? (
-                <>
-                  <div className="life-calendar-day-drawer__map">
-                    <DayRouteMap stops={routeStops} />
-                  </div>
-                  <div className="life-calendar-day-stop-list">
-                    {routeStops.length > 0 ? routeStops.map((stop) => (
-                      <article className="life-calendar-day-stop-list__item" key={stop.id}>
-                        <span>{stop.timeLabel}</span>
-                        <strong>{stop.name}</strong>
-                        <p>{[stop.label, stop.address].filter(Boolean).join(" · ")}</p>
-                      </article>
-                    )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "지도에 그릴 장소 기록이 아직 부족해요."}</div>}
-                  </div>
-                </>
-              ) : null}
-
-              {detailView === "activities" ? (
-                <div className="life-calendar-day-activity-list">
-                  {activityItems.length > 0 ? activityItems.map((item) => (
-                    <article className="life-calendar-day-activity-list__item" key={item.id}>
-                      <span>{item.timeLabel}</span>
-                      <div>
-                        <strong>{item.external.title}</strong>
-                        <p>{[item.external.placeName, item.external.meta].filter(Boolean).join(" · ") || "활동 기록"}</p>
-                      </div>
-                    </article>
-                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
-                </div>
-              ) : null}
-
-              {detailView === "photos" ? (
-                <div className="life-calendar-day-photo-gallery">
-                  {visiblePhotoItems.length > 0 ? visiblePhotoItems.map((item) => (
-                    <figure className="life-calendar-day-photo-gallery__item" key={item.id}>
-                      {item.external.fileUrl ? (
-                        item.external.mimeType?.startsWith("video/") ? (
-                          <video controls src={item.external.fileUrl} />
-                        ) : (
-                          <Image
-                            alt={item.external.caption || item.external.title}
-                            height={item.external.height ?? 220}
-                            src={item.external.fileUrl}
-                            unoptimized
-                            width={item.external.width ?? 220}
-                          />
-                        )
-                      ) : (
-                        <div>{item.external.caption || item.external.title}</div>
-                      )}
-                        <figcaption>
-                          <strong>{getPhotoCardTitle(item)}</strong>
-                          <span>{getPhotoCardMeta(item)}</span>
-                          {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
-                        </figcaption>
-                      </figure>
-                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
-                </div>
-              ) : null}
-
-              {detailView === "companions" ? (
-                companionCounts.length > 0 ? (
-                  <div className="life-calendar-day-companions">
-                    {companionCounts.map((item) => (
-                      <article className="life-calendar-day-companions__item" key={item.value}>
-                        <strong>{item.value}</strong>
-                        <span>{item.count}회 등장</span>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 함께한 사람 기록이 아직 없어요."}</div>
-                )
-              ) : null}
-
-              {detailView === "finance" ? (
-                <div className="life-calendar-day-finance life-calendar-day-finance--detail">
-                  <article>
-                    <span>수입</span>
-                    <strong>{formatNumberWithUnit(finance.income, "원")}</strong>
-                  </article>
-                  <article>
-                    <span>지출</span>
-                    <strong>{formatExpenseValueWithUnit(finance.expense, "원")}</strong>
-                  </article>
-                  <article>
-                    <span>순합계</span>
-                    <strong>{formatNumberWithUnit(finance.net, "원")}</strong>
-                  </article>
-                </div>
-              ) : null}
-
-              {detailView === "logs" ? (
-                <div className="life-calendar-day-logs">
-                  {logItems.length > 0 ? logItems.map((item) => (
-                    <article key={item.id}>
-                      <span>{item.timeLabel}</span>
-                      <p>{item.external.meta || item.external.title}</p>
-                    </article>
-                  )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 하루 기록이 아직 없어요."}</div>}
-                </div>
-              ) : null}
-            </section>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
-    <>
-      <div className="life-calendar-day-panel">
-        <div className="life-calendar-day-panel__layout">
-          <DayInsightBar buttons={dayInsightButtons.map((button) => ({ ...button, active: detailView === button.key }))} />
-          <section className="life-calendar-day-card life-calendar-day-card--timeline">
-            <div className="life-calendar-day-card__head">
-              <span>활동 타임라인</span>
+    <div className="life-calendar-day-panel life-calendar-day-panel--mobile">
+      <div className="life-calendar-day-panel__layout life-calendar-day-panel__layout--mobile">
+        <DayInsightBar buttons={dayInsightButtons.map((button) => ({ ...button, active: detailView === button.key }))} />
+        <section className={isTimelineOpen ? "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--expanded" : "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--collapsed"}>
+          <button aria-expanded={isTimelineOpen} className="life-calendar-day-card__head life-calendar-day-card__head--toggle" onClick={() => setIsTimelineOpen((current) => !current)} type="button">
+            <span>활동 타임라인</span>
+            <div className="life-calendar-day-card__meta">
               <b>{activityItems.length}건</b>
+              <ChevronDown aria-hidden className={`life-calendar-day-card__chevron ${isTimelineOpen ? "life-calendar-day-card__chevron--open" : ""}`} size={16} />
             </div>
+          </button>
+          {isTimelineOpen ? (
             <div className="life-calendar-day-timeline">
               {timelineRows.length > 0 ? timelineRows.map((row) => {
                 if (row.kind === "activity") {
@@ -1270,10 +424,9 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                 );
               }) : <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>}
             </div>
-          </section>
-        </div>
+          ) : null}
+        </section>
       </div>
-
       {detailView ? (
         <div className="life-detail-overlay" onClick={closeDetail}>
           <section className="life-detail-drawer life-calendar-day-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
@@ -1338,20 +491,25 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
                     ) : (
                       <div>{item.external.caption || item.external.title}</div>
                     )}
-                      <figcaption>
-                        <strong>{getPhotoCardTitle(item)}</strong>
-                        <span>{getPhotoCardMeta(item)}</span>
-                        {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
-                      </figcaption>
-                    </figure>
+                    <figcaption>
+                      <strong>{getPhotoCardTitle(item)}</strong>
+                      <span>{getPhotoCardMeta(item)}</span>
+                      {getPhotoContextLines(item).map((line) => <em key={`${item.id}-${line}`}>{line}</em>)}
+                    </figcaption>
+                  </figure>
                 )) : <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 남은 사진이 아직 없어요."}</div>}
               </div>
             ) : null}
 
             {detailView === "companions" ? (
               companionCounts.length > 0 ? (
-                <div className="life-calendar-day-card__chips">
-                  {companionCounts.map((item) => <b key={item.value}>{item.value} · {item.count}회</b>)}
+                <div className="life-calendar-day-companions">
+                  {companionCounts.map((item) => (
+                    <article className="life-calendar-day-companions__item" key={item.value}>
+                      <strong>{item.value}</strong>
+                      <span>{item.count}회 등장</span>
+                    </article>
+                  ))}
                 </div>
               ) : (
                 <div className="life-calendar-db-empty">{isLoading ? "기록 불러오는 중..." : "이 날 함께한 사람 기록이 아직 없어요."}</div>
@@ -1359,7 +517,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
             ) : null}
 
             {detailView === "finance" ? (
-              <div className="life-calendar-day-finance">
+              <div className="life-calendar-day-finance life-calendar-day-finance--detail">
                 <article>
                   <span>수입</span>
                   <strong>{formatNumberWithUnit(finance.income, "원")}</strong>
@@ -1388,7 +546,7 @@ function LifeCalendarDayPanel({ isLoading, items }: { isLoading: boolean; items:
           </section>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -1608,13 +766,6 @@ function getFinanceTotals(items: DayTimelineItem[]) {
     },
     { expense: 0, income: 0, net: 0 },
   );
-}
-
-function getDatabaseEyebrow(scope: LifeCalendarScope) {
-  if (scope === "day") return "일간 요약";
-  if (scope === "week") return "주간 요약";
-  if (scope === "month") return "월간 요약";
-  return "선택 기간 요약";
 }
 
 function getTopValues(values: string[]) {
@@ -1901,3 +1052,11 @@ function formatTimelineRange(startLabel: string, endTime?: string) {
   if (!endTime || startLabel === "하루종일" || startLabel === "기록" || startLabel === "시간 미정") return startLabel;
   return `${startLabel} ~ ${endTime}`;
 }
+
+
+
+
+
+
+
+

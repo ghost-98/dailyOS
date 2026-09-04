@@ -26,15 +26,10 @@
   gap: var(--space-4);
 }
 
-.life-axis-view .calendar-layout--detail-open,
 .life-axis-view .ledger-layout {
   align-items: flex-start;
   gap: var(--space-4);
   grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
-}
-
-.life-axis-view .calendar-layout--database.calendar-layout--detail-open {
-  grid-template-columns: minmax(0, 0.96fr) minmax(460px, 1.14fr);
 }
 
 .life-axis-view .calendar-board,

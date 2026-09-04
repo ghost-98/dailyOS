@@ -49,3 +49,4 @@ export function CalendarFilterChip({
 
   return <span className={className}>{content}</span>;
 }
+

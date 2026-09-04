@@ -100,7 +100,7 @@
   right: 10px;
   bottom: 8px;
   color: rgb(253, 224, 71);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 900;
   line-height: 1;
 }
@@ -603,12 +603,12 @@
 .life-calendar-day-drawer__map {
   overflow: hidden;
   border-radius: 18px;
-  min-height: 380px;
+  min-height: 340px;
 }
 
 .life-calendar-day-drawer__map .life-calendar-day-map {
-  min-height: 380px;
-  height: 380px;
+  min-height: 340px;
+  height: 340px;
 }
 
 .life-calendar-day-photo-gallery {
@@ -638,6 +638,196 @@
   width: 100%;
   aspect-ratio: 1;
   min-height: 220px;
+}
+
+.life-calendar-day-photo-view {
+  position: relative;
+  width: min(100%, 760px);
+  margin-inline: auto;
+  min-height: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.life-calendar-day-photo-counter {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.life-calendar-day-photo-counter span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.life-calendar-day-photo-carousel {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 14px;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.life-calendar-day-photo-card {
+  width: 100%;
+  scroll-snap-align: start;
+  perspective: 1600px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 10, 16, 0.26);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.life-calendar-day-photo-card--active {
+  border-color: rgba(201, 184, 255, 0.34);
+  background: rgba(8, 10, 16, 0.52);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+}
+
+.life-calendar-day-photo-card--current {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.life-calendar-day-photo-card__inner {
+  position: relative;
+  width: 100%;
+  min-height: clamp(340px, 56dvh, 440px);
+  transform-style: preserve-3d;
+  transition: transform 300ms ease;
+}
+
+.life-calendar-day-photo-card--active .life-calendar-day-photo-card__inner {
+  transform: rotateY(180deg);
+}
+
+.life-calendar-day-photo-card__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  backface-visibility: hidden;
+}
+
+.life-calendar-day-photo-card__face--front {
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 10, 16, 0.24);
+}
+
+.life-calendar-day-photo-card__face--back {
+  transform: rotateY(180deg);
+  align-content: start;
+  gap: 12px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.82)),
+    radial-gradient(circle at top, rgba(201, 184, 255, 0.14), transparent 48%);
+  padding: 16px;
+  overflow: auto;
+}
+
+.life-calendar-day-photo-card__media {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.life-calendar-day-photo-card__media img,
+.life-calendar-day-photo-card__media video,
+.life-calendar-day-photo-card__media div {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: clamp(280px, 46dvh, 360px);
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.life-calendar-day-photo-card__media div {
+  display: grid;
+  place-items: center;
+  min-height: 336px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 16px;
+  text-align: center;
+}
+
+.life-calendar-day-photo-card__caption {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, rgba(8, 10, 16, 0.08), rgba(8, 10, 16, 0.72));
+}
+
+.life-calendar-day-photo-card__face--back strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.life-calendar-day-photo-card__caption span {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.life-calendar-day-photo-card__section {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 12px 10px;
+}
+
+.life-calendar-day-photo-card__section strong {
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.life-calendar-day-photo-card__face--back span,
+.life-calendar-day-photo-card__face--back p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.life-calendar-day-photo-card__lines {
+  display: grid;
+  gap: 5px;
+}
+
+.life-calendar-day-photo-card__lines p {
+  margin: 0;
+}
+
+.life-calendar-day-photo-card__lines p + p {
+  padding-top: 2px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
 .life-calendar-day-finance {
@@ -1174,47 +1364,6 @@
   line-height: 1.5;
 }
 
-.life-calendar-header-modes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.life-calendar-header-modes__button {
-  min-height: var(--chip-height);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 820;
-  padding: 0 var(--chip-padding-x);
-}
-
-.life-calendar-header-modes__button--active {
-  border-color: var(--tone-violet-border);
-  background: var(--tone-violet-bg);
-}
-
-.life-calendar-header-modes__range {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 1fr));
-  align-items: end;
-  gap: 10px;
-  margin-left: 6px;
-}
-
-.life-calendar-header-modes__range .ui-form-field {
-  min-width: 0;
-}
-
-.life-calendar-header-modes__range input {
-  min-height: var(--chip-height);
-}
-
 .life-db-hero--dashboard {
   display: grid;
   gap: 18px;
@@ -1431,11 +1580,6 @@
   background: linear-gradient(135deg, rgba(200, 182, 255, 0.92), rgba(255, 200, 221, 0.84));
   box-shadow: 0 12px 26px rgba(157, 178, 255, 0.16);
   color: #221833;
-}
-
-.life-axis-view .ledger-detail .date-detail-card,
-.life-axis-view .calendar-detail .date-detail-card {
-  min-height: 100%;
 }
 
 .life-places-count {
@@ -1936,18 +2080,18 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(8, 10, 16, 0.45);
+  background: rgba(8, 10, 16, 0.62);
   padding: 0 10px 10px;
 }
 
 .life-search-period-sheet {
   width: min(100%, 720px);
   border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 24px;
+  border-radius: 24px 24px 0 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
     var(--surface);
-  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.32);
   padding: 18px;
   animation: search-period-slide-up 180ms ease-out;
 }
@@ -1959,9 +2103,41 @@
   gap: 14px;
 }
 
+.life-search-period-sheet__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .life-search-period-sheet__title {
   display: flex;
   align-items: center;
+}
+
+.life-slide-sheet__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.life-slide-sheet__count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  background: rgba(253, 224, 71, 0.16);
+  color: rgb(253, 224, 71);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 8px;
+}
+
+.life-slide-sheet__body {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  margin-top: 16px;
 }
 
 .life-search-period-sheet__icon-button,
@@ -2021,6 +2197,254 @@
   justify-content: end;
   gap: 10px;
   margin-top: 14px;
+}
+
+.life-search-period-sheet__actions--solo {
+  grid-template-columns: 1fr auto;
+}
+
+.life-search-period-sheet__actions-spacer {
+  min-width: 0;
+}
+
+.life-day-detail-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: min(calc(100dvh - 18px), 820px);
+}
+
+.life-day-detail-sheet .life-slide-sheet__body {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.life-day-detail-sheet .life-calendar-day-detail {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.life-day-detail-sheet .life-calendar-day-detail--map {
+  overflow: hidden;
+}
+
+.life-day-detail-sheet .life-calendar-day-drawer__map {
+  flex: 0 0 auto;
+}
+
+.life-day-detail-sheet .life-calendar-day-stop-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  max-height: clamp(180px, 32dvh, 320px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.life-calendar-day-finance-detail {
+  overflow-y: auto;
+}
+
+.life-calendar-day-finance-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.life-calendar-day-finance-group__toggle {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 20px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 0 14px;
+  text-align: left;
+}
+
+.life-calendar-day-finance-group__toggle span {
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.life-calendar-day-finance-group__toggle strong {
+  font-size: 0.96rem;
+}
+
+.life-calendar-day-finance-group--income .life-calendar-day-finance-group__toggle strong {
+  color: #7ed8aa;
+}
+
+.life-calendar-day-finance-group--expense .life-calendar-day-finance-group__toggle strong {
+  color: #ff9caa;
+}
+
+.life-calendar-day-finance-group__chevron {
+  color: var(--muted);
+  transition: transform 160ms ease;
+}
+
+.life-calendar-day-finance-group__chevron--open {
+  transform: rotate(180deg);
+}
+
+.life-calendar-day-finance-group__list {
+  display: grid;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 4px 14px 8px;
+}
+
+.life-calendar-day-finance-group__list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.life-calendar-day-finance-group__list article:last-child {
+  border-bottom: 0;
+}
+
+.life-calendar-day-finance-group__list article div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.life-calendar-day-finance-group__list article strong,
+.life-calendar-day-finance-group__list article span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-calendar-day-finance-group__list article strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.life-calendar-day-finance-group__list article span,
+.life-calendar-day-finance-group__empty {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.life-calendar-day-finance-group__list article b {
+  color: var(--text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.life-calendar-day-finance-group__empty {
+  margin: 0;
+  padding: 16px 0 12px;
+  text-align: center;
+}
+
+.life-calendar-day-finance-detail__net {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+}
+
+.life-calendar-day-finance-detail__net span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.life-calendar-day-finance-detail__net strong {
+  color: var(--violet);
+  font-size: 0.9rem;
+}
+
+.life-calendar-day-companions {
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.life-calendar-day-companions__item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  min-height: 62px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 9px 12px 9px 9px;
+}
+
+.life-calendar-day-companions__avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.18);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgba(201, 184, 255, 0.18), rgba(255, 210, 140, 0.08));
+  color: var(--violet);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.life-calendar-day-companions__item > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.life-calendar-day-companions__item strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-calendar-day-companions__item > div span {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.life-calendar-day-companions__item b {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: rgba(255, 204, 102, 0.1);
+  color: #ffd275;
+  font-size: 0.74rem;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+
+.life-calendar-route-marker--inline {
+  width: 28px;
+  height: 28px;
+  font-size: 0.72rem;
+  flex: 0 0 auto;
+}
+
+.life-calendar-day-stop-list__item {
+  cursor: pointer;
+}
+
+.life-calendar-day-stop-list__item--active {
+  border-color: rgba(201, 184, 255, 0.3);
+  background: rgba(201, 184, 255, 0.08);
 }
 
 .life-search-period-sheet__done {
@@ -2135,33 +2559,194 @@
   padding: 18px;
 }
 
+.record-create-flow__sheet-header {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.record-create-flow__sheet-header > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.record-create-flow__sheet-header p {
+  margin: 0;
+}
+
+.record-create-flow__sheet-header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.record-create-flow__sheet-header > button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .record-create-flow__form {
   display: grid;
   gap: 12px;
 }
 
 .record-create-flow__category-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .record-create-flow__category-item {
-  min-height: 42px;
+  display: inline-flex;
+  min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
+  overflow: hidden;
+}
+
+.record-create-flow__category-item > button {
+  border: 0;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
   font: inherit;
-  font-weight: 800;
-  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 7px 12px;
 }
 
 .record-create-flow__category-item--active {
   border-color: rgba(201, 184, 255, 0.28);
   background: rgba(201, 184, 255, 0.1);
   color: var(--violet);
+}
+
+.record-create-flow__category-remove {
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding-inline: 8px !important;
+}
+
+.record-create-flow__category-add {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  border: 1px dashed rgba(201, 184, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.07);
+  color: var(--violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+  padding: 0 11px;
+}
+
+.record-create-flow__category-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.record-create-flow__category-editor button {
+  min-width: 58px;
+  border: 1px solid rgba(201, 184, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--text);
+  font: inherit;
+  font-weight: 850;
+}
+
+.record-create-flow__time-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-create-flow__time-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.record-create-flow__time-grid span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.record-create-flow__time-toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planner-place-field {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.planner-place-card__actions,
+.planner-saved-places,
+.planner-saved-places > span,
+.planner-saved-places button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.planner-place-card__actions {
+  gap: 6px;
+}
+
+.planner-place-card__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.planner-saved-places {
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.planner-saved-places > span {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.planner-saved-places button {
+  gap: 5px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.planner-saved-places button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  padding-inline: 7px;
+}
+
+.record-create-flow__conditional-section {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(201, 184, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(201, 184, 255, 0.045);
+  padding: 14px;
 }
 
 .record-create-flow__form input,

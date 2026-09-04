@@ -155,7 +155,7 @@ export function useDailyOSUser() {
 
 function getDisplayName(profile: DailyOSProfile | null, user?: User | null) {
   const metadataName = typeof user?.user_metadata?.full_name === "string" ? user.user_metadata.full_name : "";
-  const displayName = profile?.fullName || metadataName || user?.email?.split("@")[0] || "사용자";
+  const displayName = profile?.fullName || metadataName || user?.email?.split("/")[0] || "사용자";
   return displayName.trim() || "사용자";
 }
 
@@ -181,7 +181,7 @@ function getFallbackProfile(user: User): DailyOSProfile {
   return {
     birthDate: typeof user.user_metadata?.birth_date === "string" ? user.user_metadata.birth_date : undefined,
     email: user.email ?? undefined,
-    fullName: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email?.split("@")[0] ?? "사용자",
+    fullName: typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : user.email?.split("/")[0] ?? "사용자",
     gender: typeof user.user_metadata?.gender === "string" ? user.user_metadata.gender : undefined,
   };
 }
@@ -452,7 +452,7 @@ function AuthScreen() {
             <input
               autoComplete="email"
               inputMode="email"
-              placeholder="you@example.com"
+              placeholder="you/example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -565,3 +565,6 @@ function AuthShell({ children, description, title }: { children?: ReactNode; des
     </main>
   );
 }
+
+
+

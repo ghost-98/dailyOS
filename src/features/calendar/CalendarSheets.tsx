@@ -5,13 +5,13 @@ import { useState } from "react";
 import { FormActionBar } from "@/components/ui/FormActionBar";
 import { IconButton } from "@/components/ui/IconButton";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
-import { FormSectionTitle } from "@/features/calendar/calendarUiParts";
-import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { FormSectionTitle } from "@/components/ui/FormSectionTitle";
+import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
 import { categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory } from "@/features/calendar/types";
 import { parseOptionalAmount } from "@/features/calendar/utils";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { PeoplePickerField } from "@/features/people/PeoplePickerField";
+import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
 import type { PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 
@@ -571,3 +571,9 @@ function parseCompanionNames(value?: string) {
     .map((item) => item.trim())
     .filter(Boolean);
 }
+
+
+
+
+
+

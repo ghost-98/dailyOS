@@ -16,3 +16,4 @@ export const mobileNav: NavItem[] = [
   { label: "설정", href: "/m/settings", key: "settings", icon: Settings },
 ];
 
+

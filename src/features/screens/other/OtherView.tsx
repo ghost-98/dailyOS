@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { DayGalleryView } from "@/features/screens/day/DayGalleryView";
 import { DayPeopleView } from "@/features/screens/day/DayPeopleView";
 import { LedgerView } from "@/features/screens/other/LedgerView";
-import { useLifeDataState } from "@/features/life/useLifeDataState";
+import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 
 type OtherTab = "people" | "ledger" | "gallery";
 
@@ -15,7 +14,7 @@ const otherTabs: Array<{ key: OtherTab; label: string }> = [
 ];
 
 export function OtherView() {
-  const { data, mutations } = useLifeDataState();
+  const { data } = useRecordsDataState();
   const [activeTab, setActiveTab] = useState<OtherTab>("people");
 
   return (
@@ -42,14 +41,19 @@ export function OtherView() {
           events={data.events}
           expenses={data.expenses}
           photos={data.lifePhotos}
-          showHeading={false}
           tasks={data.tasks}
         />
       ) : null}
 
       {activeTab === "ledger" ? <LedgerView variant="tab" /> : null}
 
-      {activeTab === "gallery" ? <DayGalleryView onDeletePhoto={mutations.deleteLifePhoto} photos={data.lifePhotos} showHeading={false} /> : null}
+      {activeTab === "gallery" ? <div className="life-empty-state">사진 화면은 정리 중이에요.</div> : null}
     </div>
   );
 }
+
+
+
+
+
+

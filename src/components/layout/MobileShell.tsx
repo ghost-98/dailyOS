@@ -52,3 +52,6 @@ function MobileShellContent({ children }: MobileShellProps) {
 function isMobileNavActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+
+

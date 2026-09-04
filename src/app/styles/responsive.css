@@ -15,10 +15,6 @@
     grid-template-columns: 1fr;
   }
 
-  .calendar-layout--detail-open {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .life-activity-layout {
     grid-template-columns: 1fr;
   }
@@ -31,10 +27,6 @@
 
   .life-activity-quick-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .calendar-detail {
-    animation: detail-slide-up 220ms ease-out both;
   }
 
   .ui-sticky-side-panel {
@@ -143,6 +135,21 @@
 
   .calendar-board {
     min-height: 0;
+  }
+
+  .life-axis-view .ledger-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .life-axis-view .calendar-board,
+  .life-axis-view .ledger-calendar-card,
+  .life-axis-view .date-detail-card {
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .life-axis-view .calendar-board--mobile-shell {
+    padding: 0;
   }
 
   .calendar-header .header-actions {
@@ -273,10 +280,6 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .record-create-flow__category-grid {
-    grid-template-columns: 1fr;
-  }
-
   .record-create-flow__choices {
     grid-template-columns: 1fr;
   }
@@ -397,12 +400,6 @@
 
   .workout-session-card__header {
     flex-direction: column;
-  }
-
-  .calendar-filters {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 16px;
   }
 
   .calendar-filter {

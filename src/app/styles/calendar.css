@@ -124,69 +124,6 @@
   color: #fca5a5;
 }
 
-.calendar-detail {
-  min-width: 0;
-  animation: detail-slide-in 220ms ease-out both;
-}
-
-.record-plans-mobile__summary-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.record-plans-mobile__summary-cards article {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 12px 13px;
-  min-height: 76px;
-}
-
-.record-plans-mobile__summary-cards span,
-.plan-timeline-card__chips span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.record-plans-mobile__summary-cards strong {
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 900;
-}
-
-.record-plans-mobile__menu {
-  display: grid;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 8px;
-}
-
-.record-plans-mobile__menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text);
-  font-size: 0.86rem;
-  font-weight: 800;
-  padding: 0 10px;
-  text-align: left;
-}
-
-.record-plans-mobile__menu button:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .date-detail-card {
   display: grid;
   align-content: start;
@@ -334,19 +271,6 @@
   gap: 16px;
 }
 
-.calendar-page .day-timeline__summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2px 2px 16px;
-}
-
-.calendar-page .day-timeline__summary-copy {
-  min-width: 0;
-}
-
 .calendar-page .day-timeline__filters {
   display: flex;
   flex-wrap: wrap;
@@ -366,23 +290,6 @@
   font-size: 0.72rem;
   font-weight: 900;
   padding: 0 6px;
-}
-
-.calendar-page .day-timeline__summary span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.calendar-page .day-timeline__summary strong {
-  color: var(--text);
-  font-size: 1.08rem;
-  font-weight: 900;
-}
-
-.day-timeline__summary-meta {
-  display: block;
-  margin-top: 0;
 }
 
 .calendar-page .day-timeline__row {
@@ -834,35 +741,6 @@
     margin-bottom: 0;
   }
 
-  .calendar-page .day-timeline__summary {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .calendar-page .day-timeline__summary-copy {
-    display: grid;
-    gap: 8px;
-  }
-
-  .calendar-page .day-timeline__summary span {
-    font-size: 1rem;
-  }
-
-  .day-timeline__summary-meta {
-    display: inline-flex;
-    align-items: center;
-    justify-self: end;
-    font-size: 0.72rem;
-    margin-top: 0;
-  }
-
-  .day-timeline__summary-filters {
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
   .timeline-card-list--mobile {
     gap: 10px;
   }
@@ -911,9 +789,6 @@
     padding: 8px 10px 8px 74px;
   }
 
-  .record-plans-mobile__summary-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .date-empty-state strong {
@@ -991,51 +866,8 @@
   flex: 0 0 auto;
 }
 
-.mobile-record-frame__add {
-  background: rgba(201, 184, 255, 0.16) !important;
-  color: var(--violet) !important;
-}
-
-.mobile-record-frame__menu {
-  display: grid;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  background: rgba(20, 21, 26, 0.9);
-  padding: 8px;
-}
-
-.mobile-record-frame__menu-list {
-  display: grid;
-  gap: 6px;
-}
-
-.mobile-record-frame__menu-list button,
-.mobile-record-frame__menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  border: 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  padding: 0 12px;
-  text-align: left;
-}
-
-.mobile-record-frame__menu-list button:hover,
-.mobile-record-frame__menu button:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .mobile-record-frame__calendar {
   display: grid;
-}
-
-.mobile-record-frame__summary {
-  display: grid;
-  margin-top: 14px;
 }
 
 .life-log-mobile-summary {
@@ -1060,8 +892,7 @@
 }
 
 .life-log-mobile-summary article,
-.life-health-mobile-summary article,
-.record-plans-mobile__summary-cards article {
+.life-health-mobile-summary article {
   display: grid;
   gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1116,8 +947,7 @@
   gap: 12px;
 }
 
-.timeline-rail__head,
-.calendar-page .day-timeline__summary {
+.timeline-rail__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -1126,15 +956,13 @@
   padding: 2px 2px 16px;
 }
 
-.timeline-rail__head-copy,
-.calendar-page .day-timeline__summary-copy {
+.timeline-rail__head-copy {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
 
-.timeline-rail__head-copy span,
-.calendar-page .day-timeline__summary span {
+.timeline-rail__head-copy span {
   color: var(--text);
   font-size: 1rem;
   font-weight: 950;
@@ -1146,21 +974,13 @@
   text-transform: none;
 }
 
-.timeline-rail__meta,
-.calendar-page .day-timeline__summary strong,
-.day-timeline__summary-meta {
+.timeline-rail__meta {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.2;
   justify-self: end;
-}
-
-.day-timeline__summary-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .timeline-rail__track {
@@ -1256,10 +1076,6 @@
   font: inherit;
   padding: 14px;
   text-align: left;
-}
-
-.record-timeline-card--desktop .record-timeline-card__summary {
-  grid-template-columns: 66px minmax(0, 1fr) 28px;
 }
 
 .record-timeline-card__leading {
@@ -1497,8 +1313,7 @@
 }
 
 @media (max-width: 820px) {
-  .timeline-rail__head,
-  .calendar-page .day-timeline__summary {
+  .timeline-rail__head {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }

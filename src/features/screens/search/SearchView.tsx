@@ -3,19 +3,19 @@
 import { CalendarRange, Check, RotateCcw, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { buildLifeSearchItems } from "@/features/life/insights";
-import { useLifeDataState } from "@/features/life/useLifeDataState";
+import { buildRecordSearchItems } from "@/features/records/search/recordsInsights";
+import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 
 export function SearchView() {
   const router = useRouter();
-  const { data } = useLifeDataState();
+  const { data } = useRecordsDataState();
   const [query, setQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
 
   const items = useMemo(
-    () => buildLifeSearchItems(data.events, data.tasks, data.activities, data.expenses, data.incomes, data.dailyLogs, data.lifePhotos, data.weights, data.workouts),
+    () => buildRecordSearchItems(data.events, data.tasks, data.activities, data.expenses, data.incomes, data.dailyLogs, data.lifePhotos, data.weights, data.workouts),
     [data.activities, data.dailyLogs, data.events, data.expenses, data.incomes, data.lifePhotos, data.tasks, data.weights, data.workouts],
   );
 
@@ -129,3 +129,9 @@ export function SearchView() {
     </div>
   );
 }
+
+
+
+
+
+
