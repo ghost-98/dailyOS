@@ -360,6 +360,41 @@
   gap: 8px;
 }
 
+.ui-tab-panel-heading {
+  width: 100%;
+  align-items: center;
+  position: relative;
+  padding-right: 42px;
+}
+
+.ui-tab-panel-heading__title {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ui-tab-panel-heading__title .eyebrow {
+  margin: 0;
+}
+
+.ui-tab-panel-heading__title > strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.ui-tab-panel-heading__actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .ui-sticky-side-panel {
   position: sticky;
   top: 18px;

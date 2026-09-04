@@ -13,6 +13,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState("");
   const [savedPlaces, setSavedPlaces] = useState<PlanPlace[]>([]);
+  const isSelectedPlaceSaved = Boolean(selectedPlace && savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace)));
 
   useEffect(() => {
     try {
@@ -61,16 +62,12 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     setMessage("");
   };
 
-  const clearPlace = () => {
-    onSelect(undefined);
-    setQuery("");
-    setResults([]);
-    setMessage("");
-  };
-
   const saveCurrentPlace = () => {
-    if (!selectedPlace || savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))) return;
-    const nextPlaces = [...savedPlaces, selectedPlace];
+    if (!selectedPlace) return;
+    const selectedKey = getPlaceKey(selectedPlace);
+    const nextPlaces = isSelectedPlaceSaved
+      ? savedPlaces.filter((place) => getPlaceKey(place) !== selectedKey)
+      : [...savedPlaces, { ...selectedPlace, name: selectedPlace.name.trim() }];
     setSavedPlaces(nextPlaces);
     window.localStorage.setItem(SAVED_PLACES_STORAGE_KEY, JSON.stringify(nextPlaces));
   };
@@ -103,15 +100,23 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
           </button>
         </div>
 
-        {selectedPlace ? (
+        {mode === "search" && selectedPlace ? (
           <div className="planner-place-panel__selected">
-            <strong>{selectedPlace.name}</strong>
+            <input
+              aria-label="내 장소 이름"
+              onChange={(event) => onSelect({ ...selectedPlace, name: event.target.value })}
+              placeholder="내 장소 이름"
+              value={selectedPlace.name}
+            />
             <div className="planner-place-panel__selected-actions">
-              <button disabled={savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))} onClick={saveCurrentPlace} type="button">
-                <Bookmark aria-hidden size={13} /> 내 장소 저장
-              </button>
-              <button onClick={clearPlace} type="button">
-                <X aria-hidden size={13} /> 해제
+              <button
+                aria-label={isSelectedPlaceSaved ? "내 장소 저장 해제" : "내 장소 저장"}
+                className={isSelectedPlaceSaved ? "planner-place-panel__bookmark planner-place-panel__bookmark--saved" : "planner-place-panel__bookmark"}
+                disabled={!selectedPlace.name.trim()}
+                onClick={saveCurrentPlace}
+                type="button"
+              >
+                <Bookmark aria-hidden fill={isSelectedPlaceSaved ? "currentColor" : "none"} size={15} />
               </button>
             </div>
           </div>
@@ -180,7 +185,10 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
 }
 
 function getPlaceKey(place: PlanPlace) {
-  return `${place.providerPlaceId ?? ""}|${place.name}|${place.address}`;
+  const normalizedAddress = place.address.trim().toLowerCase();
+  if (normalizedAddress) return normalizedAddress;
+  if (place.providerPlaceId) return `provider:${place.providerPlaceId}`;
+  return `coordinates:${place.latitude.toFixed(6)},${place.longitude.toFixed(6)}`;
 }
 
 async function readPlaceSearchResponse(response: Response): Promise<{ places?: PlaceRecord[]; error?: string }> {
