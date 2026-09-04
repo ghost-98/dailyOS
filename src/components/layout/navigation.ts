@@ -1,15 +1,18 @@
-import { Activity, CalendarDays, Settings } from "lucide-react";
+import { CalendarDays, Grid2x2, Plus, Search, Settings } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export type NavItem = {
   href: string;
-  icon: typeof Activity;
+  icon: LucideIcon;
   key: string;
   label: string;
 };
 
 export const mobileNav: NavItem[] = [
-  { label: "기록", href: "/m/life/activities", key: "life-activities", icon: Activity },
-  { label: "하루", href: "/m/life", key: "life", icon: CalendarDays },
+  { label: "검색", href: "/m/search", key: "search", icon: Search },
+  { label: "하루", href: "/m/day", key: "day", icon: CalendarDays },
+  { label: "+", href: "/m/record", key: "record", icon: Plus },
+  { label: "기타", href: "/m/other", key: "other", icon: Grid2x2 },
   { label: "설정", href: "/m/settings", key: "settings", icon: Settings },
 ];
 

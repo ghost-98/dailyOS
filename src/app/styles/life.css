@@ -5,18 +5,14 @@
 
 .life-calendar-day-panel__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.24fr) minmax(340px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "timeline photos"
-    "timeline companions"
-    "timeline map"
-    "timeline map"
-    "timeline finance"
-    "timeline logs";
-  grid-template-rows: minmax(164px, 0.78fr) minmax(126px, 0.54fr) minmax(176px, 0.9fr) minmax(176px, 0.9fr) minmax(148px, 0.68fr) minmax(108px, 0.46fr);
+    "insights"
+    "timeline";
+  grid-template-rows: auto auto;
   gap: var(--space-3);
-  height: 970px;
-  min-height: 970px;
+  height: auto;
+  min-height: 0;
 }
 
 .life-calendar-day-card {
@@ -57,6 +53,56 @@
 
 .life-calendar-day-card--logs {
   grid-area: logs;
+}
+
+.life-calendar-day-insight-bar {
+  grid-area: insights;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+}
+
+.life-calendar-day-insight-bar__button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(229, 232, 240, 0.96);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.life-calendar-day-insight-bar__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(201, 184, 255, 0.18);
+  background: rgba(201, 184, 255, 0.1);
+}
+
+.life-calendar-day-insight-bar__button--active {
+  border-color: rgba(201, 184, 255, 0.22);
+  background: linear-gradient(180deg, rgba(201, 184, 255, 0.18), rgba(201, 184, 255, 0.08));
+  color: var(--text);
+}
+
+.life-calendar-day-insight-bar__button svg {
+  display: block;
+}
+
+.life-calendar-day-insight-bar__count {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: rgb(253, 224, 71);
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .life-calendar-day-card--photos,
@@ -639,16 +685,16 @@
 
 .life-calendar-day-panel--mobile .life-calendar-day-panel__layout {
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-areas: none;
-  grid-template-rows: none;
-  grid-auto-rows: max-content;
-  grid-auto-flow: row;
-  justify-items: stretch;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   height: auto;
   min-height: 0;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-insight-bar {
+  width: 100%;
+  grid-area: auto;
 }
 
 .life-calendar-day-panel--mobile .life-calendar-day-card {
@@ -664,7 +710,24 @@
 }
 
 .life-calendar-day-panel--mobile .life-calendar-day-card--timeline {
+  width: 100%;
   grid-template-rows: auto;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-insight-bar {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 8px;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-insight-bar__button {
+  min-height: 54px;
+  border-radius: 14px;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-insight-bar__count {
+  right: 8px;
+  bottom: 6px;
+  font-size: 0.68rem;
 }
 
 .life-calendar-day-panel--mobile .life-calendar-day-card--collapsed {
@@ -678,6 +741,14 @@
 .life-calendar-day-panel--mobile .life-calendar-day-card__head {
   padding-bottom: 8px;
   margin-bottom: 0;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-timeline {
+  width: 100%;
+}
+
+.life-calendar-day-panel--mobile .life-calendar-day-timeline__item {
+  grid-template-columns: 66px minmax(0, 1fr);
 }
 
 .life-calendar-day-panel--mobile .life-calendar-day-card__head span {
@@ -1790,6 +1861,360 @@
   padding: 22px;
 }
 
+.life-search-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.life-search-controls--compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(118px, 0.65fr);
+  gap: 10px;
+}
+
+.life-search-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 2px 2px 0;
+}
+
+.life-search-meta-row strong {
+  color: var(--violet);
+  font-size: 1.06rem;
+  font-weight: 900;
+}
+
+.life-search-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+}
+
+.life-search-controls__query {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 0 14px;
+}
+
+.life-search-controls__query input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+.life-search-period-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  cursor: pointer;
+  flex: 0 0 42px;
+  padding: 0;
+}
+
+.life-search-period-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.45);
+  padding: 0 10px 10px;
+}
+
+.life-search-period-sheet {
+  width: min(100%, 720px);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.24);
+  padding: 18px;
+  animation: search-period-slide-up 180ms ease-out;
+}
+
+.life-search-period-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.life-search-period-sheet__title {
+  display: flex;
+  align-items: center;
+}
+
+.life-search-period-sheet__icon-button,
+.life-search-period-sheet__done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.life-search-period-sheet__icon-button {
+  width: 38px;
+  padding: 0;
+}
+
+.life-search-period-sheet__title .eyebrow {
+  color: var(--violet);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+.life-search-period-sheet__inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.life-search-period-sheet__inputs label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.life-search-period-sheet__inputs input {
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font: inherit;
+  padding: 0 12px;
+}
+
+.life-search-period-sheet__actions {
+  display: grid;
+  grid-template-columns: 38px minmax(72px, auto);
+  justify-content: end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.life-search-period-sheet__done {
+  border-color: rgba(201, 184, 255, 0.26);
+  background: rgba(201, 184, 255, 0.12);
+  color: var(--violet);
+}
+
+.life-search-period-sheet__done span {
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.life-search-controls__period input {
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+}
+
+.life-search-controls__period span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.life-search-filter-row,
+.life-other-switcher {
+  display: grid;
+  gap: 8px;
+}
+
+.life-search-filter-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.life-other-switcher {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.life-other-switcher {
+  margin-bottom: 12px;
+}
+
+.life-search-filter-pill,
+.life-other-switcher__item {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.life-search-filter-pill--active,
+.life-other-switcher__item--active {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+}
+
+.record-create-flow {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 18px;
+}
+
+.record-create-flow__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.record-create-flow__choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.record-create-flow__choice strong {
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.record-create-flow__sheet {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    var(--surface);
+  padding: 18px;
+}
+
+.record-create-flow__form {
+  display: grid;
+  gap: 12px;
+}
+
+.record-create-flow__category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-create-flow__category-item {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.record-create-flow__category-item--active {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+}
+
+.record-create-flow__form input,
+.record-create-flow__form select,
+.record-create-flow__form textarea {
+  width: 100%;
+}
+
+.record-create-flow__form .ui-form-field > input,
+.record-create-flow__form .ui-form-field > select,
+.record-create-flow__form .ui-form-field > textarea {
+  min-height: 48px;
+}
+
+@keyframes search-period-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.record-create-flow__form textarea {
+  min-height: 98px;
+}
+
+.record-create-flow__mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.record-create-flow__mode-switch-item {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.record-create-flow__mode-switch-item--active {
+  border-color: rgba(201, 184, 255, 0.28);
+  background: rgba(201, 184, 255, 0.1);
+  color: var(--violet);
+}
+
 .life-report-metrics,
 .life-insight-grid,
 .life-report-month,
@@ -2313,6 +2738,10 @@
   gap: 10px;
 }
 
+.life-search-controls--switcher {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .life-search-controls label {
   display: flex;
   align-items: center;
@@ -2340,6 +2769,37 @@
   padding: 0 12px;
 }
 
+.life-search-filter {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  min-height: 64px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.life-search-filter strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.life-search-filter span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.life-search-filter--active {
+  border-color: rgba(201, 184, 255, 0.3);
+  background: rgba(201, 184, 255, 0.08);
+}
+
 .life-search-result-head {
   display: flex;
   align-items: center;
@@ -2356,6 +2816,10 @@
 .life-search-results {
   display: grid;
   gap: 9px;
+}
+
+.life-search-results:empty {
+  display: none;
 }
 
 .life-search-results button {
@@ -2898,6 +3362,17 @@
   opacity: 0.48;
 }
 
+.mobile-sheet-submit {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-record-sheet__footer {
+  justify-content: stretch;
+}
+
 .life-ask-error {
   margin: 0;
   color: var(--pink);
@@ -3431,6 +3906,7 @@ button:disabled {
   font-size: 1.04rem;
   font-weight: 800;
   outline: none;
+  min-height: 52px;
   padding: 14px 16px;
 }
 
@@ -4303,22 +4779,109 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
-.life-activity-day-summary {
+.life-activity-insight-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
-.life-activity-day-summary__card--time {
+.life-activity-insight-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
   min-width: 0;
+  min-height: 90px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  padding: 12px 12px 11px;
+  text-align: left;
 }
 
-.life-activity-day-summary__card--expense {
-  min-width: 0;
+.life-activity-insight-card svg {
+  color: rgba(229, 232, 240, 0.92);
 }
 
-.life-activity-day-summary__card--count {
-  min-width: 0;
+.life-activity-insight-card strong {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.life-activity-insight-card span {
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 920;
+  letter-spacing: -0.02em;
+}
+
+.life-activity-insight-card--active {
+  border-color: rgba(201, 184, 255, 0.22);
+  background: linear-gradient(180deg, rgba(201, 184, 255, 0.18), rgba(201, 184, 255, 0.08));
+}
+
+.life-activity-insight-card--active svg {
+  color: var(--violet);
+}
+
+.life-activity-insight-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.life-activity-insight-total {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.life-activity-insight-total span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.life-activity-insight-total strong {
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 940;
+}
+
+.life-activity-insight-list {
+  display: grid;
+  gap: 8px;
+}
+
+.life-activity-insight-list__item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 14px;
+}
+
+.life-activity-insight-list__item strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.life-activity-insight-list__item span,
+.life-activity-insight-list__item small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.life-activity-insight-sheet__body {
+  display: grid;
+  gap: 12px;
 }
 
 .life-activity-mobile {

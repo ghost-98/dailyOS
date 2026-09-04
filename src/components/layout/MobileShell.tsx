@@ -27,13 +27,20 @@ function MobileShellContent({ children }: MobileShellProps) {
 
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
-          const isActive = isMobileNavActive(pathname, item.href, item.key);
+          const isActive = isMobileNavActive(pathname, item.href);
           const Icon = item.icon;
+          const isRecord = item.key === "record";
 
           return (
-            <Link className={`bottom-nav__item ${isActive ? "bottom-nav__item--active" : ""}`} href={item.href} key={item.key}>
+            <Link
+              aria-label={item.label}
+              className={`bottom-nav__item ${isRecord ? "bottom-nav__item--record" : ""} ${isActive ? "bottom-nav__item--active" : ""}`}
+              href={item.href}
+              key={item.key}
+              title={item.label}
+            >
               <Icon aria-hidden size={20} />
-              <span>{item.label}</span>
+              {!isRecord ? <span>{item.label}</span> : null}
             </Link>
           );
         })}
@@ -42,8 +49,6 @@ function MobileShellContent({ children }: MobileShellProps) {
   );
 }
 
-function isMobileNavActive(pathname: string, href: string, key: string) {
-  if (key === "life-activities") return ["/m/life/activities", "/m/life/plans", "/m/life/logs", "/m/life/health"].includes(pathname);
-  if (key === "life") return pathname === "/m/life" || ["/m/life/calendar", "/m/life/gallery", "/m/life/search", "/m/life/people"].includes(pathname);
+function isMobileNavActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
