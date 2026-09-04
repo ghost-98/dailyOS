@@ -27,6 +27,7 @@ declare global {
       maps: {
         Event: {
           addListener: (target: NaverMarker, eventName: string, listener: () => void) => void;
+          trigger: (target: NaverMap, eventName: string) => void;
         };
         LatLng: new (latitude: number, longitude: number) => NaverLatLng;
         LatLngBounds: new () => NaverLatLngBounds;
