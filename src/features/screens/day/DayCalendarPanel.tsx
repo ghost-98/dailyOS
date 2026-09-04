@@ -34,6 +34,8 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
   const [detailView, setDetailView] = useState<DayDetailView>(null);
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+  const [isActivityEditMode, setIsActivityEditMode] = useState(false);
+  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(() => new Set());
 
   const activityItems = useMemo(
     () => items.filter((item): item is DayActivityItem => "external" in item && item.external.type === "activity"),
@@ -89,18 +91,53 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
     setPhotoViewer(null);
   };
 
+  const toggleActivity = (activityId: string) => {
+    setExpandedActivityIds((current) => {
+      const next = new Set(current);
+      if (next.has(activityId)) next.delete(activityId);
+      else next.add(activityId);
+      return next;
+    });
+  };
+
+  const toggleTimeline = () => {
+    if (isTimelineOpen) setIsActivityEditMode(false);
+    setIsTimelineOpen((current) => !current);
+  };
+
   return (
     <div className="life-calendar-day-panel life-calendar-day-panel--mobile">
       <div className="life-calendar-day-panel__layout life-calendar-day-panel__layout--mobile">
         <DayInsightBar buttons={dayInsightButtons.map((button) => ({ ...button, active: detailView === button.key }))} />
         <section className={isTimelineOpen ? "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--expanded" : "life-calendar-day-card life-calendar-day-card--timeline life-calendar-day-card--collapsed"}>
-          <button aria-expanded={isTimelineOpen} className="life-calendar-day-card__head life-calendar-day-card__head--toggle" onClick={() => setIsTimelineOpen((current) => !current)} type="button">
-            <span>활동 타임라인</span>
-            <div className="life-calendar-day-card__meta">
+          <div className="life-calendar-day-card__head life-calendar-day-card__head--toggle">
+            <button className="life-calendar-day-card__title" onClick={toggleTimeline} type="button">
+              <span>활동 타임라인</span>
               <b>{activityItems.length}건</b>
-              <ChevronDown aria-hidden className={`life-calendar-day-card__chevron ${isTimelineOpen ? "life-calendar-day-card__chevron--open" : ""}`} size={16} />
+            </button>
+            <div className="life-calendar-day-card__controls">
+              {isTimelineOpen && actions ? (
+                <button
+                  aria-label={isActivityEditMode ? "활동 편집 종료" : "활동 편집"}
+                  aria-pressed={isActivityEditMode}
+                  className={`life-calendar-day-card__control ${isActivityEditMode ? "life-calendar-day-card__control--active" : ""}`}
+                  onClick={() => setIsActivityEditMode((current) => !current)}
+                  type="button"
+                >
+                  <Pencil aria-hidden size={14} />
+                </button>
+              ) : null}
+              <button
+                aria-expanded={isTimelineOpen}
+                aria-label={isTimelineOpen ? "활동 타임라인 접기" : "활동 타임라인 펼치기"}
+                className="life-calendar-day-card__control"
+                onClick={toggleTimeline}
+                type="button"
+              >
+                <ChevronDown aria-hidden className={`life-calendar-day-card__chevron ${isTimelineOpen ? "life-calendar-day-card__chevron--open" : ""}`} size={16} />
+              </button>
             </div>
-          </button>
+          </div>
           {isTimelineOpen ? (
             <div className="life-calendar-day-timeline">
               {timelineRows.length > 0 ? (
@@ -108,6 +145,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
                   if (row.kind === "activity") {
                     const item = row.item;
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
+                    const isActivityOpen = expandedActivityIds.has(item.external.id);
                     return (
                       <article className="life-calendar-day-timeline__item" key={item.id}>
                         <div className="life-calendar-day-timeline__time">
@@ -119,37 +157,45 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
                                 {linkedPhotos.length}
                               </button>
                             ) : null}
-                            {[item.external.category].filter(Boolean).slice(0, 3).map((tag, index) => (
-                              <b className={`life-calendar-day-tag life-calendar-day-tag--${index % 3}`} key={`${item.id}-${tag}`}>
-                                {tag}
-                              </b>
-                            ))}
                           </div>
                         </div>
-                        <div className="life-calendar-day-timeline__body">
+                        <div className={`life-calendar-day-timeline__body ${isActivityOpen ? "life-calendar-day-timeline__body--expanded" : "life-calendar-day-timeline__body--collapsed"}`}>
                           <div className="life-calendar-day-item-heading">
-                            <strong>{item.external.title}</strong>
-                            {actions ? <div className="life-calendar-day-item-actions">
+                            <button
+                              aria-expanded={isActivityOpen}
+                              className="life-calendar-day-item-heading__toggle"
+                              onClick={() => toggleActivity(item.external.id)}
+                              type="button"
+                            >
+                              <strong>{item.external.title}</strong>
+                              <ChevronDown aria-hidden className={`life-calendar-day-item-heading__chevron ${isActivityOpen ? "life-calendar-day-item-heading__chevron--open" : ""}`} size={15} />
+                            </button>
+                            {actions && isActivityEditMode ? <div className="life-calendar-day-item-actions">
                               <button aria-label="활동 수정" onClick={() => void actions.editActivity(item.external.id)} type="button"><Pencil aria-hidden size={14} /></button>
                               <button aria-label="활동 삭제" onClick={() => void actions.deleteActivity(item.external.id)} type="button"><Trash2 aria-hidden size={14} /></button>
                             </div> : null}
                           </div>
-                          {item.external.placeName ? (
+                          {isActivityOpen && item.external.category ? (
+                            <div className="life-calendar-day-timeline__tags life-calendar-day-timeline__body-tags">
+                              <b className="life-calendar-day-tag life-calendar-day-tag--0">{item.external.category}</b>
+                            </div>
+                          ) : null}
+                          {isActivityOpen && item.external.placeName ? (
                             <p>
                               <MapPin aria-hidden size={14} /> {item.external.placeName}
                             </p>
                           ) : null}
-                          {item.external.companions ? (
+                          {isActivityOpen && item.external.companions ? (
                             <p>
                               <UsersRound aria-hidden size={14} /> {item.external.companions}
                             </p>
                           ) : null}
-                          {item.external.food ? (
+                          {isActivityOpen && item.external.food ? (
                             <p>
                               <UtensilsCrossed aria-hidden size={14} /> {item.external.food}
                             </p>
                           ) : null}
-                          {item.external.amount ? (
+                          {isActivityOpen && item.external.amount ? (
                             <p>
                               <Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}
                             </p>
@@ -199,6 +245,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
         routeStops={routeStops}
         view={detailView}
         onClose={closeDetail}
+        onOpenPhotos={openPhotoViewer}
       />
     </div>
   );
@@ -231,6 +278,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
 
   items.forEach((item) => {
     if ("event" in item && item.event.place) {
+      const linkedPhotos = photoItems.filter((photo) => photo.external.linkedTargetId === item.event.id && photo.external.linkedTargetType === "event");
       stops.push({
         address: item.event.place.address,
         id: item.id,
@@ -238,6 +286,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
       });
@@ -245,6 +294,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
     }
 
     if ("task" in item && item.task.place) {
+      const linkedPhotos = photoItems.filter((photo) => photo.external.linkedTargetId === item.task.id && photo.external.linkedTargetType === "todo");
       stops.push({
         address: item.task.place.address,
         id: item.id,
@@ -252,6 +302,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
       });
@@ -267,6 +318,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
           latitude: item.external.placeLatitude,
           longitude: item.external.placeLongitude,
           name: item.external.placeName,
+          photos: linkedPhotosByActivityId.get(item.external.id) ?? [],
           sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
         });
@@ -282,6 +334,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
           latitude: photoSource.external.placeLatitude,
           longitude: photoSource.external.placeLongitude,
           name: item.external.title,
+          photos: linkedPhotos,
           sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
         });
@@ -290,6 +343,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
     }
 
     if ("external" in item && item.external.type === "photo") {
+      const photoItem = item as DayPhotoItem;
       if (item.external.linkedTargetType === "activity" && item.external.linkedTargetId) return;
 
       if (!item.external.linkedTargetId) {
@@ -301,6 +355,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
           latitude: item.external.placeLatitude,
           longitude: item.external.placeLongitude,
           name: getPhotoStopName(item.external),
+          photos: [photoItem],
           sortMinutes: item.sortMinutes,
           timeLabel: formatPhotoTimeLabel(item.external),
         });
@@ -317,6 +372,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: linkedPlace.latitude,
         longitude: linkedPlace.longitude,
         name: `${formatPhotoTimeLabel(item.external)} 사진`,
+        photos: [photoItem],
         sortMinutes: item.sortMinutes,
         timeLabel: formatPhotoTimeLabel(item.external),
       });

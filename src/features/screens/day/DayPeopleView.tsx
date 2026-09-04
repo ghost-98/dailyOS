@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
+import { PanelHeading } from "@/components/ui/PanelHeading";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
@@ -79,22 +80,20 @@ export function DayPeopleView() {
   return (
     <div className="life-tab-panel">
       <SectionCard className="life-people-list ui-workspace-panel ui-workspace-panel--tall">
-        <div className="section-heading ui-panel-heading ui-panel-heading--compact life-people-list__head">
-          <div className="life-people-list__title">
-            <div className="life-people-list__heading">
-              <p className="eyebrow">사람 목록</p>
-              <strong className="life-people-list__count">{people.length}명</strong>
-              <IconButton
-                label={isCreateMode ? "사람 목록 닫기" : "사람 추가"}
-                onClick={() => (isCreateMode ? closeCreateMode() : setIsCreateMode(true))}
-                size="sm"
-                tone="soft"
-              >
-                {isCreateMode ? <X aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
-              </IconButton>
-            </div>
-          </div>
-        </div>
+        <PanelHeading
+          actions={(
+            <IconButton
+              label={isCreateMode ? "사람 목록 닫기" : "사람 추가"}
+              onClick={() => (isCreateMode ? closeCreateMode() : setIsCreateMode(true))}
+              size="sm"
+              tone="soft"
+            >
+              {isCreateMode ? <X aria-hidden size={16} /> : <Plus aria-hidden size={16} />}
+            </IconButton>
+          )}
+          meta={<strong className="life-people-list__count">{people.length}명</strong>}
+          title="사람 목록"
+        />
 
         {isCreateMode ? (
           <div className="life-people-inline-create">

@@ -25,9 +25,10 @@ type DayDetailSheetProps = {
   routeStops: DayRouteStop[];
   view: DayDetailView;
   onClose: () => void;
+  onOpenPhotos: (items: DayPhotoItem[], title: string) => void;
 };
 
-export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, photoTitle, photoViewerItems, routeStops, view, onClose }: DayDetailSheetProps) {
+export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, photoTitle, photoViewerItems, routeStops, view, onClose, onOpenPhotos }: DayDetailSheetProps) {
   const mapRef = useRef<DayMapDetailHandle | null>(null);
 
   if (!view) return null;
@@ -57,7 +58,7 @@ export function DayDetailSheet({ actions, companionCounts, finance, financeItems
       onClose={onClose}
     >
       {view === "photos" ? <DayPhotoDetail actions={actions} isLoading={isLoading} items={photoViewerItems} /> : null}
-      {view === "map" ? <DayMapDetail isLoading={isLoading} ref={mapRef} routeStops={routeStops} /> : null}
+      {view === "map" ? <DayMapDetail isLoading={isLoading} onShowPhotos={onOpenPhotos} ref={mapRef} routeStops={routeStops} /> : null}
       {view === "companions" ? <DayCompanionDetail isLoading={isLoading} items={companionCounts} /> : null}
       {view === "finance" ? <DayFinanceDetail actions={actions} finance={finance} items={financeItems} /> : null}
       {view === "logs" ? <DayLogDetail actions={actions} isLoading={isLoading} items={logItems} /> : null}
