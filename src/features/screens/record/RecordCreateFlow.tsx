@@ -1,25 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, X } from "lucide-react";
+import { Activity, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
-import { EventCreateSheet, TaskCreateSheet } from "@/features/calendar/CalendarSheets";
-import { createCalendarEventInDb } from "@/features/calendar/api";
+import { createCalendarEventInDb } from "@/features/sources/calendarApi";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { createTaskInDb } from "@/features/tasks/api";
-import { getDefaultActivityTime } from "@/features/life/activityHelpers";
-import { formatDateKey, formatFullDate } from "@/features/life/dateTime";
-import { useLifeDataState } from "@/features/life/useLifeDataState";
-import { createPersonInDb, fetchPeopleFromDb } from "@/features/people/api";
-import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/health/api";
-import { PeoplePickerField } from "@/features/people/PeoplePickerField";
-import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
+import { createTaskInDb } from "@/features/sources/taskApi";
+import { getDefaultActivityTime } from "@/features/records/time/recordActivityHelpers";
+import { formatDateKey, formatFullDate } from "@/features/records/time/recordDateTime";
+import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
+import { createPersonInDb, fetchPeopleFromDb } from "@/features/sources/peopleApi";
+import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/sources/healthApi";
+import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
+import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
 import type { LifeMediaUploadInput, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
 import { confirmAction } from "@/lib/actionGuards";
+import { RecordLinkTargetField } from "@/features/screens/record/components/RecordLinkTargetField";
+import type { RecordLinkTargetOption } from "@/features/screens/record/components/RecordLinkTargetField";
+import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
+import { PlanCreateForm } from "@/features/screens/record/forms/PlanCreateForm";
 
 type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo";
 type HealthMode = "weight" | "running";
@@ -33,11 +36,12 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
   { icon: Camera, key: "photo", label: "사진" },
 ];
 
-const activityCategories = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
+const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
+const CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY = "dailyos.record.customActivityCategories";
 
 export function RecordCreateFlow() {
   const router = useRouter();
-  const { setData, mutations } = useLifeDataState();
+  const { data, setData, mutations } = useRecordsDataState();
   const createPerson = async (name: string) => createPersonInDb({ name });
   const [step, setStep] = useState<"choose" | CreateType>("choose");
   const [people, setPeople] = useState<PersonRecord[]>([]);
@@ -59,6 +63,12 @@ export function RecordCreateFlow() {
   const finish = () => {
     router.push("/m/day");
   };
+
+  const linkTargets: RecordLinkTargetOption[] = [
+    ...data.activities.map((item) => ({ date: item.date, id: item.id, title: item.title, type: "activity" as const })),
+    ...data.tasks.map((item) => ({ date: item.scheduledDate, id: item.id, title: item.title, type: "todo" as const })),
+    ...data.events.filter((item) => item.type === "event").map((item) => ({ date: item.date, id: item.id, title: item.title, type: "event" as const })),
+  ];
 
   return (
     <div className="life-page">
@@ -108,10 +118,11 @@ export function RecordCreateFlow() {
             onBack={() => setStep("choose")}
             onDone={finish}
             onMessage={setMessage}
-            onSave={async (date, content) => {
-              await mutations.createDailyLog(date, content);
+            onSave={async (date, content, linkedTarget) => {
+              await mutations.createDailyLog(date, content, linkedTarget);
               setMessage("기록을 추가했어요.");
             }}
+            linkTargets={linkTargets}
           />
         ) : null}
 
@@ -141,6 +152,7 @@ export function RecordCreateFlow() {
             onDone={finish}
             onMessage={setMessage}
             onSavePhotos={mutations.uploadLifePhotos}
+            linkTargets={linkTargets}
           />
         ) : null}
 
@@ -208,13 +220,51 @@ function ActivityCreateForm({
   const [date, setDate] = useState(defaultDate);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("기타");
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customCategory, setCustomCategory] = useState("");
+  const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false);
   const [startTime, setStartTime] = useState(getDefaultActivityTime());
-  const [isAllDay, setIsAllDay] = useState(false);
+  const [endTime, setEndTime] = useState("");
+  const [hasTime, setHasTime] = useState(true);
+  const [hasEndTime, setHasEndTime] = useState(false);
   const [place, setPlace] = useState<PlanPlace | undefined>();
+  const [startPlace, setStartPlace] = useState<PlanPlace | undefined>();
+  const [endPlace, setEndPlace] = useState<PlanPlace | undefined>();
+  const [transportMode, setTransportMode] = useState("");
   const [companions, setCompanions] = useState<string[]>([]);
+  const [food, setFood] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY);
+      if (saved) setCustomCategories(JSON.parse(saved) as string[]);
+    } catch {
+      setCustomCategories([]);
+    }
+  }, []);
+
+  const categories = [...BASE_ACTIVITY_CATEGORIES, ...customCategories];
+
+  const addCustomCategory = () => {
+    const nextCategory = customCategory.trim();
+    if (!nextCategory || categories.includes(nextCategory)) return;
+    const nextCategories = [...customCategories, nextCategory];
+    setCustomCategories(nextCategories);
+    window.localStorage.setItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY, JSON.stringify(nextCategories));
+    setCategory(nextCategory);
+    setCustomCategory("");
+    setIsCategoryEditorOpen(false);
+  };
+
+  const removeCustomCategory = (target: string) => {
+    const nextCategories = customCategories.filter((item) => item !== target);
+    setCustomCategories(nextCategories);
+    window.localStorage.setItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY, JSON.stringify(nextCategories));
+    if (category === target) setCategory("기타");
+  };
 
   const save = async () => {
     if (!title.trim()) return;
@@ -226,13 +276,20 @@ function ActivityCreateForm({
         date,
         title: title.trim(),
         category,
-        isAllDay,
-        startTime: isAllDay ? undefined : startTime || undefined,
+        isAllDay: !hasTime,
+        startTime: hasTime ? startTime || undefined : undefined,
+        endTime: hasTime && hasEndTime ? endTime || undefined : undefined,
         companions: companions.length > 0 ? companions.join(", ") : undefined,
         expenseAmount: expenseAmount ? Number(expenseAmount) : undefined,
         memo: memo.trim() || undefined,
-        placeName: place?.name,
-        placeAddress: place?.address,
+        placeName: category === "이동" ? endPlace?.name : place?.name,
+        placeAddress: category === "이동" ? endPlace?.address : place?.address,
+        startPlaceName: category === "이동" ? startPlace?.name : undefined,
+        startPlaceAddress: category === "이동" ? startPlace?.address : undefined,
+        endPlaceName: category === "이동" ? endPlace?.name : undefined,
+        endPlaceAddress: category === "이동" ? endPlace?.address : undefined,
+        transportMode: category === "이동" ? transportMode.trim() || undefined : undefined,
+        food: category === "식사" ? food.trim() || undefined : undefined,
       });
       onMessage("활동을 추가했어요.");
       onDone();
@@ -243,7 +300,7 @@ function ActivityCreateForm({
 
   return (
     <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact">
+      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
         <div className="ui-panel-heading__intro">
           <p className="eyebrow">활동 추가</p>
           <h2>{formatFullDate(date)}</h2>
@@ -261,29 +318,79 @@ function ActivityCreateForm({
         </FormField>
         <FormField label="유형">
           <div className="record-create-flow__category-grid" role="list" aria-label="활동 유형">
-            {activityCategories.map((item) => (
-              <button
-                aria-pressed={category === item}
-                className={category === item ? "record-create-flow__category-item record-create-flow__category-item--active" : "record-create-flow__category-item"}
-                key={item}
-                onClick={() => setCategory(item)}
-                type="button"
-              >
-                {item}
-              </button>
-            ))}
+            {categories.map((item) => {
+              const isCustom = customCategories.includes(item);
+              return (
+                <span className={category === item ? "record-create-flow__category-item record-create-flow__category-item--active" : "record-create-flow__category-item"} key={item}>
+                  <button aria-pressed={category === item} onClick={() => setCategory(item)} type="button">{item}</button>
+                  {isCustom ? <button aria-label={`${item} 태그 삭제`} className="record-create-flow__category-remove" onClick={() => removeCustomCategory(item)} type="button"><X aria-hidden size={11} /></button> : null}
+                </span>
+              );
+            })}
+            <button className="record-create-flow__category-add" onClick={() => setIsCategoryEditorOpen((current) => !current)} type="button">
+              <Plus aria-hidden size={13} /> 태그 추가
+            </button>
           </div>
+          {isCategoryEditorOpen ? (
+            <div className="record-create-flow__category-editor">
+              <input
+                aria-label="새 활동 태그"
+                placeholder="새 태그"
+                value={customCategory}
+                onChange={(event) => setCustomCategory(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addCustomCategory();
+                  }
+                }}
+              />
+              <button disabled={!customCategory.trim()} onClick={addCustomCategory} type="button">추가</button>
+            </div>
+          ) : null}
         </FormField>
         <FormField label="시간">
-          <input disabled={isAllDay} type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-          <label className="planner-option-toggle">
-            <input checked={isAllDay} type="checkbox" onChange={(event) => setIsAllDay(event.target.checked)} />
-            <span>하루종일</span>
-          </label>
+          <div className="record-create-flow__time-toggles">
+            <label className="planner-option-toggle">
+              <input checked={hasTime} type="checkbox" onChange={(event) => setHasTime(event.target.checked)} />
+              <span>시간 사용</span>
+            </label>
+            <label className="planner-option-toggle">
+              <input checked={hasTime && hasEndTime} disabled={!hasTime} type="checkbox" onChange={(event) => setHasEndTime(event.target.checked)} />
+              <span>종료 시간 사용</span>
+            </label>
+          </div>
+          {hasTime ? (
+            <div className="record-create-flow__time-grid">
+              <label><span>시작 시간</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
+              {hasEndTime ? <label><span>종료 시간</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label> : null}
+            </div>
+          ) : null}
         </FormField>
-        <FormField label="장소">
-          <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
-        </FormField>
+        {category === "이동" ? (
+          <div className="record-create-flow__conditional-section">
+            <FormField label="출발지">
+              <PlaceSearchField selectedPlace={startPlace} onSelect={setStartPlace} />
+            </FormField>
+            <FormField label="도착지">
+              <PlaceSearchField selectedPlace={endPlace} onSelect={setEndPlace} />
+            </FormField>
+            <FormField label="이동 수단">
+              <input placeholder="예: 도보, 지하철, 버스, 택시, 자차" value={transportMode} onChange={(event) => setTransportMode(event.target.value)} />
+            </FormField>
+          </div>
+        ) : (
+          <FormField label="장소">
+            <PlaceSearchField selectedPlace={place} onSelect={setPlace} />
+          </FormField>
+        )}
+        {category === "식사" ? (
+          <div className="record-create-flow__conditional-section">
+            <FormField label="식사 메뉴">
+              <input placeholder="예: 샐러드, 라떼, 파스타" value={food} onChange={(event) => setFood(event.target.value)} />
+            </FormField>
+          </div>
+        ) : null}
         <FormField label="함께한 사람">
           <PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} />
         </FormField>
@@ -309,17 +416,20 @@ function PhotoCreateForm({
   onDone,
   onMessage,
   onSavePhotos,
+  linkTargets,
 }: {
   defaultDate: string;
   message: string;
   onBack: () => void;
   onDone: () => void;
   onMessage: (value: string) => void;
-  onSavePhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string) => Promise<void> | void;
+  onSavePhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
+  linkTargets: RecordLinkTargetOption[];
 }) {
   const [date, setDate] = useState(defaultDate);
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
@@ -332,6 +442,7 @@ function PhotoCreateForm({
         date,
         files.map((file) => ({ file })),
         caption.trim() || undefined,
+        linkedTarget,
       );
       onMessage("사진을 추가했어요.");
       onDone();
@@ -342,7 +453,7 @@ function PhotoCreateForm({
 
   return (
     <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact">
+      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
         <div className="ui-panel-heading__intro">
           <p className="eyebrow">사진 추가</p>
           <h2>{formatFullDate(date)}</h2>
@@ -366,6 +477,9 @@ function PhotoCreateForm({
         <FormField label="설명">
           <input placeholder="예: 산책 기록, 모임 사진" value={caption} onChange={(event) => setCaption(event.target.value)} />
         </FormField>
+        <FormField label="연결 대상">
+          <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
+        </FormField>
         {files.length > 0 ? <p className="life-health-message">{files.length}개 파일을 선택했어요.</p> : null}
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
@@ -383,16 +497,19 @@ function LogCreateForm({
   onDone,
   onMessage,
   onSave,
+  linkTargets,
 }: {
   defaultDate: string;
   message: string;
   onBack: () => void;
   onDone: () => void;
   onMessage: (value: string) => void;
-  onSave: (date: string, content: string) => Promise<void> | void;
+  onSave: (date: string, content: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
+  linkTargets: RecordLinkTargetOption[];
 }) {
   const [date, setDate] = useState(defaultDate);
   const [content, setContent] = useState("");
+  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
@@ -400,7 +517,7 @@ function LogCreateForm({
     if (!confirmAction("기록을 추가할까요?")) return;
     setIsSaving(true);
     try {
-      await onSave(date, content.trim());
+      await onSave(date, content.trim(), linkedTarget);
       onMessage("기록을 추가했어요.");
       onDone();
     } finally {
@@ -410,7 +527,7 @@ function LogCreateForm({
 
   return (
     <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact">
+      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
         <div className="ui-panel-heading__intro">
           <p className="eyebrow">기록 추가</p>
           <h2>{formatFullDate(date)}</h2>
@@ -425,6 +542,9 @@ function LogCreateForm({
         </FormField>
         <FormField label="내용">
           <textarea placeholder="오늘 기억하고 싶은 문장" value={content} onChange={(event) => setContent(event.target.value)} />
+        </FormField>
+        <FormField label="연결 대상">
+          <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
         </FormField>
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
@@ -497,7 +617,7 @@ function HealthCreateForm({
 
   return (
     <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact">
+      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
         <div className="ui-panel-heading__intro">
           <p className="eyebrow">건강 추가</p>
           <h2>{formatFullDate(date)}</h2>
@@ -574,45 +694,14 @@ function EventTaskCreateFlow({
   onSaveTask: (task: TaskItem) => Promise<void> | void;
   people: PersonRecord[];
 }) {
-  const [saving, setSaving] = useState(false);
-
-  return kind === "event" ? (
-    <EventCreateSheet
-      allowedTypes={["event", "todo"]}
-      defaultDate={defaultDate}
-      defaultType="event"
-      event={null}
-      isSaving={saving}
-      onClose={onBack}
-      onCreatePerson={onCreatePerson}
-      onSave={async (event) => {
-        setSaving(true);
-        try {
-          await onSaveEvent(event);
-          onDone();
-        } finally {
-          setSaving(false);
-        }
-      }}
-      people={people}
-    />
-  ) : (
-    <TaskCreateSheet
-      defaultDate={defaultDate}
-      isSaving={saving}
-      onClose={onBack}
-      onCreatePerson={onCreatePerson}
-      onSave={async (task) => {
-        setSaving(true);
-        try {
-          await onSaveTask(task);
-          onDone();
-        } finally {
-          setSaving(false);
-        }
-      }}
-      people={people}
-      task={null}
-    />
-  );
+  return <PlanCreateForm defaultDate={defaultDate} kind={kind} onClose={onBack} onCreatePerson={onCreatePerson} onDone={onDone} onSaveEvent={onSaveEvent} onSaveTask={onSaveTask} people={people} />;
 }
+
+
+
+
+
+
+
+
+

@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { MapPin, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bookmark, MapPin, Search, X } from "lucide-react";
 import type { PlanPlace, PlaceRecord } from "@/types/domain";
+
+const SAVED_PLACES_STORAGE_KEY = "dailyos.record.savedPlaces";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
   const [results, setResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState("");
+  const [savedPlaces, setSavedPlaces] = useState<PlanPlace[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SAVED_PLACES_STORAGE_KEY);
+      if (saved) setSavedPlaces(JSON.parse(saved) as PlanPlace[]);
+    } catch {
+      setSavedPlaces([]);
+    }
+  }, []);
 
   const searchPlaces = async () => {
     const trimmedQuery = query.trim();
@@ -50,18 +62,45 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     setMessage("");
   };
 
+  const saveCurrentPlace = () => {
+    if (!selectedPlace || savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))) return;
+    const nextPlaces = [...savedPlaces, selectedPlace];
+    setSavedPlaces(nextPlaces);
+    window.localStorage.setItem(SAVED_PLACES_STORAGE_KEY, JSON.stringify(nextPlaces));
+  };
+
+  const removeSavedPlace = (target: PlanPlace) => {
+    const nextPlaces = savedPlaces.filter((place) => getPlaceKey(place) !== getPlaceKey(target));
+    setSavedPlaces(nextPlaces);
+    window.localStorage.setItem(SAVED_PLACES_STORAGE_KEY, JSON.stringify(nextPlaces));
+  };
+
   return (
-    <div className="event-form-card planner-place-card">
-      <div className="planner-place-card__header">
-        <div>
-          <strong>{selectedPlace ? selectedPlace.name : "장소 선택"}</strong>
-        </div>
+    <div className="planner-place-field">
+      {selectedPlace ? <div className="planner-place-card__header">
+        <strong>{selectedPlace.name}</strong>
+        <div className="planner-place-card__actions">
+          <button disabled={savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))} onClick={saveCurrentPlace} type="button">
+            <Bookmark aria-hidden size={13} /> 내 장소
+          </button>
         {selectedPlace ? (
           <button onClick={clearPlace} type="button">
-            선택 해제
+            <X aria-hidden size={13} /> 해제
           </button>
         ) : null}
-      </div>
+        </div>
+      </div> : null}
+
+      {savedPlaces.length > 0 ? (
+        <div className="planner-saved-places" aria-label="내 장소">
+          {savedPlaces.map((place) => (
+            <span key={getPlaceKey(place)}>
+              <button onClick={() => { onSelect(place); setQuery(place.name); }} type="button"><Bookmark aria-hidden size={12} />{place.name}</button>
+              <button aria-label={`${place.name} 내 장소 삭제`} onClick={() => removeSavedPlace(place)} type="button"><X aria-hidden size={11} /></button>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="planner-place-search">
         <MapPin aria-hidden size={18} />
@@ -103,6 +142,10 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
       ) : null}
     </div>
   );
+}
+
+function getPlaceKey(place: PlanPlace) {
+  return `${place.providerPlaceId ?? ""}|${place.name}|${place.address}`;
 }
 
 async function readPlaceSearchResponse(response: Response): Promise<{ places?: PlaceRecord[]; error?: string }> {
