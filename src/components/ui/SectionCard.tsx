@@ -8,3 +8,4 @@ type SectionCardProps = {
 export function SectionCard({ children, className = "" }: SectionCardProps) {
   return <section className={`section-card ${className}`}>{children}</section>;
 }
+

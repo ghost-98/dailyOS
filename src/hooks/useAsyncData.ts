@@ -64,3 +64,4 @@ export function useAsyncData<T>({ deps, initialData, load, onError }: UseAsyncDa
 
   return { data, isLoading, reload, setData };
 }
+

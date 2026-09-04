@@ -2,11 +2,11 @@
 
 import type { SetStateAction } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchPeopleFromDb } from "@/features/people/api";
-import { fetchTasksFromDb } from "@/features/tasks/api";
+import { fetchPeopleFromDb } from "@/features/sources/peopleApi";
+import { fetchTasksFromDb } from "@/features/sources/taskApi";
 import type { PersonRecord, TaskItem } from "@/types/domain";
-import { fetchCalendarEventsFromDb } from "./api";
-import type { CalendarEvent } from "./data";
+import { fetchCalendarEventsFromDb } from "@/features/sources/calendarApi";
+import type { CalendarEvent } from "@/features/calendar/data";
 
 export function useCalendarResources() {
   const eventsAndTasks = useAsyncData({
@@ -38,3 +38,11 @@ export function useCalendarResources() {
     tasks: eventsAndTasks.data.tasks,
   };
 }
+
+
+
+
+
+
+
+

@@ -28,3 +28,4 @@ export function useResponsiveMode() {
 
   return { isDesktop: !isMobile, isMobile, isReady };
 }
+
