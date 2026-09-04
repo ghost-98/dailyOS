@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Camera, Map, UsersRound, WalletCards, type LucideIcon } from "lucide-react";
 import { DayPeopleView } from "@/features/screens/day/DayPeopleView";
 import { LedgerView } from "@/features/screens/other/LedgerView";
-import { OtherTabShell } from "@/features/screens/other/components/OtherTabShell";
+import { OtherMapView } from "@/features/screens/other/OtherMapView";
+import { OtherGalleryView } from "@/features/screens/other/OtherGalleryView";
 
 type OtherTab = "people" | "ledger" | "map" | "gallery";
 
@@ -44,15 +45,11 @@ export function OtherView() {
       {activeTab === "ledger" ? <LedgerView /> : null}
 
       {activeTab === "map" ? (
-        <OtherTabShell title="지도">
-          <div className="life-empty-state">지도 화면은 정리 중이에요.</div>
-        </OtherTabShell>
+        <OtherMapView />
       ) : null}
 
       {activeTab === "gallery" ? (
-        <OtherTabShell title="사진">
-          <div className="life-empty-state">사진 화면은 정리 중이에요.</div>
-        </OtherTabShell>
+        <OtherGalleryView />
       ) : null}
     </div>
   );

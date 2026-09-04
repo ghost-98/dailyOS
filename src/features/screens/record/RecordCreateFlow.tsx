@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, X } from "lucide-react";
+import { Activity, Banknote, Bed, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -23,8 +23,10 @@ import type { RecordLinkTargetOption } from "@/features/screens/record/component
 import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
 import { RecordCreateSheet } from "@/features/screens/record/components/RecordCreateSheet";
 import { PlanCreateForm } from "@/features/screens/record/forms/PlanCreateForm";
+import { IncomeCreateForm } from "@/features/screens/record/forms/IncomeCreateForm";
+import { SleepWakeCreateForm } from "@/features/screens/record/forms/SleepWakeCreateForm";
 
-type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo";
+type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo" | "income" | "bedtime" | "wake";
 type HealthMode = "weight" | "running";
 
 const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: string }> = [
@@ -34,6 +36,9 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
   { icon: Camera, key: "photo", label: "사진" },
   { icon: NotebookPen, key: "log", label: "기록" },
   { icon: HeartPulse, key: "health", label: "건강" },
+  { icon: Banknote, key: "income", label: "수입" },
+  { icon: Bed, key: "bedtime", label: "취침" },
+  { icon: Sunrise, key: "wake", label: "기상" },
 ];
 
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
@@ -155,6 +160,25 @@ export function RecordCreateFlow() {
             onMessage={setMessage}
             onSavePhotos={mutations.uploadLifePhotos}
             linkTargets={linkTargets}
+          />
+        ) : null}
+
+        {step === "income" ? (
+          <IncomeCreateForm
+            defaultDate={formatDateKey(new Date())}
+            onBack={() => setStep("choose")}
+            onDone={finish}
+            onSave={mutations.createIncome}
+          />
+        ) : null}
+
+        {step === "bedtime" || step === "wake" ? (
+          <SleepWakeCreateForm
+            defaultDate={formatDateKey(new Date())}
+            mode={step}
+            onBack={() => setStep("choose")}
+            onDone={finish}
+            onSave={mutations.saveActivity}
           />
         ) : null}
 

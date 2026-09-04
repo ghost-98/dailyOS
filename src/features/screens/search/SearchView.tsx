@@ -1,10 +1,11 @@
 "use client";
 
-import { CalendarRange, Check, RotateCcw, Search, X } from "lucide-react";
+import { CalendarRange, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildRecordSearchItems } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
+import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 
 export function SearchView() {
   const router = useRouter();
@@ -83,48 +84,15 @@ export function SearchView() {
           )}
         </div>
 
-        {isPeriodOpen ? (
-          <div className="life-search-period-sheet__backdrop" onClick={() => setIsPeriodOpen(false)} role="presentation">
-            <section className="life-search-period-sheet" onClick={(event) => event.stopPropagation()}>
-              <div className="life-search-period-sheet__head">
-                <div className="life-search-period-sheet__title">
-                  <p className="eyebrow">기간 설정</p>
-                </div>
-                <button className="life-search-period-sheet__icon-button" onClick={() => setIsPeriodOpen(false)} type="button">
-                  <X aria-hidden size={16} />
-                </button>
-              </div>
-
-              <div className="life-search-period-sheet__inputs">
-                <label>
-                  <span>시작일</span>
-                  <input aria-label="시작일" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-                </label>
-                <label>
-                  <span>종료일</span>
-                  <input aria-label="종료일" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-                </label>
-              </div>
-
-              <div className="life-search-period-sheet__actions">
-                <button
-                  className="life-search-period-sheet__icon-button"
-                  onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  type="button"
-                >
-                  <RotateCcw aria-hidden size={15} />
-                </button>
-                <button className="life-search-period-sheet__done life-search-period-sheet__done--small" onClick={() => setIsPeriodOpen(false)} type="button">
-                  <Check aria-hidden size={15} />
-                  <span>적용</span>
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
+        <PeriodFilterSheet
+          endDate={endDate}
+          isOpen={isPeriodOpen}
+          onClose={() => setIsPeriodOpen(false)}
+          onEndDateChange={setEndDate}
+          onReset={() => { setStartDate(""); setEndDate(""); }}
+          onStartDateChange={setStartDate}
+          startDate={startDate}
+        />
       </div>
     </div>
   );

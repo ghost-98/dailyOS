@@ -21,6 +21,7 @@ export type DayRouteStop = {
   latitude?: number;
   longitude?: number;
   name: string;
+  photos?: DayPhotoItem[];
   sortMinutes?: number;
   timeLabel: string;
 };
