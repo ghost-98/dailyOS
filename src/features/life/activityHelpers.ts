@@ -51,8 +51,3 @@ export function buildActivityDetailRows(activity: LifeActivityRecord) {
 export function parseActivityCompanions(value?: string) {
   return parseCompanions(value);
 }
-
-export function matchesSleepWakeActivity(activity: LifeActivityRecord, kind: "sleep" | "wake") {
-  if ((activity.category ?? "").trim() !== "수면") return false;
-  return (activity.title ?? "").trim() === (kind === "sleep" ? "취침" : "기상");
-}

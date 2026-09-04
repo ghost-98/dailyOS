@@ -86,11 +86,6 @@ export async function loadLifeDataForMode(mode: LifeDataMode): Promise<LifeDataS
     return { ...emptyLifeDataSnapshot, activities: activities ?? [], dailyLogs: dailyLogs ?? [] };
   }
 
-  if (mode === "places") {
-    const [activities, dailyLogs, lifePhotos] = await Promise.all([fetchLifeActivitiesFromDb(), fetchDailyLogsFromDb(), fetchLifePhotosFromDb()]);
-    return { ...emptyLifeDataSnapshot, activities: activities ?? [], dailyLogs: dailyLogs ?? [], lifePhotos: lifePhotos ?? [] };
-  }
-
   if (mode === "gallery") {
     const lifePhotos = await fetchLifePhotosFromDb();
     return { ...emptyLifeDataSnapshot, lifePhotos: lifePhotos ?? [] };

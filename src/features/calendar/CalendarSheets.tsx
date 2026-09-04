@@ -4,7 +4,8 @@ import { Bell, CalendarDays, Clock3, ListChecks, UsersRound, WalletCards, X } fr
 import { useState } from "react";
 import { FormActionBar } from "@/components/ui/FormActionBar";
 import { IconButton } from "@/components/ui/IconButton";
-import { FormSectionTitle } from "@/features/calendar/components";
+import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
+import { FormSectionTitle } from "@/features/calendar/calendarUiParts";
 import { PlaceSearchField } from "@/features/calendar/PlaceSearchField";
 import { categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory } from "@/features/calendar/types";
@@ -12,6 +13,7 @@ import { parseOptionalAmount } from "@/features/calendar/utils";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { PeoplePickerField } from "@/features/people/PeoplePickerField";
 import type { PersonRecord, PlanPlace, TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
+import { useResponsiveMode } from "@/hooks/useResponsiveMode";
 
 type EventCreateSheetProps = {
   allowedTypes: CalendarCategory[];
@@ -59,6 +61,7 @@ export function EventCreateSheet({
   const [expenseAmount, setExpenseAmount] = useState(event?.expenseAmount !== undefined ? String(event.expenseAmount) : "");
   const [companions, setCompanions] = useState<string[]>(parseCompanionNames(event?.companions));
   const [place, setPlace] = useState<PlanPlace | undefined>(event?.place);
+  const { isMobile } = useResponsiveMode();
 
   const saveCurrentEvent = () => {
     const trimmedTitle = title.trim();
@@ -97,9 +100,30 @@ export function EventCreateSheet({
         <div className="event-sheet__body planner-sheet__body">
           <FormSectionTitle title="기본 정보" description="제목과 메모를 먼저 잡아두세요." />
           <div className="event-form-card event-form-card--title planner-form-card planner-form-card--primary">
-            <label className="planner-field planner-field--wide">
+            <label
+              className="planner-field planner-field--wide planner-field--title"
+              style={isMobile ? { minHeight: 240, padding: "24px 16px 22px" } : undefined}
+            >
               <span>제목</span>
-              <input autoFocus placeholder={`${categoryLabels[type]} 제목`} value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
+              {isMobile ? (
+                <textarea
+                  autoFocus
+                  placeholder={`${categoryLabels[type]} 제목`}
+                  rows={4}
+                  style={{
+                    minHeight: 132,
+                    resize: "none",
+                    fontSize: "1.06rem",
+                    lineHeight: 1.4,
+                    paddingTop: 14,
+                    paddingBottom: 14,
+                  }}
+                  value={title}
+                  onChange={(changeEvent) => setTitle(changeEvent.target.value)}
+                />
+              ) : (
+                <input autoFocus placeholder={`${categoryLabels[type]} 제목`} value={title} onChange={(changeEvent) => setTitle(changeEvent.target.value)} />
+              )}
             </label>
             <label className="planner-field planner-field--wide">
               <span>메모</span>
@@ -258,7 +282,13 @@ export function EventCreateSheet({
           </div>
         </div>
 
-        <FormActionBar cancelDisabled={isSaving} onCancel={onClose} onSubmit={saveCurrentEvent} submitDisabled={isSaving} submitLabel={isSaving ? "저장 중..." : "저장"} />
+        {isMobile ? (
+          <MobileSheetSubmitButton disabled={isSaving} onClick={saveCurrentEvent}>
+            {isSaving ? "저장 중..." : event ? "이벤트 수정" : `${categoryLabels[type]} 추가`}
+          </MobileSheetSubmitButton>
+        ) : (
+          <FormActionBar cancelDisabled={isSaving} onCancel={onClose} onSubmit={saveCurrentEvent} submitDisabled={isSaving} submitLabel={isSaving ? "저장 중..." : "저장"} />
+        )}
       </section>
     </div>
   );
@@ -287,6 +317,7 @@ export function TaskCreateSheet({
   const [expenseAmount, setExpenseAmount] = useState(task?.expenseAmount !== undefined ? String(task.expenseAmount) : "");
   const [companions, setCompanions] = useState<string[]>(parseCompanionNames(task?.companions));
   const [place, setPlace] = useState<PlanPlace | undefined>(task?.place);
+  const { isMobile } = useResponsiveMode();
 
   const saveTask = () => {
     const trimmedTitle = title.trim();
@@ -328,9 +359,30 @@ export function TaskCreateSheet({
         <div className="event-sheet__body planner-sheet__body">
           <FormSectionTitle title="기본 정보" description="할 일의 핵심 내용과 메모를 적어두세요." />
           <div className="event-form-card event-form-card--title planner-form-card planner-form-card--primary">
-            <label className="planner-field planner-field--wide">
+            <label
+              className="planner-field planner-field--wide planner-field--title"
+              style={isMobile ? { minHeight: 240, padding: "24px 16px 22px" } : undefined}
+            >
               <span>제목</span>
-              <input autoFocus placeholder="할 일 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
+              {isMobile ? (
+                <textarea
+                  autoFocus
+                  placeholder="할 일 제목"
+                  rows={4}
+                  style={{
+                    minHeight: 132,
+                    resize: "none",
+                    fontSize: "1.06rem",
+                    lineHeight: 1.4,
+                    paddingTop: 14,
+                    paddingBottom: 14,
+                  }}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              ) : (
+                <input autoFocus placeholder="할 일 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
+              )}
             </label>
             <label className="planner-field planner-field--wide">
               <span>메모</span>
@@ -500,7 +552,13 @@ export function TaskCreateSheet({
           </div>
         </div>
 
-        <FormActionBar cancelDisabled={isSaving} onCancel={onClose} onSubmit={saveTask} submitDisabled={isSaving} submitLabel={isSaving ? "저장 중..." : "저장"} />
+        {isMobile ? (
+          <MobileSheetSubmitButton disabled={isSaving} onClick={saveTask}>
+            {isSaving ? "저장 중..." : task ? "할 일 수정" : "할 일 추가"}
+          </MobileSheetSubmitButton>
+        ) : (
+          <FormActionBar cancelDisabled={isSaving} onCancel={onClose} onSubmit={saveTask} submitDisabled={isSaving} submitLabel={isSaving ? "저장 중..." : "저장"} />
+        )}
       </section>
     </div>
   );

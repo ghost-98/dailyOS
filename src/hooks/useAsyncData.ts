@@ -60,7 +60,7 @@ export function useAsyncData<T>({ deps, initialData, load, onError }: UseAsyncDa
 
     previousDepsRef.current = deps;
     void reload();
-  });
+  }, [reload, ...deps]);
 
   return { data, isLoading, reload, setData };
 }

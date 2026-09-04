@@ -1,22 +1,16 @@
 import { requireCurrentUser } from "@/lib/authUser";
-import { collectDocumentFilePathsFromBlocks } from "@/features/documents/utils";
 import { supabase } from "@/lib/supabase";
 
 const exportTables = [
   { name: "profiles", conflict: "user_id" },
-  { name: "place_folders", conflict: "id" },
-  { name: "places", conflict: "id" },
-  { name: "personal_places", conflict: "id" },
   { name: "tasks", conflict: "id" },
   { name: "calendar_events", conflict: "id" },
   { name: "daily_logs", conflict: "id" },
   { name: "life_photos", conflict: "id" },
-  { name: "documents", conflict: "id" },
   { name: "weight_records", conflict: "id" },
   { name: "workout_sessions", conflict: "id" },
   { name: "expense_records", conflict: "id" },
-  { name: "place_folder_links", conflict: "id" },
-  { name: "place_links", conflict: "id" },
+  { name: "income_records", conflict: "id" },
 ] as const;
 
 const deleteTables = [...exportTables].reverse();
@@ -86,9 +80,7 @@ export async function deleteDailyOSData() {
   const user = await requireCurrentUser();
   const { data: photoRows } = await supabase.from("life_photos").select("file_path").eq("user_id", user.id);
   const filePaths = (photoRows ?? []).map((row) => String((row as { file_path: string }).file_path)).filter(Boolean);
-  const { data: documentRows } = await supabase.from("documents").select("content").eq("user_id", user.id);
-  const documentFilePaths = (documentRows ?? []).flatMap((row) => collectDocumentFilePathsFromBlocks((row as { content: unknown }).content));
-  const storagePaths = [...new Set([...filePaths, ...documentFilePaths])];
+  const storagePaths = [...new Set(filePaths)];
 
   if (storagePaths.length > 0) {
     const { error } = await supabase.storage.from("life-media").remove(storagePaths);
