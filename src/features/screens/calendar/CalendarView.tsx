@@ -4,20 +4,20 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Banknote, Camera, ChevronDown, MapPin, NotebookPen, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { DayInsightBar } from "@/components/screens/day/DayInsightBar";
-import { EventCreateSheet, TaskCreateSheet } from "@/features/calendar/CalendarSheets";
-import { MobileRecordFrame } from "@/components/screens/record/MobileRecordFrame";
-import { RecordMonthCalendar } from "@/components/screens/record/RecordMonthCalendar";
+import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
+import { EventCreateSheet, TaskCreateSheet } from "@/features/screens/calendar/components/CalendarCreateSheets";
+import { MobileCalendarFrame } from "@/features/screens/calendar/components/MobileCalendarFrame";
+import { MonthCalendar } from "@/features/screens/calendar/components/MonthCalendar";
 import { LifeCalendarDayPanel as DayCalendarPanel } from "@/features/screens/day/DayCalendarPanel";
 import { confirmAction } from "@/lib/actionGuards";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
 import type { EventType, TaskItem } from "@/types/domain";
-import { createPersonInDb } from "@/features/sources/peopleApi";
-import { createTaskInDb, updateTaskInDb } from "@/features/sources/taskApi";
-import { useCalendarResources } from "@/features/calendar/useCalendarResources";
-import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/sources/ledgerApi";
-import { updateLifeActivitiesBySourceInDb } from "@/features/records/api/recordsApi";
+import { createPersonInDb } from "@/features/data/people/api";
+import { createTaskInDb, updateTaskInDb } from "@/features/data/tasks/api";
+import { useCalendarResources } from "@/features/screens/calendar/hooks/useCalendarResources";
+import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/data/ledger/api";
+import { updateLifeActivitiesBySourceInDb } from "@/features/data/records/api";
 import { formatWon, getLinkedTargetTypeLabel } from "@/features/records/format/recordFormatters";
 import { parseCompanions } from "@/features/records/search/recordsInsights";
 import {
@@ -30,14 +30,16 @@ import {
   summarizeDay,
 } from "@/features/calendar/calendarViewHelpers";
 import { formatDateKey, formatSelectedDate, getMonthDays, isDateInRange } from "@/features/calendar/utils";
-import { createCalendarEventInDb, updateCalendarEventInDb } from "@/features/sources/calendarApi";
+import { createCalendarEventInDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import { categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, ExternalCalendarItem } from "@/features/calendar/types";
 import type { CalendarEvent } from "@/features/calendar/data";
+import type { DayItemActions } from "@/features/screens/day/dayDetailTypes";
 type CalendarViewProps = {
   allowedTypes?: EventType[];
   defaultSelectedDate?: string | null;
   externalItems?: ExternalCalendarItem[];
+  dayActions?: DayItemActions;
 };
 
 const initialMonth = new Date();
@@ -54,6 +56,7 @@ function CalendarViewContent({
   allowedTypes,
   defaultSelectedDate = null,
   externalItems = [],
+  dayActions,
 }: CalendarViewProps) {
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
   const { events, isLoading, people, setEvents, setPeople, setTasks, tasks } = useCalendarResources();
@@ -181,9 +184,9 @@ function CalendarViewContent({
   return (
     <div className="calendar-page">
       <div className="calendar-board--mobile-shell">
-        <MobileRecordFrame
+        <MobileCalendarFrame
           calendar={
-            <RecordMonthCalendar
+            <MonthCalendar
               countsByDate={monthCalendarCounts}
               monthCursor={currentMonth}
               onNextMonth={() => moveMonth(1)}
@@ -207,9 +210,9 @@ function CalendarViewContent({
           onToggleCalendar={toggleMobileCalendar}
         >
           <div className="record-plans-mobile__detail">
-            <DayCalendarPanel isLoading={isLoading} items={selectedTimelineItems} />
+            <DayCalendarPanel actions={dayActions} isLoading={isLoading} items={selectedTimelineItems} />
           </div>
-        </MobileRecordFrame>
+        </MobileCalendarFrame>
       </div>
 
       {isEventSheetOpen ? (

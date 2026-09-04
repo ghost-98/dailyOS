@@ -1,10 +1,10 @@
-import { fetchCalendarEventsFromDb } from "@/features/sources/calendarApi";
+import { fetchCalendarEventsFromDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/sources/healthApi";
-import { fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/sources/ledgerApi";
-import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/records/api/recordsApi";
+import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/data/health/api";
+import { fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/data/ledger/api";
+import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/data/records/api";
 import type { RecordViewMode } from "@/features/records/state/recordModes";
-import { fetchTasksFromDb } from "@/features/sources/taskApi";
+import { fetchTasksFromDb } from "@/features/data/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 
 export type RecordDataSnapshot = {

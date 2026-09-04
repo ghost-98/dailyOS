@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Banknote, Camera, ChevronDown, MapPin, NotebookPen, UsersRound, UtensilsCrossed } from "lucide-react";
-import { DayInsightBar } from "@/components/screens/day/DayInsightBar";
+import { Banknote, Camera, ChevronDown, MapPin, NotebookPen, Pencil, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
+import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
 import { DayDetailSheet } from "@/features/screens/day/details/DayDetailSheet";
 import type {
   DayActivityItem,
@@ -11,6 +11,7 @@ import type {
   DayFinanceItem,
   DayFinanceTotals,
   DayLogItem,
+  DayItemActions,
   DayPhotoItem,
   DayRouteStop,
   DayStandalonePhotoGroup,
@@ -24,11 +25,12 @@ import { categoryLabels } from "@/features/calendar/presentation";
 import type { CalendarCategory, DayTimelineItem, ExternalCalendarItem } from "@/features/calendar/types";
 
 type LifeCalendarDayPanelProps = {
+  actions?: DayItemActions;
   isLoading: boolean;
   items: DayTimelineItem[];
 };
 
-export function LifeCalendarDayPanel({ isLoading, items }: LifeCalendarDayPanelProps) {
+export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendarDayPanelProps) {
   const [detailView, setDetailView] = useState<DayDetailView>(null);
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
@@ -125,7 +127,13 @@ export function LifeCalendarDayPanel({ isLoading, items }: LifeCalendarDayPanelP
                           </div>
                         </div>
                         <div className="life-calendar-day-timeline__body">
-                          <strong>{item.external.title}</strong>
+                          <div className="life-calendar-day-item-heading">
+                            <strong>{item.external.title}</strong>
+                            {actions ? <div className="life-calendar-day-item-actions">
+                              <button aria-label="활동 수정" onClick={() => void actions.editActivity(item.external.id)} type="button"><Pencil aria-hidden size={14} /></button>
+                              <button aria-label="활동 삭제" onClick={() => void actions.deleteActivity(item.external.id)} type="button"><Trash2 aria-hidden size={14} /></button>
+                            </div> : null}
+                          </div>
                           {item.external.placeName ? (
                             <p>
                               <MapPin aria-hidden size={14} /> {item.external.placeName}
@@ -179,6 +187,7 @@ export function LifeCalendarDayPanel({ isLoading, items }: LifeCalendarDayPanelP
       </div>
 
       <DayDetailSheet
+        actions={actions}
         companionCounts={companionCounts}
         finance={finance}
         financeItems={financeItems}

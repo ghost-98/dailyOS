@@ -84,17 +84,48 @@ export function PlanCreateForm({ defaultDate, kind, onClose, onCreatePerson, onD
       submit={<MobileSheetSubmitButton disabled={!title.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : `${label} 추가`}</MobileSheetSubmitButton>}
     >
       <FormField label="날짜"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></FormField>
-      <FormField label="제목"><input autoFocus placeholder={`${label} 제목`} value={title} onChange={(event) => setTitle(event.target.value)} /></FormField>
-      <FormField label="시간">
-        <div className="record-create-flow__time-toggles">
-          <label className="planner-option-toggle"><input checked={hasTime} type="checkbox" onChange={(event) => setHasTime(event.target.checked)} /><span>시간 사용</span></label>
-          <label className="planner-option-toggle"><input checked={hasTime && hasEndTime} disabled={!hasTime} type="checkbox" onChange={(event) => setHasEndTime(event.target.checked)} /><span>종료 시간 사용</span></label>
-        </div>
-        {hasTime ? <div className="record-create-flow__time-grid">
-          <label><span>시작 시간</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
-          {hasEndTime ? <label><span>종료 시간</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label> : null}
-        </div> : null}
-      </FormField>
+        <FormField label="제목"><input autoFocus placeholder={`${label} 제목`} value={title} onChange={(event) => setTitle(event.target.value)} /></FormField>
+        <FormField label="시간">
+          <div className="record-create-flow__time-toggle-row" role="group" aria-label="시간 설정">
+            <button
+              aria-pressed={hasTime}
+              className={hasTime ? "planner-option-toggle planner-option-toggle--active" : "planner-option-toggle"}
+              onClick={() => {
+                setHasTime((current) => {
+                  const next = !current;
+                  if (!next) setHasEndTime(false);
+                  return next;
+                });
+              }}
+              type="button"
+            >
+              <span>시간 사용</span>
+            </button>
+            <button
+              aria-pressed={hasTime && hasEndTime}
+              className={hasTime && hasEndTime ? "planner-option-toggle planner-option-toggle--active" : "planner-option-toggle"}
+              disabled={!hasTime}
+              onClick={() => setHasEndTime((current) => !current)}
+              type="button"
+            >
+              <span>종료 시간 사용</span>
+            </button>
+          </div>
+          {hasTime ? (
+            <div className="record-create-flow__time-grid">
+              <label className="record-create-flow__time-field">
+                <span>시작 시간</span>
+                <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+              </label>
+              {hasEndTime ? (
+                <label className="record-create-flow__time-field">
+                  <span>종료 시간</span>
+                  <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
+        </FormField>
       <FormField label="장소"><PlaceSearchField selectedPlace={place} onSelect={setPlace} /></FormField>
       <FormField label="함께한 사람"><PeoplePickerField onChange={setCompanions} onCreatePerson={onCreatePerson} people={people} selectedNames={companions} /></FormField>
       <FormField label="지출"><input inputMode="numeric" placeholder="0" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value.replace(/[^\d]/g, ""))} /></FormField>

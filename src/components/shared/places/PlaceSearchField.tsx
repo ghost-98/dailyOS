@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bookmark, MapPin, Search, X } from "lucide-react";
+import { Bookmark, MapPin, Search, Star, X } from "lucide-react";
 import type { PlanPlace, PlaceRecord } from "@/types/domain";
 
 const SAVED_PLACES_STORAGE_KEY = "dailyos.record.savedPlaces";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState(selectedPlace?.name ?? "");
+  const [mode, setMode] = useState<"search" | "saved">("search");
   const [results, setResults] = useState<PlaceRecord[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState("");
@@ -22,12 +23,17 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     }
   }, []);
 
-  const searchPlaces = async () => {
-    const trimmedQuery = query.trim();
+  useEffect(() => {
+    setQuery(selectedPlace?.name ?? "");
+  }, [selectedPlace?.name]);
+
+  const searchPlaces = async (value?: string) => {
+    const trimmedQuery = (value ?? query).trim();
     if (!trimmedQuery) return;
 
     setIsSearching(true);
     setMessage("");
+    setMode("search");
 
     try {
       const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(trimmedQuery)}`);
@@ -76,70 +82,99 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   };
 
   return (
-    <div className="planner-place-field">
-      {selectedPlace ? <div className="planner-place-card__header">
-        <strong>{selectedPlace.name}</strong>
-        <div className="planner-place-card__actions">
-          <button disabled={savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))} onClick={saveCurrentPlace} type="button">
-            <Bookmark aria-hidden size={13} /> 내 장소
+    <div className="planner-place-panel">
+      <div className="planner-place-panel__top">
+        <div className="planner-place-mode" role="tablist" aria-label="장소">
+          <button
+            aria-pressed={mode === "search"}
+            className={mode === "search" ? "planner-place-mode__button planner-place-mode__button--active" : "planner-place-mode__button"}
+            onClick={() => setMode("search")}
+            type="button"
+          >
+            장소 검색
           </button>
+          <button
+            aria-pressed={mode === "saved"}
+            className={mode === "saved" ? "planner-place-mode__button planner-place-mode__button--active" : "planner-place-mode__button"}
+            onClick={() => setMode("saved")}
+            type="button"
+          >
+            <Star aria-hidden size={12} /> 내 장소
+          </button>
+        </div>
+
         {selectedPlace ? (
-          <button onClick={clearPlace} type="button">
-            <X aria-hidden size={13} /> 해제
-          </button>
+          <div className="planner-place-panel__selected">
+            <strong>{selectedPlace.name}</strong>
+            <div className="planner-place-panel__selected-actions">
+              <button disabled={savedPlaces.some((place) => getPlaceKey(place) === getPlaceKey(selectedPlace))} onClick={saveCurrentPlace} type="button">
+                <Bookmark aria-hidden size={13} /> 내 장소 저장
+              </button>
+              <button onClick={clearPlace} type="button">
+                <X aria-hidden size={13} /> 해제
+              </button>
+            </div>
+          </div>
         ) : null}
-        </div>
-      </div> : null}
-
-      {savedPlaces.length > 0 ? (
-        <div className="planner-saved-places" aria-label="내 장소">
-          {savedPlaces.map((place) => (
-            <span key={getPlaceKey(place)}>
-              <button onClick={() => { onSelect(place); setQuery(place.name); }} type="button"><Bookmark aria-hidden size={12} />{place.name}</button>
-              <button aria-label={`${place.name} 내 장소 삭제`} onClick={() => removeSavedPlace(place)} type="button"><X aria-hidden size={11} /></button>
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="planner-place-search">
-        <MapPin aria-hidden size={18} />
-        <input
-          placeholder="장소명이나 주소 검색"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void searchPlaces();
-            }
-          }}
-        />
-        <button disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
-          <Search aria-hidden size={16} />
-          {isSearching ? "검색 중" : "검색"}
-        </button>
       </div>
 
-      {selectedPlace ? (
-        <p className="date-event__place">
-          <MapPin aria-hidden size={14} />
-          <span>{selectedPlace.name}</span>
-          {selectedPlace.address ? <em>{selectedPlace.address}</em> : null}
-        </p>
-      ) : null}
-      {message ? <p className="planner-place-message">{message}</p> : null}
+      <div className="planner-place-panel__body">
+        {mode === "search" ? (
+          <>
+            <div className="planner-place-search ui-input-shell">
+              <MapPin aria-hidden size={18} />
+              <input
+                placeholder="장소명이나 주소 검색"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void searchPlaces();
+                  }
+                }}
+              />
+              <button aria-label="장소 검색" disabled={isSearching || query.trim().length === 0} onClick={() => void searchPlaces()} type="button">
+                <Search aria-hidden size={14} />
+              </button>
+            </div>
 
-      {results.length > 0 ? (
-        <div className="planner-place-results">
-          {results.map((place) => (
-            <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMapPlace(place)} type="button">
-              <strong>{place.name}</strong>
-              <span>{place.address || place.category || "주소 정보 없음"}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+            {message ? <p className="planner-place-message">{message}</p> : null}
+
+            {results.length > 0 ? (
+              <div className="planner-place-results">
+                {results.map((place) => (
+                  <button key={`${place.providerPlaceId ?? place.id}-${place.name}`} onClick={() => chooseMapPlace(place)} type="button">
+                    <strong>{place.name}</strong>
+                    <span>{place.address || place.category || "주소 정보 없음"}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="planner-place-saved-list" aria-label="내 장소">
+            {savedPlaces.length > 0 ? (
+              savedPlaces.map((place) => (
+                <div className="planner-place-saved-list__item" key={getPlaceKey(place)}>
+                  <button onClick={() => { onSelect(place); setQuery(place.name); }} type="button">
+                    <strong>{place.name}</strong>
+                    <span>{place.address || "주소 정보 없음"}</span>
+                  </button>
+                  <button aria-label={`${place.name} 내 장소 삭제`} onClick={() => removeSavedPlace(place)} type="button">
+                    <X aria-hidden size={11} />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="planner-place-empty">
+                <strong>아직 저장한 장소가 없어요.</strong>
+                <p>자주 가는 장소를 저장해 두면 다음 입력이 더 빨라집니다.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -173,6 +208,3 @@ function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {
     url: place.url,
   };
 }
-
-
-

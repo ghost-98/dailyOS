@@ -2,16 +2,18 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { getTimelineTimeLabel } from "@/features/calendar/calendarViewHelpers";
 import { getLinkedTargetTypeLabel } from "@/features/records/format/recordFormatters";
-import type { DayPhotoItem } from "@/features/screens/day/dayDetailTypes";
+import type { DayItemActions, DayPhotoItem } from "@/features/screens/day/dayDetailTypes";
 
 type DayPhotoDetailProps = {
+  actions?: DayItemActions;
   isLoading: boolean;
   items: DayPhotoItem[];
 };
 
-export function DayPhotoDetail({ isLoading, items }: DayPhotoDetailProps) {
+export function DayPhotoDetail({ actions, isLoading, items }: DayPhotoDetailProps) {
   const itemRefs = useRef(new Map<string, HTMLElement>());
   const scrollRafRef = useRef<number | null>(null);
   const sortedItems = useMemo(() => [...items].sort((left, right) => getPhotoSortMinutes(left) - getPhotoSortMinutes(right)), [items]);
@@ -99,6 +101,10 @@ export function DayPhotoDetail({ isLoading, items }: DayPhotoDetailProps) {
                     <div className="life-calendar-day-photo-card__caption"><span>{formatPhotoTimeLabel(item.external)}</span></div>
                   </div>
                   <div className="life-calendar-day-photo-card__face life-calendar-day-photo-card__face--back">
+                    {actions ? <div className="life-calendar-day-photo-card__actions" onClick={(event) => event.stopPropagation()}>
+                      <button aria-label="사진 수정" onClick={() => void actions.editPhoto(item.external.id)} type="button"><Pencil aria-hidden size={14} /></button>
+                      <button aria-label="사진 삭제" onClick={() => void actions.deletePhoto(item.external.id)} type="button"><Trash2 aria-hidden size={14} /></button>
+                    </div> : null}
                     <PhotoInfoSection empty="적어둔 설명이 없어요." lines={getPhotoUserNotes(item)} title="내가 적은 내용" />
                     <PhotoInfoSection empty="연결된 시스템 정보가 없어요." lines={getPhotoSystemNotes(item)} title="시스템 내용" />
                     <PhotoInfoSection empty="메타데이터를 읽을 수 없어요." lines={getPhotoMetadataLines(item)} title="사진 메타데이터" />

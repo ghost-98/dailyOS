@@ -1,31 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import type { DayFinanceItem, DayFinanceTotals } from "@/features/screens/day/dayDetailTypes";
+import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import type { DayFinanceItem, DayFinanceTotals, DayItemActions } from "@/features/screens/day/dayDetailTypes";
 
 type DayFinanceDetailProps = {
+  actions?: DayItemActions;
   finance: DayFinanceTotals;
   items: DayFinanceItem[];
 };
 
-export function DayFinanceDetail({ finance, items }: DayFinanceDetailProps) {
+export function DayFinanceDetail({ actions, finance, items }: DayFinanceDetailProps) {
   const incomeItems = items.filter((item) => item.external.type === "income");
   const expenseItems = items.filter((item) => item.external.type === "expense");
 
   return (
     <div className="life-calendar-day-detail life-calendar-day-finance-detail">
-      <FinanceGroup label="수입" items={incomeItems} tone="income" total={finance.income} />
+      <FinanceGroup actions={actions} label="수입" items={incomeItems} tone="income" total={finance.income} />
       <FinanceGroup label="지출" items={expenseItems} tone="expense" total={finance.expense} />
-      <div className="life-calendar-day-finance-detail__net">
-        <span>순합계</span>
-        <strong>{formatSignedWon(finance.net)}</strong>
-      </div>
     </div>
   );
 }
 
-function FinanceGroup({ label, items, tone, total }: { label: string; items: DayFinanceItem[]; tone: "income" | "expense"; total: number }) {
+function FinanceGroup({ actions, label, items, tone, total }: { actions?: DayItemActions; label: string; items: DayFinanceItem[]; tone: "income" | "expense"; total: number }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -44,7 +41,13 @@ function FinanceGroup({ label, items, tone, total }: { label: string; items: Day
                   <strong>{item.external.title}</strong>
                   <span>{[item.timeLabel, item.external.category, item.external.meta].filter(Boolean).join(" · ")}</span>
                 </div>
-                <b>{tone === "expense" ? formatExpenseWon(item.external.amount ?? 0) : formatSignedWon(item.external.amount ?? 0)}</b>
+                <div className="life-calendar-day-finance-group__side">
+                  <b>{tone === "expense" ? formatExpenseWon(item.external.amount ?? 0) : formatSignedWon(item.external.amount ?? 0)}</b>
+                  {tone === "income" && actions ? <div className="life-calendar-day-item-actions">
+                    <button aria-label="수입 수정" onClick={() => void actions.editIncome(item.external.id)} type="button"><Pencil aria-hidden size={13} /></button>
+                    <button aria-label="수입 삭제" onClick={() => void actions.deleteIncome(item.external.id)} type="button"><Trash2 aria-hidden size={13} /></button>
+                  </div> : null}
+                </div>
               </article>
             ))
           ) : (

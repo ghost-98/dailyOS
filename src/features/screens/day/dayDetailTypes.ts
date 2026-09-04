@@ -40,3 +40,14 @@ export type DayCounterItem = {
   count: number;
   value: string;
 };
+
+export type DayItemActions = {
+  deleteActivity: (id: string) => Promise<void> | void;
+  deleteIncome: (id: string) => Promise<void> | void;
+  deleteLog: (id: string) => Promise<void> | void;
+  deletePhoto: (id: string) => Promise<void> | void;
+  editActivity: (id: string) => Promise<void> | void;
+  editIncome: (id: string) => Promise<void> | void;
+  editLog: (id: string) => Promise<void> | void;
+  editPhoto: (id: string) => Promise<void> | void;
+};

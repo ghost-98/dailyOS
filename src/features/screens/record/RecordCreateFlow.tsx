@@ -4,17 +4,16 @@ import { useEffect, useState } from "react";
 import { Activity, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
-import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
-import { createCalendarEventInDb } from "@/features/sources/calendarApi";
+import { createCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { createTaskInDb } from "@/features/sources/taskApi";
+import { createTaskInDb } from "@/features/data/tasks/api";
 import { getDefaultActivityTime } from "@/features/records/time/recordActivityHelpers";
 import { formatDateKey, formatFullDate } from "@/features/records/time/recordDateTime";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
-import { createPersonInDb, fetchPeopleFromDb } from "@/features/sources/peopleApi";
-import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/sources/healthApi";
+import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
+import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/data/health/api";
 import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
 import type { LifeMediaUploadInput, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
@@ -22,6 +21,7 @@ import { confirmAction } from "@/lib/actionGuards";
 import { RecordLinkTargetField } from "@/features/screens/record/components/RecordLinkTargetField";
 import type { RecordLinkTargetOption } from "@/features/screens/record/components/RecordLinkTargetField";
 import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
+import { RecordCreateSheet } from "@/features/screens/record/components/RecordCreateSheet";
 import { PlanCreateForm } from "@/features/screens/record/forms/PlanCreateForm";
 
 type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo";
@@ -31,9 +31,9 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
   { icon: Activity, key: "activity", label: "활동" },
   { icon: CalendarCheck2, key: "task", label: "할 일" },
   { icon: CalendarDays, key: "event", label: "이벤트" },
+  { icon: Camera, key: "photo", label: "사진" },
   { icon: NotebookPen, key: "log", label: "기록" },
   { icon: HeartPulse, key: "health", label: "건강" },
-  { icon: Camera, key: "photo", label: "사진" },
 ];
 
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
@@ -86,7 +86,9 @@ export function RecordCreateFlow() {
                 const Icon = choice.icon;
                 return (
                   <button className="record-create-flow__choice" key={choice.key} type="button" onClick={() => setStep(choice.key)}>
-                    <Icon aria-hidden size={18} />
+                    <span className="record-create-flow__choice-icon">
+                      <Icon aria-hidden size={18} />
+                    </span>
                     <strong>{choice.label}</strong>
                   </button>
                 );
@@ -299,16 +301,7 @@ function ActivityCreateForm({
   };
 
   return (
-    <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
-        <div className="ui-panel-heading__intro">
-          <p className="eyebrow">활동 추가</p>
-          <h2>{formatFullDate(date)}</h2>
-        </div>
-        <IconButton label="뒤로" onClick={onBack} tone="outline">
-          <X aria-hidden size={16} />
-        </IconButton>
-      </header>
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!title.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : "활동 추가"}</MobileSheetSubmitButton>} title="활동 추가">
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
@@ -350,20 +343,43 @@ function ActivityCreateForm({
           ) : null}
         </FormField>
         <FormField label="시간">
-          <div className="record-create-flow__time-toggles">
-            <label className="planner-option-toggle">
-              <input checked={hasTime} type="checkbox" onChange={(event) => setHasTime(event.target.checked)} />
+          <div className="record-create-flow__time-toggle-row" role="group" aria-label="시간 설정">
+            <button
+              aria-pressed={hasTime}
+              className={hasTime ? "planner-option-toggle planner-option-toggle--active" : "planner-option-toggle"}
+              onClick={() => {
+                setHasTime((current) => {
+                  const next = !current;
+                  if (!next) setHasEndTime(false);
+                  return next;
+                });
+              }}
+              type="button"
+            >
               <span>시간 사용</span>
-            </label>
-            <label className="planner-option-toggle">
-              <input checked={hasTime && hasEndTime} disabled={!hasTime} type="checkbox" onChange={(event) => setHasEndTime(event.target.checked)} />
+            </button>
+            <button
+              aria-pressed={hasTime && hasEndTime}
+              className={hasTime && hasEndTime ? "planner-option-toggle planner-option-toggle--active" : "planner-option-toggle"}
+              disabled={!hasTime}
+              onClick={() => setHasEndTime((current) => !current)}
+              type="button"
+            >
               <span>종료 시간 사용</span>
-            </label>
+            </button>
           </div>
           {hasTime ? (
             <div className="record-create-flow__time-grid">
-              <label><span>시작 시간</span><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>
-              {hasEndTime ? <label><span>종료 시간</span><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></label> : null}
+              <label className="record-create-flow__time-field">
+                <span>시작 시간</span>
+                <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+              </label>
+              {hasEndTime ? (
+                <label className="record-create-flow__time-field">
+                  <span>종료 시간</span>
+                  <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
+                </label>
+              ) : null}
             </div>
           ) : null}
         </FormField>
@@ -402,10 +418,7 @@ function ActivityCreateForm({
         </FormField>
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
-      <MobileSheetSubmitButton disabled={!title.trim() || isSaving} onClick={save}>
-        {isSaving ? "저장 중..." : "활동 추가"}
-      </MobileSheetSubmitButton>
-    </SectionCard>
+    </RecordCreateSheet>
   );
 }
 
@@ -452,19 +465,13 @@ function PhotoCreateForm({
   };
 
   return (
-    <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
-        <div className="ui-panel-heading__intro">
-          <p className="eyebrow">사진 추가</p>
-          <h2>{formatFullDate(date)}</h2>
-        </div>
-        <IconButton label="뒤로" onClick={onBack} tone="outline">
-          <X aria-hidden size={16} />
-        </IconButton>
-      </header>
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={files.length === 0 || isSaving} onClick={save}>{isSaving ? "저장 중..." : "사진 추가"}</MobileSheetSubmitButton>} title="사진 추가">
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        </FormField>
+        <FormField label="연결 대상">
+          <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
         </FormField>
         <FormField label="사진/영상">
           <input
@@ -477,16 +484,10 @@ function PhotoCreateForm({
         <FormField label="설명">
           <input placeholder="예: 산책 기록, 모임 사진" value={caption} onChange={(event) => setCaption(event.target.value)} />
         </FormField>
-        <FormField label="연결 대상">
-          <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
-        </FormField>
         {files.length > 0 ? <p className="life-health-message">{files.length}개 파일을 선택했어요.</p> : null}
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
-      <MobileSheetSubmitButton disabled={files.length === 0 || isSaving} onClick={save}>
-        {isSaving ? "저장 중..." : "사진 추가"}
-      </MobileSheetSubmitButton>
-    </SectionCard>
+    </RecordCreateSheet>
   );
 }
 
@@ -526,32 +527,20 @@ function LogCreateForm({
   };
 
   return (
-    <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
-        <div className="ui-panel-heading__intro">
-          <p className="eyebrow">기록 추가</p>
-          <h2>{formatFullDate(date)}</h2>
-        </div>
-        <IconButton label="뒤로" onClick={onBack} tone="outline">
-          <X aria-hidden size={16} />
-        </IconButton>
-      </header>
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!content.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : "기록 추가"}</MobileSheetSubmitButton>} title="기록 추가">
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </FormField>
-        <FormField label="내용">
-          <textarea placeholder="오늘 기억하고 싶은 문장" value={content} onChange={(event) => setContent(event.target.value)} />
-        </FormField>
         <FormField label="연결 대상">
           <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
         </FormField>
+        <FormField label="내용">
+          <textarea placeholder="오늘 기억하고 싶은 문장" value={content} onChange={(event) => setContent(event.target.value)} />
+        </FormField>
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
-      <MobileSheetSubmitButton disabled={!content.trim() || isSaving} onClick={save}>
-        {isSaving ? "저장 중..." : "기록 추가"}
-      </MobileSheetSubmitButton>
-    </SectionCard>
+    </RecordCreateSheet>
   );
 }
 
@@ -616,16 +605,12 @@ function HealthCreateForm({
   };
 
   return (
-    <SectionCard className="record-create-flow__sheet">
-      <header className="section-heading ui-panel-heading ui-panel-heading--compact record-create-flow__sheet-header">
-        <div className="ui-panel-heading__intro">
-          <p className="eyebrow">건강 추가</p>
-          <h2>{formatFullDate(date)}</h2>
-        </div>
-        <IconButton label="뒤로" onClick={onBack} tone="outline">
-          <X aria-hidden size={16} />
-        </IconButton>
-      </header>
+    <RecordCreateSheet
+      dateLabel={formatFullDate(date)}
+      onClose={onBack}
+      submit={<MobileSheetSubmitButton disabled={isSaving} onClick={save}>{isSaving ? "저장 중..." : mode === "weight" ? "몸무게 추가" : "러닝 추가"}</MobileSheetSubmitButton>}
+      title="건강 추가"
+    >
       <div className="record-create-flow__form">
         <div className="record-create-flow__mode-switch">
           <button className={mode === "weight" ? "record-create-flow__mode-switch-item record-create-flow__mode-switch-item--active" : "record-create-flow__mode-switch-item"} onClick={() => setMode("weight")} type="button">
@@ -668,10 +653,7 @@ function HealthCreateForm({
         )}
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
-      <MobileSheetSubmitButton disabled={isSaving} onClick={save}>
-        {isSaving ? "저장 중..." : mode === "weight" ? "몸무게 추가" : "러닝 추가"}
-      </MobileSheetSubmitButton>
-    </SectionCard>
+    </RecordCreateSheet>
   );
 }
 

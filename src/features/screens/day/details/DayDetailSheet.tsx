@@ -10,9 +10,10 @@ import { DayLogDetail } from "@/features/screens/day/details/logs/DayLogDetail";
 import { DayMapDetail } from "@/features/screens/day/details/map/DayMapDetail";
 import type { DayMapDetailHandle } from "@/features/screens/day/details/map/DayMapDetail";
 import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDetail";
-import type { DayCounterItem, DayDetailView, DayFinanceItem, DayFinanceTotals, DayLogItem, DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
+import type { DayCounterItem, DayDetailView, DayFinanceItem, DayFinanceTotals, DayItemActions, DayLogItem, DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
 
 type DayDetailSheetProps = {
+  actions?: DayItemActions;
   companionCounts: DayCounterItem[];
   finance: DayFinanceTotals;
   financeItems: DayFinanceItem[];
@@ -26,7 +27,7 @@ type DayDetailSheetProps = {
   onClose: () => void;
 };
 
-export function DayDetailSheet({ companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, photoTitle, photoViewerItems, routeStops, view, onClose }: DayDetailSheetProps) {
+export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, photoTitle, photoViewerItems, routeStops, view, onClose }: DayDetailSheetProps) {
   const mapRef = useRef<DayMapDetailHandle | null>(null);
 
   if (!view) return null;
@@ -55,11 +56,11 @@ export function DayDetailSheet({ companionCounts, finance, financeItems, finance
       }
       onClose={onClose}
     >
-      {view === "photos" ? <DayPhotoDetail isLoading={isLoading} items={photoViewerItems} /> : null}
+      {view === "photos" ? <DayPhotoDetail actions={actions} isLoading={isLoading} items={photoViewerItems} /> : null}
       {view === "map" ? <DayMapDetail isLoading={isLoading} ref={mapRef} routeStops={routeStops} /> : null}
       {view === "companions" ? <DayCompanionDetail isLoading={isLoading} items={companionCounts} /> : null}
-      {view === "finance" ? <DayFinanceDetail finance={finance} items={financeItems} /> : null}
-      {view === "logs" ? <DayLogDetail isLoading={isLoading} items={logItems} /> : null}
+      {view === "finance" ? <DayFinanceDetail actions={actions} finance={finance} items={financeItems} /> : null}
+      {view === "logs" ? <DayLogDetail actions={actions} isLoading={isLoading} items={logItems} /> : null}
     </SlideUpSheet>
   );
 }

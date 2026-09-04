@@ -2,14 +2,14 @@
 
 import { useMemo } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/sources/calendarApi";
+import { deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { fetchExpenseRecordsFromDb } from "@/features/sources/ledgerApi";
-import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivityInDb, uploadLifePhotosToDb } from "@/features/records/api/recordsApi";
+import { fetchExpenseRecordsFromDb } from "@/features/data/ledger/api";
+import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivityInDb, updateLifePhotoCaptionInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
 import { emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
 import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
-import { deleteTaskFromDb, updateTaskInDb } from "@/features/sources/taskApi";
+import { deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
 import type { DailyLogRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace } from "@/types/domain";
 
 export function useRecordsDataState() {
@@ -59,6 +59,15 @@ export function useRecordsDataState() {
   const deleteLifePhoto = async (photo: LifePhotoRecord) => {
     await deleteLifePhotoFromDb(photo);
     setLifeData((current) => ({ ...current, lifePhotos: current.lifePhotos.filter((item) => item.id !== photo.id) }));
+  };
+
+  const updateLifePhotoCaption = async (id: string, caption?: string) => {
+    const savedPhoto = await updateLifePhotoCaptionInDb(id, caption);
+    if (!savedPhoto) return;
+    setLifeData((current) => ({
+      ...current,
+      lifePhotos: current.lifePhotos.map((item) => (item.id === savedPhoto.id ? savedPhoto : item)),
+    }));
   };
 
   const syncSourceFromActivity = async (activity: LifeActivityRecord) => {
@@ -157,6 +166,7 @@ export function useRecordsDataState() {
       deleteLifePhoto,
       saveActivity,
       updateDailyLog,
+      updateLifePhotoCaption,
       uploadLifePhotos,
     },
     reload,

@@ -9,7 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { supabase } from "@/lib/supabase";
-import { deleteDailyOSData, downloadDailyOSExport, exportDailyOSData, importDailyOSData } from "@/features/settings/dataManagement";
+import { deleteDailyOSData, downloadDailyOSExport, exportDailyOSData, importDailyOSData } from "@/features/data/settings/dataManagement";
 
 export function SettingsView() {
   const { displayName: authDisplayName, profile, refreshProfile, user: authUser } = useDailyOSUser();

@@ -14,26 +14,17 @@
   gap: var(--space-6);
 }
 
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
+.life-axis-view .calendar-page {
   gap: var(--space-4);
 }
 
 .life-tab-panel,
-.life-axis-view .calendar-page,
-.life-axis-view .ledger-page {
+.life-axis-view .calendar-page {
   display: grid;
   gap: var(--space-4);
 }
 
-.life-axis-view .ledger-layout {
-  align-items: flex-start;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
-}
-
 .life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card,
 .life-axis-view .date-detail-card {
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: var(--radius-xl);
@@ -41,8 +32,7 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
 }
 
-.life-axis-view .calendar-board,
-.life-axis-view .ledger-calendar-card {
+.life-axis-view .calendar-board {
   min-height: 720px;
   padding: 28px;
 }

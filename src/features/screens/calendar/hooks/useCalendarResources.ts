@@ -2,10 +2,10 @@
 
 import type { SetStateAction } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchPeopleFromDb } from "@/features/sources/peopleApi";
-import { fetchTasksFromDb } from "@/features/sources/taskApi";
+import { fetchPeopleFromDb } from "@/features/data/people/api";
+import { fetchTasksFromDb } from "@/features/data/tasks/api";
 import type { PersonRecord, TaskItem } from "@/types/domain";
-import { fetchCalendarEventsFromDb } from "@/features/sources/calendarApi";
+import { fetchCalendarEventsFromDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 
 export function useCalendarResources() {

@@ -137,12 +137,7 @@
     min-height: 0;
   }
 
-  .life-axis-view .ledger-layout {
-    grid-template-columns: 1fr;
-  }
-
   .life-axis-view .calendar-board,
-  .life-axis-view .ledger-calendar-card,
   .life-axis-view .date-detail-card {
     min-height: 0;
     padding: 22px;
@@ -277,40 +272,11 @@
 
   .life-search-filter-row,
   .life-other-switcher {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .record-create-flow__choices {
-    grid-template-columns: 1fr;
-  }
-
-  .ledger-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ledger-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .ledger-detail {
-    position: static;
-  }
-
-  .ledger-calendar-card {
-    min-height: auto;
-    padding: 18px;
-  }
-
-  .ledger-tab-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .ledger-record {
-    grid-template-columns: 1fr;
-  }
-
-  .ledger-record__side {
-    justify-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .bottom-nav__item--active {

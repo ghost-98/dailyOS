@@ -1643,223 +1643,30 @@
   min-height: 260px;
 }
 
-.ledger-page {
+.other-tab-shell {
   display: grid;
-  gap: 28px;
+  gap: 14px;
 }
 
-.ledger-header {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 18px;
-}
-
-.ledger-header.life-tab-heading {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.ledger-summary-grid {
-  display: grid;
-  grid-template-columns: minmax(240px, 1.2fr) repeat(3, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.ledger-metric {
+.other-tab-shell__body {
   display: grid;
   gap: 12px;
-  min-height: 150px;
-  padding: 22px;
+  min-height: 220px;
 }
 
-.ledger-metric span,
-.ledger-daily-total span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.ledger-metric strong {
-  font-size: 32px;
-  line-height: 1;
-}
-
-.ledger-metric--main strong {
-  font-size: 42px;
-}
-
-.ledger-metric p {
-  margin: 0;
-  color: var(--muted);
-}
-
-.ledger-tab-summary {
+.life-empty-state {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.ledger-tab-summary div {
-  display: grid;
-  gap: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 12px;
-}
-
-.ledger-tab-summary span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.ledger-tab-summary strong {
-  overflow: hidden;
-  color: var(--text);
-  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
-  font-weight: 900;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ledger-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
-  gap: 18px;
-  align-items: flex-start;
-}
-
-.ledger-calendar-card {
-  min-height: 720px;
-  padding: 28px;
-}
-
-.ledger-month-label {
-  pointer-events: none;
-}
-
-.ledger-calendar-grid .ledger-day {
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.ledger-day__stack {
-  display: grid;
-  width: 100%;
-  gap: 4px;
-}
-
-.ledger-day__income,
-.ledger-day__expense {
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 900;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ledger-day__income {
-  color: #4ade80;
-}
-
-.ledger-day__expense {
-  color: #fda4af;
-}
-
-.ledger-day__empty {
-  min-height: 18px;
-}
-
-.ledger-day em {
-  color: var(--muted);
-  font-size: 11px;
-  font-style: normal;
-}
-
-.ledger-detail {
-  min-width: 0;
-  position: sticky;
-  top: 24px;
-}
-
-.ledger-detail-heading {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.ledger-daily-total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  margin: 18px 0;
-  padding: 16px;
-}
-
-.ledger-daily-total strong {
-  font-size: 24px;
-}
-
-.ledger-record-list {
-  display: grid;
-  gap: 10px;
-}
-
-.ledger-record {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 15px;
-}
-
-.ledger-record strong {
-  display: block;
-  margin-top: 8px;
-}
-
-.ledger-record p {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.ledger-record__side {
-  display: grid;
-  justify-items: end;
-  gap: 14px;
-}
-
-.ledger-record__side b {
-  font-size: 17px;
-}
-
-.ledger-record__side div {
-  display: flex;
-  gap: 6px;
-}
-
-.ledger-record__side button {
-  display: grid;
-  width: 30px;
-  height: 30px;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-}
-
-.ledger-sheet {
-  width: min(620px, 100%);
-}
-
-.ledger-sheet__body {
-  grid-template-columns: 1fr;
+  min-height: 220px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 850;
+  line-height: 1.45;
+  padding: 18px;
+  text-align: center;
 }
 
 
@@ -2298,6 +2105,9 @@
 
 .life-calendar-day-finance-group__list {
   display: grid;
+  max-height: 176px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding: 4px 14px 8px;
 }
@@ -2343,6 +2153,58 @@
   color: var(--text);
   font-size: 0.82rem;
   white-space: nowrap;
+}
+
+.life-calendar-day-finance-group__side {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px !important;
+}
+
+.life-calendar-day-item-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.life-calendar-day-item-heading > :first-child {
+  min-width: 0;
+}
+
+.life-calendar-day-item-actions,
+.life-calendar-day-photo-card__actions {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px !important;
+  flex: 0 0 auto;
+}
+
+.life-calendar-day-item-actions button,
+.life-calendar-day-photo-card__actions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.life-calendar-day-item-actions button:last-child,
+.life-calendar-day-photo-card__actions button:last-child {
+  color: #ff9caa;
+}
+
+.life-calendar-day-photo-card__actions {
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .life-calendar-day-finance-group__empty {
@@ -2486,11 +2348,13 @@
 }
 
 .life-other-switcher {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.life-other-switcher {
-  margin-bottom: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 5px;
 }
 
 .life-search-filter-pill,
@@ -2506,11 +2370,34 @@
   padding: 0 14px;
 }
 
+.life-other-switcher__item {
+  min-height: 40px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  font-size: 0.76rem;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.life-other-switcher__item svg {
+  flex: 0 0 auto;
+}
+
 .life-search-filter-pill--active,
 .life-other-switcher__item--active {
-  border-color: rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.1);
+  border-color: transparent;
+  background: rgba(201, 184, 255, 0.13);
   color: var(--violet);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 }
 
 .record-create-flow {
@@ -2525,28 +2412,53 @@
 
 .record-create-flow__choices {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .record-create-flow__choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 58px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 92px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
+  background:
+    radial-gradient(circle at top, rgba(201, 184, 255, 0.16), transparent 52%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   color: inherit;
   cursor: pointer;
   font: inherit;
-  padding: 14px 16px;
-  text-align: left;
+  padding: 12px 10px;
+  text-align: center;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.record-create-flow__choice:hover {
+  border-color: rgba(201, 184, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(201, 184, 255, 0.12), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.03);
+  transform: translateY(-1px);
+}
+
+.record-create-flow__choice-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--violet);
 }
 
 .record-create-flow__choice strong {
   color: var(--text);
-  font-size: 0.98rem;
+  font-size: 0.84rem;
 }
 
 .record-create-flow__sheet {
@@ -2561,31 +2473,44 @@
 
 .record-create-flow__sheet-header {
   width: 100%;
+  display: grid;
+  gap: 8px;
+}
+
+.record-create-flow__sheet-header-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.record-create-flow__sheet-header > div {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.record-create-flow__sheet-header p {
+.record-create-flow__sheet-header-row .eyebrow {
   margin: 0;
 }
 
-.record-create-flow__sheet-header span {
+.record-create-flow__sheet-date-row {
+  min-width: 0;
+}
+
+.record-create-flow__sheet-date {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
-.record-create-flow__sheet-header > button {
-  flex: 0 0 auto;
-  margin-left: auto;
+@media (max-width: 420px) {
+  .record-create-flow__choices {
+    gap: 6px;
+  }
+
+  .record-create-flow__choice {
+    min-height: 84px;
+    padding: 10px 8px;
+  }
+
+  .record-create-flow__choice strong {
+    font-size: 0.8rem;
+  }
 }
 
 .record-create-flow__form {
@@ -2669,9 +2594,31 @@
   gap: 8px;
 }
 
-.record-create-flow__time-grid label {
+.record-create-flow__time-toggle-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.record-create-flow__time-toggle-row .planner-option-toggle {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.record-create-flow__time-grid label,
+.record-create-flow__time-field {
   display: grid;
   gap: 6px;
+  min-height: 78px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  box-sizing: border-box;
+  overflow: hidden;
+  min-width: 0;
+  padding: 12px 12px 10px;
 }
 
 .record-create-flow__time-grid span {
@@ -2680,10 +2627,45 @@
   font-weight: 800;
 }
 
-.record-create-flow__time-toggles {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.record-create-flow__time-field input {
+  appearance: none;
+  width: 100%;
+  max-width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 11px;
+  font-size: 0.92rem;
+  line-height: 1;
+  text-align: left;
+}
+
+.record-create-flow__time-field input::-webkit-datetime-edit,
+.record-create-flow__time-field input::-webkit-datetime-edit-fields-wrapper,
+.record-create-flow__time-field input::-webkit-datetime-edit-hour-field,
+.record-create-flow__time-field input::-webkit-datetime-edit-minute-field,
+.record-create-flow__time-field input::-webkit-datetime-edit-ampm-field {
+  margin: 0;
+  padding: 0;
+}
+
+.record-create-flow__time-field input::-webkit-datetime-edit-text {
+  padding: 0 1px;
+}
+
+.record-create-flow__time-field input::-webkit-calendar-picker-indicator {
+  filter: invert(0.88);
+  margin: 0;
+  padding: 0;
+}
+
+.record-create-flow__time-field input::-webkit-inner-spin-button {
+  display: none;
 }
 
 .planner-place-field {
@@ -3447,16 +3429,15 @@
 
 .life-people-view {
   display: grid;
-  grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
 
-.life-people-list,
-.life-people-detail {
+.life-people-list {
   display: grid;
   gap: 14px;
-  min-height: 560px;
+  min-height: 0;
   border: 1px solid rgba(255, 255, 255, 0.11);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
@@ -3469,97 +3450,85 @@
   gap: 9px;
 }
 
-.life-people-suggestions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 36px;
-  border-radius: 999px;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 850;
-  padding: 0 14px;
-}
-
-.life-people-suggestions button {
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  background: rgba(201, 184, 255, 0.12);
-  color: var(--text);
-}
-
-.ledger-record--income {
-  border-color: rgba(74, 222, 128, 0.22);
-  background: rgba(74, 222, 128, 0.05);
-}
-
-.ledger-capture-panel {
-  display: grid;
-  gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  margin: 18px 0;
-  padding: 16px;
-}
-
-.ledger-capture-panel--collapsed {
-  gap: 0;
-  padding-bottom: 10px;
-}
-
-.ledger-capture-panel__heading {
-  align-items: flex-start;
-}
-
-.ledger-income-form {
-  display: grid;
-  gap: 12px;
-}
-
 .life-people-form {
   display: grid;
   gap: 14px;
 }
 
-.life-people-suggestions strong {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.life-people-form__actions,
-.life-people-suggestions div,
-.life-people-metrics {
+.life-people-form__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.life-people-suggestions {
-  display: grid;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 14px;
-}
-
 .life-people-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+}
+
+.life-people-list__head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.life-people-list__head.section-heading {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.life-people-list__title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.life-people-list__heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.life-people-list__heading strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.life-people-list__heading .eyebrow {
+  margin: 0;
+}
+
+.life-people-list__heading .ui-icon-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.life-people-list__count {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.life-people-list__head .ui-icon-button {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .life-person-buttons--scroll {
-  max-height: 620px;
+  max-height: 276px;
   overflow-y: auto;
   padding-right: 6px;
 }
 
 .life-person-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   align-items: stretch;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
@@ -3580,7 +3549,7 @@
   border: 0;
   background: transparent;
   color: inherit;
-  cursor: pointer;
+  cursor: default;
   font: inherit;
   padding: 2px;
   text-align: left;
@@ -3599,12 +3568,6 @@
 
 .life-person-card__main small {
   font-size: 0.74rem;
-}
-
-.life-person-card__actions {
-  display: grid;
-  align-content: start;
-  gap: 8px;
 }
 
 .life-people-inline-create {
@@ -3636,93 +3599,6 @@
   font: inherit;
   font-size: 0.78rem;
   font-weight: 800;
-}
-
-.life-people-detail__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.life-people-detail .life-search-results {
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.life-people-places {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.life-people-places span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  font-size: 0.76rem;
-  font-weight: 800;
-  padding: 0 12px;
-}
-
-.life-people-metrics article {
-  flex: 1 1 140px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 14px;
-}
-
-.life-people-metrics span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.life-people-metrics strong {
-  display: block;
-  margin-top: 6px;
-  color: var(--text);
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.life-people-collapsible {
-  display: grid;
-  gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 14px;
-}
-
-.life-people-collapsible__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
-  padding: 0;
-  text-align: left;
-}
-
-.life-people-collapsible__header span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.life-people-collapsible__header strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.98rem;
 }
 
 .life-db-hero {

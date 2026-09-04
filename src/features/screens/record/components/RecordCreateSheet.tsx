@@ -7,11 +7,13 @@ export function RecordCreateSheet({ children, dateLabel, onClose, submit, title 
   return (
     <SectionCard className="record-create-flow__sheet">
       <header className="record-create-flow__sheet-header">
-        <div>
+        <div className="record-create-flow__sheet-header-row">
           <p className="eyebrow">{title}</p>
-          <span>{dateLabel}</span>
+          <IconButton label="닫기" onClick={onClose} size="sm" tone="outline"><X aria-hidden size={16} /></IconButton>
         </div>
-        <IconButton label="닫기" onClick={onClose} size="sm" tone="outline"><X aria-hidden size={16} /></IconButton>
+        <div className="record-create-flow__sheet-date-row">
+          <span className="record-create-flow__sheet-date">{dateLabel}</span>
+        </div>
       </header>
       <div className="record-create-flow__form">{children}</div>
       {submit}
