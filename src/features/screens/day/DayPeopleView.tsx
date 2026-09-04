@@ -6,10 +6,9 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { DayTabHeading } from "@/features/screens/day/DayTabHeading";
-import { formatWon } from "@/features/life/formatters";
-import { buildPeopleSummaries } from "@/features/life/insights";
-import { createPersonInDb, deletePersonFromDb, fetchPeopleFromDb, updatePersonInDb } from "@/features/people/api";
+import { formatWon } from "@/features/records/format/recordFormatters";
+import { buildRecordPeopleSummaries } from "@/features/records/search/recordsInsights";
+import { createPersonInDb, deletePersonFromDb, fetchPeopleFromDb, updatePersonInDb } from "@/features/sources/peopleApi";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { confirmAction } from "@/lib/actionGuards";
 import type {
@@ -27,7 +26,6 @@ type DayPeopleViewProps = {
   events: CalendarEvent[];
   expenses: ExpenseRecord[];
   photos: LifePhotoRecord[];
-  showHeading?: boolean;
   tasks: TaskItem[];
 };
 
@@ -40,7 +38,6 @@ export function DayPeopleView({
   events,
   expenses,
   photos,
-  showHeading = true,
   tasks,
 }: DayPeopleViewProps) {
   const [people, setPeople] = useState<PersonRecord[]>([]);
@@ -76,7 +73,7 @@ export function DayPeopleView({
   }, []);
 
   const summaries = useMemo(
-    () => buildPeopleSummaries(events, tasks, activities, expenses, dailyLogs, photos),
+    () => buildRecordPeopleSummaries(events, tasks, activities, expenses, dailyLogs, photos),
     [activities, dailyLogs, events, expenses, photos, tasks],
   );
 
@@ -241,13 +238,6 @@ export function DayPeopleView({
 
   return (
     <div className="life-tab-panel">
-      {showHeading ? (
-        <DayTabHeading
-          title="사람"
-          description="함께한 사람을 별도로 관리하고, 연결된 기록과 장소 흐름을 한쪽에서 바로 확인합니다."
-        />
-      ) : null}
-
       <div className="life-people-view ui-workspace-grid ui-workspace-grid--balanced">
         <SectionCard className="life-people-list ui-workspace-panel ui-workspace-panel--tall">
           <div className="section-heading ui-panel-heading ui-panel-heading--compact">
@@ -526,3 +516,12 @@ export function DayPeopleView({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

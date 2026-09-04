@@ -6,3 +6,6 @@ export function SelectedDatePlacesMap({ places }: { places?: PlanPlace[] }) {
   void places;
   return null;
 }
+
+
+

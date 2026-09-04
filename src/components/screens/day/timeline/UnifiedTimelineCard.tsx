@@ -15,7 +15,6 @@ export function UnifiedTimelineCard({
   details = [],
   expanded,
   isDone = false,
-  layout,
   leading,
   title,
   tone,
@@ -26,7 +25,6 @@ export function UnifiedTimelineCard({
   details?: UnifiedTimelineDetailRow[];
   expanded: boolean;
   isDone?: boolean;
-  layout: "mobile" | "desktop";
   leading: ReactNode;
   title: string;
   tone: "activity" | "event" | "todo";
@@ -37,7 +35,7 @@ export function UnifiedTimelineCard({
       className={[
         "record-timeline-card",
         `record-timeline-card--${tone}`,
-        `record-timeline-card--${layout}`,
+        "record-timeline-card--mobile",
         expanded ? "record-timeline-card--expanded" : "",
         isDone ? "record-timeline-card--done" : "",
       ]
@@ -98,3 +96,4 @@ export function UnifiedTimelineCard({
     </article>
   );
 }
+

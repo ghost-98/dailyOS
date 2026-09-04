@@ -41,3 +41,4 @@ export function DayInsightBar({ buttons }: DayInsightBarProps) {
     </div>
   );
 }
+

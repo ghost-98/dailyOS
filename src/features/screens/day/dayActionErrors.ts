@@ -3,3 +3,4 @@ export function getDayActionErrorMessage(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) return error;
   return fallback;
 }
+

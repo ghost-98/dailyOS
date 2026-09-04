@@ -38,3 +38,4 @@ export function TimelineRail({ children, className = "", empty, headline, meta }
     </section>
   );
 }
+
