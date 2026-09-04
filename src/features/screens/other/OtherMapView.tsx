@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Plus, RotateCcw, X } from "lucide-react";
+import { Plus, RotateCcw, Search, X } from "lucide-react";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
@@ -23,13 +23,15 @@ export function OtherMapView() {
   const [selectedPlace, setSelectedPlace] = useState<PlanPlace>();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [query, setQuery] = useState("");
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [expandedPlaceIds, setExpandedPlaceIds] = useState<Set<string>>(() => new Set());
   const [photoViewerItems, setPhotoViewerItems] = useState<LifePhotoRecord[]>([]);
   const mapRef = useRef<OtherMapCanvasHandle | null>(null);
   const placeCardRefs = useRef(new Map<string, HTMLElement>());
   const { data } = useRecordsDataState();
-  const places = useMemo(() => buildPeriodPlaces(data, startDate, endDate), [data, endDate, startDate]);
+  const periodPlaces = useMemo(() => buildPeriodPlaces(data, startDate, endDate), [data, endDate, startDate]);
+  const places = useMemo(() => filterMapPlaces(periodPlaces, query), [periodPlaces, query]);
 
   return (
     <OtherTabShell
@@ -54,7 +56,17 @@ export function OtherMapView() {
       ) : null}
       <PeriodSummaryBar
         actions={(
-          <IconButton label="지도 위치 초기화" onClick={() => mapRef.current?.resetViewport()} size="sm" tone="soft"><RotateCcw aria-hidden size={15} /></IconButton>
+          <IconButton
+            label="지도와 검색 초기화"
+            onClick={() => {
+              setQuery("");
+              setActivePlaceId(null);
+              setExpandedPlaceIds(new Set());
+              mapRef.current?.resetViewport();
+            }}
+            size="sm"
+            tone="soft"
+          ><RotateCcw aria-hidden size={15} /></IconButton>
         )}
         count={places.length}
         countUnit="곳"
@@ -62,6 +74,10 @@ export function OtherMapView() {
         onOpenPeriod={() => setIsPeriodOpen(true)}
         startDate={startDate}
       />
+      <label className="other-map-search ui-input-shell">
+        <Search aria-hidden size={16} />
+        <input aria-label="지도 기록 검색" placeholder="장소, 주소, 활동 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
+      </label>
       <OtherMapCanvas
         onPlaceSelect={(placeId) => {
           setActivePlaceId(placeId);
@@ -112,6 +128,16 @@ export function OtherMapView() {
       />
     </OtherTabShell>
   );
+}
+
+function filterMapPlaces(places: OtherMapPlace[], query: string) {
+  const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
+  if (!normalizedQuery) return places;
+  return places.filter((place) => [
+    place.name,
+    place.address,
+    ...place.records.flatMap((record) => [record.title, record.label, record.date]),
+  ].some((value) => value?.toLocaleLowerCase("ko-KR").includes(normalizedQuery)));
 }
 
 function toggleSetValue(current: Set<string>, value: string) {

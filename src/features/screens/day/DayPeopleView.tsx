@@ -137,9 +137,10 @@ export function DayPeopleView() {
           <div className="life-person-buttons life-person-buttons--scroll">
             {filteredPeople.map((person) => (
               <article className="life-person-card" key={person.id}>
+                <span aria-hidden className="life-person-card__avatar">{getPersonInitial(person.name)}</span>
                 <div className="life-person-card__main">
                   <strong>{person.name}</strong>
-                  <span>{person.memo?.trim() ? person.memo : "메모 없음"}</span>
+                  {person.memo?.trim() ? <span>{person.memo}</span> : null}
                 </div>
               </article>
             ))}
@@ -154,4 +155,8 @@ export function DayPeopleView() {
       </SectionCard>
     </div>
   );
+}
+
+function getPersonInitial(name: string) {
+  return name.trim().slice(0, 1).toUpperCase() || "?";
 }
