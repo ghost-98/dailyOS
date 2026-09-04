@@ -204,3 +204,9 @@ export function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCa
   };
   return order[type];
 }
+
+
+
+
+
+

@@ -14,3 +14,6 @@ export type CalendarEvent = {
   companions?: string;
   place?: PlanPlace;
 };
+
+
+

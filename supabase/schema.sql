@@ -325,77 +325,6 @@ alter table public.expense_records
   alter column target_type set not null,
   alter column target_id set not null;
 
-create table if not exists public.place_folders (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  name text not null,
-  color text not null default '#9db2ff',
-  icon text not null default 'dot',
-  sort_order integer not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.places (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  folder_id uuid references public.place_folders(id) on delete set null,
-  name text not null,
-  address text not null default '',
-  latitude numeric(10, 7) not null,
-  longitude numeric(10, 7) not null,
-  provider text not null default 'manual' check (provider in ('naver', 'manual')),
-  provider_place_id text,
-  phone text,
-  category text,
-  url text,
-  is_favorite boolean not null default false,
-  memo text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.personal_places (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  label text not null,
-  mapped_name text,
-  address text not null,
-  latitude numeric(10, 7) not null,
-  longitude numeric(10, 7) not null,
-  provider_place_id text,
-  phone text,
-  category text,
-  url text,
-  memo text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (user_id, label)
-);
-
-create table if not exists public.place_folder_links (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  place_id uuid not null references public.places(id) on delete cascade,
-  folder_id uuid not null references public.place_folders(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  unique (user_id, place_id, folder_id)
-);
-
-create table if not exists public.place_links (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  place_id uuid not null references public.places(id) on delete cascade,
-  target_type text not null check (target_type in ('schedule', 'todo', 'workout', 'expense', 'daily_log')),
-  target_id uuid not null,
-  target_date date,
-  starts_at timestamptz,
-  ends_at timestamptz,
-  memo text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 create table if not exists public.people (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -420,23 +349,6 @@ create table if not exists public.people_links (
   unique (user_id, person_name, target_type, target_id)
 );
 
-create table if not exists public.documents (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  title text not null default '새 문서',
-  icon text,
-  folder text,
-  tags text[] not null default '{}'::text[],
-  summary text,
-  content jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.documents
-  add column if not exists folder text,
-  add column if not exists tags text[] not null default '{}'::text[];
-
 create index if not exists profiles_email_idx on public.profiles(email);
 create index if not exists tasks_user_scheduled_idx on public.tasks(user_id, scheduled_date);
 create index if not exists tasks_user_due_idx on public.tasks(user_id, due_date);
@@ -450,9 +362,7 @@ create index if not exists expense_records_user_date_idx on public.expense_recor
 create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
-create index if not exists documents_user_updated_idx on public.documents(user_id, updated_at desc);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
-create index if not exists personal_places_user_label_idx on public.personal_places(user_id, label);
 
 create or replace view public.life_people_index
 with (security_invoker = true)
@@ -683,14 +593,6 @@ where expense_amount is not null
       and expense_records.target_type = 'todo'
       and expense_records.target_id = tasks.id
   );
-create index if not exists place_folders_user_sort_idx on public.place_folders(user_id, sort_order, created_at);
-create index if not exists places_user_created_idx on public.places(user_id, created_at desc);
-create index if not exists places_user_provider_idx on public.places(user_id, provider, provider_place_id);
-create index if not exists places_user_folder_idx on public.places(user_id, folder_id, created_at desc);
-create index if not exists place_folder_links_user_folder_idx on public.place_folder_links(user_id, folder_id);
-create index if not exists place_folder_links_place_idx on public.place_folder_links(place_id);
-create index if not exists place_links_user_target_idx on public.place_links(user_id, target_type, target_id);
-create index if not exists place_links_place_idx on public.place_links(place_id, target_date);
 create index if not exists daily_logs_user_date_idx on public.daily_logs(user_id, log_date, created_at desc);
 create index if not exists life_photos_user_date_idx on public.life_photos(user_id, photo_date, created_at desc);
 
@@ -770,31 +672,6 @@ create trigger set_income_records_updated_at
 before update on public.income_records
 for each row execute function public.set_updated_at();
 
-drop trigger if exists set_places_updated_at on public.places;
-create trigger set_places_updated_at
-before update on public.places
-for each row execute function public.set_updated_at();
-
-drop trigger if exists set_personal_places_updated_at on public.personal_places;
-create trigger set_personal_places_updated_at
-before update on public.personal_places
-for each row execute function public.set_updated_at();
-
-drop trigger if exists set_place_folders_updated_at on public.place_folders;
-create trigger set_place_folders_updated_at
-before update on public.place_folders
-for each row execute function public.set_updated_at();
-
-drop trigger if exists set_place_links_updated_at on public.place_links;
-create trigger set_place_links_updated_at
-before update on public.place_links
-for each row execute function public.set_updated_at();
-
-drop trigger if exists set_documents_updated_at on public.documents;
-create trigger set_documents_updated_at
-before update on public.documents
-for each row execute function public.set_updated_at();
-
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
@@ -805,14 +682,8 @@ alter table public.daily_logs enable row level security;
 alter table public.life_photos enable row level security;
 alter table public.expense_records enable row level security;
 alter table public.income_records enable row level security;
-alter table public.place_folders enable row level security;
-alter table public.places enable row level security;
-alter table public.personal_places enable row level security;
-alter table public.place_folder_links enable row level security;
-alter table public.place_links enable row level security;
 alter table public.people enable row level security;
 alter table public.people_links enable row level security;
-alter table public.documents enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -1055,201 +926,6 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own income records" on public.income_records;
 create policy "Users can delete own income records"
 on public.income_records for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own place folders" on public.place_folders;
-create policy "Users can read own place folders"
-on public.place_folders for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own place folders" on public.place_folders;
-create policy "Users can insert own place folders"
-on public.place_folders for insert
-to authenticated
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can update own place folders" on public.place_folders;
-create policy "Users can update own place folders"
-on public.place_folders for update
-to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can delete own place folders" on public.place_folders;
-create policy "Users can delete own place folders"
-on public.place_folders for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own places" on public.places;
-create policy "Users can read own places"
-on public.places for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own places" on public.places;
-create policy "Users can insert own places"
-on public.places for insert
-to authenticated
-with check (
-  user_id = auth.uid()
-  and (
-    folder_id is null
-    or exists (
-      select 1
-      from public.place_folders
-      where place_folders.id = places.folder_id
-        and place_folders.user_id = auth.uid()
-    )
-  )
-);
-
-drop policy if exists "Users can update own places" on public.places;
-create policy "Users can update own places"
-on public.places for update
-to authenticated
-using (user_id = auth.uid())
-with check (
-  user_id = auth.uid()
-  and (
-    folder_id is null
-    or exists (
-      select 1
-      from public.place_folders
-      where place_folders.id = places.folder_id
-        and place_folders.user_id = auth.uid()
-    )
-  )
-);
-
-drop policy if exists "Users can delete own places" on public.places;
-create policy "Users can delete own places"
-on public.places for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own personal places" on public.personal_places;
-create policy "Users can read own personal places"
-on public.personal_places for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own personal places" on public.personal_places;
-create policy "Users can insert own personal places"
-on public.personal_places for insert
-to authenticated
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can update own personal places" on public.personal_places;
-create policy "Users can update own personal places"
-on public.personal_places for update
-to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can delete own personal places" on public.personal_places;
-create policy "Users can delete own personal places"
-on public.personal_places for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own place folder links" on public.place_folder_links;
-create policy "Users can read own place folder links"
-on public.place_folder_links for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own place folder links" on public.place_folder_links;
-create policy "Users can insert own place folder links"
-on public.place_folder_links for insert
-to authenticated
-with check (
-  user_id = auth.uid()
-  and exists (
-    select 1
-    from public.places
-    where places.id = place_folder_links.place_id
-      and places.user_id = auth.uid()
-  )
-  and exists (
-    select 1
-    from public.place_folders
-    where place_folders.id = place_folder_links.folder_id
-      and place_folders.user_id = auth.uid()
-  )
-);
-
-drop policy if exists "Users can delete own place folder links" on public.place_folder_links;
-create policy "Users can delete own place folder links"
-on public.place_folder_links for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own place links" on public.place_links;
-create policy "Users can read own place links"
-on public.place_links for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own place links" on public.place_links;
-create policy "Users can insert own place links"
-on public.place_links for insert
-to authenticated
-with check (
-  user_id = auth.uid()
-  and exists (
-    select 1
-    from public.places
-    where places.id = place_links.place_id
-      and places.user_id = auth.uid()
-  )
-);
-
-drop policy if exists "Users can update own place links" on public.place_links;
-create policy "Users can update own place links"
-on public.place_links for update
-to authenticated
-using (user_id = auth.uid())
-with check (
-  user_id = auth.uid()
-  and exists (
-    select 1
-    from public.places
-    where places.id = place_links.place_id
-      and places.user_id = auth.uid()
-  )
-);
-
-drop policy if exists "Users can delete own place links" on public.place_links;
-create policy "Users can delete own place links"
-on public.place_links for delete
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can read own documents" on public.documents;
-create policy "Users can read own documents"
-on public.documents for select
-to authenticated
-using (user_id = auth.uid());
-
-drop policy if exists "Users can insert own documents" on public.documents;
-create policy "Users can insert own documents"
-on public.documents for insert
-to authenticated
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can update own documents" on public.documents;
-create policy "Users can update own documents"
-on public.documents for update
-to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
-
-drop policy if exists "Users can delete own documents" on public.documents;
-create policy "Users can delete own documents"
-on public.documents for delete
 to authenticated
 using (user_id = auth.uid());
 

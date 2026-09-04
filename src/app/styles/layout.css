@@ -253,6 +253,24 @@
   padding: 42px min(5vw, 64px) 72px;
 }
 
+.app-shell--mobile {
+  display: block;
+  min-height: 100dvh;
+  padding-bottom: calc(82px + env(safe-area-inset-bottom));
+}
+
+.app-shell--mobile .sidebar {
+  display: none;
+}
+
+.app-shell--mobile .main-panel {
+  padding: 24px 16px 34px;
+}
+
+.app-shell--mobile .bottom-nav {
+  display: grid;
+}
+
 
 .eyebrow {
   margin: 0 0 var(--eyebrow-gap);

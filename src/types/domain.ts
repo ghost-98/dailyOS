@@ -151,19 +151,8 @@ export type LifeMediaUploadInput = {
 
 export type PlaceProvider = "naver" | "manual";
 
-export type PlaceFolder = {
-  id: string;
-  name: string;
-  color: string;
-  icon: string;
-  sortOrder: number;
-};
-
 export type PlaceRecord = {
   id: string;
-  folderId?: string;
-  folderIds?: string[];
-  sourceIds?: string[];
   name: string;
   address: string;
   latitude: number;
@@ -177,22 +166,9 @@ export type PlaceRecord = {
   memo?: string;
 };
 
-export type PersonalPlaceRecord = {
-  id: string;
-  label: string;
-  mappedName?: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  providerPlaceId?: string;
-  phone?: string;
-  category?: string;
-  url?: string;
-  memo?: string;
-};
-
 export type PersonRecord = {
   id: string;
   name: string;
   memo?: string;
 };
+

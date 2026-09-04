@@ -15,10 +15,6 @@
     grid-template-columns: 1fr;
   }
 
-  .calendar-layout--detail-open {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .life-activity-layout {
     grid-template-columns: 1fr;
   }
@@ -31,10 +27,6 @@
 
   .life-activity-quick-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .calendar-detail {
-    animation: detail-slide-up 220ms ease-out both;
   }
 
   .ui-sticky-side-panel {
@@ -145,6 +137,16 @@
     min-height: 0;
   }
 
+  .life-axis-view .calendar-board,
+  .life-axis-view .date-detail-card {
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .life-axis-view .calendar-board--mobile-shell {
+    padding: 0;
+  }
+
   .calendar-header .header-actions {
     display: none;
   }
@@ -234,8 +236,47 @@
     padding: 7px 0;
   }
 
+  .bottom-nav__item--record {
+    padding: 10px 0 8px;
+  }
+
+  .bottom-nav__item--record svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .bottom-nav__item--record span {
+    display: none;
+  }
+
   .bottom-nav__item span {
     font-size: 11px;
+  }
+
+  .life-search-controls--compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .life-search-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .life-search-period-sheet__inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .life-search-period-sheet__actions {
+    grid-template-columns: 38px minmax(72px, auto);
+  }
+
+  .life-search-filter-row,
+  .life-other-switcher {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .record-create-flow__choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .bottom-nav__item--active {
@@ -265,6 +306,25 @@
   .planner-form-card--primary .planner-field + .planner-field {
     border-top: 1px solid rgba(255, 255, 255, 0.09);
     border-left: 0;
+  }
+
+  .planner-field--title {
+    min-height: 200px;
+    padding: 22px 16px 20px;
+  }
+
+  .planner-field--title input {
+    min-height: 108px;
+    font-size: 1.05rem;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .planner-field--title textarea {
+    min-height: 108px;
+    font-size: 1.05rem;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
 }
@@ -306,12 +366,6 @@
 
   .workout-session-card__header {
     flex-direction: column;
-  }
-
-  .calendar-filters {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 16px;
   }
 
   .calendar-filter {
@@ -397,6 +451,25 @@
     text-align: left;
   }
 
+  .planner-field--title {
+    min-height: 220px;
+    padding: 24px 16px 22px;
+  }
+
+  .planner-field--title input {
+    min-height: 120px;
+    font-size: 1.06rem;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .planner-field--title textarea {
+    min-height: 120px;
+    font-size: 1.06rem;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
   .planner-date-row,
   .planner-time-row {
     grid-template-columns: 1fr;
@@ -459,6 +532,22 @@
   .life-activity-form-grid,
   .life-activity-form-grid--people-meal {
     grid-template-columns: 1fr;
+  }
+
+  .life-activity-form-card:has(.life-activity-title-field) {
+    padding: 18px 16px 20px;
+  }
+
+  .life-activity-title-field {
+    gap: 10px;
+    min-height: 156px;
+  }
+
+  .life-activity-title-field input {
+    min-height: 104px;
+    border-radius: 20px;
+    font-size: 1.08rem;
+    padding: 18px 16px;
   }
 
   .life-gallery-toolbar__filters,
