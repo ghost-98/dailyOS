@@ -3,7 +3,6 @@
 import { CalendarView } from "@/features/screens/calendar/CalendarView";
 import { formatDateKey } from "@/features/records/time/recordDateTime";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
-import { deleteIncomeRecordFromDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
 import { confirmAction } from "@/lib/actionGuards";
 
 type DayViewProps = {
@@ -15,7 +14,7 @@ export function DayView({ initialDate }: DayViewProps) {
 }
 
 function DayDataRouter({ initialDate }: { initialDate?: string }) {
-  const { data, externalItems, mutations, setData } = useRecordsDataState();
+  const { data, externalItems, mutations } = useRecordsDataState();
 
   const dayActions = {
     editActivity: async (id: string) => {
@@ -63,14 +62,12 @@ function DayDataRouter({ initialDate }: { initialDate?: string }) {
       if (amountText === null) return;
       const amount = Number(amountText.replace(/[^\d]/g, ""));
       if (!Number.isFinite(amount) || amount <= 0) return;
-      const saved = await updateIncomeRecordInDb({ ...income, amount, title });
-      if (saved) setData((current) => ({ ...current, incomes: current.incomes.map((item) => (item.id === saved.id ? saved : item)) }));
+      await mutations.updateIncome({ ...income, amount, title });
     },
     deleteIncome: async (id: string) => {
       const income = data.incomes.find((item) => item.id === id);
       if (!income || !confirmAction(`"${income.title}" 수입을 삭제할까요?`)) return;
-      await deleteIncomeRecordFromDb(id);
-      setData((current) => ({ ...current, incomes: current.incomes.filter((item) => item.id !== id) }));
+      await mutations.deleteIncome(id);
     },
   };
 

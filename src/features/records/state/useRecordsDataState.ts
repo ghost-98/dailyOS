@@ -4,13 +4,13 @@ import { useMemo } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { fetchExpenseRecordsFromDb } from "@/features/data/ledger/api";
+import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
 import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivityInDb, updateLifePhotoCaptionInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
 import { emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
 import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
 import { deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
-import type { DailyLogRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace } from "@/types/domain";
+import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace } from "@/types/domain";
 
 export function useRecordsDataState() {
   const { data, isLoading, reload, setData } = useAsyncData({
@@ -34,6 +34,27 @@ export function useRecordsDataState() {
     const savedLog = await createDailyLogInDb(date, content, linkedTarget);
     if (!savedLog) return;
     setLifeData((current) => ({ ...current, dailyLogs: [savedLog, ...current.dailyLogs] }));
+  };
+
+  const createIncome = async (record: IncomeRecord) => {
+    const savedIncome = await createIncomeRecordInDb(record);
+    if (!savedIncome) return;
+    setLifeData((current) => ({ ...current, incomes: [savedIncome, ...current.incomes] }));
+  };
+
+  const updateIncome = async (record: IncomeRecord) => {
+    const savedIncome = await updateIncomeRecordInDb(record);
+    if (!savedIncome) return;
+    setLifeData((current) => ({
+      ...current,
+      incomes: current.incomes.map((item) => (item.id === savedIncome.id ? savedIncome : item)),
+    }));
+  };
+
+  const deleteIncome = async (id: string) => {
+    const deleted = await deleteIncomeRecordFromDb(id);
+    if (!deleted) return;
+    setLifeData((current) => ({ ...current, incomes: current.incomes.filter((item) => item.id !== id) }));
   };
 
   const updateDailyLog = async (log: DailyLogRecord) => {
@@ -161,10 +182,13 @@ export function useRecordsDataState() {
     isLoading,
     mutations: {
       createDailyLog,
+      createIncome,
+      deleteIncome,
       deleteActivity,
       deleteDailyLog,
       deleteLifePhoto,
       saveActivity,
+      updateIncome,
       updateDailyLog,
       updateLifePhotoCaption,
       uploadLifePhotos,

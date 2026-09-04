@@ -33,9 +33,11 @@ export const emptyRecordDataSnapshot: RecordDataSnapshot = {
 
 let cachedRecordDataSnapshot: RecordDataSnapshot | null = null;
 let cachedLifeDataPromise: Promise<RecordDataSnapshot> | null = null;
+let recordDataLoadedAt = 0;
+const RECORD_DATA_CACHE_TTL_MS = 30 * 60 * 1000;
 
 export async function loadRecordDataSnapshot(): Promise<RecordDataSnapshot> {
-  if (cachedRecordDataSnapshot) return cachedRecordDataSnapshot;
+  if (cachedRecordDataSnapshot && Date.now() - recordDataLoadedAt < RECORD_DATA_CACHE_TTL_MS) return cachedRecordDataSnapshot;
   if (!cachedLifeDataPromise) {
     cachedLifeDataPromise = (async () => {
       const [events, tasks, expenses, incomes, activities, dailyLogs, lifePhotos, weights, workouts] = await Promise.all([
@@ -65,6 +67,7 @@ export async function loadRecordDataSnapshot(): Promise<RecordDataSnapshot> {
   }
 
   cachedRecordDataSnapshot = await cachedLifeDataPromise;
+  recordDataLoadedAt = Date.now();
   cachedLifeDataPromise = null;
   return cachedRecordDataSnapshot;
 }
