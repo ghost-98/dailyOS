@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, MapPin, Moon, NotebookPen, Pencil, Sun, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, MapPin, Moon, NotebookPen, Pencil, Plus, Sunrise, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
 import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
 import { DayDetailSheet } from "@/features/screens/day/details/DayDetailSheet";
 import type {
@@ -28,9 +29,11 @@ type LifeCalendarDayPanelProps = {
   actions?: DayItemActions;
   isLoading: boolean;
   items: DayTimelineItem[];
+  selectedDate: string;
 };
 
-export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendarDayPanelProps) {
+export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }: LifeCalendarDayPanelProps) {
+  const router = useRouter();
   const [detailView, setDetailView] = useState<DayDetailView>(null);
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
@@ -61,17 +64,30 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
   );
   const linkedPhotosByActivityId = useMemo(() => buildLinkedPhotoMap(photoItems), [photoItems]);
   const standalonePhotoGroups = useMemo(() => buildStandalonePhotoGroups(photoItems), [photoItems]);
+  const boundaryEntries = useMemo(() => {
+    const wakeItems = activityItems.filter((item) => item.external.title === "기상").sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id));
+    const bedtimeItems = activityItems.filter((item) => item.external.title === "취침").sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id));
+    return {
+      bedtime: bedtimeItems[bedtimeItems.length - 1] ?? null,
+      wake: wakeItems[0] ?? null,
+    };
+  }, [activityItems]);
   const companionEntryCount = useMemo(
     () => activityItems.reduce((sum, item) => sum + getTopValues(parseCompanions(item.external.companions)).reduce((innerSum, value) => innerSum + value.count, 0), 0),
     [activityItems],
   );
   const financeEntryCount = financeItems.length;
+  const openBoundaryCreate = (mode: "bedtime" | "wake") => {
+    router.push(`/m/record?create=${mode}&date=${encodeURIComponent(selectedDate)}`);
+  };
   const timelineRows = useMemo(
     () =>
       [
         ...activityItems.map((item) => ({ id: item.id, item, kind: "activity" as const, sortMinutes: item.sortMinutes })),
         ...standalonePhotoGroups.map((group) => ({ group, id: group.id, kind: "photo" as const, sortMinutes: group.sortMinutes })),
-      ].sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id)),
+      ]
+        .filter((row) => row.kind !== "activity" || (row.item.external.title !== "기상" && row.item.external.title !== "취침"))
+        .sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id)),
     [activityItems, standalonePhotoGroups],
   );
   const companionCounts = useMemo(() => getTopValues(activityItems.flatMap((item) => parseCompanions(item.external.companions))).slice(0, 8), [activityItems]);
@@ -145,23 +161,25 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
           </div>
           {isTimelineOpen ? (
             <div className="life-calendar-day-timeline">
+              {renderBoundaryRow({
+                actions,
+                boundaryEntries,
+                isActivityEditMode,
+                mode: "wake",
+                onAdd: () => openBoundaryCreate("wake"),
+                onDelete: () => {
+                  if (boundaryEntries.wake) void actions?.deleteActivity(boundaryEntries.wake.external.id);
+                },
+                onEdit: () => {
+                  if (boundaryEntries.wake) router.push(`/m/record?edit=activity&id=${encodeURIComponent(boundaryEntries.wake.external.id)}`);
+                },
+              })}
               {timelineRows.length > 0 ? (
                 timelineRows.map((row) => {
                   if (row.kind === "activity") {
                     const item = row.item;
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
                     const isActivityOpen = expandedActivityIds.has(item.external.id);
-                    const isDayBoundary = item.external.title === "기상" || item.external.title === "취침";
-                    if (isDayBoundary) {
-                      const BoundaryIcon = item.external.title === "기상" ? Sun : Moon;
-                      return (
-                        <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${item.external.title === "기상" ? "wake" : "bedtime"}`} key={item.id}>
-                          <time>{formatTimelineRange(item.timeLabel, undefined)}</time>
-                          <span className="life-calendar-day-boundary-row__icon"><BoundaryIcon aria-hidden size={15} /></span>
-                          {item.external.placeName ? <span className="life-calendar-day-boundary-row__place"><MapPin aria-hidden size={12} /> {item.external.placeName}</span> : null}
-                        </article>
-                      );
-                    }
                     return (
                       <article className="life-calendar-day-timeline__item" key={item.id}>
                         <div className="life-calendar-day-timeline__time">
@@ -240,6 +258,19 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
               ) : (
                 <div className="life-calendar-db-empty life-calendar-day-timeline__empty">{isLoading ? "기록 불러오는 중..." : "이 날 저장된 활동 기록이 아직 없어요."}</div>
               )}
+              {renderBoundaryRow({
+                actions,
+                boundaryEntries,
+                isActivityEditMode,
+                mode: "bedtime",
+                onAdd: () => openBoundaryCreate("bedtime"),
+                onDelete: () => {
+                  if (boundaryEntries.bedtime) void actions?.deleteActivity(boundaryEntries.bedtime.external.id);
+                },
+                onEdit: () => {
+                  if (boundaryEntries.bedtime) router.push(`/m/record?edit=activity&id=${encodeURIComponent(boundaryEntries.bedtime.external.id)}`);
+                },
+              })}
             </div>
           ) : null}
         </section>
@@ -498,4 +529,62 @@ function getStandalonePhotoGroupSummary(group: DayStandalonePhotoGroup) {
   if (!firstPhoto) return "이 시간대에 남은 사진 기록";
   if (group.items.length === 1) return firstPhoto.external.caption || firstPhoto.external.meta || "이 시간대에 남은 사진 기록";
   return `${firstPhoto.external.caption || firstPhoto.external.meta || "사진 기록"} 외 ${group.items.length - 1}장`;
+}
+
+function renderBoundaryRow({
+  actions,
+  boundaryEntries,
+  isActivityEditMode,
+  mode,
+  onAdd,
+  onDelete,
+  onEdit,
+}: {
+  actions?: DayItemActions;
+  boundaryEntries: { bedtime: DayActivityItem | null; wake: DayActivityItem | null };
+  isActivityEditMode: boolean;
+  mode: "bedtime" | "wake";
+  onAdd: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+}) {
+  const item = mode === "wake" ? boundaryEntries.wake : boundaryEntries.bedtime;
+  const hasItem = Boolean(item);
+  const BoundaryIcon = mode === "wake" ? Sunrise : Moon;
+  const timeLabel = item ? formatBoundaryTime(item) : "-";
+  const placeLabel = item?.external.placeName ?? item?.external.memo ?? "";
+
+  return (
+    <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${mode}`} key={mode}>
+      <span className="life-calendar-day-boundary-row__icon">
+        <BoundaryIcon aria-hidden size={15} />
+      </span>
+      <div className="life-calendar-day-boundary-row__body">
+        <span className="life-calendar-day-boundary-row__time">{timeLabel}</span>
+        {hasItem && placeLabel ? <span className="life-calendar-day-boundary-row__place">{placeLabel}</span> : null}
+      </div>
+      <div className="life-calendar-day-boundary-row__actions">
+        {actions && isActivityEditMode && !hasItem ? (
+          <button aria-label={`${mode === "wake" ? "기상" : "취침"} 추가`} className="life-calendar-day-boundary-row__add" onClick={onAdd} type="button">
+            <Plus aria-hidden size={14} />
+            <span>추가</span>
+          </button>
+        ) : null}
+        {actions && isActivityEditMode && hasItem ? (
+          <>
+            <button aria-label={`${mode === "wake" ? "기상" : "취침"} 수정`} onClick={onEdit} type="button">
+              <Pencil aria-hidden size={14} />
+            </button>
+            <button aria-label={`${mode === "wake" ? "기상" : "취침"} 삭제`} onClick={onDelete} type="button">
+              <Trash2 aria-hidden size={14} />
+            </button>
+          </>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function formatBoundaryTime(item: DayActivityItem) {
+  return item.external.startTime ? `${item.external.startTime}${item.external.endTime ? ` ~ ${item.external.endTime}` : ""}` : item.timeLabel;
 }

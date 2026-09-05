@@ -1,11 +1,10 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
-type SectionCardProps = {
+type SectionCardProps = HTMLAttributes<HTMLElement> & {
   children: ReactNode;
-  className?: string;
 };
 
-export function SectionCard({ children, className = "" }: SectionCardProps) {
-  return <section className={`section-card ${className}`}>{children}</section>;
+export function SectionCard({ children, className = "", ...props }: SectionCardProps) {
+  return <section className={`section-card ${className}`.trim()} {...props}>{children}</section>;
 }
 
