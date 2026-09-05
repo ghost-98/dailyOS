@@ -1,11 +1,14 @@
 import type { DayTimelineItem, ExternalCalendarItem } from "@/features/calendar/types";
+import type { CalendarEvent } from "@/features/calendar/data";
+import type { TaskItem } from "@/types/domain";
 
-export type DayDetailView = "map" | "photos" | "companions" | "finance" | "logs" | null;
+export type DayDetailView = "plans" | "map" | "photos" | "companions" | "finance" | "logs" | null;
 
 export type DayActivityItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "activity" };
 export type DayLogItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "daily_log" };
 export type DayPhotoItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "photo" };
 export type DayFinanceItem = Extract<DayTimelineItem, { external: ExternalCalendarItem }> & { type: "expense" | "income" };
+export type DayPlanItem = Extract<DayTimelineItem, { event: unknown } | { task: unknown }>;
 
 export type DayStandalonePhotoGroup = {
   id: string;
@@ -47,8 +50,13 @@ export type DayItemActions = {
   deleteIncome: (id: string) => Promise<void> | void;
   deleteLog: (id: string) => Promise<void> | void;
   deletePhoto: (id: string) => Promise<void> | void;
+  deleteEvent: (id: string) => Promise<void> | void;
+  deleteTask: (id: string) => Promise<void> | void;
   editActivity: (id: string) => Promise<void> | void;
   editIncome: (id: string) => Promise<void> | void;
   editLog: (id: string) => Promise<void> | void;
   editPhoto: (id: string) => Promise<void> | void;
+  editEvent: (event: CalendarEvent) => Promise<void> | void;
+  editTask: (task: TaskItem) => Promise<void> | void;
+  toggleTask: (task: TaskItem) => Promise<void> | void;
 };

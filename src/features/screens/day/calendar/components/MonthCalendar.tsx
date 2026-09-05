@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { getMonthDays } from "@/features/calendar/utils";
+import { getMonthDays } from "@/features/calendar/dateUtils";
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 

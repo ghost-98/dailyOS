@@ -23,3 +23,9 @@ export function getLinkedTargetTypeLabel(type?: "todo" | "event" | "activity" | 
   return "날짜";
 }
 
+export function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" | "isAllDay" | "startTime">) {
+  if (activity.isAllDay || !activity.startTime) return "시간 미정";
+  return activity.endTime ? `${activity.startTime}-${activity.endTime}` : activity.startTime;
+}
+
+import type { LifeActivityRecord } from "@/types/domain";

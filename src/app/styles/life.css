@@ -58,7 +58,7 @@
 .life-calendar-day-insight-bar {
   grid-area: insights;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
@@ -326,13 +326,63 @@
   display: grid;
   gap: 6px;
   justify-items: start;
-  padding-top: 2px;
+  padding: 10px 0 0 2px;
+}
+
+.life-calendar-day-boundary-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 58px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border-block: 1px solid rgba(255, 255, 255, 0.055);
+  padding: 9px 2px;
+}
+
+.life-calendar-day-boundary-row time {
+  color: var(--text);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+}
+
+.life-calendar-day-boundary-row__icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.life-calendar-day-boundary-row--wake .life-calendar-day-boundary-row__icon {
+  background: rgba(242, 201, 109, 0.1);
+  color: #f2c96d;
+}
+
+.life-calendar-day-boundary-row--bedtime .life-calendar-day-boundary-row__icon {
+  background: rgba(142, 167, 255, 0.1);
+  color: #aebeff;
+}
+
+.life-calendar-day-boundary-row__place {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .life-calendar-day-timeline__time span {
   color: var(--text);
-  font-size: 0.92rem;
-  font-weight: 900;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  letter-spacing: -0.02em;
 }
 
 .life-calendar-day-timeline__body {
@@ -340,7 +390,7 @@
   gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  background: linear-gradient(135deg, rgba(157, 178, 255, 0.055), rgba(255, 255, 255, 0.025));
   padding: 12px;
 }
 
@@ -655,6 +705,8 @@
 
 .life-calendar-day-timeline__body--collapsed {
   gap: 0;
+  border-color: rgba(157, 178, 255, 0.13);
+  padding-block: 10px;
 }
 
 .life-calendar-day-item-heading__toggle {
@@ -678,6 +730,186 @@
   min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.life-calendar-day-item-heading__summary {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.life-calendar-day-activity-type {
+  flex: 0 0 auto;
+  display: inline-flex;
+  min-height: 21px;
+  align-items: center;
+  border: 1px solid rgba(157, 178, 255, 0.2);
+  border-radius: 7px;
+  background: rgba(157, 178, 255, 0.08);
+  color: var(--violet);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.life-calendar-day-item-heading__summary strong {
+  font-size: 0.9rem;
+  font-weight: 820;
+  letter-spacing: -0.02em;
+}
+
+.life-calendar-day-timeline__movement {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  border-left: 2px solid rgba(157, 178, 255, 0.34);
+  border-radius: 0 9px 9px 0;
+  background: rgba(157, 178, 255, 0.055);
+  padding: 8px 9px;
+}
+
+.life-calendar-day-timeline__details {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  padding-top: 10px;
+}
+
+.life-calendar-day-timeline__movement .life-calendar-day-timeline__route {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.life-calendar-day-timeline__route span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.life-calendar-day-timeline__route svg {
+  color: var(--muted-dark);
+  margin: 0 0 0 2px;
+  transform: rotate(90deg);
+}
+
+.life-calendar-day-timeline__movement p {
+  margin: 0;
+}
+
+.life-day-plan-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(56dvh, 460px);
+  overflow-y: auto;
+}
+
+.life-day-plan-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.life-day-plan-group {
+  min-width: 0;
+}
+
+.life-day-plan-group__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(157, 178, 255, 0.16);
+  padding: 0 2px 9px;
+}
+
+.life-day-plan-group__heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--violet);
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.life-day-plan-group__heading b {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.life-day-plan-group__empty {
+  margin: 0;
+  padding: 14px 2px 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.life-day-plan-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 10px 2px;
+}
+
+.life-day-plan-card__check,
+.life-day-plan-card__event-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(157, 178, 255, 0.24);
+  border-radius: 9px;
+  background: rgba(157, 178, 255, 0.08);
+  color: var(--violet);
+}
+
+.life-day-plan-card__check {
+  cursor: pointer;
+}
+
+.life-day-plan-card__check[aria-pressed="true"] {
+  background: var(--violet);
+  color: var(--bg-deep);
+}
+
+.life-day-plan-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.life-day-plan-card__content > span,
+.life-day-plan-card__content small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.life-day-plan-card__content strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.life-day-plan-card__content small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.life-day-plan-card--done .life-day-plan-card__content strong {
+  color: var(--muted);
+  text-decoration: line-through;
 }
 
 .life-calendar-day-timeline__body--expanded .life-calendar-day-item-heading__toggle strong {
@@ -994,7 +1226,7 @@
 }
 
 .life-calendar-day-panel--mobile .life-calendar-day-insight-bar {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 8px;
 }
 

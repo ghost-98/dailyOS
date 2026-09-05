@@ -1834,6 +1834,23 @@
   padding: 12px;
 }
 
+.planner-place-panel__selected--active {
+  border-color: rgba(157, 178, 255, 0.36);
+  background: rgba(157, 178, 255, 0.09);
+}
+
+.planner-place-panel__name-input {
+  border-bottom-color: transparent !important;
+}
+
+.planner-place-panel__name-input--editing {
+  border-bottom-color: var(--violet) !important;
+}
+
+.planner-place-panel__selected > input[readonly] {
+  cursor: default;
+}
+
 .planner-place-panel__selected > input {
   width: 100%;
   min-width: 0;
@@ -2044,6 +2061,12 @@
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.planner-place-results .planner-place-results__item--selected {
+  border-color: rgba(157, 178, 255, 0.4);
+  background: rgba(157, 178, 255, 0.11);
+  box-shadow: inset 3px 0 0 var(--violet);
 }
 
 .planner-place-empty {

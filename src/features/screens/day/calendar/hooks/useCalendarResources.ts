@@ -2,9 +2,8 @@
 
 import type { SetStateAction } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { fetchPeopleFromDb } from "@/features/data/people/api";
 import { fetchTasksFromDb } from "@/features/data/tasks/api";
-import type { PersonRecord, TaskItem } from "@/types/domain";
+import type { TaskItem } from "@/types/domain";
 import { fetchCalendarEventsFromDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 
@@ -19,20 +18,9 @@ export function useCalendarResources() {
     onError: (error) => console.error("Failed to load calendar data from Supabase", error),
   });
 
-  const people = useAsyncData({
-    deps: [],
-    initialData: [] as PersonRecord[],
-    load: async () => (await fetchPeopleFromDb()) ?? [],
-    onError: (error) => console.error("Failed to load people from Supabase", error),
-  });
-
   return {
     events: eventsAndTasks.data.events,
     isLoading: eventsAndTasks.isLoading,
-    people: people.data,
-    setEvents: (updater: SetStateAction<CalendarEvent[]>) =>
-      eventsAndTasks.setData((current) => ({ ...current, events: typeof updater === "function" ? updater(current.events) : updater })),
-    setPeople: people.setData,
     setTasks: (updater: SetStateAction<TaskItem[]>) =>
       eventsAndTasks.setData((current) => ({ ...current, tasks: typeof updater === "function" ? updater(current.tasks) : updater })),
     tasks: eventsAndTasks.data.tasks,

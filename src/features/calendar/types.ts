@@ -24,7 +24,11 @@ export type ExternalCalendarItem = {
   placeLatitude?: number;
   placeLongitude?: number;
   placeName?: string;
+  startPlaceName?: string;
+  endPlaceName?: string;
   startTime?: string;
+  transportMode?: string;
+  memo?: string;
   takenAt?: string;
   title: string;
   type: ExternalCalendarCategory;
