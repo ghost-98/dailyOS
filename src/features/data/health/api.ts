@@ -127,6 +127,7 @@ export async function fetchWeightRecordsFromDb() {
   const { data, error } = await supabase
     .from("weight_records")
     .select(weightColumns)
+    .eq("user_id", userId)
     .order("record_date", { ascending: false });
 
   if (error) throw error;
@@ -150,11 +151,14 @@ export async function createWeightRecordInDb(record: WeightRecord) {
 
 export async function updateWeightRecordInDb(record: WeightRecord) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("weight_records")
     .update(mapWeightUpdate(record))
     .eq("id", record.id)
+    .eq("user_id", userId)
     .select(weightColumns)
     .single();
 
@@ -164,7 +168,9 @@ export async function updateWeightRecordInDb(record: WeightRecord) {
 
 export async function deleteWeightRecordFromDb(id: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("weight_records").delete().eq("id", id);
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { error } = await supabase.from("weight_records").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }
@@ -177,6 +183,7 @@ export async function fetchWorkoutSessionsFromDb() {
   const { data, error } = await supabase
     .from("workout_sessions")
     .select(workoutColumns)
+    .eq("user_id", userId)
     .order("workout_date", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -201,11 +208,14 @@ export async function createWorkoutSessionInDb(session: WorkoutSession) {
 
 export async function updateWorkoutSessionInDb(session: WorkoutSession) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("workout_sessions")
     .update(mapWorkoutUpdate(session))
     .eq("id", session.id)
+    .eq("user_id", userId)
     .select(workoutColumns)
     .single();
 
@@ -215,7 +225,9 @@ export async function updateWorkoutSessionInDb(session: WorkoutSession) {
 
 export async function deleteWorkoutSessionFromDb(id: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("workout_sessions").delete().eq("id", id);
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { error } = await supabase.from("workout_sessions").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }

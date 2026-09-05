@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Camera, Map, UsersRound, WalletCards, type LucideIcon } from "lucide-react";
-import { DayPeopleView } from "@/features/screens/day/DayPeopleView";
+import { PeopleView } from "@/features/screens/other/PeopleView";
 import { LedgerView } from "@/features/screens/other/LedgerView";
 import { OtherMapView } from "@/features/screens/other/OtherMapView";
 import { OtherGalleryView } from "@/features/screens/other/OtherGalleryView";
@@ -39,7 +39,7 @@ export function OtherView() {
       </div>
 
       {activeTab === "people" ? (
-        <DayPeopleView />
+        <PeopleView />
       ) : null}
 
       {activeTab === "ledger" ? <LedgerView /> : null}

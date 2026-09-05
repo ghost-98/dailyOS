@@ -11,7 +11,7 @@ import { confirmAction } from "@/lib/actionGuards";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
 import type { PersonRecord } from "@/types/domain";
 
-export function DayPeopleView() {
+export function PeopleView() {
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [query, setQuery] = useState("");
   const [isCreateMode, setIsCreateMode] = useState(false);

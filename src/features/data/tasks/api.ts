@@ -134,6 +134,7 @@ export async function fetchTasksFromDb() {
   const { data, error } = await supabase
     .from("tasks")
     .select(taskColumns)
+    .eq("user_id", userId)
     .order("scheduled_date", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -158,11 +159,14 @@ export async function createTaskInDb(task: TaskItem) {
 
 export async function updateTaskInDb(task: TaskItem) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("tasks")
     .update(mapTaskToUpdate(task))
     .eq("id", task.id)
+    .eq("user_id", userId)
     .select(taskColumns)
     .single();
 
@@ -172,8 +176,10 @@ export async function updateTaskInDb(task: TaskItem) {
 
 export async function deleteTaskFromDb(id: string) {
   if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
 
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const { error } = await supabase.from("tasks").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }

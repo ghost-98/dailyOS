@@ -317,14 +317,6 @@ alter table public.expense_records drop constraint if exists expense_records_tar
 alter table public.expense_records
   add constraint expense_records_target_type_check check (target_type in ('schedule', 'todo', 'event', 'activity'));
 
-delete from public.expense_records
-where target_type is null
-   or target_id is null;
-
-alter table public.expense_records
-  alter column target_type set not null,
-  alter column target_id set not null;
-
 create table if not exists public.people (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -335,18 +327,29 @@ create table if not exists public.people (
   unique (user_id, name)
 );
 
-create table if not exists public.people_links (
+create table if not exists public.saved_places (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  person_id uuid references public.people(id) on delete cascade,
-  person_name text not null,
-  target_type text not null check (target_type in ('schedule', 'todo', 'event', 'daily_log', 'photo', 'expense', 'workout')),
-  target_id uuid not null,
-  target_date date,
-  memo text,
+  place_key text not null,
+  name text not null,
+  address text not null default '',
+  latitude numeric(10, 7) not null,
+  longitude numeric(10, 7) not null,
+  provider_place_id text,
+  phone text,
+  category text,
+  url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (user_id, person_name, target_type, target_id)
+  unique (user_id, place_key)
+);
+
+create table if not exists public.activity_categories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, name)
 );
 
 create index if not exists profiles_email_idx on public.profiles(email);
@@ -361,238 +364,10 @@ create index if not exists workout_sessions_user_date_idx on public.workout_sess
 create index if not exists expense_records_user_date_idx on public.expense_records(user_id, expense_date desc);
 create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
-create index if not exists people_links_user_person_idx on public.people_links(user_id, person_name);
+create index if not exists saved_places_user_name_idx on public.saved_places(user_id, name);
+create index if not exists activity_categories_user_name_idx on public.activity_categories(user_id, name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
 
-create or replace view public.life_people_index
-with (security_invoker = true)
-as
-select
-  user_id,
-  trim(person_name) as person_name,
-  'schedule' as source_type,
-  id as source_id,
-  event_date as source_date,
-  title,
-  place_name
-from public.calendar_events
-cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
-where type = 'schedule'
-  and trim(person_name) <> ''
-union all
-select
-  user_id,
-  trim(person_name) as person_name,
-  'event' as source_type,
-  id as source_id,
-  event_date as source_date,
-  title,
-  place_name
-from public.calendar_events
-cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
-where type = 'event'
-  and trim(person_name) <> ''
-union all
-select
-  user_id,
-  trim(person_name) as person_name,
-  'todo' as source_type,
-  id as source_id,
-  scheduled_date as source_date,
-  title,
-  place_name
-from public.tasks
-cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,，、·]\s*') as person_name
-where trim(person_name) <> ''
-union all
-select
-  user_id,
-  trim(person_name) as person_name,
-  'activity' as source_type,
-  id as source_id,
-  activity_date as source_date,
-  title,
-  place_name
-from public.life_activities
-cross join lateral regexp_split_to_table(coalesce(companions, ''), '\s*[,???]\s*') as person_name
-where trim(person_name) <> ''
-union all
-select
-  user_id,
-  person_name,
-  target_type as source_type,
-  target_id as source_id,
-  target_date as source_date,
-  coalesce(memo, person_name) as title,
-  null as place_name
-from public.people_links;
-
-create or replace view public.life_record_index
-with (security_invoker = true)
-as
-select
-  user_id,
-  event_date as record_date,
-  type::text as source_type,
-  id as source_id,
-  case when type = 'event' then 'event' else 'schedule' end as target_type,
-  id as target_id,
-  title,
-  nullif(meta, '') as summary,
-  expense_amount as amount,
-  place_name,
-  created_at,
-  null::time as measured_at
-from public.calendar_events
-where type in ('schedule', 'event')
-union all
-select
-  user_id,
-  scheduled_date as record_date,
-  'todo' as source_type,
-  id as source_id,
-  'todo' as target_type,
-  id as target_id,
-  title,
-  memo as summary,
-  expense_amount as amount,
-  place_name,
-  created_at,
-  null::time as measured_at
-from public.tasks
-union all
-select
-  user_id,
-  activity_date as record_date,
-  'activity' as source_type,
-  id as source_id,
-  'activity' as target_type,
-  id as target_id,
-  title,
-  concat_ws(' ? ', nullif(category, ''), nullif(food, ''), nullif(memo, '')) as summary,
-  expense_amount as amount,
-  place_name,
-  created_at,
-  null::time as measured_at
-from public.life_activities
-union all
-select
-  user_id,
-  expense_date as record_date,
-  'expense' as source_type,
-  id as source_id,
-  target_type,
-  target_id,
-  title,
-  memo as summary,
-  amount,
-  null as place_name,
-  created_at,
-  null::time as measured_at
-from public.expense_records
-union all
-select
-  user_id,
-  log_date as record_date,
-  'daily_log' as source_type,
-  id as source_id,
-  linked_target_type as target_type,
-  linked_target_id as target_id,
-  '하루 기록' as title,
-  content as summary,
-  null as amount,
-  null as place_name,
-  created_at,
-  null::time as measured_at
-from public.daily_logs
-union all
-select
-  user_id,
-  photo_date as record_date,
-  'photo' as source_type,
-  id as source_id,
-  linked_target_type as target_type,
-  linked_target_id as target_id,
-  coalesce(caption, file_name) as title,
-  file_name as summary,
-  null as amount,
-  null as place_name,
-  created_at,
-  null::time as measured_at
-from public.life_photos
-union all
-select
-  user_id,
-  workout_date as record_date,
-  'workout' as source_type,
-  id as source_id,
-  null as target_type,
-  null as target_id,
-  case when type = 'running' then '러닝 기록' else '운동 기록' end as title,
-  concat_ws(' · ', case when distance_km is not null then distance_km::text || 'km' end, coalesce(duration_seconds, duration_minutes * 60)::text || '초') as summary,
-  null as amount,
-  null as place_name,
-  created_at,
-  null::time as measured_at
-from public.workout_sessions
-union all
-select
-  user_id,
-  record_date,
-  'weight' as source_type,
-  id as source_id,
-  null as target_type,
-  null as target_id,
-  '아침 몸무게' as title,
-  concat_ws(' · ', measured_at::text, case when measured_fasted then '6시간 이상 공복' else '공복 미충족' end, weight_kg::text || 'kg') as summary,
-  null as amount,
-  null as place_name,
-  created_at,
-  measured_at::time
-from public.weight_records;
-
-insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)
-select
-  user_id,
-  event_date,
-  title,
-  expense_amount,
-  'etc',
-  nullif(meta, ''),
-  case when type = 'event' then 'event' else 'schedule' end,
-  id
-from public.calendar_events
-where expense_amount is not null
-  and expense_amount > 0
-  and type in ('schedule', 'event')
-  and not exists (
-    select 1
-    from public.expense_records
-    where expense_records.user_id = calendar_events.user_id
-      and expense_records.target_type = case when calendar_events.type = 'event' then 'event' else 'schedule' end
-      and expense_records.target_id = calendar_events.id
-  );
-
-insert into public.expense_records (user_id, expense_date, title, amount, category, memo, target_type, target_id)
-select
-  user_id,
-  scheduled_date,
-  title,
-  expense_amount,
-  'etc',
-  memo,
-  'todo',
-  id
-from public.tasks
-where expense_amount is not null
-  and expense_amount > 0
-  and not exists (
-    select 1
-    from public.expense_records
-    where expense_records.user_id = tasks.user_id
-      and expense_records.target_type = 'todo'
-      and expense_records.target_id = tasks.id
-  );
 create index if not exists daily_logs_user_date_idx on public.daily_logs(user_id, log_date, created_at desc);
 create index if not exists life_photos_user_date_idx on public.life_photos(user_id, photo_date, created_at desc);
 
@@ -672,6 +447,16 @@ create trigger set_income_records_updated_at
 before update on public.income_records
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_people_updated_at on public.people;
+create trigger set_people_updated_at
+before update on public.people
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_saved_places_updated_at on public.saved_places;
+create trigger set_saved_places_updated_at
+before update on public.saved_places
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
@@ -683,7 +468,8 @@ alter table public.life_photos enable row level security;
 alter table public.expense_records enable row level security;
 alter table public.income_records enable row level security;
 alter table public.people enable row level security;
-alter table public.people_links enable row level security;
+alter table public.saved_places enable row level security;
+alter table public.activity_categories enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
@@ -954,52 +740,49 @@ on public.people for delete
 to authenticated
 using (user_id = auth.uid());
 
-drop policy if exists "Users can read own people links" on public.people_links;
-create policy "Users can read own people links"
-on public.people_links for select
+drop policy if exists "Users can read own saved places" on public.saved_places;
+drop policy if exists "Users can read own activity categories" on public.activity_categories;
+create policy "Users can read own activity categories"
+on public.activity_categories for select
 to authenticated
 using (user_id = auth.uid());
 
-drop policy if exists "Users can insert own people links" on public.people_links;
-create policy "Users can insert own people links"
-on public.people_links for insert
+drop policy if exists "Users can insert own activity categories" on public.activity_categories;
+create policy "Users can insert own activity categories"
+on public.activity_categories for insert
 to authenticated
-with check (
-  user_id = auth.uid()
-  and (
-    person_id is null
-    or exists (
-      select 1
-      from public.people
-      where people.id = people_links.person_id
-        and people.user_id = auth.uid()
-    )
-  )
-);
+with check (user_id = auth.uid());
 
-drop policy if exists "Users can update own people links" on public.people_links;
-create policy "Users can update own people links"
-on public.people_links for update
+drop policy if exists "Users can delete own activity categories" on public.activity_categories;
+create policy "Users can delete own activity categories"
+on public.activity_categories for delete
+to authenticated
+using (user_id = auth.uid());
+
+create policy "Users can read own saved places"
+on public.saved_places for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own saved places" on public.saved_places;
+create policy "Users can insert own saved places"
+on public.saved_places for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own saved places" on public.saved_places;
+create policy "Users can update own saved places"
+on public.saved_places for update
 to authenticated
 using (user_id = auth.uid())
-with check (
-  user_id = auth.uid()
-  and (
-    person_id is null
-    or exists (
-      select 1
-      from public.people
-      where people.id = people_links.person_id
-        and people.user_id = auth.uid()
-    )
-  )
-);
+with check (user_id = auth.uid());
 
-drop policy if exists "Users can delete own people links" on public.people_links;
-create policy "Users can delete own people links"
-on public.people_links for delete
+drop policy if exists "Users can delete own saved places" on public.saved_places;
+create policy "Users can delete own saved places"
+on public.saved_places for delete
 to authenticated
 using (user_id = auth.uid());
+
 
 notify pgrst, 'reload schema';
 

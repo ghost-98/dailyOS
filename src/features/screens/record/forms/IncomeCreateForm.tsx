@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FormField } from "@/components/ui/FormField";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
-import { formatFullDate } from "@/features/records/time/recordDateTime";
+import { formatFullDate } from "@/features/calendar/dateUtils";
 import { RecordCreateSheet } from "@/features/screens/record/components/RecordCreateSheet";
 import { confirmAction } from "@/lib/actionGuards";
 import type { IncomeCategory, IncomeRecord } from "@/types/domain";
@@ -20,29 +20,30 @@ const INCOME_CATEGORIES: Array<{ label: string; value: IncomeCategory }> = [
 
 type IncomeCreateFormProps = {
   defaultDate: string;
+  initialRecord?: IncomeRecord;
   onBack: () => void;
   onDone: () => void;
   onSave: (record: IncomeRecord) => Promise<void> | void;
 };
 
-export function IncomeCreateForm({ defaultDate, onBack, onDone, onSave }: IncomeCreateFormProps) {
-  const [date, setDate] = useState(defaultDate);
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<IncomeCategory>("salary");
-  const [memo, setMemo] = useState("");
+export function IncomeCreateForm({ defaultDate, initialRecord, onBack, onDone, onSave }: IncomeCreateFormProps) {
+  const [date, setDate] = useState(initialRecord?.date ?? defaultDate);
+  const [title, setTitle] = useState(initialRecord?.title ?? "");
+  const [amount, setAmount] = useState(initialRecord ? String(initialRecord.amount) : "");
+  const [category, setCategory] = useState<IncomeCategory>(initialRecord?.category ?? "salary");
+  const [memo, setMemo] = useState(initialRecord?.memo ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const canSave = Boolean(title.trim() && Number(amount) > 0);
 
   const save = async () => {
-    if (!canSave || isSaving || !confirmAction("수입을 추가할까요?")) return;
+    if (!canSave || isSaving || !confirmAction(initialRecord ? "수입 수정을 저장할까요?" : "수입을 추가할까요?")) return;
     setIsSaving(true);
     try {
       await onSave({
         amount: Number(amount),
         category,
         date,
-        id: `income-${Date.now()}`,
+        id: initialRecord?.id ?? `income-${Date.now()}`,
         memo: memo.trim() || undefined,
         title: title.trim(),
       });
@@ -56,8 +57,8 @@ export function IncomeCreateForm({ defaultDate, onBack, onDone, onSave }: Income
     <RecordCreateSheet
       dateLabel={formatFullDate(date)}
       onClose={onBack}
-      submit={<MobileSheetSubmitButton disabled={!canSave || isSaving} onClick={save}>{isSaving ? "저장 중..." : "수입 추가"}</MobileSheetSubmitButton>}
-      title="수입 추가"
+      submit={<MobileSheetSubmitButton disabled={!canSave || isSaving} onClick={save}>{isSaving ? "저장 중..." : initialRecord ? "수정 저장" : "수입 추가"}</MobileSheetSubmitButton>}
+      title={initialRecord ? "수입 수정" : "수입 추가"}
     >
       <FormField label="날짜"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></FormField>
       <FormField label="항목"><input autoFocus placeholder="예: 월급, 환급금" value={title} onChange={(event) => setTitle(event.target.value)} /></FormField>

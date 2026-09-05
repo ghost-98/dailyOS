@@ -117,7 +117,11 @@ async function renameCompanionValuesInTable(table: "calendar_events" | "life_act
   for (const row of (data ?? []) as Array<{ companions: string | null; id: string }>) {
     const nextCompanions = renameCompanionValue(row.companions, previousName, nextName);
     if (nextCompanions === row.companions) continue;
-    const { error: updateError } = await supabase.from(table).update({ companions: nextCompanions || null }).eq("id", row.id);
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({ companions: nextCompanions || null })
+      .eq("id", row.id)
+      .eq("user_id", userId);
     if (updateError) throw updateError;
   }
 }

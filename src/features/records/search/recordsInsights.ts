@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatRunDuration, formatWeightMeasurementMeta, formatWon, getLinkedTargetTypeLabel } from "@/features/records/format/recordFormatters";
 import { getActivityPlaceRef } from "@/features/records/place/recordPlaces";
-import { formatActivityTime } from "@/features/records/activity/recordReconstruction";
+import { formatActivityTime } from "@/features/records/format/recordFormatters";
 import type { RecordPlaceRef } from "@/features/records/place/recordPlaces";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 

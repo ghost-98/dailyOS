@@ -2,15 +2,15 @@
 
 import { useMemo } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
+import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
-import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivityInDb, updateLifePhotoCaptionInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
+import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, syncLinkedExpenseRecordInDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
+import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivitiesBySourceFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivitiesBySourceInDb, updateLifeActivityInDb, updateLifePhotoDetailsInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
 import { emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
-import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
-import { deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
-import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace } from "@/types/domain";
+import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
+import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
+import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem } from "@/types/domain";
 
 export function useRecordsDataState() {
   const { data, isLoading, reload, setData } = useAsyncData({
@@ -40,6 +40,62 @@ export function useRecordsDataState() {
     const savedIncome = await createIncomeRecordInDb(record);
     if (!savedIncome) return;
     setLifeData((current) => ({ ...current, incomes: [savedIncome, ...current.incomes] }));
+  };
+
+  const createEvent = async (event: CalendarEvent) => {
+    const savedEvent = await createCalendarEventInDb(event);
+    if (!savedEvent) return;
+    setLifeData((current) => ({ ...current, events: [savedEvent, ...current.events] }));
+  };
+
+  const createTask = async (task: TaskItem) => {
+    const savedTask = await createTaskInDb(task);
+    if (!savedTask) return;
+    setLifeData((current) => ({ ...current, tasks: [savedTask, ...current.tasks] }));
+  };
+
+  const updateTask = async (task: TaskItem) => {
+    const savedTask = await updateTaskInDb(task);
+    const nextTask = savedTask ?? task;
+    await updateLifeActivitiesBySourceInDb({ category: "할 일", companions: nextTask.companions, date: nextTask.scheduledDate, endTime: nextTask.endTime, expenseAmount: nextTask.expenseAmount, isAllDay: nextTask.isAllDay, memo: nextTask.memo, placeAddress: nextTask.place?.address, placeName: nextTask.place?.name, sourceId: nextTask.id, sourceType: "todo", startTime: nextTask.startTime, title: nextTask.title });
+    await syncLinkedExpenseRecordInDb({ amount: nextTask.expenseAmount, date: nextTask.scheduledDate, memo: nextTask.memo, targetId: nextTask.id, targetType: "todo", title: nextTask.title });
+    setLifeData((current) => ({
+      ...current,
+      tasks: current.tasks.map((item) => (item.id === nextTask.id ? nextTask : item)),
+    }));
+  };
+
+  const updateEvent = async (event: CalendarEvent) => {
+    const savedEvent = await updateCalendarEventInDb(event);
+    if (!savedEvent) return;
+    await updateLifeActivitiesBySourceInDb({ category: "이벤트", companions: savedEvent.companions, date: savedEvent.date, endTime: savedEvent.endTime, expenseAmount: savedEvent.expenseAmount, isAllDay: savedEvent.isAllDay, memo: savedEvent.meta, placeAddress: savedEvent.place?.address, placeName: savedEvent.place?.name, sourceId: savedEvent.id, sourceType: "event", startTime: savedEvent.time, title: savedEvent.title });
+    await syncLinkedExpenseRecordInDb({ amount: savedEvent.expenseAmount, date: savedEvent.date, memo: savedEvent.meta, targetId: savedEvent.id, targetType: "event", title: savedEvent.title });
+    setLifeData((current) => ({
+      ...current,
+      events: current.events.map((item) => (item.id === savedEvent.id ? savedEvent : item)),
+    }));
+  };
+
+  const deleteTask = async (id: string) => {
+    const deleted = await deleteTaskFromDb(id);
+    if (!deleted) return;
+    await deleteLifeActivitiesBySourceFromDb("todo", id);
+    setLifeData((current) => ({
+      ...current,
+      activities: current.activities.filter((item) => item.sourceId !== id || item.sourceType !== "todo"),
+      tasks: current.tasks.filter((item) => item.id !== id),
+    }));
+  };
+
+  const deleteEvent = async (id: string) => {
+    const deleted = await deleteCalendarEventFromDb(id);
+    if (!deleted) return;
+    await deleteLifeActivitiesBySourceFromDb("event", id);
+    setLifeData((current) => ({
+      ...current,
+      activities: current.activities.filter((item) => item.sourceId !== id || item.sourceType !== "event"),
+      events: current.events.filter((item) => item.id !== id),
+    }));
   };
 
   const updateIncome = async (record: IncomeRecord) => {
@@ -82,8 +138,8 @@ export function useRecordsDataState() {
     setLifeData((current) => ({ ...current, lifePhotos: current.lifePhotos.filter((item) => item.id !== photo.id) }));
   };
 
-  const updateLifePhotoCaption = async (id: string, caption?: string) => {
-    const savedPhoto = await updateLifePhotoCaptionInDb(id, caption);
+  const updateLifePhotoDetails = async (id: string, date: string, caption?: string, linkedTarget?: RecordLinkedTarget) => {
+    const savedPhoto = await updateLifePhotoDetailsInDb(id, date, caption, linkedTarget);
     if (!savedPhoto) return;
     setLifeData((current) => ({
       ...current,
@@ -182,15 +238,21 @@ export function useRecordsDataState() {
     isLoading,
     mutations: {
       createDailyLog,
+      createEvent,
       createIncome,
+      createTask,
       deleteIncome,
+      deleteEvent,
+      deleteTask,
       deleteActivity,
       deleteDailyLog,
       deleteLifePhoto,
       saveActivity,
       updateIncome,
+      updateEvent,
+      updateTask,
       updateDailyLog,
-      updateLifePhotoCaption,
+      updateLifePhotoDetails,
       uploadLifePhotos,
     },
     reload,

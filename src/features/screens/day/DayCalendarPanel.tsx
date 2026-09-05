@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Banknote, Camera, ChevronDown, MapPin, NotebookPen, Pencil, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, MapPin, Moon, NotebookPen, Pencil, Sun, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
 import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
 import { DayDetailSheet } from "@/features/screens/day/details/DayDetailSheet";
 import type {
@@ -41,6 +41,10 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
     () => items.filter((item): item is DayActivityItem => "external" in item && item.external.type === "activity"),
     [items],
   );
+  const planItems = useMemo(
+    () => items.filter((item): item is Extract<DayTimelineItem, { event: unknown } | { task: unknown }> => item.type === "event" || item.type === "todo"),
+    [items],
+  );
   const photoItems = useMemo(
     () => items.filter((item): item is DayPhotoItem => "external" in item && item.external.type === "photo"),
     [items],
@@ -74,6 +78,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
   const visiblePhotoItems = photoViewer?.items ?? photoItems;
 
   const dayInsightButtons = [
+    { icon: CalendarCheck2, key: "plans" as const, label: "할 일·이벤트", count: planItems.length, onClick: () => setDetailView("plans") },
     { icon: Camera, key: "photos" as const, label: "사진 기억", count: photoItems.length, onClick: () => openPhotoViewer(photoItems, "사진 기억") },
     { icon: MapPin, key: "map" as const, label: "동선 지도", count: routeStops.length, onClick: () => setDetailView("map") },
     { icon: UsersRound, key: "companions" as const, label: "함께한 사람", count: companionEntryCount, onClick: () => setDetailView("companions") },
@@ -146,6 +151,17 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
                     const item = row.item;
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
                     const isActivityOpen = expandedActivityIds.has(item.external.id);
+                    const isDayBoundary = item.external.title === "기상" || item.external.title === "취침";
+                    if (isDayBoundary) {
+                      const BoundaryIcon = item.external.title === "기상" ? Sun : Moon;
+                      return (
+                        <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${item.external.title === "기상" ? "wake" : "bedtime"}`} key={item.id}>
+                          <time>{formatTimelineRange(item.timeLabel, undefined)}</time>
+                          <span className="life-calendar-day-boundary-row__icon"><BoundaryIcon aria-hidden size={15} /></span>
+                          {item.external.placeName ? <span className="life-calendar-day-boundary-row__place"><MapPin aria-hidden size={12} /> {item.external.placeName}</span> : null}
+                        </article>
+                      );
+                    }
                     return (
                       <article className="life-calendar-day-timeline__item" key={item.id}>
                         <div className="life-calendar-day-timeline__time">
@@ -167,7 +183,10 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
                               onClick={() => toggleActivity(item.external.id)}
                               type="button"
                             >
-                              <strong>{item.external.title}</strong>
+                              <span className="life-calendar-day-item-heading__summary">
+                                {item.external.category ? <b className="life-calendar-day-activity-type">{item.external.category}</b> : null}
+                                <strong>{item.external.title}</strong>
+                              </span>
                               <ChevronDown aria-hidden className={`life-calendar-day-item-heading__chevron ${isActivityOpen ? "life-calendar-day-item-heading__chevron--open" : ""}`} size={15} />
                             </button>
                             {actions && isActivityEditMode ? <div className="life-calendar-day-item-actions">
@@ -175,30 +194,24 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
                               <button aria-label="활동 삭제" onClick={() => void actions.deleteActivity(item.external.id)} type="button"><Trash2 aria-hidden size={14} /></button>
                             </div> : null}
                           </div>
-                          {isActivityOpen && item.external.category ? (
-                            <div className="life-calendar-day-timeline__tags life-calendar-day-timeline__body-tags">
-                              <b className="life-calendar-day-tag life-calendar-day-tag--0">{item.external.category}</b>
+                          {isActivityOpen ? (
+                            <div className="life-calendar-day-timeline__details">
+                              {item.external.category === "이동" && (item.external.startPlaceName || item.external.endPlaceName || item.external.transportMode) ? (
+                                <div className="life-calendar-day-timeline__movement">
+                                  <div className="life-calendar-day-timeline__route">
+                                    <span>{item.external.startPlaceName || "출발지 미지정"}</span>
+                                    <ArrowRight aria-hidden size={13} />
+                                    <span>{item.external.endPlaceName || "도착지 미지정"}</span>
+                                  </div>
+                                  {item.external.transportMode ? <p><Bus aria-hidden size={14} /> {item.external.transportMode}</p> : null}
+                                </div>
+                              ) : null}
+                              {item.external.category !== "이동" && item.external.placeName ? <p><MapPin aria-hidden size={14} /> {item.external.placeName}</p> : null}
+                              {item.external.companions ? <p><UsersRound aria-hidden size={14} /> {item.external.companions}</p> : null}
+                              {item.external.food ? <p><UtensilsCrossed aria-hidden size={14} /> {item.external.food}</p> : null}
+                              {item.external.amount ? <p><Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}</p> : null}
+                              {item.external.memo ? <p><NotebookPen aria-hidden size={14} /> {item.external.memo}</p> : null}
                             </div>
-                          ) : null}
-                          {isActivityOpen && item.external.placeName ? (
-                            <p>
-                              <MapPin aria-hidden size={14} /> {item.external.placeName}
-                            </p>
-                          ) : null}
-                          {isActivityOpen && item.external.companions ? (
-                            <p>
-                              <UsersRound aria-hidden size={14} /> {item.external.companions}
-                            </p>
-                          ) : null}
-                          {isActivityOpen && item.external.food ? (
-                            <p>
-                              <UtensilsCrossed aria-hidden size={14} /> {item.external.food}
-                            </p>
-                          ) : null}
-                          {isActivityOpen && item.external.amount ? (
-                            <p>
-                              <Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}
-                            </p>
                           ) : null}
                         </div>
                       </article>
@@ -240,6 +253,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items }: LifeCalendar
         financeEntryCount={financeEntryCount}
         isLoading={isLoading}
         logItems={logItems}
+        planItems={planItems}
         photoTitle={photoViewer?.title ?? "사진 기억"}
         photoViewerItems={visiblePhotoItems}
         routeStops={routeStops}

@@ -123,6 +123,7 @@ export async function fetchCalendarEventsFromDb() {
   const { data, error } = await supabase
     .from("calendar_events")
     .select(selectColumns)
+    .eq("user_id", userId)
     .order("event_date", { ascending: true })
     .order("event_time", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -148,11 +149,14 @@ export async function createCalendarEventInDb(event: CalendarEvent) {
 
 export async function updateCalendarEventInDb(event: CalendarEvent) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("calendar_events")
     .update(mapEventToUpdate(event))
     .eq("id", event.id)
+    .eq("user_id", userId)
     .select(selectColumns)
     .single();
 
@@ -162,8 +166,10 @@ export async function updateCalendarEventInDb(event: CalendarEvent) {
 
 export async function deleteCalendarEventFromDb(id: string) {
   if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
 
-  const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+  const { error } = await supabase.from("calendar_events").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }

@@ -1,4 +1,4 @@
-import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
+import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
 
 export type RecordLinkTargetOption = RecordLinkedTarget & {
   date: string;

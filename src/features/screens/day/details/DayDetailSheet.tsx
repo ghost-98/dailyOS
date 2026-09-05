@@ -10,7 +10,8 @@ import { DayLogDetail } from "@/features/screens/day/details/logs/DayLogDetail";
 import { DayMapDetail } from "@/features/screens/day/details/map/DayMapDetail";
 import type { DayMapDetailHandle } from "@/features/screens/day/details/map/DayMapDetail";
 import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDetail";
-import type { DayCounterItem, DayDetailView, DayFinanceItem, DayFinanceTotals, DayItemActions, DayLogItem, DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
+import { DayPlanDetail } from "@/features/screens/day/details/plans/DayPlanDetail";
+import type { DayCounterItem, DayDetailView, DayFinanceItem, DayFinanceTotals, DayItemActions, DayLogItem, DayPhotoItem, DayPlanItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
 
 type DayDetailSheetProps = {
   actions?: DayItemActions;
@@ -20,6 +21,7 @@ type DayDetailSheetProps = {
   financeEntryCount: number;
   isLoading: boolean;
   logItems: DayLogItem[];
+  planItems: DayPlanItem[];
   photoTitle: string;
   photoViewerItems: DayPhotoItem[];
   routeStops: DayRouteStop[];
@@ -28,7 +30,7 @@ type DayDetailSheetProps = {
   onOpenPhotos: (items: DayPhotoItem[], title: string) => void;
 };
 
-export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, photoTitle, photoViewerItems, routeStops, view, onClose, onOpenPhotos }: DayDetailSheetProps) {
+export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, planItems, photoTitle, photoViewerItems, routeStops, view, onClose, onOpenPhotos }: DayDetailSheetProps) {
   const mapRef = useRef<DayMapDetailHandle | null>(null);
 
   if (!view) return null;
@@ -39,6 +41,7 @@ export function DayDetailSheet({ actions, companionCounts, finance, financeItems
     logCount: logItems.length,
     photoCount: photoViewerItems.length,
     photoTitle,
+    planCount: planItems.length,
     routeStopCount: routeStops.length,
     view,
   });
@@ -58,6 +61,7 @@ export function DayDetailSheet({ actions, companionCounts, finance, financeItems
       onClose={onClose}
     >
       {view === "photos" ? <DayPhotoDetail actions={actions} isLoading={isLoading} items={photoViewerItems} /> : null}
+      {view === "plans" ? <DayPlanDetail actions={actions} items={planItems} /> : null}
       {view === "map" ? <DayMapDetail isLoading={isLoading} onShowPhotos={onOpenPhotos} ref={mapRef} routeStops={routeStops} /> : null}
       {view === "companions" ? <DayCompanionDetail isLoading={isLoading} items={companionCounts} /> : null}
       {view === "finance" ? <DayFinanceDetail actions={actions} finance={finance} items={financeItems} /> : null}
@@ -66,16 +70,18 @@ export function DayDetailSheet({ actions, companionCounts, finance, financeItems
   );
 }
 
-function getDetailMeta({ companionCount, financeEntryCount, logCount, photoCount, photoTitle, routeStopCount, view }: {
+function getDetailMeta({ companionCount, financeEntryCount, logCount, photoCount, photoTitle, planCount, routeStopCount, view }: {
   companionCount: number;
   financeEntryCount: number;
   logCount: number;
   photoCount: number;
   photoTitle: string;
+  planCount: number;
   routeStopCount: number;
   view: Exclude<DayDetailView, null>;
 }) {
   const meta = {
+    plans: { count: `${planCount}건`, title: "할 일·이벤트" },
     photos: { count: `${photoCount}장`, title: photoTitle },
     map: { count: `${routeStopCount}개`, title: "동선 지도" },
     companions: { count: `${companionCount}명`, title: "함께한 사람" },

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FormField } from "@/components/ui/FormField";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
-import { formatFullDate } from "@/features/records/time/recordDateTime";
+import { formatFullDate } from "@/features/calendar/dateUtils";
 import { RecordCreateSheet } from "@/features/screens/record/components/RecordCreateSheet";
 import { confirmAction } from "@/lib/actionGuards";
 import type { LifeActivityRecord, PlanPlace } from "@/types/domain";

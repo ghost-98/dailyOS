@@ -2,29 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { Activity, Banknote, Bed, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, Sunrise, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
-import { createCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
-import { createTaskInDb } from "@/features/data/tasks/api";
-import { getDefaultActivityTime } from "@/features/records/time/recordActivityHelpers";
-import { formatDateKey, formatFullDate } from "@/features/records/time/recordDateTime";
+import { formatDateKey, formatFullDate, getRoundedCurrentTime } from "@/features/calendar/dateUtils";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
 import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/data/health/api";
 import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
-import type { LifeMediaUploadInput, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
+import type { DailyLogRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
 import { confirmAction } from "@/lib/actionGuards";
 import { RecordLinkTargetField } from "@/features/screens/record/components/RecordLinkTargetField";
 import type { RecordLinkTargetOption } from "@/features/screens/record/components/RecordLinkTargetField";
-import type { RecordLinkedTarget } from "@/features/records/targets/recordTargets";
+import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
 import { RecordCreateSheet } from "@/features/screens/record/components/RecordCreateSheet";
 import { PlanCreateForm } from "@/features/screens/record/forms/PlanCreateForm";
 import { IncomeCreateForm } from "@/features/screens/record/forms/IncomeCreateForm";
 import { SleepWakeCreateForm } from "@/features/screens/record/forms/SleepWakeCreateForm";
+import { createActivityCategoryInDb, deleteActivityCategoryFromDb, fetchActivityCategoriesFromDb } from "@/features/data/records/activityCategories";
 
 type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo" | "income" | "bedtime" | "wake";
 type HealthMode = "weight" | "running";
@@ -42,13 +40,15 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
 ];
 
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
-const CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY = "dailyos.record.customActivityCategories";
 
 export function RecordCreateFlow() {
   const router = useRouter();
-  const { data, setData, mutations } = useRecordsDataState();
+  const searchParams = useSearchParams();
+  const { data, isLoading, setData, mutations } = useRecordsDataState();
   const createPerson = async (name: string) => createPersonInDb({ name });
-  const [step, setStep] = useState<"choose" | CreateType>("choose");
+  const editType = parseCreateType(searchParams.get("edit"));
+  const editId = searchParams.get("id");
+  const [step, setStep] = useState<"choose" | CreateType>(() => editType ?? "choose");
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [message, setMessage] = useState("");
 
@@ -74,6 +74,19 @@ export function RecordCreateFlow() {
     ...data.tasks.map((item) => ({ date: item.scheduledDate, id: item.id, title: item.title, type: "todo" as const })),
     ...data.events.filter((item) => item.type === "event").map((item) => ({ date: item.date, id: item.id, title: item.title, type: "event" as const })),
   ];
+
+  const editTargetExists = !editType || !editId || (
+    editType === "activity" ? data.activities.some((item) => item.id === editId) :
+    editType === "task" ? data.tasks.some((item) => item.id === editId) :
+    editType === "event" ? data.events.some((item) => item.id === editId) :
+    editType === "log" ? data.dailyLogs.some((item) => item.id === editId) :
+    editType === "photo" ? data.lifePhotos.some((item) => item.id === editId) :
+    editType === "income" ? data.incomes.some((item) => item.id === editId) : true
+  );
+
+  if (editType && editId && !editTargetExists) {
+    return <div className="life-page"><div className="life-calendar-db-empty">{isLoading ? "수정할 내용을 불러오는 중..." : "수정할 내용을 찾지 못했습니다."}</div></div>;
+  }
 
   return (
     <div className="life-page">
@@ -104,7 +117,9 @@ export function RecordCreateFlow() {
 
         {step === "activity" ? (
           <ActivityCreateForm
+            key={editType === "activity" ? data.activities.find((item) => item.id === editId)?.id ?? "activity-loading" : "activity-create"}
             defaultDate={formatDateKey(new Date())}
+            initialActivity={editType === "activity" ? data.activities.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
             onCreatePerson={createPerson}
@@ -120,13 +135,17 @@ export function RecordCreateFlow() {
 
         {step === "log" ? (
           <LogCreateForm
+            key={editType === "log" ? data.dailyLogs.find((item) => item.id === editId)?.id ?? "log-loading" : "log-create"}
             defaultDate={formatDateKey(new Date())}
+            initialLog={editType === "log" ? data.dailyLogs.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
             onDone={finish}
             onMessage={setMessage}
             onSave={async (date, content, linkedTarget) => {
-              await mutations.createDailyLog(date, content, linkedTarget);
+              const existing = editType === "log" ? data.dailyLogs.find((item) => item.id === editId) : undefined;
+              if (existing) await mutations.updateDailyLog({ ...existing, content, date, linkedTargetId: linkedTarget?.id, linkedTargetTitle: linkedTarget?.title, linkedTargetType: linkedTarget?.type });
+              else await mutations.createDailyLog(date, content, linkedTarget);
               setMessage("기록을 추가했어요.");
             }}
             linkTargets={linkTargets}
@@ -153,22 +172,27 @@ export function RecordCreateFlow() {
 
         {step === "photo" ? (
           <PhotoCreateForm
+            key={editType === "photo" ? data.lifePhotos.find((item) => item.id === editId)?.id ?? "photo-loading" : "photo-create"}
             defaultDate={formatDateKey(new Date())}
+            initialPhoto={editType === "photo" ? data.lifePhotos.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
             onDone={finish}
             onMessage={setMessage}
             onSavePhotos={mutations.uploadLifePhotos}
+            onUpdatePhoto={mutations.updateLifePhotoDetails}
             linkTargets={linkTargets}
           />
         ) : null}
 
         {step === "income" ? (
           <IncomeCreateForm
+            key={editType === "income" ? data.incomes.find((item) => item.id === editId)?.id ?? "income-loading" : "income-create"}
             defaultDate={formatDateKey(new Date())}
+            initialRecord={editType === "income" ? data.incomes.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}
             onDone={finish}
-            onSave={mutations.createIncome}
+            onSave={editType === "income" ? mutations.updateIncome : mutations.createIncome}
           />
         ) : null}
 
@@ -184,18 +208,14 @@ export function RecordCreateFlow() {
 
         {step === "event" ? (
           <EventTaskCreateFlow
+            key={editType === "event" ? data.events.find((item) => item.id === editId)?.id ?? "event-loading" : "event-create"}
             defaultDate={formatDateKey(new Date())}
             kind="event"
+            initialEvent={editType === "event" ? data.events.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}
             onDone={finish}
-            onSaveEvent={async (event) => {
-              const saved = await createCalendarEventInDb(event);
-              if (saved) setData((current) => ({ ...current, events: [saved, ...current.events] }));
-            }}
-            onSaveTask={async (task) => {
-              const saved = await createTaskInDb(task);
-              if (saved) setData((current) => ({ ...current, tasks: [saved, ...current.tasks] }));
-            }}
+            onSaveEvent={editType === "event" ? mutations.updateEvent : mutations.createEvent}
+            onSaveTask={mutations.createTask}
             onCreatePerson={createPerson}
             people={people}
           />
@@ -203,18 +223,14 @@ export function RecordCreateFlow() {
 
         {step === "task" ? (
           <EventTaskCreateFlow
+            key={editType === "task" ? data.tasks.find((item) => item.id === editId)?.id ?? "task-loading" : "task-create"}
             defaultDate={formatDateKey(new Date())}
             kind="task"
+            initialTask={editType === "task" ? data.tasks.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}
             onDone={finish}
-            onSaveEvent={async (event) => {
-              const saved = await createCalendarEventInDb(event);
-              if (saved) setData((current) => ({ ...current, events: [saved, ...current.events] }));
-            }}
-            onSaveTask={async (task) => {
-              const saved = await createTaskInDb(task);
-              if (saved) setData((current) => ({ ...current, tasks: [saved, ...current.tasks] }));
-            }}
+            onSaveEvent={mutations.createEvent}
+            onSaveTask={editType === "task" ? mutations.updateTask : mutations.createTask}
             onCreatePerson={createPerson}
             people={people}
           />
@@ -226,6 +242,7 @@ export function RecordCreateFlow() {
 
 function ActivityCreateForm({
   defaultDate,
+  initialActivity,
   message,
   onBack,
   onCreatePerson,
@@ -235,6 +252,7 @@ function ActivityCreateForm({
   people,
 }: {
   defaultDate: string;
+  initialActivity?: LifeActivityRecord;
   message: string;
   onBack: () => void;
   onCreatePerson: (name: string) => Promise<PersonRecord | null>;
@@ -243,62 +261,68 @@ function ActivityCreateForm({
   onSave: (activity: LifeActivityRecord) => Promise<void> | void;
   people: PersonRecord[];
 }) {
-  const [date, setDate] = useState(defaultDate);
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("기타");
+  const [date, setDate] = useState(initialActivity?.date ?? defaultDate);
+  const [title, setTitle] = useState(initialActivity?.title ?? "");
+  const [category, setCategory] = useState(initialActivity?.category ?? "기타");
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState("");
   const [isCategoryEditorOpen, setIsCategoryEditorOpen] = useState(false);
-  const [startTime, setStartTime] = useState(getDefaultActivityTime());
-  const [endTime, setEndTime] = useState("");
-  const [hasTime, setHasTime] = useState(true);
-  const [hasEndTime, setHasEndTime] = useState(false);
-  const [place, setPlace] = useState<PlanPlace | undefined>();
-  const [startPlace, setStartPlace] = useState<PlanPlace | undefined>();
-  const [endPlace, setEndPlace] = useState<PlanPlace | undefined>();
-  const [transportMode, setTransportMode] = useState("");
-  const [companions, setCompanions] = useState<string[]>([]);
-  const [food, setFood] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState("");
-  const [memo, setMemo] = useState("");
+  const [startTime, setStartTime] = useState(initialActivity?.startTime ?? getRoundedCurrentTime());
+  const [endTime, setEndTime] = useState(initialActivity?.endTime ?? "");
+  const [hasTime, setHasTime] = useState(!(initialActivity?.isAllDay ?? false));
+  const [hasEndTime, setHasEndTime] = useState(Boolean(initialActivity?.endTime));
+  const [place, setPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.placeName, initialActivity?.placeAddress));
+  const [startPlace, setStartPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.startPlaceName, initialActivity?.startPlaceAddress));
+  const [endPlace, setEndPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.endPlaceName, initialActivity?.endPlaceAddress));
+  const [transportMode, setTransportMode] = useState(initialActivity?.transportMode ?? "");
+  const [companions, setCompanions] = useState<string[]>(() => initialActivity?.companions?.split(",").map((item) => item.trim()).filter(Boolean) ?? []);
+  const [food, setFood] = useState(initialActivity?.food ?? "");
+  const [expenseAmount, setExpenseAmount] = useState(initialActivity?.expenseAmount ? String(initialActivity.expenseAmount) : "");
+  const [memo, setMemo] = useState(initialActivity?.memo ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY);
-      if (saved) setCustomCategories(JSON.parse(saved) as string[]);
-    } catch {
-      setCustomCategories([]);
-    }
+    let isMounted = true;
+    const loadCategories = async () => {
+      try {
+        const categories = await fetchActivityCategoriesFromDb();
+        if (isMounted) setCustomCategories(categories ?? []);
+      } catch (error) {
+        console.error("Failed to load activity categories", error);
+      }
+    };
+    void loadCategories();
+    return () => { isMounted = false; };
   }, []);
 
   const categories = [...BASE_ACTIVITY_CATEGORIES, ...customCategories];
 
-  const addCustomCategory = () => {
+  const addCustomCategory = async () => {
     const nextCategory = customCategory.trim();
     if (!nextCategory || categories.includes(nextCategory)) return;
-    const nextCategories = [...customCategories, nextCategory];
-    setCustomCategories(nextCategories);
-    window.localStorage.setItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY, JSON.stringify(nextCategories));
-    setCategory(nextCategory);
+    const savedCategory = await createActivityCategoryInDb(nextCategory);
+    if (!savedCategory) return;
+    setCustomCategories((current) => [...current.filter((item) => item !== savedCategory), savedCategory].sort());
+    setCategory(savedCategory);
     setCustomCategory("");
     setIsCategoryEditorOpen(false);
   };
 
-  const removeCustomCategory = (target: string) => {
-    const nextCategories = customCategories.filter((item) => item !== target);
-    setCustomCategories(nextCategories);
-    window.localStorage.setItem(CUSTOM_ACTIVITY_CATEGORY_STORAGE_KEY, JSON.stringify(nextCategories));
+  const removeCustomCategory = async (target: string) => {
+    const deleted = await deleteActivityCategoryFromDb(target);
+    if (!deleted) return;
+    setCustomCategories((current) => current.filter((item) => item !== target));
     if (category === target) setCategory("기타");
   };
 
   const save = async () => {
     if (!title.trim()) return;
-    if (!confirmAction("활동을 추가할까요?")) return;
+    if (!confirmAction(initialActivity ? "활동 수정을 저장할까요?" : "활동을 추가할까요?")) return;
     setIsSaving(true);
     try {
       await onSave({
-        id: `activity-${Date.now()}`,
+        ...initialActivity,
+        id: initialActivity?.id ?? `activity-${Date.now()}`,
         date,
         title: title.trim(),
         category,
@@ -317,7 +341,7 @@ function ActivityCreateForm({
         transportMode: category === "이동" ? transportMode.trim() || undefined : undefined,
         food: category === "식사" ? food.trim() || undefined : undefined,
       });
-      onMessage("활동을 추가했어요.");
+      onMessage(initialActivity ? "활동을 수정했어요." : "활동을 추가했어요.");
       onDone();
     } finally {
       setIsSaving(false);
@@ -325,7 +349,7 @@ function ActivityCreateForm({
   };
 
   return (
-    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!title.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : "활동 추가"}</MobileSheetSubmitButton>} title="활동 추가">
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!title.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : initialActivity ? "수정 저장" : "활동 추가"}</MobileSheetSubmitButton>} title={initialActivity ? "활동 수정" : "활동 추가"}>
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
@@ -340,7 +364,7 @@ function ActivityCreateForm({
               return (
                 <span className={category === item ? "record-create-flow__category-item record-create-flow__category-item--active" : "record-create-flow__category-item"} key={item}>
                   <button aria-pressed={category === item} onClick={() => setCategory(item)} type="button">{item}</button>
-                  {isCustom ? <button aria-label={`${item} 태그 삭제`} className="record-create-flow__category-remove" onClick={() => removeCustomCategory(item)} type="button"><X aria-hidden size={11} /></button> : null}
+                  {isCustom ? <button aria-label={`${item} 태그 삭제`} className="record-create-flow__category-remove" onClick={() => void removeCustomCategory(item)} type="button"><X aria-hidden size={11} /></button> : null}
                 </span>
               );
             })}
@@ -358,11 +382,11 @@ function ActivityCreateForm({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    addCustomCategory();
+                    void addCustomCategory();
                   }
                 }}
               />
-              <button disabled={!customCategory.trim()} onClick={addCustomCategory} type="button">추가</button>
+              <button disabled={!customCategory.trim()} onClick={() => void addCustomCategory()} type="button">추가</button>
             </div>
           ) : null}
         </FormField>
@@ -448,40 +472,40 @@ function ActivityCreateForm({
 
 function PhotoCreateForm({
   defaultDate,
+  initialPhoto,
   message,
   onBack,
   onDone,
   onMessage,
   onSavePhotos,
+  onUpdatePhoto,
   linkTargets,
 }: {
   defaultDate: string;
+  initialPhoto?: LifePhotoRecord;
   message: string;
   onBack: () => void;
   onDone: () => void;
   onMessage: (value: string) => void;
   onSavePhotos: (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
+  onUpdatePhoto: (id: string, date: string, caption?: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
   linkTargets: RecordLinkTargetOption[];
 }) {
-  const [date, setDate] = useState(defaultDate);
-  const [caption, setCaption] = useState("");
+  const [date, setDate] = useState(initialPhoto?.date ?? defaultDate);
+  const [caption, setCaption] = useState(initialPhoto?.caption ?? "");
   const [files, setFiles] = useState<File[]>([]);
-  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>();
+  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>(() => initialPhoto?.linkedTargetId && initialPhoto.linkedTargetType ? { id: initialPhoto.linkedTargetId, title: initialPhoto.linkedTargetTitle ?? "연결 대상", type: initialPhoto.linkedTargetType } : undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
-    if (files.length === 0 || isSaving) return;
-    if (!confirmAction("사진을 추가할까요?")) return;
+    if ((!initialPhoto && files.length === 0) || isSaving) return;
+    if (!confirmAction(initialPhoto ? "사진 수정을 저장할까요?" : "사진을 추가할까요?")) return;
 
     setIsSaving(true);
     try {
-      await onSavePhotos(
-        date,
-        files.map((file) => ({ file })),
-        caption.trim() || undefined,
-        linkedTarget,
-      );
-      onMessage("사진을 추가했어요.");
+      if (initialPhoto) await onUpdatePhoto(initialPhoto.id, date, caption.trim() || undefined, linkedTarget);
+      else await onSavePhotos(date, files.map((file) => ({ file })), caption.trim() || undefined, linkedTarget);
+      onMessage(initialPhoto ? "사진을 수정했어요." : "사진을 추가했어요.");
       onDone();
     } finally {
       setIsSaving(false);
@@ -489,7 +513,7 @@ function PhotoCreateForm({
   };
 
   return (
-    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={files.length === 0 || isSaving} onClick={save}>{isSaving ? "저장 중..." : "사진 추가"}</MobileSheetSubmitButton>} title="사진 추가">
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={(!initialPhoto && files.length === 0) || isSaving} onClick={save}>{isSaving ? "저장 중..." : initialPhoto ? "수정 저장" : "사진 추가"}</MobileSheetSubmitButton>} title={initialPhoto ? "사진 수정" : "사진 추가"}>
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
@@ -497,14 +521,14 @@ function PhotoCreateForm({
         <FormField label="연결 대상">
           <RecordLinkTargetField date={date} onChange={setLinkedTarget} options={linkTargets} value={linkedTarget} />
         </FormField>
-        <FormField label="사진/영상">
+        {!initialPhoto ? <FormField label="사진/영상">
           <input
             accept="image/*,video/*"
             multiple
             type="file"
             onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
           />
-        </FormField>
+        </FormField> : null}
         <FormField label="설명">
           <input placeholder="예: 산책 기록, 모임 사진" value={caption} onChange={(event) => setCaption(event.target.value)} />
         </FormField>
@@ -517,6 +541,7 @@ function PhotoCreateForm({
 
 function LogCreateForm({
   defaultDate,
+  initialLog,
   message,
   onBack,
   onDone,
@@ -525,6 +550,7 @@ function LogCreateForm({
   linkTargets,
 }: {
   defaultDate: string;
+  initialLog?: DailyLogRecord;
   message: string;
   onBack: () => void;
   onDone: () => void;
@@ -532,18 +558,18 @@ function LogCreateForm({
   onSave: (date: string, content: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
   linkTargets: RecordLinkTargetOption[];
 }) {
-  const [date, setDate] = useState(defaultDate);
-  const [content, setContent] = useState("");
-  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>();
+  const [date, setDate] = useState(initialLog?.date ?? defaultDate);
+  const [content, setContent] = useState(initialLog?.content ?? "");
+  const [linkedTarget, setLinkedTarget] = useState<RecordLinkedTarget | undefined>(() => initialLog?.linkedTargetId && initialLog.linkedTargetType ? { id: initialLog.linkedTargetId, title: initialLog.linkedTargetTitle ?? "연결 대상", type: initialLog.linkedTargetType } : undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
     if (!content.trim()) return;
-    if (!confirmAction("기록을 추가할까요?")) return;
+    if (!confirmAction(initialLog ? "기록 수정을 저장할까요?" : "기록을 추가할까요?")) return;
     setIsSaving(true);
     try {
       await onSave(date, content.trim(), linkedTarget);
-      onMessage("기록을 추가했어요.");
+      onMessage(initialLog ? "기록을 수정했어요." : "기록을 추가했어요.");
       onDone();
     } finally {
       setIsSaving(false);
@@ -551,7 +577,7 @@ function LogCreateForm({
   };
 
   return (
-    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!content.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : "기록 추가"}</MobileSheetSubmitButton>} title="기록 추가">
+    <RecordCreateSheet dateLabel={formatFullDate(date)} onClose={onBack} submit={<MobileSheetSubmitButton disabled={!content.trim() || isSaving} onClick={save}>{isSaving ? "저장 중..." : initialLog ? "수정 저장" : "기록 추가"}</MobileSheetSubmitButton>} title={initialLog ? "기록 수정" : "기록 추가"}>
       <div className="record-create-flow__form">
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
@@ -683,6 +709,8 @@ function HealthCreateForm({
 
 function EventTaskCreateFlow({
   defaultDate,
+  initialEvent,
+  initialTask,
   kind,
   onBack,
   onDone,
@@ -692,6 +720,8 @@ function EventTaskCreateFlow({
   people,
 }: {
   defaultDate: string;
+  initialEvent?: CalendarEvent;
+  initialTask?: TaskItem;
   kind: "event" | "task";
   onBack: () => void;
   onCreatePerson: (name: string) => Promise<PersonRecord | null>;
@@ -700,7 +730,16 @@ function EventTaskCreateFlow({
   onSaveTask: (task: TaskItem) => Promise<void> | void;
   people: PersonRecord[];
 }) {
-  return <PlanCreateForm defaultDate={defaultDate} kind={kind} onClose={onBack} onCreatePerson={onCreatePerson} onDone={onDone} onSaveEvent={onSaveEvent} onSaveTask={onSaveTask} people={people} />;
+  return <PlanCreateForm defaultDate={defaultDate} initialEvent={initialEvent} initialTask={initialTask} kind={kind} onClose={onBack} onCreatePerson={onCreatePerson} onDone={onDone} onSaveEvent={onSaveEvent} onSaveTask={onSaveTask} people={people} />;
+}
+
+function parseCreateType(value: string | null): CreateType | null {
+  return CREATE_CHOICES.some((choice) => choice.key === value) ? value as CreateType : null;
+}
+
+function toActivityPlace(name?: string, address?: string): PlanPlace | undefined {
+  if (!name) return undefined;
+  return { address: address ?? "", latitude: 0, longitude: 0, name };
 }
 
 

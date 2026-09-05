@@ -1,63 +1,7 @@
 import { categoryDisplayOrder } from "@/features/calendar/presentation";
-import { formatDateKey, formatSelectedDate, isDateInRange, uniquePlanPlaces } from "@/features/calendar/utils";
 import type { CalendarEvent } from "@/features/calendar/data";
 import type { CalendarCategory, DayTimelineItem, ExternalCalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
-import type { EventType, PlanPlace, TaskItem } from "@/types/domain";
-
-export type LifeCalendarScope = "day" | "week" | "month" | "range";
-
-export type PeriodDaySummary = {
-  activityCount: number;
-  date: string;
-  expenseCount: number;
-  healthCount: number;
-  incomeCount: number;
-  items: DayTimelineItem[];
-  placeCount: number;
-  planCount: number;
-  recordCount: number;
-  totalCount: number;
-};
-
-export function normalizeRangeBounds(start: string, end: string) {
-  if (start <= end) return { end, start };
-  return { end: start, start: end };
-}
-
-export function getWeekBounds(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00`);
-  const start = new Date(date);
-  const weekday = date.getDay();
-  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
-  start.setDate(date.getDate() + mondayOffset);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  return { end: formatDateKey(end), start: formatDateKey(start) };
-}
-
-export function getMonthBounds(month: Date) {
-  const start = new Date(month.getFullYear(), month.getMonth(), 1);
-  const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  return { end: formatDateKey(end), start: formatDateKey(start) };
-}
-
-export function isRangeOverlapping(startDate: string, endDate: string | undefined, filterStart: string, filterEnd: string) {
-  const normalizedEndDate = endDate ?? startDate;
-  return startDate <= filterEnd && normalizedEndDate >= filterStart;
-}
-
-export function getTimelineItemDate(item: DayTimelineItem) {
-  if ("event" in item) return item.event.date;
-  if ("task" in item) return item.task.scheduledDate;
-  return item.external.date;
-}
-
-export function getScopeTitle(scope: LifeCalendarScope, start: string, end: string, currentMonth: Date) {
-  if (scope === "day") return formatSelectedDate(start);
-  if (scope === "week") return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
-  if (scope === "month") return `${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`;
-  return `${formatSelectedDate(start)} ~ ${formatSelectedDate(end)}`;
-}
+import type { EventType, TaskItem } from "@/types/domain";
 
 export function getCategories(allowedTypes?: EventType[]): CalendarCategory[] {
   const source = allowedTypes ?? categoryDisplayOrder;
@@ -108,40 +52,6 @@ export function createExternalTimelineItem(external: ExternalCalendarItem): DayT
   };
 }
 
-export function buildPeriodDaySummaries(start: string, end: string, events: CalendarEvent[], tasks: TaskItem[], externalItems: ExternalCalendarItem[]) {
-  const allDates = enumerateDates(start, end);
-  return allDates
-    .map((date) => {
-      const dayEvents = events.filter((item) => isDateInRange(date, item.date, item.endDate));
-      const dayTasks = tasks.filter((item) => isDateInRange(date, item.scheduledDate, item.dueDate));
-      const dayExternalItems = externalItems.filter((item) => item.date === date);
-      const items = [
-        ...dayTasks.map((item) => createTaskTimelineItem(item)),
-        ...dayEvents.map((item) => createEventTimelineItem(item)),
-        ...dayExternalItems.map((item) => createExternalTimelineItem(item)),
-      ];
-      const places = uniquePlanPlaces(
-        [...dayEvents, ...dayTasks]
-          .map((item) => item.place)
-          .filter((place): place is PlanPlace => Boolean(place)),
-      );
-
-      return {
-        activityCount: dayExternalItems.filter((item) => item.type === "activity").length,
-        date,
-        expenseCount: dayExternalItems.filter((item) => item.type === "expense").length,
-        healthCount: dayExternalItems.filter((item) => item.type === "workout" || item.type === "weight").length,
-        incomeCount: dayExternalItems.filter((item) => item.type === "income").length,
-        items,
-        placeCount: places.length,
-        planCount: dayEvents.length + dayTasks.length,
-        recordCount: dayExternalItems.filter((item) => item.type === "daily_log" || item.type === "photo").length,
-        totalCount: items.length,
-      } satisfies PeriodDaySummary;
-    })
-    .filter((summary) => summary.totalCount > 0);
-}
-
 export function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categories: CalendarCategory[], externalItems: ExternalCalendarItem[]) {
   const eventCount = categories.includes("event") ? events.filter((event) => event.type === "event").length : 0;
   const todoCount = categories.includes("todo") ? tasks.length : 0;
@@ -152,17 +62,6 @@ export function summarizeDay(events: CalendarEvent[], tasks: TaskItem[], categor
     todoCount,
     totalCount: eventCount + todoCount + recordCount,
   };
-}
-
-function enumerateDates(start: string, end: string) {
-  const dates: string[] = [];
-  const cursor = new Date(`${start}T00:00:00`);
-  const endDate = new Date(`${end}T00:00:00`);
-  while (cursor <= endDate) {
-    dates.push(formatDateKey(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return dates;
 }
 
 function getTimelineSortMinutes(time?: string, isAllDay = true) {
