@@ -212,6 +212,7 @@ export async function fetchLifeActivitiesFromDb() {
   const { data, error } = await supabase
     .from("life_activities")
     .select(lifeActivityColumns)
+    .eq("user_id", userId)
     .order("activity_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -246,8 +247,16 @@ export async function createLifeActivityInDb(activity: LifeActivityRecord) {
 
 export async function updateLifeActivityInDb(activity: LifeActivityRecord) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
-  const { data, error } = await supabase.from("life_activities").update(mapLifeActivityToPayload(activity)).eq("id", activity.id).select(lifeActivityColumns).single();
+  const { data, error } = await supabase
+    .from("life_activities")
+    .update(mapLifeActivityToPayload(activity))
+    .eq("id", activity.id)
+    .eq("user_id", userId)
+    .select(lifeActivityColumns)
+    .single();
   if (error) throw error;
   const savedActivity = mapLifeActivityRow(data as LifeActivityRow);
   await syncLinkedExpenseRecordInDb({
@@ -278,6 +287,8 @@ export async function updateLifeActivitiesBySourceInDb(source: {
   previousSourceType?: "todo" | "event";
 }) {
   if (!supabase) return [];
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("life_activities")
@@ -298,6 +309,7 @@ export async function updateLifeActivitiesBySourceInDb(source: {
     })
     .eq("source_id", source.sourceId)
     .eq("source_type", source.previousSourceType ?? source.sourceType)
+    .eq("user_id", userId)
     .select(lifeActivityColumns);
 
   if (error) throw error;
@@ -319,19 +331,33 @@ export async function updateLifeActivitiesBySourceInDb(source: {
 
 export async function deleteLifeActivityFromDb(id: string) {
   if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
   await deleteLinkedExpenseRecordInDb("activity", id);
-  const { error } = await supabase.from("life_activities").delete().eq("id", id);
+  const { error } = await supabase.from("life_activities").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }
 
 export async function deleteLifeActivitiesBySourceFromDb(sourceType: "todo" | "event", sourceId: string) {
   if (!supabase) return false;
-  const { data, error: selectError } = await supabase.from("life_activities").select("id").eq("source_type", sourceType).eq("source_id", sourceId);
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { data, error: selectError } = await supabase
+    .from("life_activities")
+    .select("id")
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId)
+    .eq("user_id", userId);
   if (selectError) throw selectError;
   const activityIds = ((data ?? []) as Array<{ id: string }>).map((activity) => activity.id);
   await Promise.all(activityIds.map((id) => deleteLinkedExpenseRecordInDb("activity", id)));
-  const { error } = await supabase.from("life_activities").delete().eq("source_type", sourceType).eq("source_id", sourceId);
+  const { error } = await supabase
+    .from("life_activities")
+    .delete()
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId)
+    .eq("user_id", userId);
   if (error) throw error;
   return true;
 }
@@ -344,6 +370,7 @@ export async function fetchDailyLogsFromDb() {
   const { data, error } = await supabase
     .from("daily_logs")
     .select(dailyLogColumns)
+    .eq("user_id", userId)
     .order("log_date", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -375,6 +402,8 @@ export async function createDailyLogInDb(date: string, content: string, linkedTa
 
 export async function updateDailyLogInDb(log: DailyLogRecord) {
   if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("daily_logs")
@@ -386,6 +415,7 @@ export async function updateDailyLogInDb(log: DailyLogRecord) {
       linked_target_type: log.linkedTargetType ?? null,
     })
     .eq("id", log.id)
+    .eq("user_id", userId)
     .select(dailyLogColumns)
     .single();
 
@@ -395,7 +425,9 @@ export async function updateDailyLogInDb(log: DailyLogRecord) {
 
 export async function deleteDailyLogFromDb(id: string) {
   if (!supabase) return false;
-  const { error } = await supabase.from("daily_logs").delete().eq("id", id);
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { error } = await supabase.from("daily_logs").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
 }
@@ -408,6 +440,7 @@ export async function fetchLifePhotosFromDb(date?: string) {
   const query = supabase
     .from("life_photos")
     .select(lifePhotoColumns)
+    .eq("user_id", userId)
     .order("photo_date", { ascending: true })
     .order("created_at", { ascending: false });
   const { data, error } = date ? await query.eq("photo_date", date) : await query;
@@ -424,6 +457,7 @@ export async function fetchLifePhotoMetadataFromDb(date?: string) {
   const query = supabase
     .from("life_photos")
     .select(lifePhotoColumns)
+    .eq("user_id", userId)
     .order("photo_date", { ascending: true })
     .order("created_at", { ascending: false });
   const { data, error } = date ? await query.eq("photo_date", date) : await query;
@@ -489,8 +523,10 @@ export async function uploadLifePhotosToDb(
 
 export async function deleteLifePhotoFromDb(photo: Pick<LifePhotoRecord, "filePath" | "id">) {
   if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
 
-  const { error: deleteError } = await supabase.from("life_photos").delete().eq("id", photo.id);
+  const { error: deleteError } = await supabase.from("life_photos").delete().eq("id", photo.id).eq("user_id", userId);
   if (deleteError) throw createLifePhotoDbError("life_photos metadata delete failed", deleteError);
 
   const { error: storageError } = await supabase.storage.from("life-media").remove([photo.filePath]);
@@ -499,20 +535,31 @@ export async function deleteLifePhotoFromDb(photo: Pick<LifePhotoRecord, "filePa
   return true;
 }
 
-export async function updateLifePhotoCaptionInDb(id: string, caption?: string) {
+export async function updateLifePhotoDetailsInDb(
+  id: string,
+  date: string,
+  caption?: string,
+  linkedTarget?: { id: string; title: string; type: "todo" | "event" | "activity" },
+) {
   if (!supabase) return null;
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
   const { data, error } = await supabase
     .from("life_photos")
-    .update({ caption: caption?.trim() || null })
+    .update({
+      caption: caption?.trim() || null,
+      linked_target_id: linkedTarget?.id ?? null,
+      linked_target_title: linkedTarget?.title ?? null,
+      linked_target_type: linkedTarget?.type ?? null,
+      photo_date: date,
+    })
     .eq("id", id)
     .eq("user_id", userId)
     .select(lifePhotoColumns)
     .single();
 
-  if (error) throw createLifePhotoDbError("life_photos caption update failed", error);
+  if (error) throw createLifePhotoDbError("life_photos details update failed", error);
   return mapLifePhotoRow(data as LifePhotoRow);
 }
 

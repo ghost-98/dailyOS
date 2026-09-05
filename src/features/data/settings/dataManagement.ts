@@ -5,12 +5,16 @@ const exportTables = [
   { name: "profiles", conflict: "user_id" },
   { name: "tasks", conflict: "id" },
   { name: "calendar_events", conflict: "id" },
+  { name: "life_activities", conflict: "id" },
   { name: "daily_logs", conflict: "id" },
   { name: "life_photos", conflict: "id" },
   { name: "weight_records", conflict: "id" },
   { name: "workout_sessions", conflict: "id" },
   { name: "expense_records", conflict: "id" },
   { name: "income_records", conflict: "id" },
+  { name: "people", conflict: "id" },
+  { name: "saved_places", conflict: "id" },
+  { name: "activity_categories", conflict: "id" },
 ] as const;
 
 const deleteTables = [...exportTables].reverse();

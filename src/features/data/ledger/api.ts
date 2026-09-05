@@ -212,7 +212,7 @@ export async function syncLinkedExpenseRecordInDb({
 
   if (!amount || amount <= 0) {
     if (!existing) return null;
-    const { error } = await supabase.from("expense_records").delete().eq("id", (existing as ExpenseRow).id);
+    const { error } = await supabase.from("expense_records").delete().eq("id", (existing as ExpenseRow).id).eq("user_id", userId);
     if (error) throw error;
     return null;
   }
@@ -233,6 +233,7 @@ export async function syncLinkedExpenseRecordInDb({
       .from("expense_records")
       .update(mapExpenseUpdate(record))
       .eq("id", (existing as ExpenseRow).id)
+      .eq("user_id", userId)
       .select(expenseColumns)
       .single();
 
