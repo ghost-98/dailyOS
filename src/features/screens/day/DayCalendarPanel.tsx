@@ -38,6 +38,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(true);
   const [isActivityEditMode, setIsActivityEditMode] = useState(false);
+  const [expandedBoundaryModes, setExpandedBoundaryModes] = useState<Record<"bedtime" | "wake", boolean>>({ bedtime: false, wake: false });
   const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(() => new Set());
 
   const activityItems = useMemo(
@@ -126,6 +127,10 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
     setIsTimelineOpen((current) => !current);
   };
 
+  const toggleBoundaryPlace = (mode: "bedtime" | "wake") => {
+    setExpandedBoundaryModes((current) => ({ ...current, [mode]: !current[mode] }));
+  };
+
   return (
     <div className="life-calendar-day-panel life-calendar-day-panel--mobile">
       <div className="life-calendar-day-panel__layout life-calendar-day-panel__layout--mobile">
@@ -166,6 +171,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                 boundaryEntries,
                 isActivityEditMode,
                 mode: "wake",
+                isPlaceExpanded: expandedBoundaryModes.wake,
                 onAdd: () => openBoundaryCreate("wake"),
                 onDelete: () => {
                   if (boundaryEntries.wake) void actions?.deleteActivity(boundaryEntries.wake.external.id);
@@ -173,6 +179,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                 onEdit: () => {
                   if (boundaryEntries.wake) router.push(`/m/record?edit=activity&id=${encodeURIComponent(boundaryEntries.wake.external.id)}`);
                 },
+                onTogglePlace: () => toggleBoundaryPlace("wake"),
               })}
               {timelineRows.length > 0 ? (
                 timelineRows.map((row) => {
@@ -181,7 +188,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
                     const isActivityOpen = expandedActivityIds.has(item.external.id);
                     return (
-                      <article className="life-calendar-day-timeline__item" key={item.id}>
+                      <article className={`life-calendar-day-timeline__item ${item.external.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} key={item.id}>
                         <div className="life-calendar-day-timeline__time">
                           <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
                           <div className="life-calendar-day-timeline__tags">
@@ -263,6 +270,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                 boundaryEntries,
                 isActivityEditMode,
                 mode: "bedtime",
+                isPlaceExpanded: expandedBoundaryModes.bedtime,
                 onAdd: () => openBoundaryCreate("bedtime"),
                 onDelete: () => {
                   if (boundaryEntries.bedtime) void actions?.deleteActivity(boundaryEntries.bedtime.external.id);
@@ -270,6 +278,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                 onEdit: () => {
                   if (boundaryEntries.bedtime) router.push(`/m/record?edit=activity&id=${encodeURIComponent(boundaryEntries.bedtime.external.id)}`);
                 },
+                onTogglePlace: () => toggleBoundaryPlace("bedtime"),
               })}
             </div>
           ) : null}
@@ -536,33 +545,49 @@ function renderBoundaryRow({
   boundaryEntries,
   isActivityEditMode,
   mode,
+  isPlaceExpanded,
   onAdd,
   onDelete,
   onEdit,
+  onTogglePlace,
 }: {
   actions?: DayItemActions;
   boundaryEntries: { bedtime: DayActivityItem | null; wake: DayActivityItem | null };
   isActivityEditMode: boolean;
   mode: "bedtime" | "wake";
+  isPlaceExpanded: boolean;
   onAdd: () => void;
   onDelete: () => void;
   onEdit: () => void;
+  onTogglePlace: () => void;
 }) {
   const item = mode === "wake" ? boundaryEntries.wake : boundaryEntries.bedtime;
   const hasItem = Boolean(item);
   const BoundaryIcon = mode === "wake" ? Sunrise : Moon;
   const timeLabel = item ? formatBoundaryTime(item) : "-";
   const placeLabel = item?.external.placeName ?? item?.external.memo ?? "";
+  const canTogglePlace = hasItem && Boolean(placeLabel);
 
   return (
     <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${mode}`} key={mode}>
+      <span className="life-calendar-day-boundary-row__time">{timeLabel}</span>
       <span className="life-calendar-day-boundary-row__icon">
         <BoundaryIcon aria-hidden size={15} />
       </span>
-      <div className="life-calendar-day-boundary-row__body">
-        <span className="life-calendar-day-boundary-row__time">{timeLabel}</span>
-        {hasItem && placeLabel ? <span className="life-calendar-day-boundary-row__place">{placeLabel}</span> : null}
-      </div>
+      {canTogglePlace ? (
+        <button
+          aria-expanded={isPlaceExpanded}
+          aria-label={isPlaceExpanded ? "장소 접기" : "장소 펼치기"}
+          className={`life-calendar-day-boundary-row__place-button ${isPlaceExpanded ? "life-calendar-day-boundary-row__place-button--open" : ""}`}
+          onClick={onTogglePlace}
+          type="button"
+        >
+          <span className="life-calendar-day-boundary-row__place">{placeLabel}</span>
+          <span className="life-calendar-day-boundary-row__place-toggle" aria-hidden>▾</span>
+        </button>
+      ) : (
+        <span className="life-calendar-day-boundary-row__place life-calendar-day-boundary-row__place--empty">-</span>
+      )}
       <div className="life-calendar-day-boundary-row__actions">
         {actions && isActivityEditMode && !hasItem ? (
           <button aria-label={`${mode === "wake" ? "기상" : "취침"} 추가`} className="life-calendar-day-boundary-row__add" onClick={onAdd} type="button">

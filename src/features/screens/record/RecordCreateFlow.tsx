@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Activity, Banknote, Bed, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
-import { SectionCard } from "@/components/ui/SectionCard";
 import { MobileSheetSubmitButton } from "@/components/ui/MobileSheetSubmitButton";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { formatDateKey, formatFullDate, getRoundedCurrentTime } from "@/features/calendar/dateUtils";
@@ -39,7 +38,7 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
   { icon: Sunrise, key: "wake", label: "기상" },
 ];
 
-const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "기타"];
+const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "독서", "영화", "기타"];
 
 export function RecordCreateFlow() {
   const router = useRouter();
@@ -99,13 +98,7 @@ export function RecordCreateFlow() {
     <div className="life-page">
       <div className="life-axis-view">
         {step === "choose" ? (
-          <SectionCard className="record-create-flow">
-            <header className="section-heading ui-panel-heading ui-panel-heading--compact">
-              <div className="ui-panel-heading__intro">
-                <p className="eyebrow">추가하기</p>
-                <h2>무엇을 추가할까요?</h2>
-              </div>
-            </header>
+          <div className="record-create-flow">
             <div className="record-create-flow__choices">
               {CREATE_CHOICES.map((choice) => {
                 const Icon = choice.icon;
@@ -119,7 +112,7 @@ export function RecordCreateFlow() {
                 );
               })}
             </div>
-          </SectionCard>
+          </div>
         ) : null}
 
         {step === "activity" ? (

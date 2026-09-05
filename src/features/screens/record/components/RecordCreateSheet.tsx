@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { SectionCard } from "@/components/ui/SectionCard";
 
 export function RecordCreateSheet({ children, dateLabel, onClose, submit, title }: { children: ReactNode; dateLabel: string; onClose: () => void; submit: ReactNode; title: string }) {
   return (
-    <SectionCard className="record-create-flow__sheet">
+    <div className="record-create-flow__sheet">
       <header className="record-create-flow__sheet-header">
         <div className="record-create-flow__sheet-header-row">
           <p className="eyebrow">{title}</p>
@@ -17,6 +16,6 @@ export function RecordCreateSheet({ children, dateLabel, onClose, submit, title 
       </header>
       <div className="record-create-flow__form">{children}</div>
       {submit}
-    </SectionCard>
+    </div>
   );
 }

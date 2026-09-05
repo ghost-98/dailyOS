@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { ReactNode } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { SectionCard } from "@/components/ui/SectionCard";
 
 type MobileCalendarFrameProps = {
   calendar?: ReactNode;
@@ -74,7 +73,7 @@ export function MobileCalendarFrame({
   };
 
   return (
-    <SectionCard
+    <div
       className={className ? `mobile-record-frame ${className} ${swipeDirection ? `mobile-record-frame--swipe-${swipeDirection}` : ""}`.trim() : `mobile-record-frame ${swipeDirection ? `mobile-record-frame--swipe-${swipeDirection}` : ""}`.trim()}
       onPointerDown={beginGesture}
       onPointerLeave={() => {
@@ -107,7 +106,7 @@ export function MobileCalendarFrame({
         {isCalendarOpen && calendar ? <div className="mobile-record-frame__calendar">{calendar}</div> : null}
         {children}
       </div>
-    </SectionCard>
+    </div>
   );
 }
 

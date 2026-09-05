@@ -803,7 +803,12 @@
 .mobile-record-frame {
   display: grid;
   gap: 14px;
-  padding: 16px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .mobile-record-frame__motion {
