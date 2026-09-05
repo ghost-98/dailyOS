@@ -131,6 +131,7 @@ function CalendarViewContent({
               } : undefined}
               isLoading={isLoading}
               items={selectedTimelineItems}
+              selectedDate={activeDate}
             />
           </div>
         </MobileCalendarFrame>

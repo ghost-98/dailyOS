@@ -47,10 +47,17 @@ export function RecordCreateFlow() {
   const { data, isLoading, setData, mutations } = useRecordsDataState();
   const createPerson = async (name: string) => createPersonInDb({ name });
   const editType = parseCreateType(searchParams.get("edit"));
+  const createType = parseCreateType(searchParams.get("create"));
   const editId = searchParams.get("id");
-  const [step, setStep] = useState<"choose" | CreateType>(() => editType ?? "choose");
+  const defaultDate = searchParams.get("date") ?? formatDateKey(new Date());
+  const [step, setStep] = useState<"choose" | CreateType>(() => editType ?? createType ?? "choose");
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (editType) return;
+    if (createType) setStep(createType);
+  }, [createType, editType]);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,7 +125,7 @@ export function RecordCreateFlow() {
         {step === "activity" ? (
           <ActivityCreateForm
             key={editType === "activity" ? data.activities.find((item) => item.id === editId)?.id ?? "activity-loading" : "activity-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             initialActivity={editType === "activity" ? data.activities.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
@@ -136,7 +143,7 @@ export function RecordCreateFlow() {
         {step === "log" ? (
           <LogCreateForm
             key={editType === "log" ? data.dailyLogs.find((item) => item.id === editId)?.id ?? "log-loading" : "log-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             initialLog={editType === "log" ? data.dailyLogs.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
@@ -154,7 +161,7 @@ export function RecordCreateFlow() {
 
         {step === "health" ? (
           <HealthCreateForm
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             message={message}
             onBack={() => setStep("choose")}
             onDone={finish}
@@ -173,7 +180,7 @@ export function RecordCreateFlow() {
         {step === "photo" ? (
           <PhotoCreateForm
             key={editType === "photo" ? data.lifePhotos.find((item) => item.id === editId)?.id ?? "photo-loading" : "photo-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             initialPhoto={editType === "photo" ? data.lifePhotos.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
@@ -188,7 +195,7 @@ export function RecordCreateFlow() {
         {step === "income" ? (
           <IncomeCreateForm
             key={editType === "income" ? data.incomes.find((item) => item.id === editId)?.id ?? "income-loading" : "income-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             initialRecord={editType === "income" ? data.incomes.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}
             onDone={finish}
@@ -198,7 +205,7 @@ export function RecordCreateFlow() {
 
         {step === "bedtime" || step === "wake" ? (
           <SleepWakeCreateForm
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             mode={step}
             onBack={() => setStep("choose")}
             onDone={finish}
@@ -209,7 +216,7 @@ export function RecordCreateFlow() {
         {step === "event" ? (
           <EventTaskCreateFlow
             key={editType === "event" ? data.events.find((item) => item.id === editId)?.id ?? "event-loading" : "event-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             kind="event"
             initialEvent={editType === "event" ? data.events.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}
@@ -224,7 +231,7 @@ export function RecordCreateFlow() {
         {step === "task" ? (
           <EventTaskCreateFlow
             key={editType === "task" ? data.tasks.find((item) => item.id === editId)?.id ?? "task-loading" : "task-create"}
-            defaultDate={formatDateKey(new Date())}
+            defaultDate={defaultDate}
             kind="task"
             initialTask={editType === "task" ? data.tasks.find((item) => item.id === editId) : undefined}
             onBack={() => setStep("choose")}

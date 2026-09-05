@@ -806,6 +806,19 @@
   padding: 16px;
 }
 
+.mobile-record-frame__motion {
+  display: grid;
+  gap: 14px;
+}
+
+.mobile-record-frame--swipe-next .mobile-record-frame__motion {
+  animation: mobileRecordFrameSlideNext 220ms ease;
+}
+
+.mobile-record-frame--swipe-prev .mobile-record-frame__motion {
+  animation: mobileRecordFrameSlidePrev 220ms ease;
+}
+
 .mobile-record-frame__eyebrow {
   margin: 0;
   color: var(--muted);
@@ -868,6 +881,30 @@
 
 .mobile-record-frame__calendar {
   display: grid;
+}
+
+@keyframes mobileRecordFrameSlideNext {
+  0% {
+    opacity: 0.7;
+    transform: translateX(18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mobileRecordFrameSlidePrev {
+  0% {
+    opacity: 0.7;
+    transform: translateX(-18px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .life-log-mobile-summary {

@@ -332,7 +332,7 @@
 .life-calendar-day-boundary-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 58px 28px minmax(0, 1fr);
+  grid-template-columns: 58px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   border-block: 1px solid rgba(255, 255, 255, 0.055);
@@ -354,6 +354,65 @@
   border-radius: 50%;
 }
 
+.life-calendar-day-boundary-row__body {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.life-calendar-day-boundary-row__time,
+.life-calendar-day-boundary-row__place {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.life-calendar-day-boundary-row__place {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-calendar-day-boundary-row__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-left: 8px;
+}
+
+.life-calendar-day-boundary-row__actions button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.life-calendar-day-boundary-row__add {
+  grid-auto-flow: column;
+  width: auto !important;
+  min-width: 72px;
+  gap: 5px;
+  padding: 0 10px !important;
+}
+
+.life-calendar-day-boundary-row__add span {
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .life-calendar-day-boundary-row--wake .life-calendar-day-boundary-row__icon {
   background: rgba(242, 201, 109, 0.1);
   color: #f2c96d;
@@ -362,19 +421,6 @@
 .life-calendar-day-boundary-row--bedtime .life-calendar-day-boundary-row__icon {
   background: rgba(142, 167, 255, 0.1);
   color: #aebeff;
-}
-
-.life-calendar-day-boundary-row__place {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 720;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .life-calendar-day-timeline__time span {
