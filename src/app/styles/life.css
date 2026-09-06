@@ -151,6 +151,20 @@
   white-space: nowrap;
 }
 
+.life-calendar-day-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.life-calendar-day-card__meta-value {
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .life-calendar-day-card__controls {
   display: inline-flex;
   align-items: center;
