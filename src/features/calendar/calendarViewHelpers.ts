@@ -104,6 +104,11 @@ export function getTimelineTypeOrder(type: CalendarCategory | ExternalCalendarCa
   return order[type];
 }
 
+export function getTimelineSortTitle(item: DayTimelineItem) {
+  if ("task" in item) return item.task.title;
+  if ("event" in item) return item.event.title;
+  return item.external.title;
+}
 
 
 

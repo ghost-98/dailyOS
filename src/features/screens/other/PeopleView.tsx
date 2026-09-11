@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, X } from "lucide-react";
+import { ChevronDown, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
@@ -9,14 +9,19 @@ import { PanelHeading } from "@/components/ui/PanelHeading";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
+import { formatWon } from "@/features/records/format/recordFormatters";
+import { buildRecordPeopleSummaries } from "@/features/records/search/recordsInsights";
+import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import type { PersonRecord } from "@/types/domain";
 
 export function PeopleView() {
+  const { data } = useRecordsDataState();
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [query, setQuery] = useState("");
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createMemo, setCreateMemo] = useState("");
+  const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
   const [isSavingCreate, setIsSavingCreate] = useState(false);
 
   useEffect(() => {
@@ -48,6 +53,11 @@ export function PeopleView() {
     });
   }, [people, query]);
 
+  const peopleSummaryByName = useMemo(() => {
+    const summaries = buildRecordPeopleSummaries(data.events, data.tasks, data.activities, data.expenses, data.dailyLogs, data.lifePhotos);
+    return new Map(summaries.map((summary) => [summary.name, summary]));
+  }, [data.activities, data.dailyLogs, data.events, data.expenses, data.lifePhotos, data.tasks]);
+
   const closeCreateMode = () => {
     setIsCreateMode(false);
     setCreateName("");
@@ -75,6 +85,10 @@ export function PeopleView() {
     } finally {
       setIsSavingCreate(false);
     }
+  };
+
+  const togglePerson = (personId: string) => {
+    setExpandedPersonId((current) => (current === personId ? null : personId));
   };
 
   return (
@@ -135,15 +149,52 @@ export function PeopleView() {
 
         {filteredPeople.length > 0 ? (
           <div className="life-person-buttons life-person-buttons--scroll">
-            {filteredPeople.map((person) => (
-              <article className="life-person-card" key={person.id}>
-                <span aria-hidden className="life-person-card__avatar">{getPersonInitial(person.name)}</span>
-                <div className="life-person-card__main">
-                  <strong>{person.name}</strong>
-                  {person.memo?.trim() ? <span>{person.memo}</span> : null}
+            {filteredPeople.map((person) => {
+              const isExpanded = expandedPersonId === person.id;
+              const summary = peopleSummaryByName.get(person.name);
+              const recentItem = summary?.items[0];
+              const topPlaces = summary?.places.slice(0, 3) ?? [];
+
+              return (
+              <article className={`life-person-card ${isExpanded ? "life-person-card--expanded" : ""}`} key={person.id}>
+                <button
+                  aria-expanded={isExpanded}
+                  className="life-person-card__summary"
+                  onClick={() => togglePerson(person.id)}
+                  type="button"
+                >
+                  <span aria-hidden className="life-person-card__avatar">{getPersonInitial(person.name)}</span>
+                  <span className="life-person-card__main">
+                    <strong>{person.name}</strong>
+                    <span>{person.memo?.trim() || "메모 없음"}</span>
+                  </span>
+                  <ChevronDown aria-hidden className="life-person-card__chevron" size={15} />
+                </button>
+                <div aria-hidden={!isExpanded} className="life-person-card__details">
+                  <div className="life-person-card__details-inner">
+                    <div className="life-person-card__metric-grid">
+                      <span><b>{summary?.items.length ?? 0}</b><small>함께한 수</small></span>
+                      <span><b>{summary?.photos.length ?? 0}</b><small>사진</small></span>
+                      <span><b>{summary?.logs.length ?? 0}</b><small>기록</small></span>
+                    </div>
+                    <div className="life-person-card__detail-copy">
+                      <b>최근</b>
+                      <p>{recentItem ? `${recentItem.date} · ${recentItem.title}` : "아직 연결된 활동이 없습니다."}</p>
+                    </div>
+                    <div className="life-person-card__detail-copy">
+                      <b>자주 나온 장소</b>
+                      <p>{topPlaces.length > 0 ? topPlaces.join(" · ") : "장소 기록이 아직 없습니다."}</p>
+                    </div>
+                    <div className="life-person-card__detail-copy">
+                      <b>메모</b>
+                      <p>{person.memo?.trim() || "아직 저장된 메모가 없습니다."}</p>
+                    </div>
+                    {summary && summary.expenseTotal > 0 ? <p className="life-person-card__expense">연결 지출 {formatWon(summary.expenseTotal)}</p> : null}
+                  </div>
                 </div>
               </article>
-            ))}
+            );
+            })}
           </div>
         ) : (
           <div className="life-map-empty life-map-empty--compact">

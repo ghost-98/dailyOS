@@ -517,7 +517,7 @@
 
 .life-calendar-day-photo-badge {
   display: inline-flex;
-  min-height: 24px;
+  min-height: 22px;
   align-items: center;
   gap: 5px;
   border: 1px solid rgba(251, 191, 36, 0.22);
@@ -529,6 +529,12 @@
   font-size: 0.72rem;
   font-weight: 850;
   padding: 0 9px;
+}
+
+.life-calendar-day-photo-badge--inline {
+  min-width: 34px;
+  justify-content: center;
+  padding: 0 7px;
 }
 
 .life-calendar-day-photo-badge:hover {
@@ -827,6 +833,13 @@
   white-space: nowrap;
 }
 
+.life-calendar-day-item-heading__side {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
 .life-calendar-day-item-heading__summary {
   min-width: 0;
   display: inline-flex;
@@ -854,6 +867,29 @@
   font-size: 0.9rem;
   font-weight: 820;
   letter-spacing: -0.02em;
+}
+
+.life-calendar-day-source-icon {
+  display: inline-grid;
+  width: 24px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.1);
+  color: rgb(229, 220, 255);
+}
+
+.life-calendar-day-source-icon--task {
+  border-color: rgba(125, 211, 252, 0.24);
+  background: rgba(14, 165, 233, 0.1);
+  color: rgb(186, 230, 253);
+}
+
+.life-calendar-day-source-icon--workout {
+  border-color: rgba(52, 211, 153, 0.24);
+  background: rgba(16, 185, 129, 0.1);
+  color: rgb(167, 243, 208);
 }
 
 .life-calendar-day-timeline__movement {
@@ -2752,7 +2788,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(8, 10, 16, 0.62);
+  background: rgba(5, 6, 10, 0.82);
+  backdrop-filter: blur(10px);
   padding: 0 10px 10px;
 }
 
@@ -4269,7 +4306,7 @@
 .life-search-results button {
   display: grid;
   width: 100%;
-  gap: 5px;
+  gap: 7px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.04);
@@ -4278,6 +4315,78 @@
   font: inherit;
   padding: 13px;
   text-align: left;
+}
+
+.life-search-results .life-search-result {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.085);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+    rgba(255, 255, 255, 0.025);
+}
+
+.life-search-result__head {
+  display: block;
+  min-width: 0;
+}
+
+.life-search-result__title {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.life-search-result__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-search-result__meta time {
+  color: rgba(229, 232, 240, 0.56);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.life-search-result__meta b {
+  min-height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(229, 232, 240, 0.74);
+  font-size: 0.68rem;
+  font-weight: 850;
+  padding: 2px 7px;
+}
+
+.life-search-result__facts {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+}
+
+.life-search-result__facts small {
+  display: flex;
+  max-width: 100%;
+  align-items: flex-start;
+  gap: 7px;
+  color: rgba(229, 232, 240, 0.68);
+  font-size: 0.76rem;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.life-search-result__facts svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: rgba(201, 184, 255, 0.82);
+}
+
+.life-search-result__facts small span {
+  min-width: 0;
+  white-space: normal;
 }
 
 .life-search-results button:hover {
@@ -4298,10 +4407,19 @@
 }
 
 .life-search-results p {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.life-search-results p svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: rgba(229, 232, 240, 0.46);
 }
 
 .life-people-view {
@@ -4398,22 +4516,33 @@
 }
 
 .life-person-buttons--scroll {
-  max-height: 276px;
-  overflow-y: auto;
-  padding-right: 6px;
+  overflow: visible;
 }
 
 .life-person-card {
-  display: flex;
-  gap: 11px;
-  align-items: center;
+  display: grid;
+  gap: 0;
   min-height: 58px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.065);
-  padding: 8px 2px;
+  padding: 0;
 }
 
 .life-person-card:last-child {
   border-bottom: 0;
+}
+
+.life-person-card__summary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 2px;
+  text-align: left;
 }
 
 .life-person-card__avatar {
@@ -4438,10 +4567,99 @@
   border: 0;
   background: transparent;
   color: inherit;
-  cursor: default;
+  cursor: inherit;
   font: inherit;
   padding: 0;
   text-align: left;
+}
+
+.life-person-card__chevron {
+  flex: 0 0 auto;
+  color: rgba(229, 232, 240, 0.42);
+  transition: transform 160ms ease, color 160ms ease;
+}
+
+.life-person-card--expanded .life-person-card__chevron {
+  color: rgba(229, 232, 240, 0.72);
+  transform: rotate(180deg);
+}
+
+.life-person-card__details {
+  display: grid;
+  grid-template-rows: 0fr;
+  gap: 0;
+  margin: 0 2px 10px 49px;
+  opacity: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0 11px;
+  transform: translateY(-4px);
+  transition: grid-template-rows 220ms ease, opacity 180ms ease, padding 180ms ease, transform 180ms ease;
+}
+
+.life-person-card--expanded .life-person-card__details {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  padding: 10px 11px;
+  transform: translateY(0);
+}
+
+.life-person-card__details-inner {
+  display: grid;
+  min-height: 0;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.life-person-card__metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.life-person-card__metric-grid span {
+  display: grid;
+  gap: 2px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px;
+}
+
+.life-person-card__metric-grid b {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.life-person-card__metric-grid small,
+.life-person-card__details b {
+  color: rgba(229, 232, 240, 0.58);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.life-person-card__detail-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.life-person-card__details p,
+.life-person-card__expense {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.life-person-card__expense {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.1);
+  color: rgb(253, 230, 138);
+  font-weight: 800;
+  padding: 5px 9px;
 }
 
 .life-person-card__main strong {

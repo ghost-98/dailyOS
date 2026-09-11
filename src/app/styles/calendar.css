@@ -2105,7 +2105,8 @@
   font-size: 13px;
 }
 
-.planner-place-results .planner-place-results__item--selected {
+.planner-place-results .planner-place-results__item--selected,
+.planner-place-saved-list .planner-place-results__item--selected {
   border-color: rgba(157, 178, 255, 0.4);
   background: rgba(157, 178, 255, 0.11);
   box-shadow: inset 3px 0 0 var(--violet);

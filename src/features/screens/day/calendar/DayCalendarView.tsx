@@ -4,23 +4,27 @@ import { useMemo, useState } from "react";
 import { MobileCalendarFrame } from "@/features/screens/day/calendar/components/MobileCalendarFrame";
 import { MonthCalendar } from "@/features/screens/day/calendar/components/MonthCalendar";
 import { LifeCalendarDayPanel as DayCalendarPanel } from "@/features/screens/day/DayCalendarPanel";
-import type { EventType } from "@/types/domain";
+import type { EventType, TaskItem } from "@/types/domain";
 import { useCalendarResources } from "@/features/screens/day/calendar/hooks/useCalendarResources";
 import {
   createEventTimelineItem,
   createExternalTimelineItem,
   createTaskTimelineItem,
   getCategories,
+  getTimelineSortTitle,
   getTimelineTypeOrder,
   summarizeDay,
 } from "@/features/calendar/calendarViewHelpers";
 import { formatDateKey, formatFullDate, getMonthDays, isDateInRange } from "@/features/calendar/dateUtils";
-import type { CalendarCategory, ExternalCalendarItem } from "@/features/calendar/types";
+import type { CalendarCategory, DayTimelineItem, ExternalCalendarItem } from "@/features/calendar/types";
 import type { DayItemActions } from "@/features/screens/day/dayDetailTypes";
+import type { CalendarEvent } from "@/features/calendar/data";
 type CalendarViewProps = {
   allowedTypes?: EventType[];
   defaultSelectedDate?: string | null;
+  events?: CalendarEvent[];
   externalItems?: ExternalCalendarItem[];
+  tasks?: TaskItem[];
   dayActions?: DayItemActions;
 };
 
@@ -33,11 +37,15 @@ export function DayCalendarView(props: CalendarViewProps) {
 function CalendarViewContent({
   allowedTypes,
   defaultSelectedDate = null,
+  events: controlledEvents,
   externalItems = [],
+  tasks: controlledTasks,
   dayActions,
 }: CalendarViewProps) {
   const categories = useMemo(() => getCategories(allowedTypes), [allowedTypes]);
-  const { events, isLoading, setTasks, tasks } = useCalendarResources();
+  const { events: loadedEvents, isLoading, setTasks, tasks: loadedTasks } = useCalendarResources();
+  const events = controlledEvents ?? loadedEvents;
+  const tasks = controlledTasks ?? loadedTasks;
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -55,7 +63,7 @@ function CalendarViewContent({
         ...selectedTasks.map((task) => createTaskTimelineItem(task)),
         ...selectedEvents.map((event) => createEventTimelineItem(event)),
         ...selectedExternalItems.map((external) => createExternalTimelineItem(external)),
-      ].sort((first, second) => first.sortMinutes - second.sortMinutes || getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type)),
+      ].sort(compareTimelineItems),
     [selectedEvents, selectedExternalItems, selectedTasks],
   );
   const monthCalendarCounts = useMemo(() => {
@@ -121,6 +129,7 @@ function CalendarViewContent({
                 ...dayActions,
                 toggleTask: async (task) => {
                   await dayActions.toggleTask(task);
+                  if (controlledTasks) return;
                   const isDone = task.status === "done";
                   setTasks((current) => current.map((item) => item.id === task.id ? {
                     ...item,
@@ -139,4 +148,18 @@ function CalendarViewContent({
 
     </div>
   );
+}
+
+function compareTimelineItems(first: DayTimelineItem, second: DayTimelineItem) {
+  const timeOrder = first.sortMinutes - second.sortMinutes;
+  if (timeOrder !== 0) return timeOrder;
+
+  const firstIsPlan = first.type === "todo" || first.type === "event";
+  const secondIsPlan = second.type === "todo" || second.type === "event";
+  if (firstIsPlan && secondIsPlan) {
+    const titleOrder = getTimelineSortTitle(first).localeCompare(getTimelineSortTitle(second), "ko");
+    if (titleOrder !== 0) return titleOrder;
+  }
+
+  return getTimelineTypeOrder(first.type) - getTimelineTypeOrder(second.type) || getTimelineSortTitle(first).localeCompare(getTimelineSortTitle(second), "ko");
 }
