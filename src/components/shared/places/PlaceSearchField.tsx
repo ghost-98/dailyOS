@@ -189,7 +189,12 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
             {savedPlaces.length > 0 ? (
               savedPlaces.map((place) => (
                 <div className="planner-place-saved-list__item" key={getSavedPlaceKey(place)}>
-                  <button onClick={() => { onSelect(place); setIsEditingName(false); }} type="button">
+                  <button
+                    aria-pressed={Boolean(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place))}
+                    className={selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place) ? "planner-place-results__item--selected" : undefined}
+                    onClick={() => { onSelect(place); setIsEditingName(false); }}
+                    type="button"
+                  >
                     <strong>{place.name}</strong>
                     <span>{place.address || "주소 정보 없음"}</span>
                   </button>

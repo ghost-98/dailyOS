@@ -68,8 +68,14 @@ export async function GET(request: Request) {
   const payload = await response.json();
   const items = ((payload.items ?? []) as NaverLocalItem[]).slice(0, 5);
   const places = await Promise.all(items.map((item, index) => toPlace(item, index, query)));
+  const validPlaces = places.filter(Boolean);
 
-  return NextResponse.json({ places: places.filter(Boolean) });
+  if (validPlaces.length > 0) {
+    return NextResponse.json({ places: validPlaces });
+  }
+
+  const addressPlace = await geocodeAddressPlace(query);
+  return NextResponse.json({ places: addressPlace ? [addressPlace] : [] });
 }
 
 async function toPlace(item: NaverLocalItem, index: number, query: string) {
@@ -125,6 +131,40 @@ async function geocodeAddress(address: string) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
   return { latitude, longitude };
+}
+
+async function geocodeAddressPlace(query: string) {
+  if (!query || !mapsKeyId || !mapsKey) return null;
+
+  const response = await fetch(`https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}&count=1`, {
+    headers: {
+      Accept: "application/json",
+      "x-ncp-apigw-api-key": mapsKey,
+      "x-ncp-apigw-api-key-id": mapsKeyId,
+    },
+    next: { revalidate: 0 },
+  });
+
+  if (!response.ok) return null;
+
+  const payload = await response.json();
+  const firstAddress = ((payload.addresses ?? []) as NaverGeocodeAddress[])[0];
+  if (!firstAddress?.x || !firstAddress.y) return null;
+
+  const longitude = Number(firstAddress.x);
+  const latitude = Number(firstAddress.y);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const address = firstAddress.roadAddress || firstAddress.jibunAddress || query;
+  return {
+    id: `naver-geocode-${longitude}-${latitude}`,
+    name: address,
+    address,
+    latitude,
+    longitude,
+    provider: "naver" as const,
+    providerPlaceId: `${longitude},${latitude}`,
+  };
 }
 
 function stripTags(value: string) {
