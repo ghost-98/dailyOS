@@ -9,7 +9,7 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import { formatDateKey, formatFullDate, getRoundedCurrentTime } from "@/features/calendar/dateUtils";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
-import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/data/health/api";
+import { createWeightRecordInDb } from "@/features/data/health/api";
 import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
 import type { DailyLogRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
@@ -87,7 +87,8 @@ export function RecordCreateFlow() {
     editType === "event" ? data.events.some((item) => item.id === editId) :
     editType === "log" ? data.dailyLogs.some((item) => item.id === editId) :
     editType === "photo" ? data.lifePhotos.some((item) => item.id === editId) :
-    editType === "income" ? data.incomes.some((item) => item.id === editId) : true
+    editType === "income" ? data.incomes.some((item) => item.id === editId) :
+    editType === "health" ? data.workouts.some((item) => item.id === editId) : true
   );
 
   if (editType && editId && !editTargetExists) {
@@ -154,15 +155,14 @@ export function RecordCreateFlow() {
 
         {step === "health" ? (
           <HealthCreateForm
+            key={editType === "health" ? data.workouts.find((item) => item.id === editId)?.id ?? "health-loading" : "health-create"}
             defaultDate={defaultDate}
+            initialWorkout={editType === "health" ? data.workouts.find((item) => item.id === editId) : undefined}
             message={message}
             onBack={() => setStep("choose")}
             onDone={finish}
             onMessage={setMessage}
-            onSaveWorkout={async (session) => {
-              const saved = await createWorkoutSessionInDb(session);
-              if (saved) setData((current) => ({ ...current, workouts: [saved, ...current.workouts] }));
-            }}
+            onSaveWorkout={editType === "health" ? mutations.updateWorkout : mutations.createWorkout}
             onSaveWeight={async (record) => {
               const saved = await createWeightRecordInDb(record);
               if (saved) setData((current) => ({ ...current, weights: [saved, ...current.weights] }));
@@ -596,6 +596,7 @@ function LogCreateForm({
 
 function HealthCreateForm({
   defaultDate,
+  initialWorkout,
   message,
   onBack,
   onDone,
@@ -604,6 +605,7 @@ function HealthCreateForm({
   onSaveWorkout,
 }: {
   defaultDate: string;
+  initialWorkout?: WorkoutSession;
   message: string;
   onBack: () => void;
   onDone: () => void;
@@ -611,18 +613,20 @@ function HealthCreateForm({
   onSaveWeight: (record: WeightRecord) => Promise<void> | void;
   onSaveWorkout: (session: WorkoutSession) => Promise<void> | void;
 }) {
-  const [mode, setMode] = useState<HealthMode>("weight");
-  const [date, setDate] = useState(defaultDate);
+  const [mode, setMode] = useState<HealthMode>(initialWorkout ? "running" : "weight");
+  const [date, setDate] = useState(initialWorkout?.date ?? defaultDate);
   const [weightKg, setWeightKg] = useState("");
   const [measuredAtTime, setMeasuredAtTime] = useState("");
   const [measuredFasted, setMeasuredFasted] = useState(true);
-  const [distanceKm, setDistanceKm] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState("");
-  const [durationSeconds, setDurationSeconds] = useState("");
+  const [distanceKm, setDistanceKm] = useState(initialWorkout?.distanceKm ? String(initialWorkout.distanceKm) : "");
+  const [startTime, setStartTime] = useState(initialWorkout?.startTime ?? getRoundedCurrentTime());
+  const [hasTime, setHasTime] = useState(initialWorkout ? !(initialWorkout.isAllDay ?? true) : true);
+  const [durationMinutes, setDurationMinutes] = useState(initialWorkout ? String(Math.floor((initialWorkout.durationSeconds ?? initialWorkout.durationMinutes * 60) / 60)) : "");
+  const [durationSeconds, setDurationSeconds] = useState(initialWorkout ? String((initialWorkout.durationSeconds ?? initialWorkout.durationMinutes * 60) % 60) : "");
   const [isSaving, setIsSaving] = useState(false);
 
   const save = async () => {
-    if (!confirmAction(mode === "weight" ? "체중을 추가할까요?" : "러닝을 추가할까요?")) return;
+    if (!confirmAction(initialWorkout ? "운동 수정을 저장할까요?" : mode === "weight" ? "체중을 추가할까요?" : "러닝을 추가할까요?")) return;
     setIsSaving(true);
     try {
       if (mode === "weight") {
@@ -638,16 +642,19 @@ function HealthCreateForm({
         const total = Number(durationMinutes || 0) * 60 + Number(durationSeconds || 0);
         if (!distanceKm || total <= 0) return;
         await onSaveWorkout({
-          id: `run-${Date.now()}`,
-          condition: "normal",
+          ...initialWorkout,
+          id: initialWorkout?.id ?? `run-${Date.now()}`,
+          condition: initialWorkout?.condition ?? "normal",
           date,
           distanceKm: Number(distanceKm),
           durationMinutes: Math.max(1, Math.ceil(total / 60)),
           durationSeconds: total,
-          type: "running",
+          isAllDay: !hasTime,
+          startTime: hasTime ? startTime || undefined : undefined,
+          type: initialWorkout?.type ?? "running",
         });
       }
-      onMessage(mode === "weight" ? "체중을 추가했어요." : "러닝을 추가했어요.");
+      onMessage(initialWorkout ? "운동을 수정했어요." : mode === "weight" ? "체중을 추가했어요." : "러닝을 추가했어요.");
       onDone();
     } finally {
       setIsSaving(false);
@@ -658,18 +665,18 @@ function HealthCreateForm({
     <RecordCreateSheet
       dateLabel={formatFullDate(date)}
       onClose={onBack}
-      submit={<MobileSheetSubmitButton disabled={isSaving} onClick={save}>{isSaving ? "저장 중..." : mode === "weight" ? "몸무게 추가" : "러닝 추가"}</MobileSheetSubmitButton>}
-      title="건강 추가"
+      submit={<MobileSheetSubmitButton disabled={isSaving} onClick={save}>{isSaving ? "저장 중..." : initialWorkout ? "수정 저장" : mode === "weight" ? "몸무게 추가" : "러닝 추가"}</MobileSheetSubmitButton>}
+      title={initialWorkout ? "운동 수정" : "건강 추가"}
     >
       <div className="record-create-flow__form">
-        <div className="record-create-flow__mode-switch">
+        {!initialWorkout ? <div className="record-create-flow__mode-switch">
           <button className={mode === "weight" ? "record-create-flow__mode-switch-item record-create-flow__mode-switch-item--active" : "record-create-flow__mode-switch-item"} onClick={() => setMode("weight")} type="button">
             몸무게
           </button>
           <button className={mode === "running" ? "record-create-flow__mode-switch-item record-create-flow__mode-switch-item--active" : "record-create-flow__mode-switch-item"} onClick={() => setMode("running")} type="button">
             러닝
           </button>
-        </div>
+        </div> : null}
         <FormField label="날짜">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </FormField>
@@ -690,6 +697,26 @@ function HealthCreateForm({
           </>
         ) : (
           <>
+            <FormField label="운동 시각">
+              <div className="record-create-flow__time-toggle-row" role="group" aria-label="운동 시간 설정">
+                <button
+                  aria-pressed={hasTime}
+                  className={hasTime ? "planner-option-toggle planner-option-toggle--active" : "planner-option-toggle"}
+                  onClick={() => setHasTime((current) => !current)}
+                  type="button"
+                >
+                  <span>시간 사용</span>
+                </button>
+              </div>
+              {hasTime ? (
+                <div className="record-create-flow__time-grid">
+                  <label className="record-create-flow__time-field">
+                    <span>시작 시간</span>
+                    <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+                  </label>
+                </div>
+              ) : null}
+            </FormField>
             <FormField label="거리">
               <input inputMode="decimal" placeholder="km" type="number" value={distanceKm} onChange={(event) => setDistanceKm(event.target.value)} />
             </FormField>

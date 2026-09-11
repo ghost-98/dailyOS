@@ -159,6 +159,8 @@ create table if not exists public.workout_sessions (
   workout_date date not null,
   type text not null check (type in ('running', 'stretching', 'bodyweight', 'weight', 'etc')),
   condition text not null default 'normal' check (condition in ('good', 'normal', 'low')),
+  start_time time,
+  is_all_day boolean not null default true,
   duration_minutes integer not null check (duration_minutes > 0),
   duration_seconds integer check (duration_seconds is null or duration_seconds > 0),
   distance_km numeric(7, 2) check (distance_km is null or distance_km > 0),
@@ -168,6 +170,8 @@ create table if not exists public.workout_sessions (
 );
 
 alter table public.workout_sessions
+  add column if not exists start_time time,
+  add column if not exists is_all_day boolean not null default true,
   add column if not exists distance_km numeric(7, 2) check (distance_km is null or distance_km > 0),
   add column if not exists duration_seconds integer check (duration_seconds is null or duration_seconds > 0);
 

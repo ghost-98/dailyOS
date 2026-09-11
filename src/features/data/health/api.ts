@@ -18,6 +18,8 @@ type WorkoutRow = {
   workout_date: string;
   type: WorkoutType;
   condition: WorkoutCondition;
+  start_time: string | null;
+  is_all_day: boolean | null;
   duration_minutes: number;
   duration_seconds: number | null;
   distance_km: number | string | null;
@@ -36,7 +38,7 @@ type WeightUpdate = Partial<Omit<WeightInsert, "user_id">>;
 type WorkoutUpdate = Partial<Omit<WorkoutInsert, "user_id">>;
 
 const weightColumns = "id,record_date,weight_kg,measured_fasted,measured_at,muscle_mass_kg,body_fat_percent,memo";
-const workoutColumns = "id,workout_date,type,condition,duration_minutes,duration_seconds,distance_km,memo";
+const workoutColumns = "id,workout_date,type,condition,start_time,is_all_day,duration_minutes,duration_seconds,distance_km,memo";
 
 function toNumber(value: number | string | null) {
   if (value === null) return undefined;
@@ -62,6 +64,8 @@ function mapWorkoutRow(row: WorkoutRow): WorkoutSession {
     date: row.workout_date,
     type: row.type,
     condition: row.condition,
+    startTime: row.start_time?.slice(0, 5) || undefined,
+    isAllDay: row.is_all_day ?? true,
     durationMinutes: row.duration_minutes,
     durationSeconds: row.duration_seconds ?? undefined,
     distanceKm: toNumber(row.distance_km),
@@ -100,6 +104,8 @@ function mapWorkoutInsert(session: WorkoutSession, userId: string): WorkoutInser
     workout_date: session.date,
     type: session.type,
     condition: session.condition,
+    start_time: session.isAllDay ? null : session.startTime ?? null,
+    is_all_day: session.isAllDay ?? true,
     duration_minutes: session.durationMinutes,
     duration_seconds: session.durationSeconds ?? session.durationMinutes * 60,
     distance_km: session.distanceKm ?? null,
@@ -112,6 +118,8 @@ function mapWorkoutUpdate(session: WorkoutSession): WorkoutUpdate {
     workout_date: session.date,
     type: session.type,
     condition: session.condition,
+    start_time: session.isAllDay ? null : session.startTime ?? null,
+    is_all_day: session.isAllDay ?? true,
     duration_minutes: session.durationMinutes,
     duration_seconds: session.durationSeconds ?? session.durationMinutes * 60,
     distance_km: session.distanceKm ?? null,

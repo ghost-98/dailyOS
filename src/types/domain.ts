@@ -53,6 +53,8 @@ export type WorkoutSession = {
   date: string;
   type: WorkoutType;
   condition: WorkoutCondition;
+  startTime?: string;
+  isAllDay?: boolean;
   durationMinutes: number;
   durationSeconds?: number;
   distanceKm?: number;

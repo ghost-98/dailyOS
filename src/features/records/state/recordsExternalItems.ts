@@ -71,9 +71,13 @@ export function buildRecordExternalItems(snapshot: Pick<RecordDataSnapshot, "act
       type: "activity" as const,
     })),
     ...workouts.map((workout) => ({
+      category: workout.type === "running" ? "러닝" : "운동",
       date: workout.date,
       id: workout.id,
+      isAllDay: workout.isAllDay,
       meta: workout.type === "running" ? [workout.distanceKm ? `${workout.distanceKm}km` : null, formatRunDuration(workout.durationSeconds ?? workout.durationMinutes * 60)].filter(Boolean).join(" · ") : workout.memo,
+      memo: workout.memo,
+      startTime: workout.startTime,
       title: workout.type === "running" ? "러닝 기록" : "운동 기록",
       type: "workout" as const,
     })),

@@ -5,12 +5,13 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, syncLinkedExpenseRecordInDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
+import { createWorkoutSessionInDb, deleteWorkoutSessionFromDb, updateWorkoutSessionInDb } from "@/features/data/health/api";
 import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivitiesBySourceFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivitiesBySourceInDb, updateLifeActivityInDb, updateLifePhotoDetailsInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
 import { emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
 import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
 import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
-import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem } from "@/types/domain";
+import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WorkoutSession } from "@/types/domain";
 
 export function useRecordsDataState() {
   const { data, isLoading, reload, setData } = useAsyncData({
@@ -40,6 +41,12 @@ export function useRecordsDataState() {
     const savedIncome = await createIncomeRecordInDb(record);
     if (!savedIncome) return;
     setLifeData((current) => ({ ...current, incomes: [savedIncome, ...current.incomes] }));
+  };
+
+  const createWorkout = async (session: WorkoutSession) => {
+    const savedWorkout = await createWorkoutSessionInDb(session);
+    if (!savedWorkout) return;
+    setLifeData((current) => ({ ...current, workouts: [savedWorkout, ...current.workouts] }));
   };
 
   const createEvent = async (event: CalendarEvent) => {
@@ -111,6 +118,21 @@ export function useRecordsDataState() {
     const deleted = await deleteIncomeRecordFromDb(id);
     if (!deleted) return;
     setLifeData((current) => ({ ...current, incomes: current.incomes.filter((item) => item.id !== id) }));
+  };
+
+  const updateWorkout = async (session: WorkoutSession) => {
+    const savedWorkout = await updateWorkoutSessionInDb(session);
+    if (!savedWorkout) return;
+    setLifeData((current) => ({
+      ...current,
+      workouts: current.workouts.map((item) => (item.id === savedWorkout.id ? savedWorkout : item)),
+    }));
+  };
+
+  const deleteWorkout = async (id: string) => {
+    const deleted = await deleteWorkoutSessionFromDb(id);
+    if (!deleted) return;
+    setLifeData((current) => ({ ...current, workouts: current.workouts.filter((item) => item.id !== id) }));
   };
 
   const updateDailyLog = async (log: DailyLogRecord) => {
@@ -241,9 +263,11 @@ export function useRecordsDataState() {
       createEvent,
       createIncome,
       createTask,
+      createWorkout,
       deleteIncome,
       deleteEvent,
       deleteTask,
+      deleteWorkout,
       deleteActivity,
       deleteDailyLog,
       deleteLifePhoto,
@@ -251,6 +275,7 @@ export function useRecordsDataState() {
       updateIncome,
       updateEvent,
       updateTask,
+      updateWorkout,
       updateDailyLog,
       updateLifePhotoDetails,
       uploadLifePhotos,
