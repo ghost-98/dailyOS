@@ -476,49 +476,56 @@ export async function uploadLifePhotosToDb(
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
-  const uploadedRows: LifePhotoRow[] = [];
-
-  for (const upload of uploads) {
-    const { file } = upload;
-    const extension = file.name.includes(".") ? file.name.split(".").pop() : "photo";
-    const safeExtension = extension?.replace(/[^a-zA-Z0-9]/g, "") || "photo";
-    const path = `${userId}/${date}/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
-
-    const { error: uploadError } = await supabase.storage.from("life-media").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-
-    if (uploadError) throw createLifePhotoDbError("life-media storage upload failed", uploadError);
-
-    const { data, error } = await supabase
-      .from("life_photos")
-      .insert({
-        user_id: userId,
-        photo_date: date,
-        file_name: file.name,
-        file_path: path,
-        mime_type: file.type || null,
-        size_bytes: file.size,
-        width: upload.width ?? null,
-        height: upload.height ?? null,
-        duration_seconds: upload.durationSeconds ?? null,
-        caption: caption || null,
-        linked_target_id: linkedTarget?.id ?? null,
-        linked_target_title: linkedTarget?.title ?? null,
-        linked_target_type: linkedTarget?.type ?? null,
-        taken_at: upload.takenAt ?? (file.lastModified ? new Date(file.lastModified).toISOString() : null),
-        latitude: upload.latitude ?? null,
-        longitude: upload.longitude ?? null,
-      })
-      .select(lifePhotoColumns)
-      .single();
-
-    if (error) throw createLifePhotoDbError("life_photos metadata insert failed", error);
-    uploadedRows.push(data as LifePhotoRow);
-  }
-
+  const uploadedRows = await Promise.all(uploads.map((upload) => uploadLifePhotoToDb(userId, date, upload, caption, linkedTarget)));
   return Promise.all(uploadedRows.map(mapLifePhotoRow));
+}
+
+async function uploadLifePhotoToDb(
+  userId: string,
+  date: string,
+  upload: LifeMediaUploadInput,
+  caption?: string,
+  linkedTarget?: { id: string; title: string; type: "todo" | "event" | "activity" },
+) {
+  if (!supabase) throw new Error("Supabase client is not initialized.");
+
+  const { file } = upload;
+  const extension = file.name.includes(".") ? file.name.split(".").pop() : "photo";
+  const safeExtension = extension?.replace(/[^a-zA-Z0-9]/g, "") || "photo";
+  const path = `${userId}/${date}/${Date.now()}-${crypto.randomUUID()}.${safeExtension}`;
+
+  const { error: uploadError } = await supabase.storage.from("life-media").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (uploadError) throw createLifePhotoDbError("life-media storage upload failed", uploadError);
+
+  const { data, error } = await supabase
+    .from("life_photos")
+    .insert({
+      user_id: userId,
+      photo_date: date,
+      file_name: file.name,
+      file_path: path,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+      width: upload.width ?? null,
+      height: upload.height ?? null,
+      duration_seconds: upload.durationSeconds ?? null,
+      caption: caption || null,
+      linked_target_id: linkedTarget?.id ?? null,
+      linked_target_title: linkedTarget?.title ?? null,
+      linked_target_type: linkedTarget?.type ?? null,
+      taken_at: upload.takenAt ?? (file.lastModified ? new Date(file.lastModified).toISOString() : null),
+      latitude: upload.latitude ?? null,
+      longitude: upload.longitude ?? null,
+    })
+    .select(lifePhotoColumns)
+    .single();
+
+  if (error) throw createLifePhotoDbError("life_photos metadata insert failed", error);
+  return data as LifePhotoRow;
 }
 
 export async function deleteLifePhotoFromDb(photo: Pick<LifePhotoRecord, "filePath" | "id">) {

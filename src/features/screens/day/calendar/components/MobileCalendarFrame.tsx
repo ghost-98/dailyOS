@@ -56,6 +56,7 @@ export function MobileCalendarFrame({
     if (event.pointerType === "mouse" && event.button !== 0) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("button, a, input, textarea, select, label")) return;
+    if (target?.closest("[data-date-swipe-lock], .life-calendar-day-map, .life-calendar-day-map-shell")) return;
     gestureRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
   };
 

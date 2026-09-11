@@ -1,9 +1,9 @@
 "use client";
 
-import { CalendarRange, Search } from "lucide-react";
+import { Banknote, CalendarRange, Camera, CheckCircle2, Clock, Dumbbell, MapPin, NotebookPen, Search, Tag, UsersRound, UtensilsCrossed } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { buildRecordSearchItems } from "@/features/records/search/recordsInsights";
+import { buildRecordSearchItems, type RecordSearchFactKind } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 
@@ -25,7 +25,7 @@ export function SearchView() {
 
   const filteredItems = hasQuery
     ? items.filter((item) => {
-        const matchesQuery = [item.title, item.description, item.date, item.tags.join(" ")]
+        const matchesQuery = [item.title, item.description, item.date, item.tags.join(" "), item.facts?.map((fact) => fact.text).join(" ")]
           .join(" ")
           .toLowerCase()
           .includes(normalizedQuery);
@@ -66,13 +66,24 @@ export function SearchView() {
             </div>
           ) : filteredItems.length > 0 ? (
             filteredItems.slice(0, 80).map((item) => (
-              <button key={item.id} onClick={() => router.push(`/m/day/calendar?date=${item.date}`)} type="button">
-                <span>
-                  {item.date} · {item.label}
+              <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(`/m/day/calendar?date=${item.date}`)} type="button">
+                <span className="life-search-result__head">
+                  <span className="life-search-result__title">
+                    <strong>{item.title}</strong>
+                    <span className="life-search-result__meta">
+                      <time>{item.date}</time>
+                      <b>{item.label}</b>
+                    </span>
+                  </span>
                 </span>
-                <strong>{item.title}</strong>
-                {item.description ? <p>{item.description}</p> : null}
-                {item.tags.length > 0 ? <em>{item.tags.join(" · ")}</em> : null}
+                {getSearchFacts(item).length > 0 ? (
+                  <span className="life-search-result__facts">
+                    {getSearchFacts(item).map((fact) => {
+                      const Icon = getSearchFactIcon(fact.kind);
+                      return <small key={`${fact.kind}-${fact.text}`}><Icon aria-hidden size={13} /> <span>{fact.text}</span></small>;
+                    })}
+                  </span>
+                ) : null}
               </button>
             ))
           ) : (
@@ -98,8 +109,21 @@ export function SearchView() {
   );
 }
 
+function getSearchFacts(item: ReturnType<typeof buildRecordSearchItems>[number]) {
+  return item.facts?.slice(0, 5) ?? [];
+}
 
-
-
-
-
+function getSearchFactIcon(kind: RecordSearchFactKind) {
+  return {
+    food: UtensilsCrossed,
+    memo: NotebookPen,
+    money: Banknote,
+    people: UsersRound,
+    photo: Camera,
+    place: MapPin,
+    status: CheckCircle2,
+    tag: Tag,
+    time: Clock,
+    workout: Dumbbell,
+  }[kind];
+}

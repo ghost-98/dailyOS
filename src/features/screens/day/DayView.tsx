@@ -59,6 +59,14 @@ function DayDataRouter({ initialDate }: { initialDate?: string }) {
       if (!task || !confirmAction(`"${task.title}" 할 일을 삭제할까요?`)) return;
       await mutations.deleteTask(id);
     },
+    editWorkout: async (id: string) => {
+      router.push(`/m/record?edit=health&id=${encodeURIComponent(id)}`);
+    },
+    deleteWorkout: async (id: string) => {
+      const workout = data.workouts.find((item) => item.id === id);
+      if (!workout || !confirmAction("이 운동 기록을 삭제할까요?")) return;
+      await mutations.deleteWorkout(id);
+    },
     editEvent: async (event: typeof data.events[number]) => {
       router.push(`/m/record?edit=event&id=${encodeURIComponent(event.id)}`);
     },
@@ -82,7 +90,9 @@ function DayDataRouter({ initialDate }: { initialDate?: string }) {
       <DayCalendarView
         allowedTypes={["event", "todo"]}
         defaultSelectedDate={initialDate ?? formatDateKey(new Date())}
+        events={data.events}
         externalItems={externalItems}
+        tasks={data.tasks}
         dayActions={dayActions}
       />
     </div>
