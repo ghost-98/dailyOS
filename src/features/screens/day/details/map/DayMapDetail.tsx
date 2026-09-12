@@ -3,7 +3,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { MapPlaceCard } from "@/components/shared/maps/MapPlaceCard";
 import { DayRouteMap } from "@/features/screens/day/details/map/DayRouteMap";
-import type { DayRouteMapHandle } from "@/features/screens/day/details/map/DayRouteMap";
+import type { DayRouteMapHandle, RouteStopResolutionStatus } from "@/features/screens/day/details/map/DayRouteMap";
 import type { DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
 
 export type DayMapDetailHandle = {
@@ -21,6 +21,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
   const stopItemRefs = useRef(new Map<string, HTMLElement>());
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [expandedStopIds, setExpandedStopIds] = useState<Set<string>>(() => new Set());
+  const [resolutionStatuses, setResolutionStatuses] = useState<Record<string, RouteStopResolutionStatus>>({});
 
   useImperativeHandle(ref, () => ({
     resetViewport: () => mapRef.current?.resetViewport(),
@@ -47,7 +48,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
   return (
     <div className="life-calendar-day-detail life-calendar-day-detail--map">
       <div className="life-calendar-day-drawer__map">
-        <DayRouteMap ref={mapRef} onStopSelect={handleSelectStop} stops={routeStops} />
+        <DayRouteMap ref={mapRef} onStopResolutionChange={setResolutionStatuses} onStopSelect={handleSelectStop} stops={routeStops} />
       </div>
       <div className="life-calendar-day-stop-list">
         {routeStops.length > 0 ? (
@@ -60,6 +61,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
               isExpanded={expandedStopIds.has(stop.id)}
               key={stop.id}
               name={stop.name}
+              notice={resolutionStatuses[stop.id] === "unresolved" ? "현재 지도에서 확인 안 됨" : undefined}
               onSelect={() => handleToggleStop(stop.id)}
               onShowPhotos={() => onShowPhotos(stop.photos ?? [], stop.name)}
               photoCount={stop.photos?.length ?? 0}

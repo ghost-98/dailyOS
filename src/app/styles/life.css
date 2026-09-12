@@ -289,8 +289,8 @@
 
 .life-calendar-day-timeline {
   display: grid;
-  align-content: start;
-  align-items: start;
+  align-content: flex-start;
+  align-items: flex-start;
   justify-items: stretch;
   gap: 8px;
   min-height: 0;
@@ -349,8 +349,12 @@
   grid-template-columns: 62px 26px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  border-block: 1px solid rgba(255, 255, 255, 0.055);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
   padding: 8px 2px;
+}
+
+.life-calendar-day-boundary-row:last-child {
+  border-bottom: 0;
 }
 
 .life-calendar-day-boundary-row time {
@@ -1046,16 +1050,6 @@
 .life-calendar-day-timeline__body--expanded .life-calendar-day-item-heading__toggle strong {
   overflow: visible;
   white-space: normal;
-}
-
-.life-calendar-day-item-heading__chevron {
-  flex: 0 0 auto;
-  color: var(--muted);
-  transition: transform 160ms ease;
-}
-
-.life-calendar-day-item-heading__chevron--open {
-  transform: rotate(180deg);
 }
 
 .life-calendar-day-drawer__map .life-calendar-day-map {
@@ -2534,6 +2528,11 @@
   justify-content: center;
   gap: 2px;
   padding-inline: 3px;
+}
+
+.map-place-card__notice {
+  color: #fcd34d !important;
+  font-weight: 850 !important;
 }
 
 .map-place-card__detail-content > p,

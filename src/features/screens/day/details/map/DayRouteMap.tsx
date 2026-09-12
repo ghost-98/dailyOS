@@ -20,18 +20,23 @@ export type DayRouteMapHandle = {
   resetViewport: () => void;
 };
 
+export type RouteStopResolutionStatus = "resolved" | "unresolved";
+
 export const DayRouteMap = forwardRef<DayRouteMapHandle, {
   compact?: boolean;
   onStopSelect?: (stopId: string) => void;
+  onStopResolutionChange?: (statuses: Record<string, RouteStopResolutionStatus>) => void;
   stops: DayRouteStop[];
 }>(
 function DayRouteMap({
   compact = false,
+  onStopResolutionChange,
   onStopSelect,
   stops,
 }: {
   compact?: boolean;
   onStopSelect?: (stopId: string) => void;
+  onStopResolutionChange?: (statuses: Record<string, RouteStopResolutionStatus>) => void;
   stops: DayRouteStop[];
 },
 ref) {
@@ -40,6 +45,7 @@ ref) {
   const markersRef = useRef<NaverMarker[]>([]);
   const polylineRef = useRef<NaverPolyline | null>(null);
   const onStopSelectRef = useRef(onStopSelect);
+  const onStopResolutionChangeRef = useRef(onStopResolutionChange);
   const [mapStatus, setMapStatus] = useState<"idle" | "ready" | "missing-key" | "error">("idle");
   const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, { latitude: number; longitude: number }>>({});
   const [isResolvingStops, setIsResolvingStops] = useState(false);
@@ -47,6 +53,10 @@ ref) {
   useEffect(() => {
     onStopSelectRef.current = onStopSelect;
   }, [onStopSelect]);
+
+  useEffect(() => {
+    onStopResolutionChangeRef.current = onStopResolutionChange;
+  }, [onStopResolutionChange]);
 
   useEffect(() => {
     if (!getNaverMapClientId()) {
@@ -67,8 +77,14 @@ ref) {
 
   useEffect(() => {
     const unresolvedStops = stops.filter((stop) => !hasCoordinates(stop) && (stop.address || stop.name));
+    const initialStatuses = stops.reduce<Record<string, RouteStopResolutionStatus>>((statuses, stop) => {
+      if (hasCoordinates(stop)) statuses[stop.id] = "resolved";
+      return statuses;
+    }, {});
+
     if (unresolvedStops.length === 0) {
       setIsResolvingStops(false);
+      onStopResolutionChangeRef.current?.(initialStatuses);
       return;
     }
 
@@ -79,11 +95,15 @@ ref) {
       setResolvedCoordinates((current) => {
         const next = { ...current };
         results.forEach((item) => {
-          if (!item) return;
+          if (!item || item.status !== "resolved") return;
           next[item.id] = { latitude: item.latitude, longitude: item.longitude };
         });
         return next;
       });
+      onStopResolutionChangeRef.current?.(results.reduce<Record<string, RouteStopResolutionStatus>>((statuses, item) => {
+        statuses[item.id] = item.status;
+        return statuses;
+      }, initialStatuses));
       setIsResolvingStops(false);
     });
 
@@ -237,7 +257,7 @@ async function resolveDayRouteStopCoordinates(stop: DayRouteStop) {
   for (const query of candidates) {
     const cached = dayRouteGeocodeCache.get(query);
     if (cached !== undefined) {
-      if (cached) return { id: stop.id, latitude: cached.latitude, longitude: cached.longitude };
+      if (cached) return { id: stop.id, latitude: cached.latitude, longitude: cached.longitude, status: "resolved" as const };
       continue;
     }
 
@@ -253,14 +273,14 @@ async function resolveDayRouteStopCoordinates(stop: DayRouteStop) {
 
       const resolved = { latitude: firstPlace.latitude, longitude: firstPlace.longitude };
       dayRouteGeocodeCache.set(query, resolved);
-      return { id: stop.id, latitude: resolved.latitude, longitude: resolved.longitude };
+      return { id: stop.id, latitude: resolved.latitude, longitude: resolved.longitude, status: "resolved" as const };
     } catch (error) {
       console.error("Failed to resolve day route stop", error);
       dayRouteGeocodeCache.set(query, null);
     }
   }
 
-  return null;
+  return { id: stop.id, status: "unresolved" as const };
 }
 
 function syncDayRouteMapViewport(map: NaverMap | null, bounds: NaverLatLngBounds, compact: boolean) {

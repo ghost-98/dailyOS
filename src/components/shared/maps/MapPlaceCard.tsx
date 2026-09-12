@@ -7,13 +7,14 @@ type MapPlaceCardProps = {
   isActive: boolean;
   isExpanded: boolean;
   name: string;
+  notice?: string;
   onSelect: () => void;
   onShowPhotos?: () => void;
   photoCount?: number;
   setRef?: (element: HTMLElement | null) => void;
 };
 
-export function MapPlaceCard({ address, detailLines, index, isActive, isExpanded, name, onSelect, onShowPhotos, photoCount = 0, setRef }: MapPlaceCardProps) {
+export function MapPlaceCard({ address, detailLines, index, isActive, isExpanded, name, notice, onSelect, onShowPhotos, photoCount = 0, setRef }: MapPlaceCardProps) {
   return (
     <article className={`map-place-card ${isActive ? "map-place-card--active" : ""}`} ref={setRef}>
       <button aria-expanded={isExpanded} className="map-place-card__toggle" onClick={onSelect} type="button">
@@ -28,6 +29,7 @@ export function MapPlaceCard({ address, detailLines, index, isActive, isExpanded
           ) : null}
         </div>
         <div className="map-place-card__detail-content">
+          {notice ? <p className="map-place-card__notice">{notice}</p> : null}
           {address ? <p>{address}</p> : null}
           {detailLines.length > 0 ? <div className="map-place-card__records">{detailLines.map((line, lineIndex) => <span key={`${line}-${lineIndex}`}>{line}</span>)}</div> : null}
         </div>
