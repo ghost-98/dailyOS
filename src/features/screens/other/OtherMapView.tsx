@@ -10,7 +10,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { MapPlaceCard } from "@/components/shared/maps/MapPlaceCard";
 import { OtherMapCanvas } from "@/features/screens/other/components/OtherMapCanvas";
 import type { OtherMapPlace } from "@/features/screens/other/components/OtherMapCanvas";
-import type { OtherMapCanvasHandle } from "@/features/screens/other/components/OtherMapCanvas";
+import type { MapPlaceResolutionStatus, OtherMapCanvasHandle } from "@/features/screens/other/components/OtherMapCanvas";
 import { OtherTabShell } from "@/features/screens/other/components/OtherTabShell";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDetail";
@@ -27,6 +27,7 @@ export function OtherMapView() {
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [expandedPlaceIds, setExpandedPlaceIds] = useState<Set<string>>(() => new Set());
   const [photoViewerItems, setPhotoViewerItems] = useState<LifePhotoRecord[]>([]);
+  const [resolutionStatuses, setResolutionStatuses] = useState<Record<string, MapPlaceResolutionStatus>>({});
   const mapRef = useRef<OtherMapCanvasHandle | null>(null);
   const placeCardRefs = useRef(new Map<string, HTMLElement>());
   const { data } = useRecordsDataState();
@@ -79,6 +80,7 @@ export function OtherMapView() {
         <input aria-label="지도 기록 검색" placeholder="장소, 주소, 활동 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
       <OtherMapCanvas
+        onPlaceResolutionChange={setResolutionStatuses}
         onPlaceSelect={(placeId) => {
           setActivePlaceId(placeId);
           setExpandedPlaceIds((current) => new Set(current).add(placeId));
@@ -98,6 +100,7 @@ export function OtherMapView() {
             isExpanded={expandedPlaceIds.has(place.id)}
             key={place.id}
             name={place.name}
+            notice={resolutionStatuses[place.id] === "unresolved" ? "현재 지도에서 확인 안 됨" : undefined}
             onSelect={() => {
               setActivePlaceId(place.id);
               mapRef.current?.focusPlace(place.id);
@@ -155,7 +158,8 @@ function buildPeriodPlaces(data: ReturnType<typeof useRecordsDataState>["data"],
   data.tasks.filter((task) => inPeriod(task.scheduledDate) && task.place).forEach((task) => places.push({ ...task.place!, id: `task-${task.id}`, records: [{ date: task.scheduledDate, label: "할 일", targetId: task.id, targetType: "todo", title: task.title }] }));
   data.activities.filter((activity) => inPeriod(activity.date)).forEach((activity) => {
     const record = [{ date: activity.date, label: "활동", targetId: activity.id, targetType: "activity" as const, title: activity.title }];
-    if (activity.placeName) places.push({ address: activity.placeAddress, id: `activity-${activity.id}`, name: activity.placeName, records: record });
+    const linkedPhotoPlace = data.lifePhotos.find((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id && typeof photo.latitude === "number" && typeof photo.longitude === "number");
+    if (activity.placeName) places.push({ address: activity.placeAddress, id: `activity-${activity.id}`, latitude: linkedPhotoPlace?.latitude, longitude: linkedPhotoPlace?.longitude, name: activity.placeName, records: record });
     if (activity.startPlaceName) places.push({ address: activity.startPlaceAddress, id: `activity-start-${activity.id}`, name: activity.startPlaceName, records: record });
     if (activity.endPlaceName) places.push({ address: activity.endPlaceAddress, id: `activity-end-${activity.id}`, name: activity.endPlaceName, records: record });
   });

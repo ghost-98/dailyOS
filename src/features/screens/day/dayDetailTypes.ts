@@ -30,11 +30,6 @@ export type DayRouteStop = {
   timeLabel: string;
 };
 
-export type DayResolvedRouteStop = DayRouteStop & {
-  latitude: number;
-  longitude: number;
-};
-
 export type DayFinanceTotals = {
   expense: number;
   income: number;

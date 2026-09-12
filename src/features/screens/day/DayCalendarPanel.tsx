@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, Dumbbell, MapPin, Moon, NotebookPen, Pencil, Plus, Sunrise, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, Dumbbell, Footprints, MapPin, Moon, NotebookPen, Pencil, Plus, Sunrise, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
 import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
 import { DayDetailSheet } from "@/features/screens/day/details/DayDetailSheet";
 import type {
@@ -220,7 +220,6 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                                 {item.external.category ? <b className="life-calendar-day-activity-type">{item.external.category}</b> : null}
                                 <strong>{item.external.title}</strong>
                               </span>
-                              <ChevronDown aria-hidden className={`life-calendar-day-item-heading__chevron ${isActivityOpen ? "life-calendar-day-item-heading__chevron--open" : ""}`} size={15} />
                             </button>
                             <div className="life-calendar-day-item-heading__side">
                               {linkedPhotos.length > 0 ? (
@@ -276,15 +275,13 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                               type="button"
                             >
                               <span className="life-calendar-day-item-heading__summary">
-                                <b className="life-calendar-day-activity-type">할 일</b>
+                                <span className="life-calendar-day-source-icon life-calendar-day-source-icon--task" aria-label="할 일">
+                                  <CalendarCheck2 aria-hidden size={12} />
+                                </span>
                                 <strong>{item.task.title}</strong>
                               </span>
-                              <ChevronDown aria-hidden className={`life-calendar-day-item-heading__chevron ${isTaskOpen ? "life-calendar-day-item-heading__chevron--open" : ""}`} size={15} />
                             </button>
                             <div className="life-calendar-day-item-heading__side">
-                              <span className="life-calendar-day-source-icon life-calendar-day-source-icon--task" aria-label="할 일">
-                                <CalendarCheck2 aria-hidden size={12} />
-                              </span>
                               {actions && isActivityEditMode ? <div className="life-calendar-day-item-actions">
                                 <button aria-label="할 일 수정" onClick={() => void actions.editTask(item.task)} type="button"><Pencil aria-hidden size={14} /></button>
                                 <button aria-label="할 일 삭제" onClick={() => void actions.deleteTask(item.task.id)} type="button"><Trash2 aria-hidden size={14} /></button>
@@ -321,15 +318,13 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                               type="button"
                             >
                               <span className="life-calendar-day-item-heading__summary">
-                                <b className="life-calendar-day-activity-type">{item.external.category ?? "운동"}</b>
+                                <span className="life-calendar-day-source-icon life-calendar-day-source-icon--workout" aria-label={item.external.category ?? "운동"}>
+                                  <Footprints aria-hidden size={12} />
+                                </span>
                                 <strong>{item.external.title}</strong>
                               </span>
-                              <ChevronDown aria-hidden className={`life-calendar-day-item-heading__chevron ${isWorkoutOpen ? "life-calendar-day-item-heading__chevron--open" : ""}`} size={15} />
                             </button>
                             <div className="life-calendar-day-item-heading__side">
-                              <span className="life-calendar-day-source-icon life-calendar-day-source-icon--workout" aria-label="운동">
-                                <Dumbbell aria-hidden size={12} />
-                              </span>
                               {actions && isActivityEditMode ? <div className="life-calendar-day-item-actions">
                                 <button aria-label="운동 수정" onClick={() => void actions.editWorkout(item.external.id)} type="button"><Pencil aria-hidden size={14} /></button>
                                 <button aria-label="운동 삭제" onClick={() => void actions.deleteWorkout(item.external.id)} type="button"><Trash2 aria-hidden size={14} /></button>
@@ -465,23 +460,23 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
     }
 
     if ("external" in item && item.external.type === "activity") {
+      const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
+      const photoSource = linkedPhotos.find((photo) => typeof photo.external.placeLatitude === "number" && typeof photo.external.placeLongitude === "number");
       if (item.external.placeName) {
         stops.push({
           address: item.external.placeAddress,
           id: item.id,
           label: "활동",
-          latitude: item.external.placeLatitude,
-          longitude: item.external.placeLongitude,
+          latitude: item.external.placeLatitude ?? photoSource?.external.placeLatitude,
+          longitude: item.external.placeLongitude ?? photoSource?.external.placeLongitude,
           name: item.external.placeName,
-          photos: linkedPhotosByActivityId.get(item.external.id) ?? [],
+          photos: linkedPhotos,
           sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
         });
         return;
       }
 
-      const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
-      const photoSource = linkedPhotos.find((photo) => typeof photo.external.placeLatitude === "number" && typeof photo.external.placeLongitude === "number");
       if (photoSource) {
         stops.push({
           id: item.id,

@@ -20,17 +20,28 @@ export type OtherMapCanvasHandle = {
   resetViewport: () => void;
 };
 
-export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, { onPlaceSelect?: (placeId: string) => void; places: OtherMapPlace[] }>(function OtherMapCanvas({ onPlaceSelect, places }, ref) {
+export type MapPlaceResolutionStatus = "resolved" | "unresolved";
+
+export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
+  onPlaceResolutionChange?: (statuses: Record<string, MapPlaceResolutionStatus>) => void;
+  onPlaceSelect?: (placeId: string) => void;
+  places: OtherMapPlace[];
+}>(function OtherMapCanvas({ onPlaceResolutionChange, onPlaceSelect, places }, ref) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
   const markersRef = useRef<NaverMarker[]>([]);
   const onPlaceSelectRef = useRef(onPlaceSelect);
+  const onPlaceResolutionChangeRef = useRef(onPlaceResolutionChange);
   const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, { latitude: number; longitude: number }>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "missing-key" | "error">("loading");
 
   useEffect(() => {
     onPlaceSelectRef.current = onPlaceSelect;
   }, [onPlaceSelect]);
+
+  useEffect(() => {
+    onPlaceResolutionChangeRef.current = onPlaceResolutionChange;
+  }, [onPlaceResolutionChange]);
 
   useEffect(() => {
     if (!getNaverMapClientId()) {
@@ -48,16 +59,30 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, { onPlaceSelect?:
 
   useEffect(() => {
     const unresolved = places.filter((place) => !hasCoordinates(place) && (place.address || place.name));
+    const initialStatuses = places.reduce<Record<string, MapPlaceResolutionStatus>>((statuses, place) => {
+      if (hasCoordinates(place)) statuses[place.id] = "resolved";
+      return statuses;
+    }, {});
+
+    if (unresolved.length === 0) {
+      onPlaceResolutionChangeRef.current?.(initialStatuses);
+      return;
+    }
+
     let isMounted = true;
     Promise.all(unresolved.map(resolvePlaceCoordinates)).then((results) => {
       if (!isMounted) return;
       setResolvedCoordinates((current) => {
         const next = { ...current };
         results.forEach((result) => {
-          if (result) next[result.id] = { latitude: result.latitude, longitude: result.longitude };
+          if (result.status === "resolved") next[result.id] = { latitude: result.latitude, longitude: result.longitude };
         });
         return next;
       });
+      onPlaceResolutionChangeRef.current?.(results.reduce<Record<string, MapPlaceResolutionStatus>>((statuses, result) => {
+        statuses[result.id] = result.status;
+        return statuses;
+      }, initialStatuses));
     });
     return () => { isMounted = false; };
   }, [places]);
@@ -175,14 +200,14 @@ function hasCoordinates(place: OtherMapPlace): place is OtherMapPlace & { latitu
 
 async function resolvePlaceCoordinates(place: OtherMapPlace) {
   const query = place.address?.trim() || place.name.trim();
-  if (!query) return null;
+  if (!query) return { id: place.id, status: "unresolved" as const };
   try {
     const endpoint = place.address?.trim() ? "/api/maps/geocode" : "/api/maps/search-place";
     const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
     const payload = await response.json() as { places?: Array<{ latitude: number; longitude: number }> };
     const first = payload.places?.[0];
-    return first ? { id: place.id, ...first } : null;
+    return first ? { id: place.id, latitude: first.latitude, longitude: first.longitude, status: "resolved" as const } : { id: place.id, status: "unresolved" as const };
   } catch {
-    return null;
+    return { id: place.id, status: "unresolved" as const };
   }
 }

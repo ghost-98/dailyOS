@@ -22,6 +22,7 @@ import { PlanCreateForm } from "@/features/screens/record/forms/PlanCreateForm";
 import { IncomeCreateForm } from "@/features/screens/record/forms/IncomeCreateForm";
 import { SleepWakeCreateForm } from "@/features/screens/record/forms/SleepWakeCreateForm";
 import { createActivityCategoryInDb, deleteActivityCategoryFromDb, fetchActivityCategoriesFromDb } from "@/features/data/records/activityCategories";
+import { createLifeMediaUploadInput } from "@/features/records/media/photoMetadata";
 
 type CreateType = "activity" | "task" | "event" | "log" | "health" | "photo" | "income" | "bedtime" | "wake";
 type HealthMode = "weight" | "running";
@@ -504,7 +505,7 @@ function PhotoCreateForm({
     setIsSaving(true);
     try {
       if (initialPhoto) await onUpdatePhoto(initialPhoto.id, date, caption.trim() || undefined, linkedTarget);
-      else await onSavePhotos(date, files.map((file) => ({ file })), caption.trim() || undefined, linkedTarget);
+      else await onSavePhotos(date, await Promise.all(files.map(createLifeMediaUploadInput)), caption.trim() || undefined, linkedTarget);
       onMessage(initialPhoto ? "사진을 수정했어요." : "사진을 추가했어요.");
       onDone();
     } finally {
