@@ -607,50 +607,6 @@
   gap: 4px;
 }
 
-.life-calendar-day-events {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.life-calendar-day-events__card {
-  display: grid;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.035);
-  padding: 13px;
-}
-
-.life-calendar-day-events__card span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-calendar-day-events__card strong {
-  color: var(--text);
-  font-size: 1rem;
-}
-
-.life-calendar-day-events__list {
-  display: grid;
-  gap: 6px;
-}
-
-.life-calendar-day-events__list p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.81rem;
-  line-height: 1.45;
-}
-
-.life-calendar-day-events__list b {
-  margin-right: 7px;
-  color: var(--text);
-  font-size: 0.76rem;
-}
-
 .life-calendar-day-map-shell {
   position: relative;
   min-height: 100%;
@@ -3778,90 +3734,6 @@
   font-weight: 850;
 }
 
-.life-day-timeline {
-  display: grid;
-  gap: 10px;
-  position: relative;
-}
-
-.life-day-timeline::before {
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 86px;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(201, 184, 255, 0.35), transparent);
-  content: "";
-}
-
-.life-day-timeline__item {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  gap: 18px;
-  position: relative;
-}
-
-.life-day-timeline__item > span {
-  align-self: start;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--muted);
-  font-size: 0.73rem;
-  font-weight: 900;
-  padding: 7px 8px;
-  text-align: center;
-}
-
-.life-day-timeline__item > div {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.045);
-  padding: 14px;
-}
-
-.life-day-timeline__item b {
-  color: var(--violet);
-  display: block;
-  font-size: 0.74rem;
-  font-weight: 900;
-  margin-bottom: 4px;
-}
-
-.life-day-timeline__item strong {
-  color: var(--text);
-  display: block;
-  font-size: 0.96rem;
-}
-
-.life-day-timeline__item p {
-  color: var(--muted);
-  font-size: 0.84rem;
-  font-weight: 650;
-  line-height: 1.45;
-  margin: 6px 0 0;
-}
-
-.life-day-timeline__item--activity > div {
-  border-color: rgba(132, 231, 174, 0.18);
-  background: rgba(132, 231, 174, 0.055);
-}
-
-.life-day-timeline__item--record > div {
-  border-color: rgba(201, 184, 255, 0.18);
-}
-
-.life-day-timeline__item--health > div {
-  border-color: rgba(94, 211, 255, 0.18);
-  background: rgba(94, 211, 255, 0.045);
-}
-
-.life-day-timeline__item--gap > div {
-  border-style: dashed;
-  border-color: rgba(255, 204, 102, 0.22);
-  background: rgba(255, 204, 102, 0.045);
-}
-
 .life-day-insights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -5269,40 +5141,6 @@ button:disabled {
   border-color: rgba(201, 184, 255, 0.42) !important;
   background: rgba(201, 184, 255, 0.18) !important;
   color: var(--text) !important;
-}
-
-.life-activity-state-toggle {
-  display: inline-flex;
-  width: 38px;
-  height: 38px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px !important;
-  padding: 0 !important;
-}
-
-.life-activity-state-toggle--wake {
-  border-color: rgba(125, 211, 252, 0.28) !important;
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0.08)) !important;
-  color: #c8f1ff !important;
-}
-
-.life-activity-state-toggle--sleep {
-  border-color: rgba(196, 181, 253, 0.28) !important;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0.08)) !important;
-  color: #e7ddff !important;
-}
-
-.life-activity-state-toggle--active.life-activity-state-toggle--wake {
-  border-color: rgba(125, 211, 252, 0.48) !important;
-  background: rgba(56, 189, 248, 0.22) !important;
-  color: #ffffff !important;
-}
-
-.life-activity-state-toggle--active.life-activity-state-toggle--sleep {
-  border-color: rgba(196, 181, 253, 0.5) !important;
-  background: rgba(139, 92, 246, 0.24) !important;
-  color: #ffffff !important;
 }
 
 .life-activity-state-reset {
