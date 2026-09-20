@@ -2252,7 +2252,8 @@
   overflow-y: auto;
 }
 
-.other-ledger-history__list article {
+.other-ledger-history__list article,
+.other-ledger-entry-button {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
@@ -2262,7 +2263,22 @@
   padding: 9px 13px;
 }
 
-.other-ledger-history__list article:last-child {
+.other-ledger-entry-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.other-ledger-entry-button:active {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.other-ledger-history__list article:last-child,
+.other-ledger-entry-button:last-child {
   border-bottom: 0;
 }
 
@@ -2284,25 +2300,30 @@
   color: #ff9caa;
 }
 
-.other-ledger-history__list article > div {
+.other-ledger-history__list article > div,
+.other-ledger-entry-button > div {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
 .other-ledger-history__list article > div strong,
-.other-ledger-history__list article > div span {
+.other-ledger-history__list article > div span,
+.other-ledger-entry-button > div strong,
+.other-ledger-entry-button > div span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.other-ledger-history__list article > div strong {
+.other-ledger-history__list article > div strong,
+.other-ledger-entry-button > div strong {
   color: var(--text);
   font-size: 0.82rem;
 }
 
-.other-ledger-history__list article > div span {
+.other-ledger-history__list article > div span,
+.other-ledger-entry-button > div span {
   color: var(--muted);
   font-size: 0.68rem;
 }
@@ -2980,6 +3001,10 @@
 
 .life-calendar-day-finance-group__list article:last-child {
   border-bottom: 0;
+}
+
+.life-calendar-day-finance-group__list .life-calendar-day-finance-entry--focused {
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .life-calendar-day-finance-group__list article div {

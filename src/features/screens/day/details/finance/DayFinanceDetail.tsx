@@ -1,29 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import type { DayFinanceItem, DayFinanceTotals, DayItemActions } from "@/features/screens/day/dayDetailTypes";
 
 type DayFinanceDetailProps = {
   actions?: DayItemActions;
   finance: DayFinanceTotals;
+  focusItemId?: string;
   items: DayFinanceItem[];
 };
 
-export function DayFinanceDetail({ actions, finance, items }: DayFinanceDetailProps) {
+export function DayFinanceDetail({ actions, finance, focusItemId, items }: DayFinanceDetailProps) {
   const incomeItems = items.filter((item) => item.external.type === "income");
   const expenseItems = items.filter((item) => item.external.type === "expense");
 
   return (
     <div className="life-calendar-day-detail life-calendar-day-finance-detail">
-      <FinanceGroup actions={actions} label="수입" items={incomeItems} tone="income" total={finance.income} />
-      <FinanceGroup label="지출" items={expenseItems} tone="expense" total={finance.expense} />
+      <FinanceGroup actions={actions} focusItemId={focusItemId} label="수입" items={incomeItems} tone="income" total={finance.income} />
+      <FinanceGroup focusItemId={focusItemId} label="지출" items={expenseItems} tone="expense" total={finance.expense} />
     </div>
   );
 }
 
-function FinanceGroup({ actions, label, items, tone, total }: { actions?: DayItemActions; label: string; items: DayFinanceItem[]; tone: "income" | "expense"; total: number }) {
+function FinanceGroup({ actions, focusItemId, label, items, tone, total }: { actions?: DayItemActions; focusItemId?: string; label: string; items: DayFinanceItem[]; tone: "income" | "expense"; total: number }) {
   const [isOpen, setIsOpen] = useState(false);
+  const hasFocusedItem = Boolean(focusItemId && items.some((item) => item.id === focusItemId));
+
+  useEffect(() => {
+    if (!hasFocusedItem || !focusItemId) return;
+    setIsOpen(true);
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`finance-${focusItemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusItemId, hasFocusedItem]);
 
   return (
     <section className={`life-calendar-day-finance-group life-calendar-day-finance-group--${tone}`}>
@@ -36,7 +47,7 @@ function FinanceGroup({ actions, label, items, tone, total }: { actions?: DayIte
         <div className="life-calendar-day-finance-group__list">
           {items.length > 0 ? (
             items.map((item) => (
-              <article key={item.id}>
+              <article className={item.id === focusItemId ? "life-calendar-day-finance-entry--focused" : undefined} id={`finance-${item.id}`} key={item.id}>
                 <div>
                   <strong>{item.external.title}</strong>
                   <span>{[item.timeLabel, item.external.category, item.external.meta].filter(Boolean).join(" · ")}</span>

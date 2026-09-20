@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
 import { OtherTabShell } from "@/features/screens/other/components/OtherTabShell";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 
 export function LedgerView() {
+  const router = useRouter();
   const { data } = useRecordsDataState();
   const initialPeriod = useMemo(() => getCurrentMonthPeriod(), []);
   const [startDate, setStartDate] = useState(initialPeriod.startDate);
@@ -45,13 +47,19 @@ export function LedgerView() {
         <div className="other-ledger-history__head"><span>최근 내역</span><strong>{ledger.entries.length}건</strong></div>
         <div className="other-ledger-history__list">
           {ledger.entries.length > 0 ? ledger.entries.map((entry) => (
-            <article key={entry.id}>
+            <button
+              aria-label={`${entry.title} ${entry.type === "income" ? "수입" : "지출"} 내역 보기`}
+              className="other-ledger-entry-button"
+              key={entry.id}
+              onClick={() => router.push(`/m/day?date=${entry.date}&focus=${encodeURIComponent(entry.id)}`)}
+              type="button"
+            >
               <span className={`other-ledger-entry__icon other-ledger-entry__icon--${entry.type}`}>
                 {entry.type === "income" ? <ArrowDownLeft aria-hidden size={15} /> : <ArrowUpRight aria-hidden size={15} />}
               </span>
               <div><strong>{entry.title}</strong><span>{entry.date}</span></div>
               <b className={`other-ledger-entry__amount other-ledger-entry__amount--${entry.type}`}>{entry.type === "income" ? "+" : "-"}{formatWon(entry.amount)}</b>
-            </article>
+            </button>
           )) : <div className="life-empty-state">아직 수입·지출 내역이 없어요.</div>}
         </div>
       </section>

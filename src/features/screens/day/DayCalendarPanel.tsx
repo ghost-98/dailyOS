@@ -407,6 +407,7 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
         companionCounts={companionCounts}
         finance={finance}
         financeItems={financeItems}
+        focusItemId={focusItemId}
         financeEntryCount={financeEntryCount}
         isLoading={isLoading}
         logItems={logItems}

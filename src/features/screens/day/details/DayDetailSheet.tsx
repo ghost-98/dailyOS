@@ -19,6 +19,7 @@ type DayDetailSheetProps = {
   finance: DayFinanceTotals;
   financeItems: DayFinanceItem[];
   financeEntryCount: number;
+  focusItemId?: string;
   isLoading: boolean;
   logItems: DayLogItem[];
   planItems: DayPlanItem[];
@@ -30,7 +31,7 @@ type DayDetailSheetProps = {
   onOpenPhotos: (items: DayPhotoItem[], title: string) => void;
 };
 
-export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, isLoading, logItems, planItems, photoTitle, photoViewerItems, routeStops, view, onClose, onOpenPhotos }: DayDetailSheetProps) {
+export function DayDetailSheet({ actions, companionCounts, finance, financeItems, financeEntryCount, focusItemId, isLoading, logItems, planItems, photoTitle, photoViewerItems, routeStops, view, onClose, onOpenPhotos }: DayDetailSheetProps) {
   const mapRef = useRef<DayMapDetailHandle | null>(null);
 
   if (!view) return null;
@@ -64,7 +65,7 @@ export function DayDetailSheet({ actions, companionCounts, finance, financeItems
       {view === "plans" ? <DayPlanDetail actions={actions} items={planItems} /> : null}
       {view === "map" ? <DayMapDetail isLoading={isLoading} onShowPhotos={onOpenPhotos} ref={mapRef} routeStops={routeStops} /> : null}
       {view === "companions" ? <DayCompanionDetail isLoading={isLoading} items={companionCounts} /> : null}
-      {view === "finance" ? <DayFinanceDetail actions={actions} finance={finance} items={financeItems} /> : null}
+      {view === "finance" ? <DayFinanceDetail actions={actions} finance={finance} focusItemId={focusItemId} items={financeItems} /> : null}
       {view === "logs" ? <DayLogDetail actions={actions} isLoading={isLoading} items={logItems} /> : null}
     </SlideUpSheet>
   );
