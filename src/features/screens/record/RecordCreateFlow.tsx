@@ -9,7 +9,6 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import { formatDateKey, formatFullDate, getRoundedCurrentTime } from "@/features/calendar/dateUtils";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
-import { createWeightRecordInDb } from "@/features/data/health/api";
 import { PeoplePickerField } from "@/components/shared/people/PeoplePickerField";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
 import type { DailyLogRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, PersonRecord, TaskItem, WeightRecord, WorkoutSession, LifeActivityRecord } from "@/types/domain";
@@ -44,7 +43,7 @@ const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만�
 export function RecordCreateFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data, isLoading, setData, mutations } = useRecordsDataState();
+  const { data, isLoading, mutations } = useRecordsDataState();
   const createPerson = async (name: string) => createPersonInDb({ name });
   const editType = parseCreateType(searchParams.get("edit"));
   const createType = parseCreateType(searchParams.get("create"));
@@ -164,10 +163,7 @@ export function RecordCreateFlow() {
             onDone={finish}
             onMessage={setMessage}
             onSaveWorkout={editType === "health" ? mutations.updateWorkout : mutations.createWorkout}
-            onSaveWeight={async (record) => {
-              const saved = await createWeightRecordInDb(record);
-              if (saved) setData((current) => ({ ...current, weights: [saved, ...current.weights] }));
-            }}
+            onSaveWeight={mutations.createWeight}
           />
         ) : null}
 

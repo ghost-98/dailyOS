@@ -60,8 +60,14 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   };
 
   const chooseMapPlace = (place: PlaceRecord) => {
-    onSelect(convertPlaceRecordToPlanPlace(place));
+    const nextPlace = convertPlaceRecordToPlanPlace(place);
+    onSelect(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(nextPlace) ? undefined : nextPlace);
     setMessage("");
+    setIsEditingName(false);
+  };
+
+  const chooseSavedPlace = (place: PlanPlace) => {
+    onSelect(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place) ? undefined : place);
     setIsEditingName(false);
   };
 
@@ -192,7 +198,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
                   <button
                     aria-pressed={Boolean(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place))}
                     className={selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place) ? "planner-place-results__item--selected" : undefined}
-                    onClick={() => { onSelect(place); setIsEditingName(false); }}
+                    onClick={() => chooseSavedPlace(place)}
                     type="button"
                   >
                     <strong>{place.name}</strong>

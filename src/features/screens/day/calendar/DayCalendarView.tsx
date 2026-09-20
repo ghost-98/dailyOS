@@ -24,6 +24,7 @@ type CalendarViewProps = {
   defaultSelectedDate?: string | null;
   events?: CalendarEvent[];
   externalItems?: ExternalCalendarItem[];
+  initialFocusId?: string;
   tasks?: TaskItem[];
   dayActions?: DayItemActions;
 };
@@ -39,6 +40,7 @@ function CalendarViewContent({
   defaultSelectedDate = null,
   events: controlledEvents,
   externalItems = [],
+  initialFocusId,
   tasks: controlledTasks,
   dayActions,
 }: CalendarViewProps) {
@@ -140,6 +142,7 @@ function CalendarViewContent({
               } : undefined}
               isLoading={isLoading}
               items={selectedTimelineItems}
+              focusItemId={initialFocusId}
               selectedDate={activeDate}
             />
           </div>

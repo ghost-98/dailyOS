@@ -8,13 +8,14 @@ import { useRouter } from "next/navigation";
 
 type DayViewProps = {
   initialDate?: string;
+  initialFocusId?: string;
 };
 
-export function DayView({ initialDate }: DayViewProps) {
-  return <div className="life-page"><DayDataRouter initialDate={initialDate} /></div>;
+export function DayView({ initialDate, initialFocusId }: DayViewProps) {
+  return <div className="life-page"><DayDataRouter initialDate={initialDate} initialFocusId={initialFocusId} /></div>;
 }
 
-function DayDataRouter({ initialDate }: { initialDate?: string }) {
+function DayDataRouter({ initialDate, initialFocusId }: DayViewProps) {
   const router = useRouter();
   const { data, externalItems, mutations } = useRecordsDataState();
 
@@ -92,6 +93,7 @@ function DayDataRouter({ initialDate }: { initialDate?: string }) {
         defaultSelectedDate={initialDate ?? formatDateKey(new Date())}
         events={data.events}
         externalItems={externalItems}
+        initialFocusId={initialFocusId}
         tasks={data.tasks}
         dayActions={dayActions}
       />

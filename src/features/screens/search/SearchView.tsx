@@ -66,7 +66,7 @@ export function SearchView() {
             </div>
           ) : filteredItems.length > 0 ? (
             filteredItems.slice(0, 80).map((item) => (
-              <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(`/m/day?date=${item.date}`)} type="button">
+              <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(`/m/day?date=${item.date}&focus=${encodeURIComponent(item.id)}`)} type="button">
                 <span className="life-search-result__head">
                   <span className="life-search-result__title">
                     <strong>{item.title}</strong>
