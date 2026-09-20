@@ -70,6 +70,8 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
     [items],
   );
   const linkedPhotosByActivityId = useMemo(() => buildLinkedPhotoMap(photoItems), [photoItems]);
+  const linkedLogsByActivityId = useMemo(() => buildLinkedExternalMap(logItems), [logItems]);
+  const linkedExpensesByActivityId = useMemo(() => buildLinkedExternalMap(financeItems.filter((item) => item.external.type === "expense")), [financeItems]);
   const standalonePhotoGroups = useMemo(() => buildStandalonePhotoGroups(photoItems), [photoItems]);
   const boundaryEntries = useMemo(() => {
     const wakeItems = activityItems.filter((item) => item.external.title === "기상").sort((left, right) => left.sortMinutes - right.sortMinutes || left.id.localeCompare(right.id));
@@ -235,6 +237,8 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
                   if (row.kind === "activity") {
                     const item = row.item;
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
+                    const linkedLogs = linkedLogsByActivityId.get(item.external.id) ?? [];
+                    const linkedExpenses = linkedExpensesByActivityId.get(item.external.id) ?? [];
                     const isActivityOpen = expandedActivityIds.has(item.external.id);
                     return (
                       <article className={`life-calendar-day-timeline__item ${item.external.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} id={`timeline-${item.id}`} key={item.id}>
@@ -284,6 +288,16 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
                               {item.external.food ? <p><UtensilsCrossed aria-hidden size={14} /> {item.external.food}</p> : null}
                               {item.external.amount ? <p><Banknote aria-hidden size={14} /> -{formatWon(Math.abs(item.external.amount))}</p> : null}
                               {item.external.memo ? <p><NotebookPen aria-hidden size={14} /> {item.external.memo}</p> : null}
+                              <div className="life-calendar-day-connections">
+                                <strong>연결된 기록</strong>
+                                <div>
+                                  {item.external.sourceId && item.external.sourceType ? <span>{item.external.sourceType === "todo" ? "할 일" : "이벤트"} · {item.external.sourceTitle || item.external.title}</span> : null}
+                                  {linkedPhotos.length > 0 ? <button onClick={() => openPhotoViewer(linkedPhotos, `${item.external.title} 사진`)} type="button"><Camera aria-hidden size={13} /> 사진 {linkedPhotos.length}</button> : null}
+                                  {linkedLogs.length > 0 ? <button onClick={() => setDetailView("logs")} type="button"><NotebookPen aria-hidden size={13} /> 기록 {linkedLogs.length}</button> : null}
+                                  {linkedExpenses.length > 0 ? <button onClick={() => setDetailView("finance")} type="button"><Banknote aria-hidden size={13} /> 지출 {linkedExpenses.length}</button> : null}
+                                  {!item.external.sourceId && linkedPhotos.length === 0 && linkedLogs.length === 0 && linkedExpenses.length === 0 ? <span>아직 연결된 기록이 없어요.</span> : null}
+                                </div>
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -619,6 +633,17 @@ function buildLinkedPhotoMap(photoItems: DayPhotoItem[]) {
     map.set(item.external.linkedTargetId, existing);
   });
 
+  return map;
+}
+
+function buildLinkedExternalMap<T extends Extract<DayTimelineItem, { external: ExternalCalendarItem }>>(items: T[]) {
+  const map = new Map<string, T[]>();
+  items.forEach((item) => {
+    if (item.external.linkedTargetType !== "activity" || !item.external.linkedTargetId) return;
+    const existing = map.get(item.external.linkedTargetId) ?? [];
+    existing.push(item);
+    map.set(item.external.linkedTargetId, existing);
+  });
   return map;
 }
 

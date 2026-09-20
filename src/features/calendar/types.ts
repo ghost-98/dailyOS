@@ -29,6 +29,9 @@ export type ExternalCalendarItem = {
   startTime?: string;
   transportMode?: string;
   memo?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  sourceType?: "todo" | "event";
   takenAt?: string;
   title: string;
   type: ExternalCalendarCategory;

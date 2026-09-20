@@ -2263,6 +2263,45 @@
   padding: 9px 13px;
 }
 
+.life-calendar-day-connections {
+  display: grid;
+  gap: 7px;
+  margin-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 9px;
+}
+
+.life-calendar-day-connections > strong {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.life-calendar-day-connections > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-calendar-day-connections button,
+.life-calendar-day-connections span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 5px 8px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.68rem;
+}
+
+.life-calendar-day-connections button {
+  cursor: pointer;
+  color: var(--text);
+}
+
 .other-ledger-entry-button {
   width: 100%;
   border: 0;
