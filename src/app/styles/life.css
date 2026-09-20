@@ -2341,6 +2341,26 @@
   color: #ff9caa;
 }
 
+.life-person-card__record-link,
+.map-place-card__records button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.life-person-card__record-link {
+  padding: 0;
+}
+
+.map-place-card__records button {
+  display: block;
+  width: 100%;
+  padding: 0;
+}
+
 .other-gallery-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -2,6 +2,7 @@
 
 import { ChevronDown, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
@@ -13,8 +14,10 @@ import { formatWon } from "@/features/records/format/recordFormatters";
 import { buildRecordPeopleSummaries } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import type { PersonRecord } from "@/types/domain";
+import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";
 
 export function PeopleView() {
+  const router = useRouter();
   const { data } = useRecordsDataState();
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [query, setQuery] = useState("");
@@ -179,7 +182,11 @@ export function PeopleView() {
                     </div>
                     <div className="life-person-card__detail-copy">
                       <b>최근</b>
-                      <p>{recentItem ? `${recentItem.date} · ${recentItem.title}` : "아직 연결된 활동이 없습니다."}</p>
+                      {recentItem?.focusId ? (
+                        <button className="life-person-card__record-link" onClick={() => router.push(createDayRecordHref(recentItem.date, recentItem.focusId!))} type="button">
+                          {recentItem.date} · {recentItem.title}
+                        </button>
+                      ) : <p>아직 연결된 활동이 없습니다.</p>}
                     </div>
                     <div className="life-person-card__detail-copy">
                       <b>자주 나온 장소</b>

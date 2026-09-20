@@ -4,6 +4,7 @@ import { getActivityPlaceRef } from "@/features/records/place/recordPlaces";
 import { formatActivityTime } from "@/features/records/format/recordFormatters";
 import type { RecordPlaceRef } from "@/features/records/place/recordPlaces";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import { createRecordFocusId } from "@/features/records/navigation/recordDeepLink";
 
 export type RecordContextBundle = {
   date: string;
@@ -24,6 +25,7 @@ export type RecordSearchItem = {
   date: string;
   description: string;
   facts?: RecordSearchFact[];
+  focusId?: string;
   id: string;
   label: string;
   tags: string[];
@@ -174,6 +176,7 @@ export function buildRecordPeopleSummaries(events: CalendarEvent[], tasks: TaskI
         date: event.date,
         description: formatRecordContextMeta(event.date, event.date, event.endDate, event.time, event.endTime, event.isAllDay, event.companions),
         id: `${name}-${targetType}-${event.id}`,
+        focusId: createRecordFocusId(targetType, event.id),
         label: "이벤트",
         tags: [event.place?.name, event.meta].filter(Boolean) as string[],
         title: event.title,
@@ -196,6 +199,7 @@ export function buildRecordPeopleSummaries(events: CalendarEvent[], tasks: TaskI
         date: task.scheduledDate,
         description: formatRecordContextMeta(task.scheduledDate, task.scheduledDate, task.dueDate, task.startTime, task.endTime, task.isAllDay, task.companions),
         id: `${name}-todo-${task.id}`,
+        focusId: createRecordFocusId("todo", task.id),
         label: "할일",
         tags: [task.place?.name, task.memo].filter(Boolean) as string[],
         title: task.title,
@@ -218,6 +222,7 @@ export function buildRecordPeopleSummaries(events: CalendarEvent[], tasks: TaskI
         date: activity.date,
         description: [formatActivityTime(activity), activity.placeName, activity.food, activity.memo].filter(Boolean).join(" · "),
         id: `${name}-activity-${activity.id}`,
+        focusId: createRecordFocusId("activity", activity.id),
         label: "활동",
         tags: [activity.placeName, activity.food, activity.memo].filter(Boolean) as string[],
         title: activity.title,

@@ -7,6 +7,7 @@ import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
 import { OtherTabShell } from "@/features/screens/other/components/OtherTabShell";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
+import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";
 
 export function LedgerView() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function LedgerView() {
               aria-label={`${entry.title} ${entry.type === "income" ? "수입" : "지출"} 내역 보기`}
               className="other-ledger-entry-button"
               key={entry.id}
-              onClick={() => router.push(`/m/day?date=${entry.date}&focus=${encodeURIComponent(entry.id)}`)}
+              onClick={() => router.push(createDayRecordHref(entry.date, entry.id))}
               type="button"
             >
               <span className={`other-ledger-entry__icon other-ledger-entry__icon--${entry.type}`}>

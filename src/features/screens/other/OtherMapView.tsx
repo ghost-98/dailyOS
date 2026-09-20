@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RotateCcw, Search, X } from "lucide-react";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
@@ -16,8 +17,10 @@ import { useRecordsDataState } from "@/features/records/state/useRecordsDataStat
 import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDetail";
 import { toDayPhotoItem } from "@/features/screens/other/utils/photoViewItems";
 import type { LifePhotoRecord, PlanPlace } from "@/types/domain";
+import { createDayRecordHref, createRecordFocusId } from "@/features/records/navigation/recordDeepLink";
 
 export function OtherMapView() {
+  const router = useRouter();
   const [isPlaceFormOpen, setIsPlaceFormOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlanPlace>();
@@ -105,6 +108,10 @@ export function OtherMapView() {
               setActivePlaceId(place.id);
               mapRef.current?.focusPlace(place.id);
               setExpandedPlaceIds((current) => toggleSetValue(current, place.id));
+            }}
+            onSelectDetail={(recordIndex) => {
+              const record = place.records[recordIndex];
+              if (record) router.push(createDayRecordHref(record.date, createRecordFocusId(record.targetType, record.targetId)));
             }}
             onShowPhotos={() => setPhotoViewerItems(linkedPhotos)}
             photoCount={linkedPhotos.length}
