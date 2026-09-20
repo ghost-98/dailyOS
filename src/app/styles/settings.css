@@ -80,6 +80,71 @@
   line-height: 1.5;
 }
 
+.settings-integrity-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7ed8aa;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.settings-integrity-list {
+  display: grid;
+  gap: 7px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.settings-integrity-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 8px;
+  color: var(--muted);
+}
+
+.settings-integrity-item--warning > svg {
+  color: #ffb86b;
+}
+
+.settings-integrity-item > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-integrity-item strong,
+.settings-integrity-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-integrity-item strong {
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.settings-integrity-item span {
+  font-size: 0.68rem;
+}
+
+.settings-integrity-item button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;

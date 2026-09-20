@@ -1,8 +1,9 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { Bell, Database, Download, LogOut, Mail, Save, Settings, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Bell, CheckCircle2, Database, Download, ExternalLink, LogOut, Mail, Save, ScanSearch, Settings, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { FormField } from "@/components/ui/FormField";
@@ -10,8 +11,13 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { supabase } from "@/lib/supabase";
 import { deleteDailyOSData, downloadDailyOSExport, exportDailyOSData, importDailyOSData } from "@/features/data/settings/dataManagement";
+import { inspectDataIntegrity, repairDataIntegrity } from "@/features/data/settings/dataIntegrity";
+import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
+import { clearRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 
 export function SettingsView() {
+  const router = useRouter();
+  const { data, isLoading: isLoadingRecords, reload } = useRecordsDataState();
   const { displayName: authDisplayName, profile, refreshProfile, user: authUser } = useDailyOSUser();
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -21,6 +27,10 @@ export function SettingsView() {
   const [isManagingData, setIsManagingData] = useState(false);
   const [eventAlarm, setEventAlarm] = useState(true);
   const [taskAlarm, setTaskAlarm] = useState(true);
+  const [integrityMessage, setIntegrityMessage] = useState("");
+  const [isRepairingIntegrity, setIsRepairingIntegrity] = useState(false);
+  const integrityIssues = useMemo(() => inspectDataIntegrity(data), [data]);
+  const repairableIssueCount = integrityIssues.filter((issue) => issue.repair).length;
 
   useEffect(() => {
     if (!supabase) return;
@@ -111,6 +121,24 @@ export function SettingsView() {
     }
   };
 
+  const repairIntegrity = async () => {
+    if (repairableIssueCount === 0 || isRepairingIntegrity) return;
+    if (!confirmAction(`${repairableIssueCount}개의 연결 오류를 정리할까요? 고아·중복 지출은 삭제하고 나머지 기록은 연결만 해제합니다.`)) return;
+    setIsRepairingIntegrity(true);
+    setIntegrityMessage("");
+    try {
+      const repaired = await repairDataIntegrity(data, integrityIssues);
+      clearRecordDataSnapshotCache();
+      await reload();
+      setIntegrityMessage(`${repaired}개의 연결 오류를 정리했습니다.`);
+    } catch (error) {
+      console.error("Failed to repair data integrity", error);
+      setIntegrityMessage("데이터 연결 정리에 실패했습니다. 다시 시도해 주세요.");
+    } finally {
+      setIsRepairingIntegrity(false);
+    }
+  };
+
   return (
     <div className="settings-page">
       <header className="page-header">
@@ -155,6 +183,32 @@ export function SettingsView() {
             <LogOut aria-hidden size={16} />
             로그아웃
           </ActionButton>
+        </SectionCard>
+
+        <SectionCard className="settings-card settings-integrity-card">
+          <div className="card-title">
+            <ScanSearch aria-hidden size={20} />
+            <span>데이터 상태 점검</span>
+          </div>
+          {isLoadingRecords ? (
+            <p className="settings-hint">기록 연결 상태를 확인하는 중입니다.</p>
+          ) : integrityIssues.length === 0 ? (
+            <div className="settings-integrity-ok"><CheckCircle2 aria-hidden size={18} /><span>발견된 연결 문제가 없습니다.</span></div>
+          ) : (
+            <div className="settings-integrity-list">
+              {integrityIssues.slice(0, 12).map((issue) => (
+                <div className={`settings-integrity-item settings-integrity-item--${issue.severity}`} key={issue.id}>
+                  <AlertTriangle aria-hidden size={15} />
+                  <div><strong>{issue.title}</strong><span>{issue.description}</span></div>
+                  {issue.href ? <button aria-label={`${issue.title} 기록 보기`} onClick={() => router.push(issue.href!)} type="button"><ExternalLink aria-hidden size={14} /></button> : null}
+                </div>
+              ))}
+              {integrityIssues.length > 12 ? <p className="settings-hint">그 외 {integrityIssues.length - 12}개의 문제가 더 있습니다.</p> : null}
+            </div>
+          )}
+          {repairableIssueCount > 0 ? <ActionButton disabled={isRepairingIntegrity} onClick={() => void repairIntegrity()} variant="secondary">연결 오류 {repairableIssueCount}개 정리</ActionButton> : null}
+          {integrityMessage ? <p className="settings-message">{integrityMessage}</p> : null}
+          <p className="settings-hint">자동 정리는 원본 기록을 보존합니다. 경로가 비어 있는 사진처럼 판단이 필요한 항목은 직접 확인만 제공합니다.</p>
         </SectionCard>
 
         <SectionCard className="settings-card">
