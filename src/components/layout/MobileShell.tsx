@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { mobileNav } from "@/components/layout/navigation";
+import { OfflineQueueStatus } from "@/components/layout/OfflineQueueStatus";
 
 type MobileShellProps = {
   children: ReactNode;
@@ -24,6 +25,7 @@ function MobileShellContent({ children }: MobileShellProps) {
   return (
     <div className="app-shell app-shell--mobile">
       <main className="main-panel">{children}</main>
+      <OfflineQueueStatus />
 
       <nav className="bottom-nav" aria-label="하단 메뉴">
         {mobileNav.map((item) => {
