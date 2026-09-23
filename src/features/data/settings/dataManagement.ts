@@ -14,6 +14,7 @@ const exportTables = [
   { name: "income_records", conflict: "id" },
   { name: "people", conflict: "id" },
   { name: "saved_places", conflict: "id" },
+  { name: "place_verifications", conflict: "id" },
   { name: "activity_categories", conflict: "id" },
 ] as const;
 

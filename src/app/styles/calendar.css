@@ -2112,6 +2112,16 @@
   box-shadow: inset 3px 0 0 var(--violet);
 }
 
+.planner-place-results__verification {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 750;
+}
+
+.planner-place-results__verification--unverified {
+  color: #ff9caa;
+}
+
 .planner-place-empty {
   margin: 0;
   color: var(--muted);

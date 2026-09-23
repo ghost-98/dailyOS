@@ -664,6 +664,17 @@
   font-weight: 900;
 }
 
+.life-calendar-route-marker--unverified {
+  border-color: #ff9caa;
+  background: #3a2027;
+  color: #ffb3bf;
+}
+
+.life-calendar-route-marker--checking {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
 .life-calendar-day-activity-list,
 .life-calendar-day-stop-list {
   display: grid;

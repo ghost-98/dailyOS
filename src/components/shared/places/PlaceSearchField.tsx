@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bookmark, MapPin, Pencil, Search, Star, X } from "lucide-react";
 import { deleteSavedPlaceFromDb, fetchSavedPlacesFromDb, getSavedPlaceKey, saveSavedPlaceInDb } from "@/features/data/places/api";
 import type { PlanPlace, PlaceRecord } from "@/types/domain";
+import { getPlaceVerificationKey, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState("");
@@ -14,6 +15,8 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   const [savedPlaces, setSavedPlaces] = useState<PlanPlace[]>([]);
   const [isSavingPlace, setIsSavingPlace] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const verificationTargets = useMemo(() => [...savedPlaces, ...(selectedPlace ? [selectedPlace] : [])].map((place) => ({ address: place.address, key: getPlaceVerificationKey(place), name: place.name })), [savedPlaces, selectedPlace]);
+  const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
   const isSelectedPlaceSaved = Boolean(selectedPlace && savedPlaces.some((place) => getSavedPlaceKey(place) === getSavedPlaceKey(selectedPlace)));
 
   useEffect(() => {
@@ -203,6 +206,7 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
                   >
                     <strong>{place.name}</strong>
                     <span>{place.address || "주소 정보 없음"}</span>
+                    {verificationStatuses[getPlaceVerificationKey(place)] === "unverified" ? <small className="planner-place-results__verification planner-place-results__verification--unverified">NAVER 확인 안 됨</small> : verificationStatuses[getPlaceVerificationKey(place)] === "checking" ? <small className="planner-place-results__verification">확인 중</small> : null}
                   </button>
                   <button aria-label={`${place.name} 내 장소 삭제`} onClick={() => void removeSavedPlace(place)} type="button">
                     <X aria-hidden size={11} />

@@ -3,6 +3,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLngBounds, NaverMap, NaverMarker } from "@/lib/naverMap";
+import type { PlaceVerificationStatus } from "@/features/data/places/verificationApi";
 
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 };
 
@@ -13,6 +14,7 @@ export type OtherMapPlace = {
   longitude?: number;
   name: string;
   records: Array<{ date: string; label: string; targetId: string; targetType: "activity" | "event" | "todo"; title: string }>;
+  verificationKey: string;
 };
 
 export type OtherMapCanvasHandle = {
@@ -26,7 +28,8 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
   onPlaceResolutionChange?: (statuses: Record<string, MapPlaceResolutionStatus>) => void;
   onPlaceSelect?: (placeId: string) => void;
   places: OtherMapPlace[];
-}>(function OtherMapCanvas({ onPlaceResolutionChange, onPlaceSelect, places }, ref) {
+  verificationStatuses?: Record<string, PlaceVerificationStatus>;
+}>(function OtherMapCanvas({ onPlaceResolutionChange, onPlaceSelect, places, verificationStatuses = {} }, ref) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
   const markersRef = useRef<NaverMarker[]>([]);
@@ -116,10 +119,11 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
 
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = visiblePlaces.map((place, index) => {
+      const verificationStatus = verificationStatuses[place.verificationKey];
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 18),
-          content: `<div class="life-calendar-route-marker"><span>${index + 1}</span></div>`,
+          content: `<div class="life-calendar-route-marker ${verificationStatus === "unverified" ? "life-calendar-route-marker--unverified" : verificationStatus === "checking" ? "life-calendar-route-marker--checking" : ""}"><span>${index + 1}</span></div>`,
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
@@ -146,7 +150,7 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
     }
 
     fitVisiblePlaces(mapRef.current, visiblePlaces);
-  }, [status, visiblePlaces]);
+  }, [status, verificationStatuses, visiblePlaces]);
 
   useImperativeHandle(ref, () => ({
     focusPlace: (placeId: string) => {
