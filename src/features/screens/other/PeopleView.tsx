@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Plus, Search, X } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
@@ -9,16 +9,17 @@ import { IconButton } from "@/components/ui/IconButton";
 import { PanelHeading } from "@/components/ui/PanelHeading";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
-import { createPersonInDb, fetchPeopleFromDb } from "@/features/data/people/api";
+import { createPersonInDb, deletePersonFromDb, fetchPeopleFromDb, updatePersonInDb } from "@/features/data/people/api";
 import { formatWon } from "@/features/records/format/recordFormatters";
 import { buildRecordPeopleSummaries } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import type { PersonRecord } from "@/types/domain";
 import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";
+import { clearRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 
 export function PeopleView() {
   const router = useRouter();
-  const { data } = useRecordsDataState();
+  const { data, reload } = useRecordsDataState();
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [query, setQuery] = useState("");
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -26,6 +27,11 @@ export function PeopleView() {
   const [createMemo, setCreateMemo] = useState("");
   const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
   const [isSavingCreate, setIsSavingCreate] = useState(false);
+  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editMemo, setEditMemo] = useState("");
+  const [isSavingPerson, setIsSavingPerson] = useState(false);
+  const [personMessage, setPersonMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -94,6 +100,58 @@ export function PeopleView() {
     setExpandedPersonId((current) => (current === personId ? null : personId));
   };
 
+  const startEditingPerson = (person: PersonRecord) => {
+    setEditingPersonId(person.id);
+    setEditName(person.name);
+    setEditMemo(person.memo ?? "");
+    setPersonMessage("");
+  };
+
+  const stopEditingPerson = () => {
+    setEditingPersonId(null);
+    setEditName("");
+    setEditMemo("");
+  };
+
+  const savePerson = async (person: PersonRecord) => {
+    const nextName = editName.trim();
+    if (!nextName || isSavingPerson) return;
+    if (!confirmAction(`"${person.name}" 사람 정보를 저장할까요?`)) return;
+    setIsSavingPerson(true);
+    setPersonMessage("");
+    try {
+      const saved = await updatePersonInDb({ ...person, memo: editMemo.trim() || undefined, name: nextName }, person.name);
+      if (!saved) return;
+      setPeople((current) => current.map((item) => item.id === saved.id ? saved : item).sort((left, right) => left.name.localeCompare(right.name)));
+      clearRecordDataSnapshotCache();
+      await reload();
+      stopEditingPerson();
+    } catch (error) {
+      console.error("Failed to update person", error);
+      setPersonMessage("사람 정보를 수정하지 못했습니다.");
+    } finally {
+      setIsSavingPerson(false);
+    }
+  };
+
+  const deletePerson = async (person: PersonRecord) => {
+    if (isSavingPerson || !confirmAction(`"${person.name}"을 사람 목록에서 삭제할까요? 과거 활동의 이름 기록은 유지됩니다.`)) return;
+    setIsSavingPerson(true);
+    setPersonMessage("");
+    try {
+      const deleted = await deletePersonFromDb(person.id);
+      if (!deleted) return;
+      setPeople((current) => current.filter((item) => item.id !== person.id));
+      if (expandedPersonId === person.id) setExpandedPersonId(null);
+      if (editingPersonId === person.id) stopEditingPerson();
+    } catch (error) {
+      console.error("Failed to delete person", error);
+      setPersonMessage("사람을 삭제하지 못했습니다.");
+    } finally {
+      setIsSavingPerson(false);
+    }
+  };
+
   return (
     <div className="life-tab-panel">
       <SectionCard className="life-people-list ui-workspace-panel ui-workspace-panel--tall">
@@ -157,6 +215,7 @@ export function PeopleView() {
               const summary = peopleSummaryByName.get(person.name);
               const recentItem = summary?.items[0];
               const topPlaces = summary?.places.slice(0, 3) ?? [];
+              const isEditing = editingPersonId === person.id;
 
               return (
               <article className={`life-person-card ${isExpanded ? "life-person-card--expanded" : ""}`} key={person.id}>
@@ -175,6 +234,17 @@ export function PeopleView() {
                 </button>
                 <div aria-hidden={!isExpanded} className="life-person-card__details">
                   <div className="life-person-card__details-inner">
+                    {isEditing ? (
+                      <div className="life-person-card__edit-form">
+                        <FormField label="이름"><input value={editName} onChange={(event) => setEditName(event.target.value)} /></FormField>
+                        <FormField label="메모"><textarea rows={3} value={editMemo} onChange={(event) => setEditMemo(event.target.value)} /></FormField>
+                        <div className="life-person-card__edit-actions">
+                          <ActionButton disabled={isSavingPerson || !editName.trim()} onClick={() => void savePerson(person)}>{isSavingPerson ? "저장 중" : "저장"}</ActionButton>
+                          <ActionButton disabled={isSavingPerson} onClick={stopEditingPerson} variant="secondary">취소</ActionButton>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
                     <div className="life-person-card__metric-grid">
                       <span><b>{summary?.items.length ?? 0}</b><small>함께한 수</small></span>
                       <span><b>{summary?.photos.length ?? 0}</b><small>사진</small></span>
@@ -197,6 +267,13 @@ export function PeopleView() {
                       <p>{person.memo?.trim() || "아직 저장된 메모가 없습니다."}</p>
                     </div>
                     {summary && summary.expenseTotal > 0 ? <p className="life-person-card__expense">연결 지출 {formatWon(summary.expenseTotal)}</p> : null}
+                    <div className="life-person-card__manage-actions">
+                      <button onClick={() => startEditingPerson(person)} type="button"><Pencil aria-hidden size={14} /> 수정</button>
+                      <button className="life-person-card__delete" onClick={() => void deletePerson(person)} type="button"><Trash2 aria-hidden size={14} /> 삭제</button>
+                    </div>
+                      </>
+                    )}
+                    {personMessage && (isEditing || isExpanded) ? <p className="life-person-card__message">{personMessage}</p> : null}
                   </div>
                 </div>
               </article>

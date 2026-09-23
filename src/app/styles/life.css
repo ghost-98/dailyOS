@@ -4580,6 +4580,54 @@
   line-height: 1.45;
 }
 
+.life-person-card__manage-actions,
+.life-person-card__edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 8px;
+}
+
+.life-person-card__manage-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 6px 9px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.life-person-card__manage-actions .life-person-card__delete {
+  color: #ff9caa;
+}
+
+.life-person-card__edit-form {
+  display: grid;
+  gap: 10px;
+}
+
+.life-person-card__edit-form input,
+.life-person-card__edit-form textarea {
+  width: 100%;
+}
+
+.life-person-card__edit-actions .ui-action-button {
+  min-height: 34px;
+}
+
+.life-person-card__message {
+  color: #ff9caa !important;
+  font-size: 0.72rem !important;
+}
+
 .life-person-card__expense {
   width: fit-content;
   border-radius: 999px;
