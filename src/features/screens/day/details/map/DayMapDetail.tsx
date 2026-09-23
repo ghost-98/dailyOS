@@ -1,10 +1,11 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { MapPlaceCard } from "@/components/shared/maps/MapPlaceCard";
 import { DayRouteMap } from "@/features/screens/day/details/map/DayRouteMap";
 import type { DayRouteMapHandle, RouteStopResolutionStatus } from "@/features/screens/day/details/map/DayRouteMap";
 import type { DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
+import { getPlaceVerificationKey, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export type DayMapDetailHandle = {
   resetViewport: () => void;
@@ -22,6 +23,8 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [expandedStopIds, setExpandedStopIds] = useState<Set<string>>(() => new Set());
   const [resolutionStatuses, setResolutionStatuses] = useState<Record<string, RouteStopResolutionStatus>>({});
+  const verificationTargets = useMemo(() => routeStops.map((stop) => ({ address: stop.address, key: getPlaceVerificationKey(stop), name: stop.name })), [routeStops]);
+  const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
 
   useImperativeHandle(ref, () => ({
     resetViewport: () => mapRef.current?.resetViewport(),
@@ -48,7 +51,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
   return (
     <div className="life-calendar-day-detail life-calendar-day-detail--map">
       <div className="life-calendar-day-drawer__map">
-        <DayRouteMap ref={mapRef} onStopResolutionChange={setResolutionStatuses} onStopSelect={handleSelectStop} stops={routeStops} />
+        <DayRouteMap ref={mapRef} onStopResolutionChange={setResolutionStatuses} onStopSelect={handleSelectStop} stops={routeStops} verificationStatuses={verificationStatuses} />
       </div>
       <div className="life-calendar-day-stop-list">
         {routeStops.length > 0 ? (
@@ -61,7 +64,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
               isExpanded={expandedStopIds.has(stop.id)}
               key={stop.id}
               name={stop.name}
-              notice={resolutionStatuses[stop.id] === "unresolved" ? "현재 지도에서 확인 안 됨" : undefined}
+              notice={verificationStatuses[getPlaceVerificationKey(stop)] === "unverified" ? "NAVER에서 현재 확인되지 않는 장소" : resolutionStatuses[stop.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : verificationStatuses[getPlaceVerificationKey(stop)] === "checking" ? "NAVER 장소 확인 중" : undefined}
               onSelect={() => handleToggleStop(stop.id)}
               onShowPhotos={() => onShowPhotos(stop.photos ?? [], stop.name)}
               photoCount={stop.photos?.length ?? 0}

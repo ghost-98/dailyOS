@@ -1,5 +1,6 @@
 import { requireCurrentUser } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
+import { isMissingPlaceVerificationTable } from "@/features/data/places/verificationApi";
 
 const exportTables = [
   { name: "profiles", conflict: "user_id" },
@@ -37,6 +38,7 @@ export async function exportDailyOSData() {
 
   for (const table of exportTables) {
     const { data, error } = await supabase.from(table.name).select("*").eq("user_id", user.id);
+    if (error && table.name === "place_verifications" && isMissingPlaceVerificationTable(error.code)) continue;
     if (error) throw error;
     tables[table.name] = (data ?? []) as ExportRow[];
   }
@@ -76,6 +78,7 @@ export async function importDailyOSData(file: File) {
       user_id: user.id,
     }));
     const { error } = await supabase.from(table.name).upsert(scopedRows, { onConflict: table.conflict });
+    if (error && table.name === "place_verifications" && isMissingPlaceVerificationTable(error.code)) continue;
     if (error) throw error;
   }
 }
@@ -94,6 +97,7 @@ export async function deleteDailyOSData() {
 
   for (const table of deleteTables) {
     const { error } = await supabase.from(table.name).delete().eq("user_id", user.id);
+    if (error && table.name === "place_verifications" && isMissingPlaceVerificationTable(error.code)) continue;
     if (error) throw error;
   }
 }

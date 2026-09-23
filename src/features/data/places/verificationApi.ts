@@ -17,12 +17,16 @@ type PlaceVerificationRow = {
 
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+export function isMissingPlaceVerificationTable(errorCode?: string) {
+  return errorCode === "42P01" || errorCode === "PGRST205";
+}
+
 export async function loadPlaceVerificationCache(keys: string[]) {
   if (!supabase || keys.length === 0) return new Map<string, PlaceVerificationRow>();
   const userId = await getCurrentUserId();
   if (!userId) return new Map<string, PlaceVerificationRow>();
   const { data, error } = await supabase.from("place_verifications").select("place_key,status,checked_at").eq("user_id", userId).in("place_key", keys);
-  if (error?.code === "42P01") return new Map<string, PlaceVerificationRow>();
+  if (isMissingPlaceVerificationTable(error?.code)) return new Map<string, PlaceVerificationRow>();
   if (error) throw error;
   return new Map(((data ?? []) as PlaceVerificationRow[]).map((row) => [row.place_key, row]));
 }
@@ -57,6 +61,6 @@ async function savePlaceVerification(placeKey: string, status: "unverified" | "v
     status,
     user_id: userId,
   }, { onConflict: "user_id,place_key" });
-  if (error?.code === "42P01") return;
+  if (isMissingPlaceVerificationTable(error?.code)) return;
   if (error) throw error;
 }
