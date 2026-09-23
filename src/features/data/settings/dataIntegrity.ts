@@ -20,7 +20,10 @@ export function inspectDataIntegrity(data: RecordDataSnapshot) {
     event: new Set(data.events.map((item) => item.id)),
     todo: new Set(data.tasks.map((item) => item.id)),
   };
-  const targetExists = (type: "activity" | "event" | "todo", id: string) => targets[type].has(id);
+  const targetExists = (type: unknown, id: unknown) => {
+    if ((type !== "activity" && type !== "event" && type !== "todo") || typeof id !== "string" || !id) return false;
+    return targets[type].has(id);
+  };
 
   data.expenses.forEach((expense) => {
     if (targetExists(expense.targetType, expense.targetId)) return;
@@ -38,7 +41,7 @@ export function inspectDataIntegrity(data: RecordDataSnapshot) {
   const expensesByTarget = new Map<string, typeof data.expenses>();
   data.expenses.forEach((expense) => {
     if (!targetExists(expense.targetType, expense.targetId)) return;
-    const key = `${expense.targetType}:${expense.targetId}`;
+    const key = `${String(expense.targetType)}:${String(expense.targetId)}`;
     expensesByTarget.set(key, [...(expensesByTarget.get(key) ?? []), expense]);
   });
   expensesByTarget.forEach((expenses) => {
@@ -59,7 +62,7 @@ export function inspectDataIntegrity(data: RecordDataSnapshot) {
   });
 
   data.lifePhotos.forEach((photo) => {
-    if (!photo.filePath.trim()) issues.push({ description: "Storage 파일 경로가 비어 있어 자동 정리하지 않습니다.", href: createDayRecordHref(photo.date, createRecordFocusId("photo", photo.id)), id: `photo-path-${photo.id}`, recordId: photo.id, repair: null, severity: "notice", title: `사진 경로 확인 · ${photo.caption || photo.fileName}` });
+    if (!photo.filePath?.trim()) issues.push({ description: "Storage 파일 경로가 비어 있어 자동 정리하지 않습니다.", href: createDayRecordHref(photo.date, createRecordFocusId("photo", photo.id)), id: `photo-path-${photo.id}`, recordId: photo.id, repair: null, severity: "notice", title: `사진 경로 확인 · ${photo.caption || photo.fileName || "파일명 없음"}` });
     if (!photo.linkedTargetId || !photo.linkedTargetType || targetExists(photo.linkedTargetType, photo.linkedTargetId)) return;
     issues.push({ description: "연결 대상이 사라져 사진의 연결 정보만 해제할 수 있습니다.", href: createDayRecordHref(photo.date, createRecordFocusId("photo", photo.id)), id: `orphan-photo-${photo.id}`, recordId: photo.id, repair: "unlink-photo", severity: "warning", title: `고아 사진 연결 · ${photo.caption || photo.fileName}` });
   });
