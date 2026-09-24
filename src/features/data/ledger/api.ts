@@ -181,6 +181,15 @@ export async function deleteIncomeRecordFromDb(id: string) {
   return true;
 }
 
+export async function deleteExpenseRecordFromDb(id: string) {
+  if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { error } = await supabase.from("expense_records").delete().eq("id", id).eq("user_id", userId);
+  if (error) throw error;
+  return true;
+}
+
 export async function syncLinkedExpenseRecordInDb({
   amount,
   date,

@@ -3,6 +3,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyline } from "@/lib/naverMap";
+import type { PlaceVerificationStatus } from "@/features/data/places/verificationApi";
+import { getPlaceVerificationKey } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export type DayRouteStop = {
   address?: string;
@@ -27,17 +29,20 @@ export const DayRouteMap = forwardRef<DayRouteMapHandle, {
   onStopSelect?: (stopId: string) => void;
   onStopResolutionChange?: (statuses: Record<string, RouteStopResolutionStatus>) => void;
   stops: DayRouteStop[];
+  verificationStatuses?: Record<string, PlaceVerificationStatus>;
 }>(
 function DayRouteMap({
   compact = false,
   onStopResolutionChange,
   onStopSelect,
   stops,
+  verificationStatuses = {},
 }: {
   compact?: boolean;
   onStopSelect?: (stopId: string) => void;
   onStopResolutionChange?: (statuses: Record<string, RouteStopResolutionStatus>) => void;
   stops: DayRouteStop[];
+  verificationStatuses?: Record<string, PlaceVerificationStatus>;
 },
 ref) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -115,12 +120,13 @@ ref) {
   const visibleStops = useMemo(
     () =>
       stops
-        .map((stop) => ({
+        .map((stop, displayIndex) => ({
           ...stop,
+          displayIndex,
           latitude: stop.latitude ?? resolvedCoordinates[stop.id]?.latitude,
           longitude: stop.longitude ?? resolvedCoordinates[stop.id]?.longitude,
         }))
-        .filter((stop): stop is DayRouteStop & { latitude: number; longitude: number } => hasCoordinates(stop)),
+        .filter((stop): stop is DayRouteStop & { displayIndex: number; latitude: number; longitude: number } => hasCoordinates(stop)),
     [resolvedCoordinates, stops],
   );
 
@@ -136,11 +142,12 @@ ref) {
     }
 
     markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = visibleStops.map((stop, index) => {
+    markersRef.current = visibleStops.map((stop) => {
+      const verificationStatus = verificationStatuses[getPlaceVerificationKey(stop)];
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 18),
-          content: `<div class="life-calendar-route-marker"><span>${index + 1}</span></div>`,
+          content: `<div class="life-calendar-route-marker ${verificationStatus === "unverified" ? "life-calendar-route-marker--unverified" : verificationStatus === "checking" ? "life-calendar-route-marker--checking" : ""}"><span>${stop.displayIndex + 1}</span></div>`,
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!),
@@ -179,7 +186,7 @@ ref) {
     const bounds = new window.naver.maps.LatLngBounds();
     visibleStops.forEach((stop) => bounds.extend(new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!)));
     syncDayRouteMapViewport(mapRef.current, bounds, compact);
-  }, [compact, mapStatus, visibleStops]);
+  }, [compact, mapStatus, verificationStatuses, visibleStops]);
 
   useEffect(() => {
     if (!mapElementRef.current || !mapRef.current || !window.naver?.maps || visibleStops.length === 0) return;

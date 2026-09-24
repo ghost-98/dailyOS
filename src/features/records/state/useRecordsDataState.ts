@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEventInDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, syncLinkedExpenseRecordInDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
-import { createWorkoutSessionInDb, deleteWorkoutSessionFromDb, updateWorkoutSessionInDb } from "@/features/data/health/api";
+import { createWeightRecordInDb, createWorkoutSessionInDb, deleteWorkoutSessionFromDb, updateWorkoutSessionInDb } from "@/features/data/health/api";
 import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivitiesBySourceFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivitiesBySourceInDb, updateLifeActivityInDb, updateLifePhotoDetailsInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
-import { emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
+import { clearRecordDataSnapshotCache, emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
 import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
 import { createTaskInDb, deleteTaskFromDb, updateTaskInDb } from "@/features/data/tasks/api";
-import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WorkoutSession } from "@/types/domain";
+import type { DailyLogRecord, IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, LifePhotoRecord, PlanPlace, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
+import { enqueueOfflineRecord, isOfflineError, OFFLINE_QUEUE_SYNCED_EVENT, type OfflineRecordOperation } from "@/features/records/offline/offlineRecordQueue";
 
 export function useRecordsDataState() {
   const { data, isLoading, reload, setData } = useAsyncData({
@@ -31,32 +32,97 @@ export function useRecordsDataState() {
     });
   };
 
+  useEffect(() => {
+    const handleOfflineSync = () => {
+      clearRecordDataSnapshotCache();
+      void reload();
+    };
+    window.addEventListener(OFFLINE_QUEUE_SYNCED_EVENT, handleOfflineSync);
+    return () => window.removeEventListener(OFFLINE_QUEUE_SYNCED_EVENT, handleOfflineSync);
+  }, [reload]);
+
+  const queueCreate = async (operation: OfflineRecordOperation, optimisticUpdate?: (current: typeof data) => typeof data) => {
+    await enqueueOfflineRecord(operation);
+    if (optimisticUpdate) setLifeData(optimisticUpdate);
+  };
+
+  const shouldQueueImmediately = () => typeof navigator !== "undefined" && !navigator.onLine;
+
   const createDailyLog = async (date: string, content: string, linkedTarget?: RecordLinkedTarget) => {
-    const savedLog = await createDailyLogInDb(date, content, linkedTarget);
+    const operation = { kind: "dailyLog", content, date, linkedTarget } satisfies OfflineRecordOperation;
+    const optimisticLog: DailyLogRecord = { content, date, id: "offline-log-" + Date.now(), linkedTargetId: linkedTarget?.id, linkedTargetTitle: linkedTarget?.title, linkedTargetType: linkedTarget?.type };
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, dailyLogs: [optimisticLog, ...current.dailyLogs] }));
+    let savedLog;
+    try { savedLog = await createDailyLogInDb(date, content, linkedTarget); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, dailyLogs: [optimisticLog, ...current.dailyLogs] }));
+      throw error;
+    }
     if (!savedLog) return;
     setLifeData((current) => ({ ...current, dailyLogs: [savedLog, ...current.dailyLogs] }));
   };
 
   const createIncome = async (record: IncomeRecord) => {
-    const savedIncome = await createIncomeRecordInDb(record);
+    const operation = { kind: "income", record } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, incomes: [record, ...current.incomes] }));
+    let savedIncome;
+    try { savedIncome = await createIncomeRecordInDb(record); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, incomes: [record, ...current.incomes] }));
+      throw error;
+    }
     if (!savedIncome) return;
     setLifeData((current) => ({ ...current, incomes: [savedIncome, ...current.incomes] }));
   };
 
   const createWorkout = async (session: WorkoutSession) => {
-    const savedWorkout = await createWorkoutSessionInDb(session);
+    const operation = { kind: "workout", record: session } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, workouts: [session, ...current.workouts] }));
+    let savedWorkout;
+    try { savedWorkout = await createWorkoutSessionInDb(session); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, workouts: [session, ...current.workouts] }));
+      throw error;
+    }
     if (!savedWorkout) return;
     setLifeData((current) => ({ ...current, workouts: [savedWorkout, ...current.workouts] }));
   };
 
+  const createWeight = async (record: WeightRecord) => {
+    const operation = { kind: "weight", record } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, weights: [record, ...current.weights] }));
+    let savedWeight;
+    try { savedWeight = await createWeightRecordInDb(record); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, weights: [record, ...current.weights] }));
+      throw error;
+    }
+    if (!savedWeight) return;
+    setLifeData((current) => ({ ...current, weights: [savedWeight, ...current.weights] }));
+  };
+
   const createEvent = async (event: CalendarEvent) => {
-    const savedEvent = await createCalendarEventInDb(event);
+    const operation = { kind: "event", record: event } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, events: [event, ...current.events] }));
+    let savedEvent;
+    try { savedEvent = await createCalendarEventInDb(event); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, events: [event, ...current.events] }));
+      throw error;
+    }
     if (!savedEvent) return;
     setLifeData((current) => ({ ...current, events: [savedEvent, ...current.events] }));
   };
 
   const createTask = async (task: TaskItem) => {
-    const savedTask = await createTaskInDb(task);
+    const operation = { kind: "task", record: task } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, tasks: [task, ...current.tasks] }));
+    let savedTask;
+    try { savedTask = await createTaskInDb(task); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, tasks: [task, ...current.tasks] }));
+      throw error;
+    }
     if (!savedTask) return;
     setLifeData((current) => ({ ...current, tasks: [savedTask, ...current.tasks] }));
   };
@@ -64,7 +130,7 @@ export function useRecordsDataState() {
   const updateTask = async (task: TaskItem) => {
     const savedTask = await updateTaskInDb(task);
     const nextTask = savedTask ?? task;
-    await updateLifeActivitiesBySourceInDb({ category: "할 일", companions: nextTask.companions, date: nextTask.scheduledDate, endTime: nextTask.endTime, expenseAmount: nextTask.expenseAmount, isAllDay: nextTask.isAllDay, memo: nextTask.memo, placeAddress: nextTask.place?.address, placeName: nextTask.place?.name, sourceId: nextTask.id, sourceType: "todo", startTime: nextTask.startTime, title: nextTask.title });
+    await updateLifeActivitiesBySourceInDb({ category: "할 일", companions: nextTask.companions, date: nextTask.scheduledDate, endTime: nextTask.endTime, expenseAmount: nextTask.expenseAmount, isAllDay: nextTask.isAllDay, memo: nextTask.memo, placeAddress: nextTask.place?.address, placeLatitude: nextTask.place?.latitude, placeLongitude: nextTask.place?.longitude, placeName: nextTask.place?.name, placeProviderId: nextTask.place?.providerPlaceId, placeProviderName: nextTask.place?.providerName, sourceId: nextTask.id, sourceType: "todo", startTime: nextTask.startTime, title: nextTask.title });
     await syncLinkedExpenseRecordInDb({ amount: nextTask.expenseAmount, date: nextTask.scheduledDate, memo: nextTask.memo, targetId: nextTask.id, targetType: "todo", title: nextTask.title });
     setLifeData((current) => ({
       ...current,
@@ -75,7 +141,7 @@ export function useRecordsDataState() {
   const updateEvent = async (event: CalendarEvent) => {
     const savedEvent = await updateCalendarEventInDb(event);
     if (!savedEvent) return;
-    await updateLifeActivitiesBySourceInDb({ category: "이벤트", companions: savedEvent.companions, date: savedEvent.date, endTime: savedEvent.endTime, expenseAmount: savedEvent.expenseAmount, isAllDay: savedEvent.isAllDay, memo: savedEvent.meta, placeAddress: savedEvent.place?.address, placeName: savedEvent.place?.name, sourceId: savedEvent.id, sourceType: "event", startTime: savedEvent.time, title: savedEvent.title });
+    await updateLifeActivitiesBySourceInDb({ category: "이벤트", companions: savedEvent.companions, date: savedEvent.date, endTime: savedEvent.endTime, expenseAmount: savedEvent.expenseAmount, isAllDay: savedEvent.isAllDay, memo: savedEvent.meta, placeAddress: savedEvent.place?.address, placeLatitude: savedEvent.place?.latitude, placeLongitude: savedEvent.place?.longitude, placeName: savedEvent.place?.name, placeProviderId: savedEvent.place?.providerPlaceId, placeProviderName: savedEvent.place?.providerName, sourceId: savedEvent.id, sourceType: "event", startTime: savedEvent.time, title: savedEvent.title });
     await syncLinkedExpenseRecordInDb({ amount: savedEvent.expenseAmount, date: savedEvent.date, memo: savedEvent.meta, targetId: savedEvent.id, targetType: "event", title: savedEvent.title });
     setLifeData((current) => ({
       ...current,
@@ -150,7 +216,14 @@ export function useRecordsDataState() {
   };
 
   const uploadLifePhotos = async (date: string, uploads: LifeMediaUploadInput[], caption?: string, linkedTarget?: RecordLinkedTarget) => {
-    const savedPhotos = await uploadLifePhotosToDb(date, uploads, caption, linkedTarget);
+    const operation = { kind: "photos", caption, date, linkedTarget, uploads } satisfies OfflineRecordOperation;
+    if (shouldQueueImmediately()) return queueCreate(operation);
+    let savedPhotos;
+    try { savedPhotos = await uploadLifePhotosToDb(date, uploads, caption, linkedTarget); }
+    catch (error) {
+      if (isOfflineError(error)) return queueCreate(operation);
+      throw error;
+    }
     if (!savedPhotos?.length) return;
     setLifeData((current) => ({ ...current, lifePhotos: [...savedPhotos, ...current.lifePhotos] }));
   };
@@ -236,7 +309,14 @@ export function useRecordsDataState() {
 
   const saveActivity = async (activity: LifeActivityRecord) => {
     const exists = data.activities.some((item) => item.id === activity.id);
-    const savedActivity = exists ? await updateLifeActivityInDb(activity) : await createLifeActivityInDb(activity);
+    const operation = { kind: "activity", record: activity } satisfies OfflineRecordOperation;
+    if (!exists && shouldQueueImmediately()) return queueCreate(operation, (current) => ({ ...current, activities: [activity, ...current.activities] }));
+    let savedActivity;
+    try { savedActivity = exists ? await updateLifeActivityInDb(activity) : await createLifeActivityInDb(activity); }
+    catch (error) {
+      if (!exists && isOfflineError(error)) return queueCreate(operation, (current) => ({ ...current, activities: [activity, ...current.activities] }));
+      throw error;
+    }
     const nextActivity = savedActivity ?? activity;
     await syncSourceFromActivity(nextActivity);
     setLifeData((current) => ({
@@ -263,6 +343,7 @@ export function useRecordsDataState() {
       createEvent,
       createIncome,
       createTask,
+      createWeight,
       createWorkout,
       deleteIncome,
       deleteEvent,
@@ -290,11 +371,12 @@ function createPlanPlaceFromActivity(activity: LifeActivityRecord, fallback?: Pl
   return {
     address: activity.placeAddress ?? fallback?.address ?? "",
     category: fallback?.category,
-    latitude: fallback?.latitude ?? 0,
-    longitude: fallback?.longitude ?? 0,
+    latitude: activity.placeLatitude ?? fallback?.latitude ?? 0,
+    longitude: activity.placeLongitude ?? fallback?.longitude ?? 0,
     name: activity.placeName,
     phone: fallback?.phone,
-    providerPlaceId: fallback?.providerPlaceId,
+    providerName: activity.placeProviderName ?? fallback?.providerName,
+    providerPlaceId: activity.placeProviderId ?? fallback?.providerPlaceId,
     url: fallback?.url,
   };
 }

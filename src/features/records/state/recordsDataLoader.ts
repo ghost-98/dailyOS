@@ -74,3 +74,9 @@ export async function loadRecordDataSnapshot(): Promise<RecordDataSnapshot> {
 export function setRecordDataSnapshotCache(nextSnapshot: RecordDataSnapshot) {
   cachedRecordDataSnapshot = nextSnapshot;
 }
+
+export function clearRecordDataSnapshotCache() {
+  cachedRecordDataSnapshot = null;
+  cachedLifeDataPromise = null;
+  recordDataLoadedAt = 0;
+}

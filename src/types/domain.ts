@@ -6,6 +6,9 @@ export type TaskPriority = "high" | "normal" | "low";
 
 export type PlanPlace = {
   name: string;
+  providerName?: string;
+  savedPlaceId?: string;
+  savedPlaceKey?: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -99,10 +102,22 @@ export type LifeActivityRecord = {
   companions?: string;
   placeName?: string;
   placeAddress?: string;
+  placeLatitude?: number;
+  placeLongitude?: number;
+  placeProviderName?: string;
+  placeProviderId?: string;
   startPlaceName?: string;
   startPlaceAddress?: string;
+  startPlaceLatitude?: number;
+  startPlaceLongitude?: number;
+  startPlaceProviderName?: string;
+  startPlaceProviderId?: string;
   endPlaceName?: string;
   endPlaceAddress?: string;
+  endPlaceLatitude?: number;
+  endPlaceLongitude?: number;
+  endPlaceProviderName?: string;
+  endPlaceProviderId?: string;
   transportMode?: string;
   sourceId?: string;
   sourceTitle?: string;

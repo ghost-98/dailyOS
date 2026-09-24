@@ -17,10 +17,22 @@ type LifeActivityRow = {
   companions: string | null;
   place_name: string | null;
   place_address: string | null;
+  place_latitude: number | string | null;
+  place_longitude: number | string | null;
+  place_provider_name: string | null;
+  place_provider_id: string | null;
   start_place_name: string | null;
   start_place_address: string | null;
+  start_place_latitude: number | string | null;
+  start_place_longitude: number | string | null;
+  start_place_provider_name: string | null;
+  start_place_provider_id: string | null;
   end_place_name: string | null;
   end_place_address: string | null;
+  end_place_latitude: number | string | null;
+  end_place_longitude: number | string | null;
+  end_place_provider_name: string | null;
+  end_place_provider_id: string | null;
   transport_mode: string | null;
   source_id: string | null;
   source_title: string | null;
@@ -58,7 +70,7 @@ type LifePhotoRow = {
   created_at: string;
 };
 
-const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,start_place_name,start_place_address,end_place_name,end_place_address,transport_mode,source_type,source_id,source_title,created_at";
+const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_name,place_provider_id,start_place_name,start_place_address,start_place_latitude,start_place_longitude,start_place_provider_name,start_place_provider_id,end_place_name,end_place_address,end_place_latitude,end_place_longitude,end_place_provider_name,end_place_provider_id,transport_mode,source_type,source_id,source_title,created_at";
 const dailyLogColumns = "id,log_date,content,linked_target_id,linked_target_title,linked_target_type,created_at";
 const lifePhotoColumns = "id,photo_date,file_name,file_path,mime_type,size_bytes,width,height,duration_seconds,caption,linked_target_id,linked_target_title,linked_target_type,taken_at,latitude,longitude,created_at";
 
@@ -136,10 +148,22 @@ function mapLifeActivityRow(row: LifeActivityRow): LifeActivityRecord {
     companions: row.companions ?? undefined,
     placeName: row.place_name ?? undefined,
     placeAddress: row.place_address ?? undefined,
+    placeLatitude: toOptionalNumber(row.place_latitude),
+    placeLongitude: toOptionalNumber(row.place_longitude),
+    placeProviderName: row.place_provider_name ?? undefined,
+    placeProviderId: row.place_provider_id ?? undefined,
     startPlaceName: row.start_place_name ?? undefined,
     startPlaceAddress: row.start_place_address ?? undefined,
+    startPlaceLatitude: toOptionalNumber(row.start_place_latitude),
+    startPlaceLongitude: toOptionalNumber(row.start_place_longitude),
+    startPlaceProviderName: row.start_place_provider_name ?? undefined,
+    startPlaceProviderId: row.start_place_provider_id ?? undefined,
     endPlaceName: row.end_place_name ?? undefined,
     endPlaceAddress: row.end_place_address ?? undefined,
+    endPlaceLatitude: toOptionalNumber(row.end_place_latitude),
+    endPlaceLongitude: toOptionalNumber(row.end_place_longitude),
+    endPlaceProviderName: row.end_place_provider_name ?? undefined,
+    endPlaceProviderId: row.end_place_provider_id ?? undefined,
     transportMode: row.transport_mode ?? undefined,
     sourceId: row.source_id ?? undefined,
     sourceTitle: row.source_title ?? undefined,
@@ -162,15 +186,33 @@ function mapLifeActivityToPayload(activity: LifeActivityRecord) {
     companions: activity.companions?.trim() || null,
     place_name: activity.placeName?.trim() || null,
     place_address: activity.placeAddress?.trim() || null,
+    place_latitude: activity.placeLatitude ?? null,
+    place_longitude: activity.placeLongitude ?? null,
+    place_provider_name: activity.placeProviderName?.trim() || null,
+    place_provider_id: activity.placeProviderId ?? null,
     start_place_name: activity.startPlaceName?.trim() || null,
     start_place_address: activity.startPlaceAddress?.trim() || null,
+    start_place_latitude: activity.startPlaceLatitude ?? null,
+    start_place_longitude: activity.startPlaceLongitude ?? null,
+    start_place_provider_name: activity.startPlaceProviderName?.trim() || null,
+    start_place_provider_id: activity.startPlaceProviderId ?? null,
     end_place_name: activity.endPlaceName?.trim() || null,
     end_place_address: activity.endPlaceAddress?.trim() || null,
+    end_place_latitude: activity.endPlaceLatitude ?? null,
+    end_place_longitude: activity.endPlaceLongitude ?? null,
+    end_place_provider_name: activity.endPlaceProviderName?.trim() || null,
+    end_place_provider_id: activity.endPlaceProviderId ?? null,
     transport_mode: activity.transportMode?.trim() || null,
     source_id: activity.sourceId ?? null,
     source_title: activity.sourceTitle?.trim() || null,
     source_type: activity.sourceType ?? null,
   };
+}
+
+function toOptionalNumber(value: number | string | null) {
+  if (value === null) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
 }
 
 async function mapLifePhotoRow(row: LifePhotoRow): Promise<LifePhotoRecord> {
@@ -283,7 +325,11 @@ export async function updateLifeActivitiesBySourceInDb(source: {
   expenseAmount?: number;
   memo?: string;
   placeAddress?: string;
+  placeLatitude?: number;
+  placeLongitude?: number;
   placeName?: string;
+  placeProviderId?: string;
+  placeProviderName?: string;
   previousSourceType?: "todo" | "event";
 }) {
   if (!supabase) return [];
@@ -303,7 +349,11 @@ export async function updateLifeActivitiesBySourceInDb(source: {
       expense_amount: source.expenseAmount ?? null,
       memo: source.memo?.trim() || null,
       place_address: source.placeAddress?.trim() || null,
+      place_latitude: source.placeLatitude ?? null,
+      place_longitude: source.placeLongitude ?? null,
       place_name: source.placeName?.trim() || null,
+      place_provider_id: source.placeProviderId ?? null,
+      place_provider_name: source.placeProviderName?.trim() || null,
       source_title: source.title.trim(),
       source_type: source.sourceType,
     })

@@ -732,6 +732,38 @@
   display: none;
 }
 
+.offline-queue-status {
+  position: fixed;
+  z-index: 45;
+  right: 12px;
+  bottom: calc(var(--bottom-nav-height, 72px) + env(safe-area-inset-bottom) + 8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.94);
+  padding: 7px 9px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.offline-queue-status:disabled {
+  cursor: default;
+}
+
+.offline-queue-status__spin {
+  animation: offline-queue-spin 900ms linear infinite;
+}
+
+@keyframes offline-queue-spin {
+  to { transform: rotate(360deg); }
+}
+
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,

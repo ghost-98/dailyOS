@@ -1,5 +1,6 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
+import { deleteLinkedExpenseRecordInDb } from "@/features/data/ledger/api";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 
 type TaskRow = {
@@ -18,6 +19,7 @@ type TaskRow = {
   expense_amount: number | string | null;
   companions: string | null;
   place_name: string | null;
+  place_provider_name: string | null;
   place_address: string | null;
   place_latitude: number | string | null;
   place_longitude: number | string | null;
@@ -34,7 +36,7 @@ type TaskInsert = Omit<TaskRow, "id"> & {
 type TaskUpdate = Partial<Omit<TaskInsert, "user_id">>;
 
 const taskColumns =
-  "id,title,status,priority,scheduled_date,due_date,start_time,end_time,is_all_day,completed_at,deferred_count,memo,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
+  "id,title,status,priority,scheduled_date,due_date,start_time,end_time,is_all_day,completed_at,deferred_count,memo,expense_amount,companions,place_name,place_provider_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
 
 function mapRowPlace(row: TaskRow) {
   const latitude = row.place_latitude === null ? null : Number(row.place_latitude);
@@ -43,6 +45,7 @@ function mapRowPlace(row: TaskRow) {
 
   return {
     name: row.place_name,
+    providerName: row.place_provider_name ?? undefined,
     address: row.place_address ?? "",
     latitude,
     longitude,
@@ -90,6 +93,7 @@ function mapTaskToInsert(task: TaskItem, userId: string): TaskInsert {
     expense_amount: task.expenseAmount ?? null,
     companions: task.companions ?? null,
     place_name: task.place?.name ?? null,
+    place_provider_name: task.place?.providerName ?? null,
     place_address: task.place?.address ?? null,
     place_latitude: task.place?.latitude ?? null,
     place_longitude: task.place?.longitude ?? null,
@@ -116,6 +120,7 @@ function mapTaskToUpdate(task: TaskItem): TaskUpdate {
     expense_amount: task.expenseAmount ?? null,
     companions: task.companions ?? null,
     place_name: task.place?.name ?? null,
+    place_provider_name: task.place?.providerName ?? null,
     place_address: task.place?.address ?? null,
     place_latitude: task.place?.latitude ?? null,
     place_longitude: task.place?.longitude ?? null,
@@ -179,6 +184,7 @@ export async function deleteTaskFromDb(id: string) {
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
+  await deleteLinkedExpenseRecordInDb("todo", id);
   const { error } = await supabase.from("tasks").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildRecordSearchItems, type RecordSearchFactKind } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
+import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 
 export function SearchView() {
@@ -66,7 +67,7 @@ export function SearchView() {
             </div>
           ) : filteredItems.length > 0 ? (
             filteredItems.slice(0, 80).map((item) => (
-              <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(`/m/day?date=${item.date}`)} type="button">
+              <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(createDayRecordHref(item.date, item.id))} type="button">
                 <span className="life-search-result__head">
                   <span className="life-search-result__title">
                     <strong>{item.title}</strong>

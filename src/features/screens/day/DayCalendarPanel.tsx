@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Banknote, Bus, CalendarCheck2, Camera, ChevronDown, Dumbbell, Footprints, MapPin, Moon, NotebookPen, Pencil, Plus, Sunrise, Trash2, UsersRound, UtensilsCrossed } from "lucide-react";
 import { DayInsightBar } from "@/features/screens/day/components/DayInsightBar";
@@ -28,12 +28,13 @@ import type { CalendarCategory, DayTimelineItem, ExternalCalendarItem } from "@/
 
 type LifeCalendarDayPanelProps = {
   actions?: DayItemActions;
+  focusItemId?: string;
   isLoading: boolean;
   items: DayTimelineItem[];
   selectedDate: string;
 };
 
-export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }: LifeCalendarDayPanelProps) {
+export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, selectedDate }: LifeCalendarDayPanelProps) {
   const router = useRouter();
   const [detailView, setDetailView] = useState<DayDetailView>(null);
   const [photoViewer, setPhotoViewer] = useState<{ items: DayPhotoItem[]; title: string } | null>(null);
@@ -103,6 +104,38 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
   );
   const companionCounts = useMemo(() => getTopValues(activityItems.flatMap((item) => parseCompanions(item.external.companions))).slice(0, 8), [activityItems]);
   const visiblePhotoItems = photoViewer?.items ?? photoItems;
+
+  useEffect(() => {
+    if (!focusItemId || isLoading) return;
+
+    setIsTimelineOpen(true);
+    if (focusItemId.startsWith("activity-")) {
+      setExpandedActivityIds(new Set([focusItemId.slice("activity-".length)]));
+    } else if (focusItemId.startsWith("todo-") && timelineRows.some((row) => row.id === focusItemId)) {
+      setExpandedActivityIds(new Set([focusItemId]));
+    } else if (focusItemId.startsWith("todo-")) {
+      setDetailView("plans");
+    } else if (focusItemId.startsWith("workout-")) {
+      setExpandedActivityIds(new Set([focusItemId]));
+    } else if (focusItemId.startsWith("event-")) {
+      setDetailView("plans");
+    } else if (focusItemId.startsWith("expense-") || focusItemId.startsWith("income-")) {
+      setDetailView("finance");
+    } else if (focusItemId.startsWith("daily-log-")) {
+      setDetailView("logs");
+    } else if (focusItemId.startsWith("photo-")) {
+      const targetPhoto = photoItems.find((item) => item.id === focusItemId);
+      if (targetPhoto) {
+        setPhotoViewer({ items: [targetPhoto], title: targetPhoto.external.title });
+        setDetailView("photos");
+      }
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`timeline-${focusItemId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusItemId, isLoading, photoItems, timelineRows]);
 
   const dayInsightButtons = [
     { icon: CalendarCheck2, key: "plans" as const, label: "할 일·이벤트", count: planItems.length, onClick: () => setDetailView("plans") },
@@ -204,7 +237,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                     const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
                     const isActivityOpen = expandedActivityIds.has(item.external.id);
                     return (
-                      <article className={`life-calendar-day-timeline__item ${item.external.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} key={item.id}>
+                      <article className={`life-calendar-day-timeline__item ${item.external.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} id={`timeline-${item.id}`} key={item.id}>
                         <div className="life-calendar-day-timeline__time">
                           <span>{formatTimelineRange(item.timeLabel, item.external.endTime)}</span>
                         </div>
@@ -262,7 +295,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                     const item = row.item;
                     const isTaskOpen = expandedActivityIds.has(item.id);
                     return (
-                      <article className={`life-calendar-day-timeline__item life-calendar-day-timeline__item--task ${item.task.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} key={item.id}>
+                      <article className={`life-calendar-day-timeline__item life-calendar-day-timeline__item--task ${item.task.endTime ? "life-calendar-day-timeline__item--range" : ""}`.trim()} id={`timeline-${item.id}`} key={item.id}>
                         <div className="life-calendar-day-timeline__time">
                           <span>{formatTimelineRange(item.timeLabel, item.task.endTime)}</span>
                         </div>
@@ -305,7 +338,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
                     const item = row.item;
                     const isWorkoutOpen = expandedActivityIds.has(item.id);
                     return (
-                      <article className="life-calendar-day-timeline__item life-calendar-day-timeline__item--workout" key={item.id}>
+                      <article className="life-calendar-day-timeline__item life-calendar-day-timeline__item--workout" id={`timeline-${item.id}`} key={item.id}>
                         <div className="life-calendar-day-timeline__time">
                           <span>{item.timeLabel}</span>
                         </div>
@@ -374,6 +407,7 @@ export function LifeCalendarDayPanel({ actions, isLoading, items, selectedDate }
         companionCounts={companionCounts}
         finance={finance}
         financeItems={financeItems}
+        focusItemId={focusItemId}
         financeEntryCount={financeEntryCount}
         isLoading={isLoading}
         logItems={logItems}
@@ -436,6 +470,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        providerName: item.event.place.providerName,
+        providerPlaceId: item.event.place.providerPlaceId,
         photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
@@ -452,6 +488,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        providerName: item.task.place.providerName,
+        providerPlaceId: item.task.place.providerPlaceId,
         photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
@@ -470,6 +508,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
           latitude: item.external.placeLatitude ?? photoSource?.external.placeLatitude,
           longitude: item.external.placeLongitude ?? photoSource?.external.placeLongitude,
           name: item.external.placeName,
+          providerName: item.external.placeProviderName,
+          providerPlaceId: item.external.placeProviderId,
           photos: linkedPhotos,
           sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
@@ -522,6 +562,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: linkedPlace.latitude,
         longitude: linkedPlace.longitude,
         name: `${formatPhotoTimeLabel(item.external)} 사진`,
+        providerName: linkedPlace.providerName,
+        providerPlaceId: linkedPlace.providerPlaceId,
         photos: [photoItem],
         sortMinutes: item.sortMinutes,
         timeLabel: formatPhotoTimeLabel(item.external),
@@ -539,7 +581,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
 }
 
 function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
-  const placeMap = new Map<string, { address?: string; latitude?: number; longitude?: number; name: string }>();
+  const placeMap = new Map<string, { address?: string; latitude?: number; longitude?: number; name: string; providerName?: string; providerPlaceId?: string }>();
 
   items.forEach((item) => {
     if ("event" in item && item.event.place) {
@@ -548,6 +590,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        providerName: item.event.place.providerName,
+        providerPlaceId: item.event.place.providerPlaceId,
       });
       return;
     }
@@ -558,6 +602,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        providerName: item.task.place.providerName,
+        providerPlaceId: item.task.place.providerPlaceId,
       });
       return;
     }
@@ -568,6 +614,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.external.placeLatitude,
         longitude: item.external.placeLongitude,
         name: item.external.placeName,
+        providerName: item.external.placeProviderName,
+        providerPlaceId: item.external.placeProviderId,
       });
     }
   });

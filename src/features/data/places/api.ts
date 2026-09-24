@@ -1,11 +1,13 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
 import type { PlanPlace } from "@/types/domain";
+import { getPlaceIdentityKey } from "@/features/data/places/placeIdentity";
 
 type SavedPlaceRow = {
   id: string;
   place_key: string;
   name: string;
+  provider_name: string | null;
   address: string;
   latitude: number | string;
   longitude: number | string;
@@ -15,13 +17,10 @@ type SavedPlaceRow = {
   url: string | null;
 };
 
-const savedPlaceColumns = "id,place_key,name,address,latitude,longitude,provider_place_id,phone,category,url";
+const savedPlaceColumns = "id,place_key,name,provider_name,address,latitude,longitude,provider_place_id,phone,category,url";
 
 export function getSavedPlaceKey(place: PlanPlace) {
-  const normalizedAddress = place.address.trim().toLocaleLowerCase("ko-KR");
-  if (normalizedAddress) return `address:${normalizedAddress}`;
-  if (place.providerPlaceId) return `provider:${place.providerPlaceId}`;
-  return `coordinates:${place.latitude.toFixed(6)},${place.longitude.toFixed(6)}`;
+  return place.savedPlaceKey ?? getPlaceIdentityKey(place);
 }
 
 export async function fetchSavedPlacesFromDb() {
@@ -45,6 +44,7 @@ export async function saveSavedPlaceInDb(place: PlanPlace) {
       latitude: place.latitude,
       longitude: place.longitude,
       name: place.name.trim(),
+      provider_name: place.providerName?.trim() || place.name.trim(),
       phone: place.phone?.trim() || null,
       place_key: getSavedPlaceKey(place),
       provider_place_id: place.providerPlaceId ?? null,
@@ -61,7 +61,9 @@ export async function deleteSavedPlaceFromDb(place: PlanPlace) {
   if (!supabase) return false;
   const userId = await getCurrentUserId();
   if (!userId) return false;
-  const { error } = await supabase.from("saved_places").delete().eq("user_id", userId).eq("place_key", getSavedPlaceKey(place));
+  let query = supabase.from("saved_places").delete().eq("user_id", userId);
+  query = place.savedPlaceId ? query.eq("id", place.savedPlaceId) : query.eq("place_key", getSavedPlaceKey(place));
+  const { error } = await query;
   if (error) throw error;
   return true;
 }
@@ -73,6 +75,9 @@ function mapSavedPlaceRow(row: SavedPlaceRow): PlanPlace {
     latitude: Number(row.latitude),
     longitude: Number(row.longitude),
     name: row.name,
+    providerName: row.provider_name ?? undefined,
+    savedPlaceId: row.id,
+    savedPlaceKey: row.place_key,
     phone: row.phone ?? undefined,
     providerPlaceId: row.provider_place_id ?? undefined,
     url: row.url ?? undefined,

@@ -664,6 +664,17 @@
   font-weight: 900;
 }
 
+.life-calendar-route-marker--unverified {
+  border-color: #ff9caa;
+  background: #3a2027;
+  color: #ffb3bf;
+}
+
+.life-calendar-route-marker--checking {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
 .life-calendar-day-activity-list,
 .life-calendar-day-stop-list {
   display: grid;
@@ -2252,7 +2263,8 @@
   overflow-y: auto;
 }
 
-.other-ledger-history__list article {
+.other-ledger-history__list article,
+.other-ledger-entry-button {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
@@ -2262,7 +2274,22 @@
   padding: 9px 13px;
 }
 
-.other-ledger-history__list article:last-child {
+.other-ledger-entry-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.other-ledger-entry-button:active {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.other-ledger-history__list article:last-child,
+.other-ledger-entry-button:last-child {
   border-bottom: 0;
 }
 
@@ -2284,25 +2311,30 @@
   color: #ff9caa;
 }
 
-.other-ledger-history__list article > div {
+.other-ledger-history__list article > div,
+.other-ledger-entry-button > div {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
 .other-ledger-history__list article > div strong,
-.other-ledger-history__list article > div span {
+.other-ledger-history__list article > div span,
+.other-ledger-entry-button > div strong,
+.other-ledger-entry-button > div span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.other-ledger-history__list article > div strong {
+.other-ledger-history__list article > div strong,
+.other-ledger-entry-button > div strong {
   color: var(--text);
   font-size: 0.82rem;
 }
 
-.other-ledger-history__list article > div span {
+.other-ledger-history__list article > div span,
+.other-ledger-entry-button > div span {
   color: var(--muted);
   font-size: 0.68rem;
 }
@@ -2318,6 +2350,26 @@
 
 .other-ledger-entry__amount--expense {
   color: #ff9caa;
+}
+
+.life-person-card__record-link,
+.map-place-card__records button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.life-person-card__record-link {
+  padding: 0;
+}
+
+.map-place-card__records button {
+  display: block;
+  width: 100%;
+  padding: 0;
 }
 
 .other-gallery-grid {
@@ -2980,6 +3032,10 @@
 
 .life-calendar-day-finance-group__list article:last-child {
   border-bottom: 0;
+}
+
+.life-calendar-day-finance-group__list .life-calendar-day-finance-entry--focused {
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .life-calendar-day-finance-group__list article div {
@@ -4522,6 +4578,75 @@
   color: var(--text);
   font-size: 0.8rem;
   line-height: 1.45;
+}
+
+.other-map-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  align-items: center;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.other-map-status-summary span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.other-map-status-summary__warning {
+  color: #ffb4a8;
+}
+
+.life-person-card__manage-actions,
+.life-person-card__edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 8px;
+}
+
+.life-person-card__manage-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 6px 9px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.life-person-card__manage-actions .life-person-card__delete {
+  color: #ff9caa;
+}
+
+.life-person-card__edit-form {
+  display: grid;
+  gap: 10px;
+}
+
+.life-person-card__edit-form input,
+.life-person-card__edit-form textarea {
+  width: 100%;
+}
+
+.life-person-card__edit-actions .ui-action-button {
+  min-height: 34px;
+}
+
+.life-person-card__message {
+  color: #ff9caa !important;
+  font-size: 0.72rem !important;
 }
 
 .life-person-card__expense {

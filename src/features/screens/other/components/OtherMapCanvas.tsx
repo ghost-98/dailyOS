@@ -3,6 +3,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { getNaverMapClientId, isNaverMapReady, loadNaverMapScript } from "@/lib/naverMap";
 import type { NaverLatLngBounds, NaverMap, NaverMarker } from "@/lib/naverMap";
+import type { PlaceVerificationStatus } from "@/features/data/places/verificationApi";
+import { getPlaceVerificationQueries } from "@/features/data/places/placeIdentity";
 
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 };
 
@@ -13,6 +15,7 @@ export type OtherMapPlace = {
   longitude?: number;
   name: string;
   records: Array<{ date: string; label: string; targetId: string; targetType: "activity" | "event" | "todo"; title: string }>;
+  verificationKey: string;
 };
 
 export type OtherMapCanvasHandle = {
@@ -26,7 +29,8 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
   onPlaceResolutionChange?: (statuses: Record<string, MapPlaceResolutionStatus>) => void;
   onPlaceSelect?: (placeId: string) => void;
   places: OtherMapPlace[];
-}>(function OtherMapCanvas({ onPlaceResolutionChange, onPlaceSelect, places }, ref) {
+  verificationStatuses?: Record<string, PlaceVerificationStatus>;
+}>(function OtherMapCanvas({ onPlaceResolutionChange, onPlaceSelect, places, verificationStatuses = {} }, ref) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
   const markersRef = useRef<NaverMarker[]>([]);
@@ -87,11 +91,12 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
     return () => { isMounted = false; };
   }, [places]);
 
-  const visiblePlaces = useMemo(() => places.map((place) => ({
+  const visiblePlaces = useMemo(() => places.map((place, displayIndex) => ({
     ...place,
+    displayIndex,
     latitude: place.latitude ?? resolvedCoordinates[place.id]?.latitude,
     longitude: place.longitude ?? resolvedCoordinates[place.id]?.longitude,
-  })).filter((place): place is OtherMapPlace & { latitude: number; longitude: number } => hasCoordinates(place)), [places, resolvedCoordinates]);
+  })).filter((place): place is OtherMapPlace & { displayIndex: number; latitude: number; longitude: number } => hasCoordinates(place)), [places, resolvedCoordinates]);
 
   useEffect(() => {
     if (status !== "ready" || !elementRef.current || !window.naver?.maps) return;
@@ -115,11 +120,12 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
     if (status !== "ready" || !mapRef.current || !window.naver?.maps) return;
 
     markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = visiblePlaces.map((place, index) => {
+    markersRef.current = visiblePlaces.map((place) => {
+      const verificationStatus = verificationStatuses[place.verificationKey];
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 18),
-          content: `<div class="life-calendar-route-marker"><span>${index + 1}</span></div>`,
+          content: `<div class="life-calendar-route-marker ${verificationStatus === "unverified" ? "life-calendar-route-marker--unverified" : verificationStatus === "checking" ? "life-calendar-route-marker--checking" : ""}"><span>${place.displayIndex + 1}</span></div>`,
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(place.latitude, place.longitude),
@@ -146,7 +152,7 @@ export const OtherMapCanvas = forwardRef<OtherMapCanvasHandle, {
     }
 
     fitVisiblePlaces(mapRef.current, visiblePlaces);
-  }, [status, visiblePlaces]);
+  }, [status, verificationStatuses, visiblePlaces]);
 
   useImperativeHandle(ref, () => ({
     focusPlace: (placeId: string) => {
@@ -199,15 +205,22 @@ function hasCoordinates(place: OtherMapPlace): place is OtherMapPlace & { latitu
 }
 
 async function resolvePlaceCoordinates(place: OtherMapPlace) {
-  const query = place.address?.trim() || place.name.trim();
-  if (!query) return { id: place.id, status: "unresolved" as const };
-  try {
-    const endpoint = place.address?.trim() ? "/api/maps/geocode" : "/api/maps/search-place";
-    const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
-    const payload = await response.json() as { places?: Array<{ latitude: number; longitude: number }> };
-    const first = payload.places?.[0];
-    return first ? { id: place.id, latitude: first.latitude, longitude: first.longitude, status: "resolved" as const } : { id: place.id, status: "unresolved" as const };
-  } catch {
-    return { id: place.id, status: "unresolved" as const };
+  const candidates = [
+    place.address?.trim() ? { endpoint: "/api/maps/geocode", query: place.address.trim() } : null,
+    ...getPlaceVerificationQueries(place).map((query) => ({ endpoint: "/api/maps/search-place", query })),
+  ].filter((candidate): candidate is { endpoint: string; query: string } => Boolean(candidate?.query));
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`${candidate.endpoint}?query=${encodeURIComponent(candidate.query)}`);
+      if (!response.ok) continue;
+      const payload = await response.json() as { places?: Array<{ latitude: number; longitude: number }> };
+      const first = payload.places?.[0];
+      if (first) return { id: place.id, latitude: first.latitude, longitude: first.longitude, status: "resolved" as const };
+    } catch {
+      continue;
+    }
   }
+
+  return { id: place.id, status: "unresolved" as const };
 }

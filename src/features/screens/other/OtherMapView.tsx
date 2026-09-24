@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Plus, RotateCcw, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CircleAlert, MapPin, MapPinOff, Plus, RotateCcw, Search, X } from "lucide-react";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
@@ -16,8 +17,11 @@ import { useRecordsDataState } from "@/features/records/state/useRecordsDataStat
 import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDetail";
 import { toDayPhotoItem } from "@/features/screens/other/utils/photoViewItems";
 import type { LifePhotoRecord, PlanPlace } from "@/types/domain";
+import { createDayRecordHref, createRecordFocusId } from "@/features/records/navigation/recordDeepLink";
+import { createPlaceVerificationTarget, getPlaceVerificationKey, getPlaceVerificationNotice, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export function OtherMapView() {
+  const router = useRouter();
   const [isPlaceFormOpen, setIsPlaceFormOpen] = useState(false);
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlanPlace>();
@@ -33,6 +37,10 @@ export function OtherMapView() {
   const { data } = useRecordsDataState();
   const periodPlaces = useMemo(() => buildPeriodPlaces(data, startDate, endDate), [data, endDate, startDate]);
   const places = useMemo(() => filterMapPlaces(periodPlaces, query), [periodPlaces, query]);
+  const verificationTargets = useMemo(() => periodPlaces.map(createPlaceVerificationTarget), [periodPlaces]);
+  const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
+  const unresolvedPlaceCount = places.filter((place) => resolutionStatuses[place.id] === "unresolved").length;
+  const unverifiedPlaceCount = places.filter((place) => verificationStatuses[place.verificationKey] === "unverified").length;
 
   return (
     <OtherTabShell
@@ -88,7 +96,13 @@ export function OtherMapView() {
         }}
         places={places}
         ref={mapRef}
+        verificationStatuses={verificationStatuses}
       />
+      <div className="other-map-status-summary" role="status">
+        <span><MapPin aria-hidden size={14} /> 지도 표시 {places.length - unresolvedPlaceCount}곳</span>
+        {unresolvedPlaceCount > 0 ? <span className="other-map-status-summary__warning" title={places.filter((place) => resolutionStatuses[place.id] === "unresolved").map((place) => place.name).join(", ")}><MapPinOff aria-hidden size={14} /> 좌표 확인 안 됨 {unresolvedPlaceCount}곳</span> : null}
+        {unverifiedPlaceCount > 0 ? <span className="other-map-status-summary__warning"><CircleAlert aria-hidden size={14} /> NAVER 확인 안 됨 {unverifiedPlaceCount}곳</span> : null}
+      </div>
       <div className="other-map-place-list">
         {places.map((place, index) => {
           const linkedPhotos = getPlacePhotos(place, data.lifePhotos);
@@ -100,11 +114,15 @@ export function OtherMapView() {
             isExpanded={expandedPlaceIds.has(place.id)}
             key={place.id}
             name={place.name}
-            notice={resolutionStatuses[place.id] === "unresolved" ? "현재 지도에서 확인 안 됨" : undefined}
+            notice={getPlaceVerificationNotice(verificationStatuses[place.verificationKey]) ?? (resolutionStatuses[place.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : undefined)}
             onSelect={() => {
               setActivePlaceId(place.id);
               mapRef.current?.focusPlace(place.id);
               setExpandedPlaceIds((current) => toggleSetValue(current, place.id));
+            }}
+            onSelectDetail={(recordIndex) => {
+              const record = place.records[recordIndex];
+              if (record) router.push(createDayRecordHref(record.date, createRecordFocusId(record.targetType, record.targetId)));
             }}
             onShowPhotos={() => setPhotoViewerItems(linkedPhotos)}
             photoCount={linkedPhotos.length}
@@ -154,14 +172,23 @@ function buildPeriodPlaces(data: ReturnType<typeof useRecordsDataState>["data"],
   const inPeriod = (date: string) => (!startDate || date >= startDate) && (!endDate || date <= endDate);
   const places: OtherMapPlace[] = [];
 
-  data.events.filter((event) => inPeriod(event.date) && event.place).forEach((event) => places.push({ ...event.place!, id: `event-${event.id}`, records: [{ date: event.date, label: "이벤트", targetId: event.id, targetType: "event", title: event.title }] }));
-  data.tasks.filter((task) => inPeriod(task.scheduledDate) && task.place).forEach((task) => places.push({ ...task.place!, id: `task-${task.id}`, records: [{ date: task.scheduledDate, label: "할 일", targetId: task.id, targetType: "todo", title: task.title }] }));
+  data.events.filter((event) => inPeriod(event.date) && event.place).forEach((event) => places.push({ ...event.place!, id: `event-${event.id}`, records: [{ date: event.date, label: "이벤트", targetId: event.id, targetType: "event", title: event.title }], verificationKey: getPlaceVerificationKey(event.place!) }));
+  data.tasks.filter((task) => inPeriod(task.scheduledDate) && task.place).forEach((task) => places.push({ ...task.place!, id: `task-${task.id}`, records: [{ date: task.scheduledDate, label: "할 일", targetId: task.id, targetType: "todo", title: task.title }], verificationKey: getPlaceVerificationKey(task.place!) }));
   data.activities.filter((activity) => inPeriod(activity.date)).forEach((activity) => {
     const record = [{ date: activity.date, label: "활동", targetId: activity.id, targetType: "activity" as const, title: activity.title }];
     const linkedPhotoPlace = data.lifePhotos.find((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id && typeof photo.latitude === "number" && typeof photo.longitude === "number");
-    if (activity.placeName) places.push({ address: activity.placeAddress, id: `activity-${activity.id}`, latitude: linkedPhotoPlace?.latitude, longitude: linkedPhotoPlace?.longitude, name: activity.placeName, records: record });
-    if (activity.startPlaceName) places.push({ address: activity.startPlaceAddress, id: `activity-start-${activity.id}`, name: activity.startPlaceName, records: record });
-    if (activity.endPlaceName) places.push({ address: activity.endPlaceAddress, id: `activity-end-${activity.id}`, name: activity.endPlaceName, records: record });
+    if (activity.placeName) {
+      const place = { address: activity.placeAddress, latitude: activity.placeLatitude ?? linkedPhotoPlace?.latitude, longitude: activity.placeLongitude ?? linkedPhotoPlace?.longitude, name: activity.placeName, providerName: activity.placeProviderName, providerPlaceId: activity.placeProviderId };
+      places.push({ ...place, id: `activity-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
+    }
+    if (activity.startPlaceName) {
+      const place = { address: activity.startPlaceAddress, latitude: activity.startPlaceLatitude, longitude: activity.startPlaceLongitude, name: activity.startPlaceName, providerName: activity.startPlaceProviderName, providerPlaceId: activity.startPlaceProviderId };
+      places.push({ ...place, id: `activity-start-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
+    }
+    if (activity.endPlaceName) {
+      const place = { address: activity.endPlaceAddress, latitude: activity.endPlaceLatitude, longitude: activity.endPlaceLongitude, name: activity.endPlaceName, providerName: activity.endPlaceProviderName, providerPlaceId: activity.endPlaceProviderId };
+      places.push({ ...place, id: `activity-end-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
+    }
   });
 
   const grouped = new Map<string, OtherMapPlace>();

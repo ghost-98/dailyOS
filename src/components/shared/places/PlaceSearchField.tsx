@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bookmark, MapPin, Pencil, Search, Star, X } from "lucide-react";
 import { deleteSavedPlaceFromDb, fetchSavedPlacesFromDb, getSavedPlaceKey, saveSavedPlaceInDb } from "@/features/data/places/api";
 import type { PlanPlace, PlaceRecord } from "@/types/domain";
+import { createPlaceVerificationTarget, getPlaceVerificationBadge, getPlaceVerificationKey, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
+import { isSamePlaceIdentity } from "@/features/data/places/placeIdentity";
 
 export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place: PlanPlace | undefined) => void; selectedPlace?: PlanPlace }) {
   const [query, setQuery] = useState("");
@@ -14,7 +16,10 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   const [savedPlaces, setSavedPlaces] = useState<PlanPlace[]>([]);
   const [isSavingPlace, setIsSavingPlace] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const isSelectedPlaceSaved = Boolean(selectedPlace && savedPlaces.some((place) => getSavedPlaceKey(place) === getSavedPlaceKey(selectedPlace)));
+  const verificationTargets = useMemo(() => [...savedPlaces, ...(selectedPlace ? [selectedPlace] : [])].map(createPlaceVerificationTarget), [savedPlaces, selectedPlace]);
+  const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
+  const selectedSavedPlace = selectedPlace ? savedPlaces.find((place) => isSamePlaceIdentity(place, selectedPlace)) : undefined;
+  const isSelectedPlaceSaved = Boolean(selectedSavedPlace);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,8 +65,14 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
   };
 
   const chooseMapPlace = (place: PlaceRecord) => {
-    onSelect(convertPlaceRecordToPlanPlace(place));
+    const nextPlace = convertPlaceRecordToPlanPlace(place);
+    onSelect(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(nextPlace) ? undefined : nextPlace);
     setMessage("");
+    setIsEditingName(false);
+  };
+
+  const chooseSavedPlace = (place: PlanPlace) => {
+    onSelect(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place) ? undefined : place);
     setIsEditingName(false);
   };
 
@@ -70,8 +81,8 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
     setIsSavingPlace(true);
     try {
       if (isSelectedPlaceSaved) {
-        await deleteSavedPlaceFromDb(selectedPlace);
-        setSavedPlaces((current) => current.filter((place) => getSavedPlaceKey(place) !== getSavedPlaceKey(selectedPlace)));
+        await deleteSavedPlaceFromDb(selectedSavedPlace!);
+        setSavedPlaces((current) => current.filter((place) => place.savedPlaceId !== selectedSavedPlace!.savedPlaceId));
       } else {
         const saved = await saveSavedPlaceInDb(selectedPlace);
         if (saved) setSavedPlaces((current) => [...current.filter((place) => getSavedPlaceKey(place) !== getSavedPlaceKey(saved)), saved].sort((a, b) => a.name.localeCompare(b.name)));
@@ -187,22 +198,27 @@ export function PlaceSearchField({ onSelect, selectedPlace }: { onSelect: (place
         ) : (
           <div className="planner-place-saved-list" aria-label="내 장소">
             {savedPlaces.length > 0 ? (
-              savedPlaces.map((place) => (
+              savedPlaces.map((place) => {
+                const verificationStatus = verificationStatuses[getPlaceVerificationKey(place)];
+                const verificationBadge = getPlaceVerificationBadge(verificationStatus);
+                return (
                 <div className="planner-place-saved-list__item" key={getSavedPlaceKey(place)}>
                   <button
                     aria-pressed={Boolean(selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place))}
                     className={selectedPlace && getSavedPlaceKey(selectedPlace) === getSavedPlaceKey(place) ? "planner-place-results__item--selected" : undefined}
-                    onClick={() => { onSelect(place); setIsEditingName(false); }}
+                    onClick={() => chooseSavedPlace(place)}
                     type="button"
                   >
                     <strong>{place.name}</strong>
                     <span>{place.address || "주소 정보 없음"}</span>
+                    {verificationBadge ? <small className={verificationStatus === "unverified" ? "planner-place-results__verification planner-place-results__verification--unverified" : "planner-place-results__verification"}>{verificationBadge}</small> : null}
                   </button>
                   <button aria-label={`${place.name} 내 장소 삭제`} onClick={() => void removeSavedPlace(place)} type="button">
                     <X aria-hidden size={11} />
                   </button>
                 </div>
-              ))
+                );
+              })
             ) : (
               <div className="planner-place-empty">
                 <strong>아직 저장한 장소가 없어요.</strong>
@@ -232,6 +248,7 @@ async function readPlaceSearchResponse(response: Response): Promise<{ places?: P
 function convertPlaceRecordToPlanPlace(place: PlaceRecord): PlanPlace {
   return {
     name: place.name,
+    providerName: place.name,
     address: place.address,
     latitude: place.latitude,
     longitude: place.longitude,

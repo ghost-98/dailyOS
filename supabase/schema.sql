@@ -72,6 +72,7 @@ create table if not exists public.tasks (
   expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   companions text,
   place_name text,
+  place_provider_name text,
   place_address text,
   place_latitude numeric(10, 7),
   place_longitude numeric(10, 7),
@@ -97,6 +98,7 @@ create table if not exists public.calendar_events (
   expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   companions text,
   place_name text,
+  place_provider_name text,
   place_address text,
   place_latitude numeric(10, 7),
   place_longitude numeric(10, 7),
@@ -115,6 +117,7 @@ alter table public.tasks
   add column if not exists expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   add column if not exists companions text,
   add column if not exists place_name text,
+  add column if not exists place_provider_name text,
   add column if not exists place_address text,
   add column if not exists place_latitude numeric(10, 7),
   add column if not exists place_longitude numeric(10, 7),
@@ -130,6 +133,7 @@ alter table public.calendar_events
   add column if not exists expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   add column if not exists companions text,
   add column if not exists place_name text,
+  add column if not exists place_provider_name text,
   add column if not exists place_address text,
   add column if not exists place_latitude numeric(10, 7),
   add column if not exists place_longitude numeric(10, 7),
@@ -204,11 +208,23 @@ create table if not exists public.life_activities (
   expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   companions text,
   place_name text,
+  place_provider_name text,
   place_address text,
+  place_latitude numeric(10, 7),
+  place_longitude numeric(10, 7),
+  place_provider_id text,
   start_place_name text,
   start_place_address text,
+  start_place_latitude numeric(10, 7),
+  start_place_longitude numeric(10, 7),
+  start_place_provider_name text,
+  start_place_provider_id text,
   end_place_name text,
   end_place_address text,
+  end_place_latitude numeric(10, 7),
+  end_place_longitude numeric(10, 7),
+  end_place_provider_name text,
+  end_place_provider_id text,
   transport_mode text,
   source_type text check (source_type is null or source_type in ('schedule', 'todo', 'event')),
   source_id text,
@@ -227,11 +243,23 @@ alter table public.life_activities
   add column if not exists expense_amount numeric(12, 0) check (expense_amount is null or expense_amount >= 0),
   add column if not exists companions text,
   add column if not exists place_name text,
+  add column if not exists place_provider_name text,
   add column if not exists place_address text,
+  add column if not exists place_latitude numeric(10, 7),
+  add column if not exists place_longitude numeric(10, 7),
+  add column if not exists place_provider_id text,
   add column if not exists start_place_name text,
   add column if not exists start_place_address text,
+  add column if not exists start_place_latitude numeric(10, 7),
+  add column if not exists start_place_longitude numeric(10, 7),
+  add column if not exists start_place_provider_name text,
+  add column if not exists start_place_provider_id text,
   add column if not exists end_place_name text,
   add column if not exists end_place_address text,
+  add column if not exists end_place_latitude numeric(10, 7),
+  add column if not exists end_place_longitude numeric(10, 7),
+  add column if not exists end_place_provider_name text,
+  add column if not exists end_place_provider_id text,
   add column if not exists transport_mode text,
   add column if not exists source_type text check (source_type is null or source_type in ('schedule', 'todo', 'event')),
   add column if not exists source_id text,
@@ -336,6 +364,7 @@ create table if not exists public.saved_places (
   user_id uuid not null references auth.users(id) on delete cascade,
   place_key text not null,
   name text not null,
+  provider_name text,
   address text not null default '',
   latitude numeric(10, 7) not null,
   longitude numeric(10, 7) not null,
@@ -345,6 +374,21 @@ create table if not exists public.saved_places (
   url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (user_id, place_key)
+);
+
+alter table public.saved_places
+  add column if not exists provider_name text;
+
+create table if not exists public.place_verifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  place_key text not null,
+  status text not null check (status in ('verified', 'unverified')),
+  checked_at timestamptz not null default now(),
+  matched_name text,
+  matched_address text,
+  created_at timestamptz not null default now(),
   unique (user_id, place_key)
 );
 
@@ -369,6 +413,7 @@ create index if not exists expense_records_user_date_idx on public.expense_recor
 create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists saved_places_user_name_idx on public.saved_places(user_id, name);
+create index if not exists place_verifications_user_status_idx on public.place_verifications(user_id, status, checked_at desc);
 create index if not exists activity_categories_user_name_idx on public.activity_categories(user_id, name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
 
@@ -400,6 +445,27 @@ with check (bucket_id = 'life-media' and (select auth.uid())::text = (storage.fo
 create policy "life_media_delete_own"
 on storage.objects for delete
 using (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
+
+create or replace function public.delete_linked_expenses_for_record()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_table_name = 'tasks' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type = 'todo' and target_id = old.id;
+  elsif tg_table_name = 'calendar_events' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type in ('event', 'schedule') and target_id = old.id;
+  elsif tg_table_name = 'life_activities' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type = 'activity' and target_id = old.id;
+  end if;
+
+  return old;
+end;
+$$;
 
 drop trigger if exists set_profiles_updated_at on public.profiles;
 create trigger set_profiles_updated_at
@@ -461,6 +527,21 @@ create trigger set_saved_places_updated_at
 before update on public.saved_places
 for each row execute function public.set_updated_at();
 
+drop trigger if exists delete_task_linked_expenses on public.tasks;
+create trigger delete_task_linked_expenses
+after delete on public.tasks
+for each row execute function public.delete_linked_expenses_for_record();
+
+drop trigger if exists delete_event_linked_expenses on public.calendar_events;
+create trigger delete_event_linked_expenses
+after delete on public.calendar_events
+for each row execute function public.delete_linked_expenses_for_record();
+
+drop trigger if exists delete_activity_linked_expenses on public.life_activities;
+create trigger delete_activity_linked_expenses
+after delete on public.life_activities
+for each row execute function public.delete_linked_expenses_for_record();
+
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;
 alter table public.calendar_events enable row level security;
@@ -473,6 +554,7 @@ alter table public.expense_records enable row level security;
 alter table public.income_records enable row level security;
 alter table public.people enable row level security;
 alter table public.saved_places enable row level security;
+alter table public.place_verifications enable row level security;
 alter table public.activity_categories enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
@@ -493,6 +575,12 @@ on public.profiles for update
 to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own profile" on public.profiles;
+create policy "Users can delete own profile"
+on public.profiles for delete
+to authenticated
+using (user_id = auth.uid());
 
 drop policy if exists "Users can read own tasks" on public.tasks;
 create policy "Users can read own tasks"
@@ -784,6 +872,31 @@ with check (user_id = auth.uid());
 drop policy if exists "Users can delete own saved places" on public.saved_places;
 create policy "Users can delete own saved places"
 on public.saved_places for delete
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can read own place verifications" on public.place_verifications;
+create policy "Users can read own place verifications"
+on public.place_verifications for select
+to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists "Users can insert own place verifications" on public.place_verifications;
+create policy "Users can insert own place verifications"
+on public.place_verifications for insert
+to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can update own place verifications" on public.place_verifications;
+create policy "Users can update own place verifications"
+on public.place_verifications for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own place verifications" on public.place_verifications;
+create policy "Users can delete own place verifications"
+on public.place_verifications for delete
 to authenticated
 using (user_id = auth.uid());
 

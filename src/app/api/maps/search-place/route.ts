@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 
   let response: Response;
   try {
-    response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=random`, {
+    response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=comment`, {
       headers: {
         Accept: "application/json",
         "X-Naver-Client-Id": searchClientId,
@@ -79,7 +79,8 @@ export async function GET(request: Request) {
 }
 
 async function toPlace(item: NaverLocalItem, index: number, query: string) {
-  const address = stripTags(item.roadAddress || item.address || "");
+  const roadAddress = stripTags(item.roadAddress || "");
+  const address = isUsableRoadAddress(roadAddress) ? roadAddress : stripTags(item.address || roadAddress);
   const coordinates = getCoordinatesFromLocalItem(item) ?? (await geocodeAddress(address || query));
   if (!coordinates) return null;
 
@@ -131,6 +132,10 @@ async function geocodeAddress(address: string) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
   return { latitude, longitude };
+}
+
+function isUsableRoadAddress(address: string) {
+  return /(?:로|길)\s*\d/.test(address);
 }
 
 async function geocodeAddressPlace(query: string) {
