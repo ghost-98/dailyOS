@@ -1,6 +1,6 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
-import { getPlaceVerificationQuery, hasCoordinates, normalizeAddress, normalizePlaceName, type PlaceIdentity } from "@/features/data/places/placeIdentity";
+import { getPlaceVerificationQueries, hasCoordinates, normalizeAddress, normalizePlaceName, type PlaceIdentity } from "@/features/data/places/placeIdentity";
 import type { PlaceRecord } from "@/types/domain";
 
 export type PlaceVerificationStatus = "checking" | "error" | "unverified" | "verified";
@@ -40,12 +40,17 @@ export async function loadPlaceVerificationCache(keys: string[]) {
 }
 
 export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
-  const query = getPlaceVerificationQuery(target);
-  if (!query) return null;
-  const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
-  if (!response.ok) throw new Error("장소 확인 요청에 실패했습니다.");
-  const payload = await response.json() as { places?: PlaceRecord[] };
-  const match = findMatchingPlace(target, payload.places ?? []);
+  const queries = getPlaceVerificationQueries(target);
+  if (queries.length === 0) return null;
+
+  let match: PlaceRecord | undefined;
+  for (const query of queries) {
+    const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error("장소 확인 요청에 실패했습니다.");
+    const payload = await response.json() as { places?: PlaceRecord[] };
+    match = findMatchingPlace(target, payload.places ?? []);
+    if (match) break;
+  }
   const status = match ? "verified" as const : "unverified" as const;
   await savePlaceVerification(target.key, status, match?.name, match?.address);
   return status;

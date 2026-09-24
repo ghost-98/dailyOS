@@ -20,10 +20,10 @@ export function getPlaceIdentityKey(place: PlaceIdentity) {
   return `name:${normalizeText(place.providerName || place.name)}`;
 }
 
-export function getPlaceVerificationQuery(place: PlaceIdentity) {
+export function getPlaceVerificationQueries(place: PlaceIdentity) {
   const name = (place.providerName || place.name).trim();
   const address = place.address?.trim() || "";
-  return [...new Set([name, address].filter(Boolean))].join(" ");
+  return [...new Set([name, address].filter(Boolean))];
 }
 
 export function isSamePlaceIdentity(left: PlaceIdentity, right: PlaceIdentity) {

@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 
   let response: Response;
   try {
-    response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=random`, {
+    response = await fetch(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=5&sort=comment`, {
       headers: {
         Accept: "application/json",
         "X-Naver-Client-Id": searchClientId,

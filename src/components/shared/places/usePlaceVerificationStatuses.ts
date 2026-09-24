@@ -5,10 +5,19 @@ import { isFreshPlaceVerification, loadPlaceVerificationCache, verifyPlaceTarget
 import { getPlaceIdentityKey, type PlaceIdentity } from "@/features/data/places/placeIdentity";
 
 const VERIFICATION_CONCURRENCY = 4;
+const VERIFICATION_KEY_VERSION = "v2";
 
 export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[]) {
   const [statuses, setStatuses] = useState<Record<string, PlaceVerificationStatus>>({});
-  const targetSignature = useMemo(() => targets.map((target) => `${target.key}|${target.name}|${target.address ?? ""}`).join("\n"), [targets]);
+  const targetSignature = useMemo(() => targets.map((target) => [
+    target.key,
+    target.name,
+    target.providerName ?? "",
+    target.providerPlaceId ?? "",
+    target.address ?? "",
+    target.latitude ?? "",
+    target.longitude ?? "",
+  ].join("|")).join("\n"), [targets]);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,11 +64,11 @@ export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[])
 }
 
 export function getPlaceVerificationKey(place: PlaceIdentity) {
-  return getPlaceIdentityKey(place);
+  return `${VERIFICATION_KEY_VERSION}:${getPlaceIdentityKey(place)}`;
 }
 
 export function createPlaceVerificationTarget(place: PlaceIdentity): PlaceVerificationTarget {
-  return { ...place, key: getPlaceIdentityKey(place) };
+  return { ...place, key: getPlaceVerificationKey(place) };
 }
 
 export function getPlaceVerificationNotice(status?: PlaceVerificationStatus) {
