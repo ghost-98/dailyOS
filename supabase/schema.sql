@@ -377,6 +377,9 @@ create table if not exists public.saved_places (
   unique (user_id, place_key)
 );
 
+alter table public.saved_places
+  add column if not exists provider_name text;
+
 create table if not exists public.place_verifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -410,6 +413,7 @@ create index if not exists expense_records_user_date_idx on public.expense_recor
 create index if not exists income_records_user_date_idx on public.income_records(user_id, income_date desc);
 create index if not exists people_user_name_idx on public.people(user_id, name);
 create index if not exists saved_places_user_name_idx on public.saved_places(user_id, name);
+create index if not exists place_verifications_user_status_idx on public.place_verifications(user_id, status, checked_at desc);
 create index if not exists activity_categories_user_name_idx on public.activity_categories(user_id, name);
 create unique index if not exists expense_records_user_target_unique_idx on public.expense_records(user_id, target_type, target_id) where target_type is not null and target_id is not null;
 
@@ -535,6 +539,12 @@ on public.profiles for update
 to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own profile" on public.profiles;
+create policy "Users can delete own profile"
+on public.profiles for delete
+to authenticated
+using (user_id = auth.uid());
 
 drop policy if exists "Users can read own tasks" on public.tasks;
 create policy "Users can read own tasks"
