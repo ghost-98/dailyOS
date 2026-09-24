@@ -27,3 +27,8 @@ create policy "Users can update own place verifications"
 on public.place_verifications for update
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own place verifications" on public.place_verifications;
+create policy "Users can delete own place verifications"
+on public.place_verifications for delete
+using (auth.uid() = user_id);

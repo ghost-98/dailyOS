@@ -130,7 +130,7 @@ export function useRecordsDataState() {
   const updateTask = async (task: TaskItem) => {
     const savedTask = await updateTaskInDb(task);
     const nextTask = savedTask ?? task;
-    await updateLifeActivitiesBySourceInDb({ category: "할 일", companions: nextTask.companions, date: nextTask.scheduledDate, endTime: nextTask.endTime, expenseAmount: nextTask.expenseAmount, isAllDay: nextTask.isAllDay, memo: nextTask.memo, placeAddress: nextTask.place?.address, placeName: nextTask.place?.name, sourceId: nextTask.id, sourceType: "todo", startTime: nextTask.startTime, title: nextTask.title });
+    await updateLifeActivitiesBySourceInDb({ category: "할 일", companions: nextTask.companions, date: nextTask.scheduledDate, endTime: nextTask.endTime, expenseAmount: nextTask.expenseAmount, isAllDay: nextTask.isAllDay, memo: nextTask.memo, placeAddress: nextTask.place?.address, placeLatitude: nextTask.place?.latitude, placeLongitude: nextTask.place?.longitude, placeName: nextTask.place?.name, placeProviderId: nextTask.place?.providerPlaceId, placeProviderName: nextTask.place?.providerName, sourceId: nextTask.id, sourceType: "todo", startTime: nextTask.startTime, title: nextTask.title });
     await syncLinkedExpenseRecordInDb({ amount: nextTask.expenseAmount, date: nextTask.scheduledDate, memo: nextTask.memo, targetId: nextTask.id, targetType: "todo", title: nextTask.title });
     setLifeData((current) => ({
       ...current,
@@ -141,7 +141,7 @@ export function useRecordsDataState() {
   const updateEvent = async (event: CalendarEvent) => {
     const savedEvent = await updateCalendarEventInDb(event);
     if (!savedEvent) return;
-    await updateLifeActivitiesBySourceInDb({ category: "이벤트", companions: savedEvent.companions, date: savedEvent.date, endTime: savedEvent.endTime, expenseAmount: savedEvent.expenseAmount, isAllDay: savedEvent.isAllDay, memo: savedEvent.meta, placeAddress: savedEvent.place?.address, placeName: savedEvent.place?.name, sourceId: savedEvent.id, sourceType: "event", startTime: savedEvent.time, title: savedEvent.title });
+    await updateLifeActivitiesBySourceInDb({ category: "이벤트", companions: savedEvent.companions, date: savedEvent.date, endTime: savedEvent.endTime, expenseAmount: savedEvent.expenseAmount, isAllDay: savedEvent.isAllDay, memo: savedEvent.meta, placeAddress: savedEvent.place?.address, placeLatitude: savedEvent.place?.latitude, placeLongitude: savedEvent.place?.longitude, placeName: savedEvent.place?.name, placeProviderId: savedEvent.place?.providerPlaceId, placeProviderName: savedEvent.place?.providerName, sourceId: savedEvent.id, sourceType: "event", startTime: savedEvent.time, title: savedEvent.title });
     await syncLinkedExpenseRecordInDb({ amount: savedEvent.expenseAmount, date: savedEvent.date, memo: savedEvent.meta, targetId: savedEvent.id, targetType: "event", title: savedEvent.title });
     setLifeData((current) => ({
       ...current,
@@ -371,11 +371,12 @@ function createPlanPlaceFromActivity(activity: LifeActivityRecord, fallback?: Pl
   return {
     address: activity.placeAddress ?? fallback?.address ?? "",
     category: fallback?.category,
-    latitude: fallback?.latitude ?? 0,
-    longitude: fallback?.longitude ?? 0,
+    latitude: activity.placeLatitude ?? fallback?.latitude ?? 0,
+    longitude: activity.placeLongitude ?? fallback?.longitude ?? 0,
     name: activity.placeName,
     phone: fallback?.phone,
-    providerPlaceId: fallback?.providerPlaceId,
+    providerName: activity.placeProviderName ?? fallback?.providerName,
+    providerPlaceId: activity.placeProviderId ?? fallback?.providerPlaceId,
     url: fallback?.url,
   };
 }

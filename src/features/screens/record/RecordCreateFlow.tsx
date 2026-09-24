@@ -268,9 +268,9 @@ function ActivityCreateForm({
   const [endTime, setEndTime] = useState(initialActivity?.endTime ?? "");
   const [hasTime, setHasTime] = useState(!(initialActivity?.isAllDay ?? false));
   const [hasEndTime, setHasEndTime] = useState(Boolean(initialActivity?.endTime));
-  const [place, setPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.placeName, initialActivity?.placeAddress));
-  const [startPlace, setStartPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.startPlaceName, initialActivity?.startPlaceAddress));
-  const [endPlace, setEndPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity?.endPlaceName, initialActivity?.endPlaceAddress));
+  const [place, setPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity, "place"));
+  const [startPlace, setStartPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity, "startPlace"));
+  const [endPlace, setEndPlace] = useState<PlanPlace | undefined>(() => toActivityPlace(initialActivity, "endPlace"));
   const [transportMode, setTransportMode] = useState(initialActivity?.transportMode ?? "");
   const [companions, setCompanions] = useState<string[]>(() => initialActivity?.companions?.split(",").map((item) => item.trim()).filter(Boolean) ?? []);
   const [food, setFood] = useState(initialActivity?.food ?? "");
@@ -331,10 +331,22 @@ function ActivityCreateForm({
         memo: memo.trim() || undefined,
         placeName: category === "이동" ? endPlace?.name : place?.name,
         placeAddress: category === "이동" ? endPlace?.address : place?.address,
+        placeLatitude: category === "이동" ? endPlace?.latitude : place?.latitude,
+        placeLongitude: category === "이동" ? endPlace?.longitude : place?.longitude,
+        placeProviderName: category === "이동" ? endPlace?.providerName : place?.providerName,
+        placeProviderId: category === "이동" ? endPlace?.providerPlaceId : place?.providerPlaceId,
         startPlaceName: category === "이동" ? startPlace?.name : undefined,
         startPlaceAddress: category === "이동" ? startPlace?.address : undefined,
+        startPlaceLatitude: category === "이동" ? startPlace?.latitude : undefined,
+        startPlaceLongitude: category === "이동" ? startPlace?.longitude : undefined,
+        startPlaceProviderName: category === "이동" ? startPlace?.providerName : undefined,
+        startPlaceProviderId: category === "이동" ? startPlace?.providerPlaceId : undefined,
         endPlaceName: category === "이동" ? endPlace?.name : undefined,
         endPlaceAddress: category === "이동" ? endPlace?.address : undefined,
+        endPlaceLatitude: category === "이동" ? endPlace?.latitude : undefined,
+        endPlaceLongitude: category === "이동" ? endPlace?.longitude : undefined,
+        endPlaceProviderName: category === "이동" ? endPlace?.providerName : undefined,
+        endPlaceProviderId: category === "이동" ? endPlace?.providerPlaceId : undefined,
         transportMode: category === "이동" ? transportMode.trim() || undefined : undefined,
         food: category === "식사" ? food.trim() || undefined : undefined,
       });
@@ -761,9 +773,17 @@ function parseCreateType(value: string | null): CreateType | null {
   return CREATE_CHOICES.some((choice) => choice.key === value) ? value as CreateType : null;
 }
 
-function toActivityPlace(name?: string, address?: string): PlanPlace | undefined {
+function toActivityPlace(activity: LifeActivityRecord | undefined, prefix: "place" | "startPlace" | "endPlace"): PlanPlace | undefined {
+  const name = activity?.[`${prefix}Name`];
   if (!name) return undefined;
-  return { address: address ?? "", latitude: 0, longitude: 0, name };
+  return {
+    address: activity?.[`${prefix}Address`] ?? "",
+    latitude: activity?.[`${prefix}Latitude`] ?? 0,
+    longitude: activity?.[`${prefix}Longitude`] ?? 0,
+    name,
+    providerName: activity?.[`${prefix}ProviderName`],
+    providerPlaceId: activity?.[`${prefix}ProviderId`],
+  };
 }
 
 

@@ -1,12 +1,12 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
+import { getPlaceVerificationQuery, hasCoordinates, normalizeAddress, normalizePlaceName, type PlaceIdentity } from "@/features/data/places/placeIdentity";
+import type { PlaceRecord } from "@/types/domain";
 
-export type PlaceVerificationStatus = "checking" | "unverified" | "verified";
+export type PlaceVerificationStatus = "checking" | "error" | "unverified" | "verified";
 
-export type PlaceVerificationTarget = {
-  address?: string;
+export type PlaceVerificationTarget = PlaceIdentity & {
   key: string;
-  name: string;
 };
 
 type PlaceVerificationRow = {
@@ -16,6 +16,7 @@ type PlaceVerificationRow = {
 };
 
 const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const CACHE_QUERY_BATCH_SIZE = 100;
 
 export function isMissingPlaceVerificationTable(errorCode?: string) {
   return errorCode === "42P01" || errorCode === "PGRST205";
@@ -25,23 +26,53 @@ export async function loadPlaceVerificationCache(keys: string[]) {
   if (!supabase || keys.length === 0) return new Map<string, PlaceVerificationRow>();
   const userId = await getCurrentUserId();
   if (!userId) return new Map<string, PlaceVerificationRow>();
-  const { data, error } = await supabase.from("place_verifications").select("place_key,status,checked_at").eq("user_id", userId).in("place_key", keys);
-  if (isMissingPlaceVerificationTable(error?.code)) return new Map<string, PlaceVerificationRow>();
-  if (error) throw error;
-  return new Map(((data ?? []) as PlaceVerificationRow[]).map((row) => [row.place_key, row]));
+  const cache = new Map<string, PlaceVerificationRow>();
+
+  for (let index = 0; index < keys.length; index += CACHE_QUERY_BATCH_SIZE) {
+    const batch = keys.slice(index, index + CACHE_QUERY_BATCH_SIZE);
+    const { data, error } = await supabase.from("place_verifications").select("place_key,status,checked_at").eq("user_id", userId).in("place_key", batch);
+    if (isMissingPlaceVerificationTable(error?.code)) return new Map<string, PlaceVerificationRow>();
+    if (error) throw error;
+    ((data ?? []) as PlaceVerificationRow[]).forEach((row) => cache.set(row.place_key, row));
+  }
+
+  return cache;
 }
 
 export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
-  const query = target.address?.trim() || target.name.trim();
+  const query = getPlaceVerificationQuery(target);
   if (!query) return null;
-  const endpoint = target.address?.trim() ? "/api/maps/geocode" : "/api/maps/search-place";
-  const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}`);
+  const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
   if (!response.ok) throw new Error("장소 확인 요청에 실패했습니다.");
-  const payload = await response.json() as { places?: Array<{ address?: string; name?: string }> };
-  const match = payload.places?.[0];
+  const payload = await response.json() as { places?: PlaceRecord[] };
+  const match = findMatchingPlace(target, payload.places ?? []);
   const status = match ? "verified" as const : "unverified" as const;
   await savePlaceVerification(target.key, status, match?.name, match?.address);
   return status;
+}
+
+function findMatchingPlace(target: PlaceVerificationTarget, candidates: PlaceRecord[]) {
+  return candidates.find((candidate) => {
+    if (target.providerPlaceId && candidate.providerPlaceId === target.providerPlaceId) return true;
+    if (hasCoordinates(target) && distanceInMeters(target, candidate) <= 150) return true;
+
+    const targetAddress = normalizeAddress(target.address);
+    const candidateAddress = normalizeAddress(candidate.address);
+    const addressMatches = Boolean(targetAddress && candidateAddress
+      && (targetAddress.includes(candidateAddress) || candidateAddress.includes(targetAddress)));
+    if (!addressMatches) return false;
+
+    const targetName = normalizePlaceName(target.providerName || target.name);
+    const candidateName = normalizePlaceName(candidate.name);
+    return !targetName || !candidateName || targetName.includes(candidateName) || candidateName.includes(targetName);
+  });
+}
+
+function distanceInMeters(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+  const latitudeDistance = (a.latitude - b.latitude) * 111_320;
+  const longitudeScale = Math.cos((a.latitude * Math.PI) / 180);
+  const longitudeDistance = (a.longitude - b.longitude) * 111_320 * longitudeScale;
+  return Math.hypot(latitudeDistance, longitudeDistance);
 }
 
 export function isFreshPlaceVerification(checkedAt: string) {

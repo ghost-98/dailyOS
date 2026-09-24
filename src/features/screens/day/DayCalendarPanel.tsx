@@ -470,6 +470,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        providerName: item.event.place.providerName,
+        providerPlaceId: item.event.place.providerPlaceId,
         photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
@@ -486,6 +488,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        providerName: item.task.place.providerName,
+        providerPlaceId: item.task.place.providerPlaceId,
         photos: linkedPhotos,
         sortMinutes: item.sortMinutes,
         timeLabel: item.timeLabel,
@@ -504,6 +508,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
           latitude: item.external.placeLatitude ?? photoSource?.external.placeLatitude,
           longitude: item.external.placeLongitude ?? photoSource?.external.placeLongitude,
           name: item.external.placeName,
+          providerName: item.external.placeProviderName,
+          providerPlaceId: item.external.placeProviderId,
           photos: linkedPhotos,
           sortMinutes: item.sortMinutes,
           timeLabel: item.timeLabel,
@@ -556,6 +562,8 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
         latitude: linkedPlace.latitude,
         longitude: linkedPlace.longitude,
         name: `${formatPhotoTimeLabel(item.external)} 사진`,
+        providerName: linkedPlace.providerName,
+        providerPlaceId: linkedPlace.providerPlaceId,
         photos: [photoItem],
         sortMinutes: item.sortMinutes,
         timeLabel: formatPhotoTimeLabel(item.external),
@@ -573,7 +581,7 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
 }
 
 function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
-  const placeMap = new Map<string, { address?: string; latitude?: number; longitude?: number; name: string }>();
+  const placeMap = new Map<string, { address?: string; latitude?: number; longitude?: number; name: string; providerName?: string; providerPlaceId?: string }>();
 
   items.forEach((item) => {
     if ("event" in item && item.event.place) {
@@ -582,6 +590,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.event.place.latitude,
         longitude: item.event.place.longitude,
         name: item.event.place.name,
+        providerName: item.event.place.providerName,
+        providerPlaceId: item.event.place.providerPlaceId,
       });
       return;
     }
@@ -592,6 +602,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.task.place.latitude,
         longitude: item.task.place.longitude,
         name: item.task.place.name,
+        providerName: item.task.place.providerName,
+        providerPlaceId: item.task.place.providerPlaceId,
       });
       return;
     }
@@ -602,6 +614,8 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
         latitude: item.external.placeLatitude,
         longitude: item.external.placeLongitude,
         name: item.external.placeName,
+        providerName: item.external.placeProviderName,
+        providerPlaceId: item.external.placeProviderId,
       });
     }
   });

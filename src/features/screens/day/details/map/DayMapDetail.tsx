@@ -5,7 +5,7 @@ import { MapPlaceCard } from "@/components/shared/maps/MapPlaceCard";
 import { DayRouteMap } from "@/features/screens/day/details/map/DayRouteMap";
 import type { DayRouteMapHandle, RouteStopResolutionStatus } from "@/features/screens/day/details/map/DayRouteMap";
 import type { DayPhotoItem, DayRouteStop } from "@/features/screens/day/dayDetailTypes";
-import { getPlaceVerificationKey, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
+import { createPlaceVerificationTarget, getPlaceVerificationKey, getPlaceVerificationNotice, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export type DayMapDetailHandle = {
   resetViewport: () => void;
@@ -23,7 +23,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [expandedStopIds, setExpandedStopIds] = useState<Set<string>>(() => new Set());
   const [resolutionStatuses, setResolutionStatuses] = useState<Record<string, RouteStopResolutionStatus>>({});
-  const verificationTargets = useMemo(() => routeStops.map((stop) => ({ address: stop.address, key: getPlaceVerificationKey(stop), name: stop.name })), [routeStops]);
+  const verificationTargets = useMemo(() => routeStops.map(createPlaceVerificationTarget), [routeStops]);
   const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
 
   useImperativeHandle(ref, () => ({
@@ -64,7 +64,7 @@ export const DayMapDetail = forwardRef<DayMapDetailHandle, DayMapDetailProps>(fu
               isExpanded={expandedStopIds.has(stop.id)}
               key={stop.id}
               name={stop.name}
-              notice={verificationStatuses[getPlaceVerificationKey(stop)] === "unverified" ? "NAVER에서 현재 확인되지 않는 장소" : resolutionStatuses[stop.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : verificationStatuses[getPlaceVerificationKey(stop)] === "checking" ? "NAVER 장소 확인 중" : undefined}
+              notice={getPlaceVerificationNotice(verificationStatuses[getPlaceVerificationKey(stop)]) ?? (resolutionStatuses[stop.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : undefined)}
               onSelect={() => handleToggleStop(stop.id)}
               onShowPhotos={() => onShowPhotos(stop.photos ?? [], stop.name)}
               photoCount={stop.photos?.length ?? 0}

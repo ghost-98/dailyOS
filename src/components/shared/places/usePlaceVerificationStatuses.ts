@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { isFreshPlaceVerification, loadPlaceVerificationCache, verifyPlaceTarget, type PlaceVerificationStatus, type PlaceVerificationTarget } from "@/features/data/places/verificationApi";
+import { getPlaceIdentityKey, type PlaceIdentity } from "@/features/data/places/placeIdentity";
+
+const VERIFICATION_CONCURRENCY = 4;
 
 export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[]) {
   const [statuses, setStatuses] = useState<Record<string, PlaceVerificationStatus>>({});
@@ -29,14 +32,20 @@ export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[])
       });
       if (isMounted) setStatuses(next);
 
-      await Promise.all(targetsToCheck.map(async (target) => {
-        try {
-          const status = await verifyPlaceTarget(target);
-          if (isMounted && status) setStatuses((current) => ({ ...current, [target.key]: status }));
-        } catch (error) {
-          console.error("Failed to verify place", error);
+      let nextTargetIndex = 0;
+      const verifyNext = async () => {
+        while (nextTargetIndex < targetsToCheck.length) {
+          const target = targetsToCheck[nextTargetIndex++];
+          try {
+            const status = await verifyPlaceTarget(target);
+            if (isMounted && status) setStatuses((current) => ({ ...current, [target.key]: status }));
+          } catch (error) {
+            console.error("Failed to verify place", error);
+            if (isMounted) setStatuses((current) => ({ ...current, [target.key]: "error" }));
+          }
         }
-      }));
+      };
+      await Promise.all(Array.from({ length: Math.min(VERIFICATION_CONCURRENCY, targetsToCheck.length) }, verifyNext));
     };
     void run();
     return () => { isMounted = false; };
@@ -45,9 +54,24 @@ export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[])
   return statuses;
 }
 
-export function getPlaceVerificationKey(place: { address?: string; latitude?: number; longitude?: number; name: string }) {
-  const address = place.address?.trim().toLocaleLowerCase("ko-KR");
-  if (address) return `address:${address}`;
-  if (typeof place.latitude === "number" && typeof place.longitude === "number") return `coordinates:${place.latitude.toFixed(6)},${place.longitude.toFixed(6)}`;
-  return `name:${place.name.trim().toLocaleLowerCase("ko-KR")}`;
+export function getPlaceVerificationKey(place: PlaceIdentity) {
+  return getPlaceIdentityKey(place);
+}
+
+export function createPlaceVerificationTarget(place: PlaceIdentity): PlaceVerificationTarget {
+  return { ...place, key: getPlaceIdentityKey(place) };
+}
+
+export function getPlaceVerificationNotice(status?: PlaceVerificationStatus) {
+  if (status === "unverified") return "NAVER에서 현재 확인되지 않는 장소";
+  if (status === "checking") return "NAVER 장소 확인 중";
+  if (status === "error") return "NAVER 장소 확인을 잠시 완료하지 못함";
+  return undefined;
+}
+
+export function getPlaceVerificationBadge(status?: PlaceVerificationStatus) {
+  if (status === "unverified") return "NAVER 확인 안 됨";
+  if (status === "checking") return "확인 중";
+  if (status === "error") return "확인 지연";
+  return undefined;
 }

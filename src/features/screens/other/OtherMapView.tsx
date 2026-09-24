@@ -18,7 +18,7 @@ import { DayPhotoDetail } from "@/features/screens/day/details/photos/DayPhotoDe
 import { toDayPhotoItem } from "@/features/screens/other/utils/photoViewItems";
 import type { LifePhotoRecord, PlanPlace } from "@/types/domain";
 import { createDayRecordHref, createRecordFocusId } from "@/features/records/navigation/recordDeepLink";
-import { getPlaceVerificationKey, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
+import { createPlaceVerificationTarget, getPlaceVerificationKey, getPlaceVerificationNotice, usePlaceVerificationStatuses } from "@/components/shared/places/usePlaceVerificationStatuses";
 
 export function OtherMapView() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export function OtherMapView() {
   const { data } = useRecordsDataState();
   const periodPlaces = useMemo(() => buildPeriodPlaces(data, startDate, endDate), [data, endDate, startDate]);
   const places = useMemo(() => filterMapPlaces(periodPlaces, query), [periodPlaces, query]);
-  const verificationTargets = useMemo(() => periodPlaces.map((place) => ({ address: place.address, key: place.verificationKey, name: place.name })), [periodPlaces]);
+  const verificationTargets = useMemo(() => periodPlaces.map(createPlaceVerificationTarget), [periodPlaces]);
   const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
 
   return (
@@ -107,7 +107,7 @@ export function OtherMapView() {
             isExpanded={expandedPlaceIds.has(place.id)}
             key={place.id}
             name={place.name}
-            notice={verificationStatuses[place.verificationKey] === "unverified" ? "NAVER에서 현재 확인되지 않는 장소" : resolutionStatuses[place.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : verificationStatuses[place.verificationKey] === "checking" ? "NAVER 장소 확인 중" : undefined}
+            notice={getPlaceVerificationNotice(verificationStatuses[place.verificationKey]) ?? (resolutionStatuses[place.id] === "unresolved" ? "지도 좌표를 확인할 수 없는 장소" : undefined)}
             onSelect={() => {
               setActivePlaceId(place.id);
               mapRef.current?.focusPlace(place.id);
@@ -171,15 +171,15 @@ function buildPeriodPlaces(data: ReturnType<typeof useRecordsDataState>["data"],
     const record = [{ date: activity.date, label: "활동", targetId: activity.id, targetType: "activity" as const, title: activity.title }];
     const linkedPhotoPlace = data.lifePhotos.find((photo) => photo.linkedTargetType === "activity" && photo.linkedTargetId === activity.id && typeof photo.latitude === "number" && typeof photo.longitude === "number");
     if (activity.placeName) {
-      const place = { address: activity.placeAddress, latitude: linkedPhotoPlace?.latitude, longitude: linkedPhotoPlace?.longitude, name: activity.placeName };
+      const place = { address: activity.placeAddress, latitude: activity.placeLatitude ?? linkedPhotoPlace?.latitude, longitude: activity.placeLongitude ?? linkedPhotoPlace?.longitude, name: activity.placeName, providerName: activity.placeProviderName, providerPlaceId: activity.placeProviderId };
       places.push({ ...place, id: `activity-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
     }
     if (activity.startPlaceName) {
-      const place = { address: activity.startPlaceAddress, name: activity.startPlaceName };
+      const place = { address: activity.startPlaceAddress, latitude: activity.startPlaceLatitude, longitude: activity.startPlaceLongitude, name: activity.startPlaceName, providerName: activity.startPlaceProviderName, providerPlaceId: activity.startPlaceProviderId };
       places.push({ ...place, id: `activity-start-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
     }
     if (activity.endPlaceName) {
-      const place = { address: activity.endPlaceAddress, name: activity.endPlaceName };
+      const place = { address: activity.endPlaceAddress, latitude: activity.endPlaceLatitude, longitude: activity.endPlaceLongitude, name: activity.endPlaceName, providerName: activity.endPlaceProviderName, providerPlaceId: activity.endPlaceProviderId };
       places.push({ ...place, id: `activity-end-${activity.id}`, records: record, verificationKey: getPlaceVerificationKey(place) });
     }
   });

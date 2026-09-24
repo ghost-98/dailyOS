@@ -16,6 +16,7 @@ type CalendarEventRow = {
   expense_amount: number | string | null;
   companions: string | null;
   place_name: string | null;
+  place_provider_name: string | null;
   place_address: string | null;
   place_latitude: number | string | null;
   place_longitude: number | string | null;
@@ -32,7 +33,7 @@ type CalendarEventInsert = Omit<CalendarEventRow, "id"> & {
 type CalendarEventUpdate = Partial<Omit<CalendarEventInsert, "user_id">>;
 
 const selectColumns =
-  "id,event_date,end_date,event_time,end_time,is_all_day,type,title,meta,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
+  "id,event_date,end_date,event_time,end_time,is_all_day,type,title,meta,expense_amount,companions,place_name,place_provider_name,place_address,place_latitude,place_longitude,place_provider_id,place_phone,place_category,place_url";
 
 function mapRowToEvent(row: CalendarEventRow): CalendarEvent {
   return {
@@ -58,6 +59,7 @@ function mapRowPlace(row: CalendarEventRow) {
 
   return {
     name: row.place_name,
+    providerName: row.place_provider_name ?? undefined,
     address: row.place_address ?? "",
     latitude,
     longitude,
@@ -82,6 +84,7 @@ function mapEventToInsert(event: CalendarEvent, userId: string): CalendarEventIn
     expense_amount: event.expenseAmount ?? null,
     companions: event.companions ?? null,
     place_name: event.place?.name ?? null,
+    place_provider_name: event.place?.providerName ?? null,
     place_address: event.place?.address ?? null,
     place_latitude: event.place?.latitude ?? null,
     place_longitude: event.place?.longitude ?? null,
@@ -105,6 +108,7 @@ function mapEventToUpdate(event: CalendarEvent): CalendarEventUpdate {
     expense_amount: event.expenseAmount ?? null,
     companions: event.companions ?? null,
     place_name: event.place?.name ?? null,
+    place_provider_name: event.place?.providerName ?? null,
     place_address: event.place?.address ?? null,
     place_latitude: event.place?.latitude ?? null,
     place_longitude: event.place?.longitude ?? null,
