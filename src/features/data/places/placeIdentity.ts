@@ -22,8 +22,7 @@ export function getPlaceIdentityKey(place: PlaceIdentity) {
 
 export function getPlaceVerificationQueries(place: PlaceIdentity) {
   const name = (place.providerName || place.name).trim();
-  const address = place.address?.trim() || "";
-  return [...new Set([name, address].filter(Boolean))];
+  return name ? [name] : [];
 }
 
 export function isSamePlaceIdentity(left: PlaceIdentity, right: PlaceIdentity) {

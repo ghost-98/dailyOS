@@ -40,7 +40,8 @@ export async function loadPlaceVerificationCache(keys: string[]) {
 }
 
 export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
-  const queries = getPlaceVerificationQueries(target);
+  const resolvedTarget = await resolveTargetCoordinates(target);
+  const queries = getPlaceVerificationQueries(resolvedTarget);
   if (queries.length === 0) return null;
 
   let match: PlaceRecord | undefined;
@@ -48,12 +49,21 @@ export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
     const response = await fetch(`/api/maps/search-place?query=${encodeURIComponent(query)}`);
     if (!response.ok) throw new Error("장소 확인 요청에 실패했습니다.");
     const payload = await response.json() as { places?: PlaceRecord[] };
-    match = findMatchingPlace(target, payload.places ?? []);
+    match = findMatchingPlace(resolvedTarget, payload.places ?? []);
     if (match) break;
   }
   const status = match ? "verified" as const : "unverified" as const;
   await savePlaceVerification(target.key, status, match?.name, match?.address);
   return status;
+}
+
+async function resolveTargetCoordinates(target: PlaceVerificationTarget) {
+  if (hasCoordinates(target) || !target.address?.trim()) return target;
+  const response = await fetch(`/api/maps/geocode?query=${encodeURIComponent(target.address.trim())}`);
+  if (!response.ok) return target;
+  const payload = await response.json() as { places?: Array<{ latitude: number; longitude: number }> };
+  const resolved = payload.places?.[0];
+  return resolved ? { ...target, latitude: resolved.latitude, longitude: resolved.longitude } : target;
 }
 
 function findMatchingPlace(target: PlaceVerificationTarget, candidates: PlaceRecord[]) {
