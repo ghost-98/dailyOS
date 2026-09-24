@@ -1,5 +1,6 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
+import { deleteLinkedExpenseRecordInDb } from "@/features/data/ledger/api";
 import type { TaskItem, TaskPriority, TaskStatus } from "@/types/domain";
 
 type TaskRow = {
@@ -183,6 +184,7 @@ export async function deleteTaskFromDb(id: string) {
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
+  await deleteLinkedExpenseRecordInDb("todo", id);
   const { error } = await supabase.from("tasks").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;

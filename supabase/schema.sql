@@ -446,6 +446,27 @@ create policy "life_media_delete_own"
 on storage.objects for delete
 using (bucket_id = 'life-media' and (select auth.uid())::text = (storage.foldername(name))[1]);
 
+create or replace function public.delete_linked_expenses_for_record()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_table_name = 'tasks' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type = 'todo' and target_id = old.id;
+  elsif tg_table_name = 'calendar_events' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type in ('event', 'schedule') and target_id = old.id;
+  elsif tg_table_name = 'life_activities' then
+    delete from public.expense_records
+    where user_id = old.user_id and target_type = 'activity' and target_id = old.id;
+  end if;
+
+  return old;
+end;
+$$;
+
 drop trigger if exists set_profiles_updated_at on public.profiles;
 create trigger set_profiles_updated_at
 before update on public.profiles
@@ -505,6 +526,21 @@ drop trigger if exists set_saved_places_updated_at on public.saved_places;
 create trigger set_saved_places_updated_at
 before update on public.saved_places
 for each row execute function public.set_updated_at();
+
+drop trigger if exists delete_task_linked_expenses on public.tasks;
+create trigger delete_task_linked_expenses
+after delete on public.tasks
+for each row execute function public.delete_linked_expenses_for_record();
+
+drop trigger if exists delete_event_linked_expenses on public.calendar_events;
+create trigger delete_event_linked_expenses
+after delete on public.calendar_events
+for each row execute function public.delete_linked_expenses_for_record();
+
+drop trigger if exists delete_activity_linked_expenses on public.life_activities;
+create trigger delete_activity_linked_expenses
+after delete on public.life_activities
+for each row execute function public.delete_linked_expenses_for_record();
 
 alter table public.profiles enable row level security;
 alter table public.tasks enable row level security;

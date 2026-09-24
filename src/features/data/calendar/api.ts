@@ -1,5 +1,6 @@
 import { getCurrentUserId } from "@/lib/authUser";
 import { supabase } from "@/lib/supabase";
+import { deleteLinkedExpenseRecordInDb } from "@/features/data/ledger/api";
 import type { EventType } from "@/types/domain";
 import type { CalendarEvent } from "@/features/calendar/data";
 
@@ -173,6 +174,7 @@ export async function deleteCalendarEventFromDb(id: string) {
   const userId = await getCurrentUserId();
   if (!userId) return false;
 
+  await deleteLinkedExpenseRecordInDb("event", id);
   const { error } = await supabase.from("calendar_events").delete().eq("id", id).eq("user_id", userId);
   if (error) throw error;
   return true;
