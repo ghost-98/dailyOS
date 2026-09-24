@@ -22,7 +22,9 @@ export function getPlaceIdentityKey(place: PlaceIdentity) {
 
 export function getPlaceVerificationQueries(place: PlaceIdentity) {
   const name = (place.providerName || place.name).trim();
-  return name ? [name] : [];
+  if (!name) return [];
+  const locality = getAddressLocality(place.address);
+  return [...new Set([locality ? `${name} ${locality}` : "", name].filter(Boolean))];
 }
 
 export function isSamePlaceIdentity(left: PlaceIdentity, right: PlaceIdentity) {
@@ -53,6 +55,11 @@ export function hasCoordinates(place: PlaceIdentity): place is PlaceIdentity & {
 
 function normalizeText(value?: string) {
   return value?.trim().toLocaleLowerCase("ko-KR") ?? "";
+}
+
+function getAddressLocality(address?: string) {
+  const tokens = address?.trim().split(/\s+/) ?? [];
+  return tokens.find((token) => /(군|구|읍|면)$/.test(token));
 }
 
 function distanceInMeters(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {

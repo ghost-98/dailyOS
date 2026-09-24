@@ -40,7 +40,7 @@ export async function loadPlaceVerificationCache(keys: string[]) {
 }
 
 export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
-  const resolvedTarget = await resolveTargetCoordinates(target);
+  const { geocodedPlace, resolvedTarget } = await resolveTargetCoordinates(target);
   const queries = getPlaceVerificationQueries(resolvedTarget);
   if (queries.length === 0) return null;
 
@@ -52,18 +52,25 @@ export async function verifyPlaceTarget(target: PlaceVerificationTarget) {
     match = findMatchingPlace(resolvedTarget, payload.places ?? []);
     if (match) break;
   }
+  match ??= geocodedPlace;
   const status = match ? "verified" as const : "unverified" as const;
   await savePlaceVerification(target.key, status, match?.name, match?.address);
   return status;
 }
 
 async function resolveTargetCoordinates(target: PlaceVerificationTarget) {
-  if (hasCoordinates(target) || !target.address?.trim()) return target;
+  if (!target.address?.trim()) return { resolvedTarget: target };
   const response = await fetch(`/api/maps/geocode?query=${encodeURIComponent(target.address.trim())}`);
-  if (!response.ok) return target;
-  const payload = await response.json() as { places?: Array<{ latitude: number; longitude: number }> };
-  const resolved = payload.places?.[0];
-  return resolved ? { ...target, latitude: resolved.latitude, longitude: resolved.longitude } : target;
+  if (!response.ok) return { resolvedTarget: target };
+  const payload = await response.json() as { places?: PlaceRecord[] };
+  const geocodedPlace = payload.places?.[0];
+  if (!geocodedPlace) return { resolvedTarget: target };
+  return {
+    geocodedPlace,
+    resolvedTarget: hasCoordinates(target)
+      ? target
+      : { ...target, latitude: geocodedPlace.latitude, longitude: geocodedPlace.longitude },
+  };
 }
 
 function findMatchingPlace(target: PlaceVerificationTarget, candidates: PlaceRecord[]) {
