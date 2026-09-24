@@ -78,16 +78,24 @@ function findMatchingPlace(target: PlaceVerificationTarget, candidates: PlaceRec
     if (target.providerPlaceId && candidate.providerPlaceId === target.providerPlaceId) return true;
     if (hasCoordinates(target) && distanceInMeters(target, candidate) <= 150) return true;
 
+    const targetName = normalizePlaceName(target.providerName || target.name);
+    const candidateName = normalizePlaceName(candidate.name);
+    const namesMatch = Boolean(targetName && candidateName && targetName === candidateName);
+    if (!hasSpecificAddress(target.address)) return namesMatch;
+
     const targetAddress = normalizeAddress(target.address);
     const candidateAddress = normalizeAddress(candidate.address);
     const addressMatches = Boolean(targetAddress && candidateAddress
       && (targetAddress.includes(candidateAddress) || candidateAddress.includes(targetAddress)));
     if (!addressMatches) return false;
 
-    const targetName = normalizePlaceName(target.providerName || target.name);
-    const candidateName = normalizePlaceName(candidate.name);
     return !targetName || !candidateName || targetName.includes(candidateName) || candidateName.includes(targetName);
   });
+}
+
+function hasSpecificAddress(address?: string) {
+  const normalized = normalizeAddress(address);
+  return normalized.split(/\s+/).length >= 2 && /(?:시|군|구|읍|면|동|로|길)/.test(normalized);
 }
 
 function distanceInMeters(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {

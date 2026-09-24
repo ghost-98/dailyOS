@@ -5,7 +5,7 @@ import { isFreshPlaceVerification, loadPlaceVerificationCache, verifyPlaceTarget
 import { getPlaceIdentityKey, type PlaceIdentity } from "@/features/data/places/placeIdentity";
 
 const VERIFICATION_CONCURRENCY = 4;
-const VERIFICATION_KEY_VERSION = "v4";
+const VERIFICATION_KEY_VERSION = "v5";
 
 export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[]) {
   const [statuses, setStatuses] = useState<Record<string, PlaceVerificationStatus>>({});
