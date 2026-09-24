@@ -24,8 +24,6 @@
 1. `20260924_add_place_verifications.sql`
 2. `20260924_refine_place_identity.sql`
 3. `20260924_complete_schema_permissions.sql`
-4. `20260924_cascade_linked_expenses.sql`
-5. `20260924_cleanup_orphan_expenses.sql`
 
 `calendar_events.place_provider_name`, `tasks.place_provider_name`, `life_activities.place_latitude` 오류는 두 번째 파일이 적용되지 않았다는 뜻이다.
 
