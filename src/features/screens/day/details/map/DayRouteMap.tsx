@@ -120,12 +120,13 @@ ref) {
   const visibleStops = useMemo(
     () =>
       stops
-        .map((stop) => ({
+        .map((stop, displayIndex) => ({
           ...stop,
+          displayIndex,
           latitude: stop.latitude ?? resolvedCoordinates[stop.id]?.latitude,
           longitude: stop.longitude ?? resolvedCoordinates[stop.id]?.longitude,
         }))
-        .filter((stop): stop is DayRouteStop & { latitude: number; longitude: number } => hasCoordinates(stop)),
+        .filter((stop): stop is DayRouteStop & { displayIndex: number; latitude: number; longitude: number } => hasCoordinates(stop)),
     [resolvedCoordinates, stops],
   );
 
@@ -141,12 +142,12 @@ ref) {
     }
 
     markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = visibleStops.map((stop, index) => {
+    markersRef.current = visibleStops.map((stop) => {
       const verificationStatus = verificationStatuses[getPlaceVerificationKey(stop)];
       const marker = new window.naver!.maps.Marker({
         icon: {
           anchor: new window.naver!.maps.Point(18, 18),
-          content: `<div class="life-calendar-route-marker ${verificationStatus === "unverified" ? "life-calendar-route-marker--unverified" : verificationStatus === "checking" ? "life-calendar-route-marker--checking" : ""}"><span>${index + 1}</span></div>`,
+          content: `<div class="life-calendar-route-marker ${verificationStatus === "unverified" ? "life-calendar-route-marker--unverified" : verificationStatus === "checking" ? "life-calendar-route-marker--checking" : ""}"><span>${stop.displayIndex + 1}</span></div>`,
         },
         map: mapRef.current,
         position: new window.naver!.maps.LatLng(stop.latitude!, stop.longitude!),

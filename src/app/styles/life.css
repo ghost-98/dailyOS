@@ -4580,6 +4580,27 @@
   line-height: 1.45;
 }
 
+.other-map-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  align-items: center;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.other-map-status-summary span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.other-map-status-summary__warning {
+  color: #ffb4a8;
+}
+
 .life-person-card__manage-actions,
 .life-person-card__edit-actions {
   display: flex;

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RotateCcw, Search, X } from "lucide-react";
+import { CircleAlert, MapPin, MapPinOff, Plus, RotateCcw, Search, X } from "lucide-react";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { PeriodSummaryBar } from "@/components/shared/date/PeriodSummaryBar";
 import { PlaceSearchField } from "@/components/shared/places/PlaceSearchField";
@@ -39,6 +39,8 @@ export function OtherMapView() {
   const places = useMemo(() => filterMapPlaces(periodPlaces, query), [periodPlaces, query]);
   const verificationTargets = useMemo(() => periodPlaces.map(createPlaceVerificationTarget), [periodPlaces]);
   const verificationStatuses = usePlaceVerificationStatuses(verificationTargets);
+  const unresolvedPlaceCount = places.filter((place) => resolutionStatuses[place.id] === "unresolved").length;
+  const unverifiedPlaceCount = places.filter((place) => verificationStatuses[place.verificationKey] === "unverified").length;
 
   return (
     <OtherTabShell
@@ -96,6 +98,11 @@ export function OtherMapView() {
         ref={mapRef}
         verificationStatuses={verificationStatuses}
       />
+      <div className="other-map-status-summary" role="status">
+        <span><MapPin aria-hidden size={14} /> 지도 표시 {places.length - unresolvedPlaceCount}곳</span>
+        {unresolvedPlaceCount > 0 ? <span className="other-map-status-summary__warning" title={places.filter((place) => resolutionStatuses[place.id] === "unresolved").map((place) => place.name).join(", ")}><MapPinOff aria-hidden size={14} /> 좌표 확인 안 됨 {unresolvedPlaceCount}곳</span> : null}
+        {unverifiedPlaceCount > 0 ? <span className="other-map-status-summary__warning"><CircleAlert aria-hidden size={14} /> NAVER 확인 안 됨 {unverifiedPlaceCount}곳</span> : null}
+      </div>
       <div className="other-map-place-list">
         {places.map((place, index) => {
           const linkedPhotos = getPlacePhotos(place, data.lifePhotos);
