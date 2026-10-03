@@ -28,16 +28,16 @@ export function planMemoryQuestion(question: string, documents: MemoryDocument[]
   const normalizedQuestion = normalize(question);
   const domain = detectDomain(normalizedQuestion);
   const dateRange = detectDateRange(normalizedQuestion, documents);
-  const analyticsSignals = ["얼마", "몇", "횟수", "가장", "많이", "비교", "추세", "패턴", "평균", "합계", "총", "분석", "정리"];
-  const recallSignals = ["언제", "뭐였", "무엇", "어디", "누구", "찾아", "보여"];
+  const analyticsSignals = ["얼마", "몇 번", "횟수", "가장", "많이", "비교", "추세", "패턴", "평균", "합계", "총", "분석", "정리"];
+  const recallSignals = ["언제", "언제먹", "먹었", "먹은", "뭐였", "무엇", "어디", "였지", "더라", "누구", "찾아", "보여"];
   const hasAnalyticsSignal = analyticsSignals.some((signal) => normalizedQuestion.includes(signal));
   const hasRecallSignal = recallSignals.some((signal) => normalizedQuestion.includes(signal));
-  const needsDeterministicAnswer = hasAnalyticsSignal || ["money", "people", "place", "health"].includes(domain);
+  const needsDeterministicAnswer = hasAnalyticsSignal && !hasRecallSignal;
 
   return {
     dateRange,
     domain,
-    intent: needsDeterministicAnswer ? "analytics" : hasRecallSignal ? "recall" : "conversation",
+    intent: hasRecallSignal ? "recall" : needsDeterministicAnswer ? "analytics" : "conversation",
     keywords: extractKeywords(normalizedQuestion),
     needsDeterministicAnswer,
   };

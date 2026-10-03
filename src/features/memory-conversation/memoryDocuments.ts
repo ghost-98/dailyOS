@@ -226,6 +226,8 @@ function scoreDocument(question: string, terms: string[], document: MemoryDocume
   const text = [document.date, document.label, document.title, document.text, JSON.stringify(document.metadata)].join(" ");
   let score = scoreText(question, terms, text);
   if (question.includes("요즘") || question.includes("최근")) score += Math.max(0, 4 - Math.min(4, dateDistanceScore(document.date)));
+  if (isFoodRecallQuestion(question) && document.kind === "activity") score += 5;
+  if (isFoodRecallQuestion(question) && /음식|식비|식당|카페|레스토랑|맛집|먹/.test(normalize(text))) score += 4;
   if (document.kind.endsWith("_summary")) score += 1;
   return score;
 }
@@ -240,15 +242,33 @@ function scoreText(question: string, terms: string[], text: string) {
   if ((question.includes("누구") || question.includes("사람")) && /함께한 사람|사람 기억/.test(normalized)) score += 4;
   if ((question.includes("어디") || question.includes("장소")) && /장소|주소|장소 기억/.test(normalized)) score += 4;
   if ((question.includes("운동") || question.includes("건강")) && /운동|러닝|몸무게|건강/.test(normalized)) score += 4;
+  if (isFoodRecallQuestion(question) && /음식|식비|식당|카페|레스토랑|맛집|먹/.test(normalized)) score += 5;
   return score;
 }
 
 function getQuestionTerms(question: string) {
   const stopWords = new Set(["나는", "내가", "나랑", "기반", "기록", "요즘", "최근", "이번", "지난", "어떻게", "뭐야", "뭐였지", "알려줘", "정리해줘"]);
-  return normalize(question)
+  const baseTerms = normalize(question)
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter((term) => term.length >= 2 && !stopWords.has(term));
+  return [...new Set(baseTerms.flatMap(expandQuestionTerm))];
+}
+
+function expandQuestionTerm(term: string) {
+  const expanded = [term];
+  const suffixes = ["음식", "요리", "식당", "레스토랑", "카페"];
+  suffixes.forEach((suffix) => {
+    if (term.endsWith(suffix) && term.length > suffix.length + 1) {
+      expanded.push(term.slice(0, -suffix.length), suffix);
+    }
+  });
+  if (term.includes("스페인")) expanded.push("스페인", "스페인음식", "스페인요리");
+  return expanded.filter((value) => value.length >= 2);
+}
+
+function isFoodRecallQuestion(question: string) {
+  return /먹|음식|요리|식당|레스토랑|맛집|카페/.test(question);
 }
 
 function extractPeople(item: RecordSearchItem) {
