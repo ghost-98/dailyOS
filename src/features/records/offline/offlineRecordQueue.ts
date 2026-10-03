@@ -27,7 +27,7 @@ export const OFFLINE_QUEUE_CHANGED_EVENT = "dailyos:offline-queue-changed";
 export const OFFLINE_QUEUE_SYNCED_EVENT = "dailyos:offline-queue-synced";
 
 const DATABASE_NAME = "dailyos-offline";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const STORE_NAME = "record-queue";
 
 export async function enqueueOfflineRecord(operation: OfflineRecordOperation) {

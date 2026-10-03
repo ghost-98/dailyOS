@@ -500,6 +500,42 @@ function buildDayRouteStops(items: DayTimelineItem[]): DayRouteStop[] {
     if ("external" in item && item.external.type === "activity") {
       const linkedPhotos = linkedPhotosByActivityId.get(item.external.id) ?? [];
       const photoSource = linkedPhotos.find((photo) => typeof photo.external.placeLatitude === "number" && typeof photo.external.placeLongitude === "number");
+      if (item.external.category === "이동") {
+        if (item.external.startPlaceName) {
+          stops.push({
+            address: item.external.startPlaceAddress,
+            id: `${item.id}-start`,
+            label: "출발",
+            latitude: item.external.startPlaceLatitude,
+            longitude: item.external.startPlaceLongitude,
+            name: item.external.startPlaceName,
+            providerName: item.external.startPlaceProviderName,
+            providerPlaceId: item.external.startPlaceProviderId,
+            photos: linkedPhotos,
+            sortMinutes: item.sortMinutes,
+            timeLabel: item.timeLabel,
+          });
+        }
+
+        if (item.external.endPlaceName) {
+          stops.push({
+            address: item.external.endPlaceAddress,
+            id: `${item.id}-end`,
+            label: "도착",
+            latitude: item.external.endPlaceLatitude,
+            longitude: item.external.endPlaceLongitude,
+            name: item.external.endPlaceName,
+            providerName: item.external.endPlaceProviderName,
+            providerPlaceId: item.external.endPlaceProviderId,
+            photos: linkedPhotos,
+            sortMinutes: item.sortMinutes + 0.1,
+            timeLabel: item.external.endTime ?? item.timeLabel,
+          });
+        }
+
+        if (item.external.startPlaceName || item.external.endPlaceName) return;
+      }
+
       if (item.external.placeName) {
         stops.push({
           address: item.external.placeAddress,
@@ -608,7 +644,20 @@ function buildLinkedTargetPlaceMap(items: DayTimelineItem[]) {
       return;
     }
 
-    if ("external" in item && item.external.type === "activity" && item.external.placeName) {
+    if ("external" in item && item.external.type === "activity") {
+      if (item.external.category === "이동" && (item.external.endPlaceName || item.external.startPlaceName)) {
+        placeMap.set(`activity:${item.external.id}`, {
+          address: item.external.endPlaceAddress ?? item.external.startPlaceAddress,
+          latitude: item.external.endPlaceLatitude ?? item.external.startPlaceLatitude,
+          longitude: item.external.endPlaceLongitude ?? item.external.startPlaceLongitude,
+          name: item.external.endPlaceName ?? item.external.startPlaceName ?? item.external.title,
+          providerName: item.external.endPlaceProviderName ?? item.external.startPlaceProviderName,
+          providerPlaceId: item.external.endPlaceProviderId ?? item.external.startPlaceProviderId,
+        });
+        return;
+      }
+
+      if (!item.external.placeName) return;
       placeMap.set(`activity:${item.external.id}`, {
         address: item.external.placeAddress,
         latitude: item.external.placeLatitude,
