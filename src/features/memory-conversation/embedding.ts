@@ -4,11 +4,12 @@ const DEFAULT_EMBEDDING_MODELS = ["gemini-embedding-2", "gemini-embedding-001"];
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL;
-const embeddingProvider = process.env.MEMORY_EMBEDDING_PROVIDER || (process.env.OLLAMA_BASE_URL ? "ollama" : "gemini");
+const embeddingProvider = process.env.MEMORY_EMBEDDING_PROVIDER || "auto";
 const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const ollamaEmbeddingModel = process.env.OLLAMA_EMBEDDING_MODEL || process.env.LOCAL_EMBEDDING_MODEL || "nomic-embed-text";
 
 export function isEmbeddingConfigured() {
+  if (embeddingProvider === "auto") return Boolean(geminiApiKey || (ollamaBaseUrl && ollamaEmbeddingModel));
   if (embeddingProvider === "ollama") return Boolean(ollamaBaseUrl && ollamaEmbeddingModel);
   return Boolean(geminiApiKey);
 }
@@ -38,7 +39,27 @@ export function toPgVector(embedding: number[]) {
 
 async function embedMemoryInput(text: string, label: string) {
   if (embeddingProvider === "ollama") return embedWithOllama(text, label);
+  if (embeddingProvider === "auto") return embedWithAutoProvider(text, label);
   return embedWithGemini(text, label);
+}
+
+async function embedWithAutoProvider(text: string, label: string) {
+  const failures: string[] = [];
+  if (geminiApiKey) {
+    try {
+      return await embedWithGemini(text, label);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : "Gemini embedding 실패");
+    }
+  }
+  if (ollamaBaseUrl && ollamaEmbeddingModel) {
+    try {
+      return await embedWithOllama(text, label);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : "Ollama embedding 실패");
+    }
+  }
+  throw new MemoryEmbeddingUnavailableError(`사용 가능한 임베딩 provider가 없습니다. ${failures.join(" | ")}`);
 }
 
 async function embedWithGemini(text: string, label: string) {

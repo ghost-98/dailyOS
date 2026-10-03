@@ -8,7 +8,7 @@ import type { MemoryChatResponse, MemoryConversationMessage, MemoryDocument, Mem
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-const memoryChatProvider = process.env.MEMORY_CHAT_PROVIDER || (process.env.OLLAMA_BASE_URL ? "ollama" : "gemini");
+const memoryChatProvider = process.env.MEMORY_CHAT_PROVIDER || "auto";
 const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const ollamaChatModel = process.env.OLLAMA_CHAT_MODEL || process.env.LOCAL_CHAT_MODEL || "qwen3:8b";
 
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 }
 
 function isChatProviderConfigured() {
+  if (memoryChatProvider === "auto") return Boolean(geminiApiKey || (ollamaBaseUrl && ollamaChatModel));
   if (memoryChatProvider === "ollama") return Boolean(ollamaBaseUrl && ollamaChatModel);
   return Boolean(geminiApiKey);
 }
@@ -76,9 +77,30 @@ async function generateProviderAnswer(
   messages: Array<{ content: string; role: string }>,
   questionPlan: ReturnType<typeof planMemoryQuestion>,
 ) {
+  if (memoryChatProvider === "auto") return generateAutoProviderAnswer(question, documents, summaries, messages, questionPlan);
   return memoryChatProvider === "ollama"
     ? generateOllamaAnswer(question, documents, summaries, messages, questionPlan)
     : generateGeminiAnswer(question, documents, summaries, messages, questionPlan);
+}
+
+async function generateAutoProviderAnswer(
+  question: string,
+  documents: MemoryDocument[],
+  summaries: MemorySummary[],
+  messages: Array<{ content: string; role: string }>,
+  questionPlan: ReturnType<typeof planMemoryQuestion>,
+) {
+  if (geminiApiKey) {
+    try {
+      return await generateGeminiAnswer(question, documents, summaries, messages, questionPlan);
+    } catch (error) {
+      console.error("Gemini memory answer failed, falling back to local provider", error);
+    }
+  }
+  if (ollamaBaseUrl && ollamaChatModel) {
+    return generateOllamaAnswer(question, documents, summaries, messages, questionPlan);
+  }
+  return buildLocalMemoryAnswer(question, documents, summaries);
 }
 
 async function getSemanticMemory(request: Request, question: string) {

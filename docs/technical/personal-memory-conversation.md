@@ -49,7 +49,7 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 기록 문서는 원문뿐 아니라 `semanticTags`, `semanticAliases`, `cuisines` 같은 의미 메타데이터도 갖는다. 예를 들어 `빠에야`, `감바스`, `타파스`가 있으면 `스페인음식`, `유럽음식`, `음식` 태그가 같이 저장된다. 질문도 같은 의미 사전으로 확장해서, 사용자가 "스페인음식 먹은 곳"처럼 물어도 관련 음식/장소 기록이 후보에 올라오게 한다.
 
-동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, 설정된 embedding provider가 있으면 바뀐 문서만 임베딩한다. `MEMORY_EMBEDDING_PROVIDER=ollama`이면 로컬 Ollama embedding을 사용하고, 기본 모델은 현재 DB `vector(768)`에 맞춘 `nomic-embed-text`다. `MEMORY_EMBEDDING_PROVIDER=gemini`이면 `gemini-embedding-2`, `gemini-embedding-001` 순서로 시도한다.
+동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, 설정된 embedding provider가 있으면 바뀐 문서만 임베딩한다. 기본값 `MEMORY_EMBEDDING_PROVIDER=auto`는 품질을 우선해 Gemini가 설정되어 있으면 먼저 쓰고, quota/장애가 나면 Ollama로 fallback한다. `MEMORY_EMBEDDING_PROVIDER=ollama`이면 로컬 Ollama embedding만 사용하고, 기본 모델은 현재 DB `vector(768)`에 맞춘 `nomic-embed-text`다. `MEMORY_EMBEDDING_PROVIDER=gemini`이면 `gemini-embedding-2`, `gemini-embedding-001` 순서로 시도한다.
 
 임베딩 재생성 조건:
 
@@ -107,8 +107,8 @@ API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모�
 
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` optional, 기본값 `gemini-1.5-flash`
-- `MEMORY_CHAT_PROVIDER` optional, `gemini` 또는 `ollama`
-- `MEMORY_EMBEDDING_PROVIDER` optional, `gemini` 또는 `ollama`
+- `MEMORY_CHAT_PROVIDER` optional, `auto`, `gemini`, `ollama`
+- `MEMORY_EMBEDDING_PROVIDER` optional, `auto`, `gemini`, `ollama`
 - `OLLAMA_BASE_URL` optional, 기본값 `http://localhost:11434`
 - `OLLAMA_CHAT_MODEL` optional, 기본값 `qwen3:8b`
 - `OLLAMA_EMBEDDING_MODEL` optional, 기본값 `nomic-embed-text`
@@ -116,7 +116,20 @@ API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모�
 
 LLM 호출이 실패하거나 provider가 설정되지 않으면 `buildLocalMemoryAnswer`가 같은 기억 선별 결과로 로컬 답변을 만든다. 따라서 API 키가 없어도 기능은 완전히 죽지 않는다. 다만 ChatGPT 수준의 답변 품질은 좋은 chat provider가 있을 때 나오고, 의미 검색 품질은 embedding과 pgvector RPC가 적용된 상태에서 나온다.
 
-로컬 우선 설정 예시:
+품질 우선 설정 예시:
+
+```env
+MEMORY_EMBEDDING_PROVIDER=auto
+MEMORY_CHAT_PROVIDER=auto
+GEMINI_API_KEY=...
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=qwen3:8b
+```
+
+이 설정은 Gemini를 우선 사용하고 quota/장애가 나면 Ollama로 fallback한다.
+
+로컬 고정 설정 예시:
 
 ```env
 MEMORY_EMBEDDING_PROVIDER=ollama
