@@ -217,13 +217,6 @@ export function SearchView() {
                     </div>
                   ) : null}
                   <div className="life-ask-answer__body">{answer.answer}</div>
-                  {!isEvidenceOpen && answer.followups.length > 0 ? (
-                    <div className="life-ask-followups life-ask-followups--compact">
-                      <div className="life-ask-followups__items">
-                        {answer.followups.slice(0, 2).map((followup) => <button key={followup} onClick={() => void ask(followup)} type="button">{followup}</button>)}
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               ) : null}
 

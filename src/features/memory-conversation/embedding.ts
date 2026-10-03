@@ -1,12 +1,23 @@
 const GEMINI_EMBEDDING_DIMENSIONS = 768;
 const GEMINI_EMBEDDING_MAX_INPUT = 12000;
-const DEFAULT_EMBEDDING_MODELS = ["gemini-embedding-2", "gemini-embedding-001", "text-embedding-004"];
+const DEFAULT_EMBEDDING_MODELS = ["gemini-embedding-2", "gemini-embedding-001"];
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL;
 
 export function isEmbeddingConfigured() {
   return Boolean(geminiApiKey);
+}
+
+export class MemoryEmbeddingUnavailableError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = "MemoryEmbeddingUnavailableError";
+  }
+}
+
+export function isMemoryEmbeddingUnavailableError(error: unknown) {
+  return error instanceof MemoryEmbeddingUnavailableError;
 }
 
 export async function embedMemoryText(text: string) {
@@ -39,7 +50,14 @@ async function embedMemoryInput(text: string, label: string) {
     });
 
     if (!response.ok) {
-      failures.push(`${model}: ${response.status} ${await readErrorBody(response)}`);
+      const errorBody = await readErrorBody(response);
+      if (response.status === 429) {
+        throw new MemoryEmbeddingUnavailableError(createQuotaMessage(errorBody), response.status);
+      }
+      if (response.status !== 404) {
+        throw new MemoryEmbeddingUnavailableError(`Gemini 임베딩 API를 사용할 수 없습니다. 상태 코드: ${response.status}`, response.status);
+      }
+      failures.push(`${model}: ${response.status} ${errorBody}`);
       continue;
     }
 
@@ -65,4 +83,11 @@ async function embedMemoryInput(text: string, label: string) {
 async function readErrorBody(response: Response) {
   const body = await response.text().catch(() => "");
   return body.slice(0, 500);
+}
+
+function createQuotaMessage(body: string) {
+  const retryAfter = body.match(/Please retry in ([^.\n]+)/)?.[1]?.trim();
+  return retryAfter
+    ? `Gemini 임베딩 무료 할당량을 초과했습니다. 약 ${retryAfter} 후 다시 동기화됩니다.`
+    : "Gemini 임베딩 무료 할당량을 초과했습니다. 잠시 후 다시 동기화됩니다.";
 }

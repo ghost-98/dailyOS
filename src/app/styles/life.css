@@ -5095,11 +5095,6 @@
   padding-top: 10px;
 }
 
-.life-ask-followups--compact {
-  border-top: 0;
-  padding-top: 0;
-}
-
 .life-ask-followups__head {
   display: flex;
   align-items: center;
@@ -5153,8 +5148,13 @@
   max-height: 120px;
   border: 0;
   background: transparent;
+  color: rgba(255, 255, 255, 0.96);
   resize: none;
   padding: 10px 8px;
+}
+
+.life-ask-composer textarea::placeholder {
+  color: rgba(229, 232, 240, 0.52);
 }
 
 .life-ask-submit {

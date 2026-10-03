@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { embedMemoryText, isEmbeddingConfigured, toPgVector } from "@/features/memory-conversation/embedding";
+import { embedMemoryText, isEmbeddingConfigured, isMemoryEmbeddingUnavailableError, toPgVector } from "@/features/memory-conversation/embedding";
 import { createUserScopedSupabase, getBearerToken } from "@/features/memory-conversation/serverSupabase";
 import type { MemoryDocument, MemorySummary } from "@/features/memory-conversation/types";
 
@@ -63,14 +63,16 @@ export async function POST(request: Request) {
     const canEmbed = isEmbeddingConfigured();
     const existingDocuments = await fetchExistingMemoryRows(supabase, "memory_documents", "document_id", documents.map((document) => document.id));
     const existingSummaries = await fetchExistingMemoryRows(supabase, "memory_summaries", "summary_id", summaries.map((summary) => summary.id));
+    let embeddingWarning = "";
     const documentRows: MemoryDocumentRow[] = [];
     for (const document of documents) {
       const existing = existingDocuments.get(document.id);
-      const shouldEmbed = canEmbed && (!existing || existing.title !== document.title || existing.text !== document.text || !existing.hasEmbedding);
+      const shouldEmbed = canEmbed && !embeddingWarning && (!existing || existing.title !== document.title || existing.text !== document.text || !existing.hasEmbedding);
+      const embedding = shouldEmbed ? await createOptionalEmbedding(createEmbeddingInput(document.title, document.text), (message) => { embeddingWarning = message; }) : undefined;
       documentRows.push({
         document_date: document.date,
         document_id: document.id,
-        ...(shouldEmbed ? { embedding: toPgVector(await embedMemoryText(createEmbeddingInput(document.title, document.text))) } : {}),
+        ...(embedding ? { embedding } : {}),
         focus_id: document.focusId ?? null,
         kind: document.kind,
         label: document.label,
@@ -86,9 +88,10 @@ export async function POST(request: Request) {
     const summaryRows: MemorySummaryRow[] = [];
     for (const summary of summaries) {
       const existing = existingSummaries.get(summary.id);
-      const shouldEmbed = canEmbed && (!existing || existing.text !== summary.text || !existing.hasEmbedding);
+      const shouldEmbed = canEmbed && !embeddingWarning && (!existing || existing.text !== summary.text || !existing.hasEmbedding);
+      const embedding = shouldEmbed ? await createOptionalEmbedding(summary.text, (message) => { embeddingWarning = message; }) : undefined;
       summaryRows.push({
-        ...(shouldEmbed ? { embedding: toPgVector(await embedMemoryText(summary.text)) } : {}),
+        ...(embedding ? { embedding } : {}),
         kind: summary.kind,
         period_end: summary.periodEnd ?? null,
         period_start: summary.periodStart ?? null,
@@ -110,7 +113,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      embedded: canEmbed,
+      embedded: canEmbed && !embeddingWarning,
+      embeddingWarning,
       syncedDocuments: documentRows.length,
       syncedSummaries: summaryRows.length,
     });
@@ -148,4 +152,16 @@ async function fetchExistingMemoryRows(
 
 function createEmbeddingInput(title: string, text: string) {
   return `${title}\n${text}`;
+}
+
+async function createOptionalEmbedding(input: string, onUnavailable: (message: string) => void) {
+  try {
+    return toPgVector(await embedMemoryText(input));
+  } catch (error) {
+    if (isMemoryEmbeddingUnavailableError(error)) {
+      onUnavailable(error.message);
+      return undefined;
+    }
+    throw error;
+  }
 }
