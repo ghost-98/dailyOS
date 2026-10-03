@@ -1,11 +1,15 @@
-const GEMINI_EMBEDDING_DIMENSIONS = 768;
-const GEMINI_EMBEDDING_MAX_INPUT = 12000;
+const MEMORY_EMBEDDING_DIMENSIONS = 768;
+const MEMORY_EMBEDDING_MAX_INPUT = 12000;
 const DEFAULT_EMBEDDING_MODELS = ["gemini-embedding-2", "gemini-embedding-001"];
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL;
+const embeddingProvider = process.env.MEMORY_EMBEDDING_PROVIDER || (process.env.OLLAMA_BASE_URL ? "ollama" : "gemini");
+const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const ollamaEmbeddingModel = process.env.OLLAMA_EMBEDDING_MODEL || process.env.LOCAL_EMBEDDING_MODEL || "nomic-embed-text";
 
 export function isEmbeddingConfigured() {
+  if (embeddingProvider === "ollama") return Boolean(ollamaBaseUrl && ollamaEmbeddingModel);
   return Boolean(geminiApiKey);
 }
 
@@ -33,6 +37,11 @@ export function toPgVector(embedding: number[]) {
 }
 
 async function embedMemoryInput(text: string, label: string) {
+  if (embeddingProvider === "ollama") return embedWithOllama(text, label);
+  return embedWithGemini(text, label);
+}
+
+async function embedWithGemini(text: string, label: string) {
   const apiKey = geminiApiKey;
   if (!apiKey) throw new Error("GEMINI_API_KEY가 설정되지 않았습니다.");
 
@@ -44,8 +53,8 @@ async function embedMemoryInput(text: string, label: string) {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        content: { parts: [{ text: text.slice(0, GEMINI_EMBEDDING_MAX_INPUT) }] },
-        output_dimensionality: GEMINI_EMBEDDING_DIMENSIONS,
+        content: { parts: [{ text: text.slice(0, MEMORY_EMBEDDING_MAX_INPUT) }] },
+        output_dimensionality: MEMORY_EMBEDDING_DIMENSIONS,
       }),
     });
 
@@ -69,7 +78,7 @@ async function embedMemoryInput(text: string, label: string) {
     }
 
     const embedding = values.map((value) => Number(value));
-    if (embedding.length !== GEMINI_EMBEDDING_DIMENSIONS) {
+    if (embedding.length !== MEMORY_EMBEDDING_DIMENSIONS) {
       failures.push(`${model}: ${embedding.length}차원 응답`);
       continue;
     }
@@ -78,6 +87,31 @@ async function embedMemoryInput(text: string, label: string) {
   }
 
   throw new Error(`Gemini ${label} embedding API error. 시도한 모델: ${failures.join(" | ")}`);
+}
+
+async function embedWithOllama(text: string, label: string) {
+  const response = await fetch(`${ollamaBaseUrl}/api/embeddings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: ollamaEmbeddingModel,
+      prompt: text.slice(0, MEMORY_EMBEDDING_MAX_INPUT),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new MemoryEmbeddingUnavailableError(`Ollama ${label} 임베딩을 사용할 수 없습니다. ${ollamaEmbeddingModel} 모델과 Ollama 서버를 확인해 주세요.`, response.status);
+  }
+
+  const data = await response.json();
+  const values = data?.embedding;
+  if (!Array.isArray(values)) throw new MemoryEmbeddingUnavailableError("Ollama embedding 응답이 비어 있습니다.");
+
+  const embedding = values.map((value) => Number(value));
+  if (embedding.length !== MEMORY_EMBEDDING_DIMENSIONS) {
+    throw new MemoryEmbeddingUnavailableError(`Ollama embedding 차원이 ${embedding.length}입니다. 현재 DB vector(${MEMORY_EMBEDDING_DIMENSIONS})와 맞지 않습니다. 768차원 모델을 쓰거나 SQL vector 차원을 바꿔 주세요.`);
+  }
+  return embedding;
 }
 
 async function readErrorBody(response: Response) {

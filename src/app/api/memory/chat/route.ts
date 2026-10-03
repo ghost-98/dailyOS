@@ -8,6 +8,9 @@ import type { MemoryChatResponse, MemoryConversationMessage, MemoryDocument, Mem
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const memoryChatProvider = process.env.MEMORY_CHAT_PROVIDER || (process.env.OLLAMA_BASE_URL ? "ollama" : "gemini");
+const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const ollamaChatModel = process.env.OLLAMA_CHAT_MODEL || process.env.LOCAL_CHAT_MODEL || "qwen3:8b";
 
 type MemoryChatRequest = {
   documents?: MemoryDocument[];
@@ -48,17 +51,34 @@ export async function POST(request: Request) {
 
   const semanticMemory = await getSemanticMemory(request, question);
   const selectedMemory = semanticMemory ?? selectConversationMemory(question, documents, summaries, messages);
-  if (!geminiApiKey) {
+  if (!isChatProviderConfigured()) {
     return NextResponse.json(buildLocalMemoryAnswer(question, selectedMemory.documents, selectedMemory.summaries));
   }
 
   try {
-    const llmResponse = await generateGeminiAnswer(question, selectedMemory.documents, selectedMemory.summaries, selectedMemory.messages, questionPlan);
+    const llmResponse = await generateProviderAnswer(question, selectedMemory.documents, selectedMemory.summaries, selectedMemory.messages, questionPlan);
     return NextResponse.json(llmResponse);
   } catch (error) {
     console.error("Failed to generate memory answer", error);
     return NextResponse.json(buildLocalMemoryAnswer(question, selectedMemory.documents, selectedMemory.summaries));
   }
+}
+
+function isChatProviderConfigured() {
+  if (memoryChatProvider === "ollama") return Boolean(ollamaBaseUrl && ollamaChatModel);
+  return Boolean(geminiApiKey);
+}
+
+async function generateProviderAnswer(
+  question: string,
+  documents: MemoryDocument[],
+  summaries: MemorySummary[],
+  messages: Array<{ content: string; role: string }>,
+  questionPlan: ReturnType<typeof planMemoryQuestion>,
+) {
+  return memoryChatProvider === "ollama"
+    ? generateOllamaAnswer(question, documents, summaries, messages, questionPlan)
+    : generateGeminiAnswer(question, documents, summaries, messages, questionPlan);
 }
 
 async function getSemanticMemory(request: Request, question: string) {
@@ -77,6 +97,41 @@ async function getSemanticMemory(request: Request, question: string) {
     console.error("Failed to retrieve semantic memory", error);
     return null;
   }
+}
+
+async function generateOllamaAnswer(
+  question: string,
+  documents: MemoryDocument[],
+  summaries: MemorySummary[],
+  messages: Array<{ content: string; role: string }>,
+  questionPlan: ReturnType<typeof planMemoryQuestion>,
+): Promise<MemoryChatResponse> {
+  const prompt = buildPrompt(question, documents, summaries, messages, questionPlan);
+  const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      format: "json",
+      model: ollamaChatModel,
+      options: { temperature: 0.25 },
+      prompt,
+      stream: false,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`Ollama API error: ${response.status}`);
+  const data = await response.json();
+  const rawText = data?.response;
+  if (typeof rawText !== "string") throw new Error("Ollama 응답이 비어 있습니다.");
+  const parsed = JSON.parse(rawText) as Partial<MemoryChatResponse>;
+
+  return {
+    answer: parsed.answer || buildLocalMemoryAnswer(question, documents, summaries).answer,
+    evidence: sanitizeEvidence(parsed.evidence, documents),
+    followups: sanitizeFollowups(parsed.followups),
+    mode: "llm",
+    summary: parsed.summary || summaries[0]?.text || "관련 기억을 바탕으로 답변했습니다.",
+  };
 }
 
 async function generateGeminiAnswer(
