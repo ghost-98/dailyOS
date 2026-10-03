@@ -45,7 +45,7 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 문서는 날짜, 제목, 유형, 원문 텍스트, 근거 이동용 `focusId`, 사람/장소/fact 메타데이터를 갖는다.
 
-동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, `GEMINI_API_KEY`가 있으면 바뀐 문서만 `text-embedding-004`로 임베딩한다.
+동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, `GEMINI_API_KEY`가 있으면 바뀐 문서만 Gemini embedding으로 임베딩한다. 기본 모델은 `gemini-embedding-2`이고, 사용할 수 없는 환경에서는 `gemini-embedding-001`, `text-embedding-004` 순서로 재시도한다.
 
 임베딩 재생성 조건:
 
@@ -86,7 +86,7 @@ API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모�
 
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` optional, 기본값 `gemini-1.5-flash`
-- `GEMINI_EMBEDDING_MODEL` optional, 기본값 `text-embedding-004`
+- `GEMINI_EMBEDDING_MODEL` optional, 미설정 시 `gemini-embedding-2`, `gemini-embedding-001`, `text-embedding-004` 순서로 자동 시도
 
 Gemini 호출이 실패하거나 키가 없으면 `buildLocalMemoryAnswer`가 같은 기억 선별 결과로 로컬 답변을 만든다. 따라서 API 키가 없어도 기능은 완전히 죽지 않는다. 다만 ChatGPT 수준의 의미 검색 품질은 embedding과 pgvector RPC가 적용된 상태에서 나온다.
 
@@ -139,7 +139,7 @@ RPC:
 1. Supabase SQL Editor 또는 migration 적용 절차로 `supabase/migrations/20261003_add_memory_conversation.sql`을 적용한다.
 2. Supabase 프로젝트에서 `vector` 확장이 활성화되는지 확인한다. 마이그레이션에 `create extension if not exists vector;`가 들어 있다.
 3. `.env.local`에 `GEMINI_API_KEY`를 설정한다.
-4. 기본 모델을 바꾸고 싶으면 `GEMINI_MODEL`, 임베딩 모델을 바꾸고 싶으면 `GEMINI_EMBEDDING_MODEL`을 설정한다. 현재 DB vector 차원은 `text-embedding-004` 기준 `768`이다. 다른 차원 모델을 쓰면 SQL의 `vector(768)`도 같이 바꿔야 한다.
+4. 기본 모델을 바꾸고 싶으면 `GEMINI_MODEL`, 임베딩 모델을 하나로 고정하고 싶으면 `GEMINI_EMBEDDING_MODEL`을 설정한다. 현재 DB vector 차원은 Gemini embedding의 `output_dimensionality=768` 기준이다. 다른 차원 모델을 쓰면 SQL의 `vector(768)`도 같이 바꿔야 한다.
 5. 앱에서 `/m/search`의 `기록 대화` 탭을 열면 현재 기록 스냅샷이 서버 동기화 API를 통해 장기 기억과 embedding으로 저장된다.
 
 ## 설계 원칙
