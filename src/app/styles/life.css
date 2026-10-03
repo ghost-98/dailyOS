@@ -3497,6 +3497,36 @@
   padding: 0 11px;
 }
 
+.record-create-flow__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.record-create-flow__suggestions button {
+  max-width: 100%;
+  min-height: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 184, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 820;
+  padding: 0 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-create-flow__suggestions button:hover {
+  border-color: rgba(201, 184, 255, 0.34);
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--violet);
+}
+
 .record-create-flow__category-editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

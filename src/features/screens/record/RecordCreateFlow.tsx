@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, Banknote, Bed, CalendarCheck2, CalendarDays, Camera, HeartPulse, NotebookPen, Plus, Sunrise, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField } from "@/components/ui/FormField";
@@ -52,6 +52,8 @@ export function RecordCreateFlow() {
   const [step, setStep] = useState<"choose" | CreateType>(() => editType ?? createType ?? "choose");
   const [people, setPeople] = useState<PersonRecord[]>([]);
   const [message, setMessage] = useState("");
+  const activityTitleSuggestions = useMemo(() => buildRecentTextSuggestions(data.activities, (item) => item.title, (item) => item.date), [data.activities]);
+  const logContentSuggestions = useMemo(() => buildRecentTextSuggestions(data.dailyLogs, (item) => item.content, (item) => item.date), [data.dailyLogs]);
 
   useEffect(() => {
     if (editType) return;
@@ -126,6 +128,7 @@ export function RecordCreateFlow() {
             onCreatePerson={createPerson}
             onDone={finish}
             onMessage={setMessage}
+            titleSuggestions={activityTitleSuggestions}
             onSave={async (payload) => {
               await mutations.saveActivity(payload);
               setMessage("활동을 추가했어요.");
@@ -143,6 +146,7 @@ export function RecordCreateFlow() {
             onBack={() => setStep("choose")}
             onDone={finish}
             onMessage={setMessage}
+            contentSuggestions={logContentSuggestions}
             onSave={async (date, content, linkedTarget) => {
               const existing = editType === "log" ? data.dailyLogs.find((item) => item.id === editId) : undefined;
               if (existing) await mutations.updateDailyLog({ ...existing, content, date, linkedTargetId: linkedTarget?.id, linkedTargetTitle: linkedTarget?.title, linkedTargetType: linkedTarget?.type });
@@ -247,6 +251,7 @@ function ActivityCreateForm({
   onMessage,
   onSave,
   people,
+  titleSuggestions,
 }: {
   defaultDate: string;
   initialActivity?: LifeActivityRecord;
@@ -257,6 +262,7 @@ function ActivityCreateForm({
   onMessage: (value: string) => void;
   onSave: (activity: LifeActivityRecord) => Promise<void> | void;
   people: PersonRecord[];
+  titleSuggestions: string[];
 }) {
   const [date, setDate] = useState(initialActivity?.date ?? defaultDate);
   const [title, setTitle] = useState(initialActivity?.title ?? "");
@@ -365,6 +371,12 @@ function ActivityCreateForm({
         </FormField>
         <FormField label="제목">
           <input autoFocus placeholder="활동 제목" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <TextSuggestionChips
+            label="기존 활동 제목"
+            onSelect={setTitle}
+            suggestions={titleSuggestions}
+            value={title}
+          />
         </FormField>
         <FormField label="유형">
           <div className="record-create-flow__category-grid" role="list" aria-label="활동 유형">
@@ -556,6 +568,7 @@ function LogCreateForm({
   onDone,
   onMessage,
   onSave,
+  contentSuggestions,
   linkTargets,
 }: {
   defaultDate: string;
@@ -565,6 +578,7 @@ function LogCreateForm({
   onDone: () => void;
   onMessage: (value: string) => void;
   onSave: (date: string, content: string, linkedTarget?: RecordLinkedTarget) => Promise<void> | void;
+  contentSuggestions: string[];
   linkTargets: RecordLinkTargetOption[];
 }) {
   const [date, setDate] = useState(initialLog?.date ?? defaultDate);
@@ -596,6 +610,12 @@ function LogCreateForm({
         </FormField>
         <FormField label="내용">
           <textarea placeholder="오늘 기억하고 싶은 문장" value={content} onChange={(event) => setContent(event.target.value)} />
+          <TextSuggestionChips
+            label="기존 기록"
+            onSelect={setContent}
+            suggestions={contentSuggestions}
+            value={content}
+          />
         </FormField>
         {message ? <p className="life-health-message">{message}</p> : null}
       </div>
@@ -767,6 +787,57 @@ function EventTaskCreateFlow({
   people: PersonRecord[];
 }) {
   return <PlanCreateForm defaultDate={defaultDate} initialEvent={initialEvent} initialTask={initialTask} kind={kind} onClose={onBack} onCreatePerson={onCreatePerson} onDone={onDone} onSaveEvent={onSaveEvent} onSaveTask={onSaveTask} people={people} />;
+}
+
+function TextSuggestionChips({
+  label,
+  onSelect,
+  suggestions,
+  value,
+}: {
+  label: string;
+  onSelect: (value: string) => void;
+  suggestions: string[];
+  value: string;
+}) {
+  const visibleSuggestions = useMemo(() => {
+    const query = normalizeSuggestionText(value);
+    return suggestions
+      .filter((suggestion) => normalizeSuggestionText(suggestion) !== query)
+      .filter((suggestion) => !query || normalizeSuggestionText(suggestion).includes(query))
+      .slice(0, 6);
+  }, [suggestions, value]);
+
+  if (visibleSuggestions.length === 0) return null;
+
+  return (
+    <div className="record-create-flow__suggestions" aria-label={label}>
+      {visibleSuggestions.map((suggestion) => (
+        <button key={suggestion} type="button" onClick={() => onSelect(suggestion)}>
+          {suggestion}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function buildRecentTextSuggestions<T>(items: T[], getText: (item: T) => string | undefined, getDate: (item: T) => string | undefined) {
+  const seen = new Set<string>();
+  return items
+    .slice()
+    .sort((left, right) => (getDate(right) ?? "").localeCompare(getDate(left) ?? ""))
+    .flatMap((item) => {
+      const text = getText(item)?.trim();
+      if (!text) return [];
+      const key = normalizeSuggestionText(text);
+      if (!key || seen.has(key)) return [];
+      seen.add(key);
+      return [text];
+    });
+}
+
+function normalizeSuggestionText(value: string) {
+  return value.trim().toLocaleLowerCase("ko-KR");
 }
 
 function parseCreateType(value: string | null): CreateType | null {
