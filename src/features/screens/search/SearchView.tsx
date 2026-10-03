@@ -10,6 +10,7 @@ import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { buildMemoryDocuments, buildMemorySummaries } from "@/features/memory-conversation/memoryDocuments";
 import type { MemoryChatResponse, MemoryConversationMessage } from "@/features/memory-conversation/types";
 import { createMemoryConversation, fetchMemoryMessages, saveMemoryMessage, syncMemoryDocumentsToDb } from "@/features/data/memory/api";
+import { supabase } from "@/lib/supabase";
 
 export function SearchView() {
   const router = useRouter();
@@ -89,6 +90,7 @@ export function SearchView() {
       }
       if (activeConversationId) await saveMemoryMessage(activeConversationId, "user", trimmedQuestion);
 
+      const accessToken = await getAccessToken();
       const response = await fetch("/api/memory/chat", {
         body: JSON.stringify({
           documents: memoryDocuments,
@@ -96,7 +98,10 @@ export function SearchView() {
           question: trimmedQuestion,
           summaries: memorySummaries,
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          "Content-Type": "application/json",
+        },
         method: "POST",
       });
       if (!response.ok) throw new Error("기록 기반 답변을 만들지 못했습니다.");
@@ -282,6 +287,13 @@ export function SearchView() {
       </div>
     </div>
   );
+}
+
+async function getAccessToken() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session?.access_token ?? null;
 }
 
 function getMemoryStatusLabel(status: "idle" | "syncing" | "ready" | "local" | "error") {

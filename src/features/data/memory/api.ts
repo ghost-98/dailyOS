@@ -8,63 +8,23 @@ export type MemoryConversationRecord = {
   updatedAt: string;
 };
 
-type MemoryDocumentRow = {
-  document_date: string;
-  document_id: string;
-  focus_id?: string | null;
-  kind: string;
-  label: string;
-  metadata: Record<string, unknown>;
-  source_id: string;
-  source_type: string;
-  text: string;
-  title: string;
-  user_id: string;
-};
-
-type MemorySummaryRow = {
-  kind: string;
-  period_end?: string | null;
-  period_start?: string | null;
-  subject?: string | null;
-  summary_id: string;
-  text: string;
-  user_id: string;
-};
-
 export async function syncMemoryDocumentsToDb(documents: MemoryDocument[], summaries: MemorySummary[]) {
   if (!supabase) return;
-  const user = await requireCurrentUser();
-  const documentRows: MemoryDocumentRow[] = documents.map((document) => ({
-    document_date: document.date,
-    document_id: document.id,
-    focus_id: document.focusId ?? null,
-    kind: document.kind,
-    label: document.label,
-    metadata: document.metadata as Record<string, unknown>,
-    source_id: document.sourceId,
-    source_type: document.sourceType,
-    text: document.text,
-    title: document.title,
-    user_id: user.id,
-  }));
-  const summaryRows: MemorySummaryRow[] = summaries.map((summary) => ({
-    kind: summary.kind,
-    period_end: summary.periodEnd ?? null,
-    period_start: summary.periodStart ?? null,
-    subject: summary.subject ?? null,
-    summary_id: summary.id,
-    text: summary.text,
-    user_id: user.id,
-  }));
-
-  if (documentRows.length > 0) {
-    const { error } = await supabase.from("memory_documents").upsert(documentRows, { onConflict: "user_id,document_id" });
-    if (error) throw error;
-  }
-  if (summaryRows.length > 0) {
-    const { error } = await supabase.from("memory_summaries").upsert(summaryRows, { onConflict: "user_id,summary_id" });
-    if (error) throw error;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("로그인이 필요합니다.");
+  const response = await fetch("/api/memory/sync", {
+    body: JSON.stringify({ documents, summaries }),
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => null);
+    throw new Error(result?.error ?? "메모리 동기화에 실패했습니다.");
   }
 }
 

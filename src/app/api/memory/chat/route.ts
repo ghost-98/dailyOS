@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildLocalMemoryAnswer, selectConversationMemory } from "@/features/memory-conversation/memoryDocuments";
+import { retrieveSemanticMemory } from "@/features/memory-conversation/semanticRetrieval";
+import { createUserScopedSupabase, getBearerToken } from "@/features/memory-conversation/serverSupabase";
 import type { MemoryChatResponse, MemoryConversationMessage, MemoryDocument, MemorySummary } from "@/features/memory-conversation/types";
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -36,7 +38,8 @@ export async function POST(request: Request) {
     } satisfies MemoryChatResponse);
   }
 
-  const selectedMemory = selectConversationMemory(question, documents, summaries, messages);
+  const semanticMemory = await getSemanticMemory(request, question);
+  const selectedMemory = semanticMemory ?? selectConversationMemory(question, documents, summaries, messages);
   if (!geminiApiKey) {
     return NextResponse.json(buildLocalMemoryAnswer(question, selectedMemory.documents, selectedMemory.summaries));
   }
@@ -47,6 +50,24 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Failed to generate memory answer", error);
     return NextResponse.json(buildLocalMemoryAnswer(question, selectedMemory.documents, selectedMemory.summaries));
+  }
+}
+
+async function getSemanticMemory(request: Request, question: string) {
+  const accessToken = getBearerToken(request);
+  if (!accessToken) return null;
+  try {
+    const supabase = createUserScopedSupabase(accessToken);
+    const memory = await retrieveSemanticMemory(supabase, question);
+    if (!memory || (memory.documents.length === 0 && memory.summaries.length === 0)) return null;
+    return {
+      documents: memory.documents,
+      messages: [] as Array<{ content: string; role: string }>,
+      summaries: memory.summaries,
+    };
+  } catch (error) {
+    console.error("Failed to retrieve semantic memory", error);
+    return null;
   }
 }
 
