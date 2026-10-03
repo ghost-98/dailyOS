@@ -1,12 +1,15 @@
 "use client";
 
-import { Banknote, CalendarRange, Camera, CheckCircle2, Clock, Dumbbell, MapPin, NotebookPen, Search, Tag, UsersRound, UtensilsCrossed } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Banknote, Brain, CalendarRange, Camera, CheckCircle2, Clock, Database, Dumbbell, MapPin, MessageCircle, NotebookPen, Search, Send, Tag, UsersRound, UtensilsCrossed } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildRecordSearchItems, type RecordSearchFactKind } from "@/features/records/search/recordsInsights";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
+import { buildMemoryDocuments, buildMemorySummaries } from "@/features/memory-conversation/memoryDocuments";
+import type { MemoryChatResponse, MemoryConversationMessage } from "@/features/memory-conversation/types";
+import { createMemoryConversation, fetchMemoryMessages, saveMemoryMessage, syncMemoryDocumentsToDb } from "@/features/data/memory/api";
 
 export function SearchView() {
   const router = useRouter();
@@ -15,11 +18,34 @@ export function SearchView() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
+  const [mode, setMode] = useState<"search" | "ask">("search");
+  const [question, setQuestion] = useState("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MemoryConversationMessage[]>([]);
+  const [answer, setAnswer] = useState<MemoryChatResponse | null>(null);
+  const [isAsking, setIsAsking] = useState(false);
+  const [memoryStatus, setMemoryStatus] = useState<"idle" | "syncing" | "ready" | "local" | "error">("idle");
+  const [askError, setAskError] = useState("");
 
   const items = useMemo(
     () => buildRecordSearchItems(data.events, data.tasks, data.activities, data.expenses, data.incomes, data.dailyLogs, data.lifePhotos, data.weights, data.workouts),
     [data.activities, data.dailyLogs, data.events, data.expenses, data.incomes, data.lifePhotos, data.tasks, data.weights, data.workouts],
   );
+  const memoryDocuments = useMemo(() => buildMemoryDocuments(data), [data]);
+  const memorySummaries = useMemo(() => buildMemorySummaries(memoryDocuments), [memoryDocuments]);
+
+  useEffect(() => {
+    if (memoryDocuments.length === 0) return;
+    let isMounted = true;
+    setMemoryStatus("syncing");
+    syncMemoryDocumentsToDb(memoryDocuments, memorySummaries)
+      .then(() => { if (isMounted) setMemoryStatus("ready"); })
+      .catch((error) => {
+        console.error("Failed to sync memory documents", error);
+        if (isMounted) setMemoryStatus("local");
+      });
+    return () => { isMounted = false; };
+  }, [memoryDocuments, memorySummaries]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
@@ -38,9 +64,155 @@ export function SearchView() {
 
   const resultCount = filteredItems.length;
 
+  const ask = async (nextQuestion = question) => {
+    const trimmedQuestion = nextQuestion.trim();
+    if (!trimmedQuestion || isAsking) return;
+    setQuestion(trimmedQuestion);
+    setAskError("");
+    setIsAsking(true);
+    setMode("ask");
+
+    const optimisticUserMessage: MemoryConversationMessage = {
+      content: trimmedQuestion,
+      createdAt: new Date().toISOString(),
+      id: `local-user-${Date.now()}`,
+      role: "user",
+    };
+    setMessages((current) => [...current, optimisticUserMessage]);
+
+    try {
+      const activeConversationId = conversationId ?? (await createMemoryConversation(trimmedQuestion.slice(0, 48)))?.id ?? null;
+      if (activeConversationId && !conversationId) {
+        setConversationId(activeConversationId);
+        const existingMessages = await fetchMemoryMessages(activeConversationId);
+        if (existingMessages.length > 0) setMessages(existingMessages);
+      }
+      if (activeConversationId) await saveMemoryMessage(activeConversationId, "user", trimmedQuestion);
+
+      const response = await fetch("/api/memory/chat", {
+        body: JSON.stringify({
+          documents: memoryDocuments,
+          messages: [...messages, optimisticUserMessage].slice(-10),
+          question: trimmedQuestion,
+          summaries: memorySummaries,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("기록 기반 답변을 만들지 못했습니다.");
+      const nextAnswer = await response.json() as MemoryChatResponse;
+      setAnswer(nextAnswer);
+      const assistantMessage: MemoryConversationMessage = {
+        content: nextAnswer.answer,
+        createdAt: new Date().toISOString(),
+        id: `local-assistant-${Date.now()}`,
+        role: "assistant",
+      };
+      setMessages((current) => [...current, assistantMessage]);
+      if (activeConversationId) await saveMemoryMessage(activeConversationId, "assistant", nextAnswer.answer);
+    } catch (error) {
+      console.error("Failed to ask memory", error);
+      setAskError(error instanceof Error ? error.message : "답변 생성에 실패했습니다.");
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
   return (
     <div className="life-tab-panel">
       <div className="life-search-shell">
+        <div className="life-search-mode-switch" role="tablist" aria-label="검색 모드">
+          <button aria-selected={mode === "search"} className={mode === "search" ? "life-search-mode-switch__item life-search-mode-switch__item--active" : "life-search-mode-switch__item"} onClick={() => setMode("search")} role="tab" type="button">
+            <Search aria-hidden size={15} />
+            <span>검색</span>
+          </button>
+          <button aria-selected={mode === "ask"} className={mode === "ask" ? "life-search-mode-switch__item life-search-mode-switch__item--active" : "life-search-mode-switch__item"} onClick={() => setMode("ask")} role="tab" type="button">
+            <Brain aria-hidden size={15} />
+            <span>기록 대화</span>
+          </button>
+        </div>
+
+        {mode === "ask" ? (
+          <div className="life-ask-layout">
+            <section className="life-ask-card">
+              <div className="life-search-meta-row">
+                <span><Database aria-hidden size={14} /> {getMemoryStatusLabel(memoryStatus)}</span>
+                <strong>{memoryDocuments.length}개 기억</strong>
+              </div>
+              <textarea
+                placeholder="예: 요즘 내 생활 패턴에서 이상한 점 있어? 지난달 누구를 자주 만났어? 최근 소비 흐름을 정리해줘."
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void ask();
+                }}
+              />
+              <div className="life-ask-examples">
+                {[
+                  "요즘 내 생활 패턴을 기록 기반으로 정리해줘",
+                  "최근 소비에서 반복되는 흐름을 찾아줘",
+                  "이번 달 사람/장소 중심으로 기억을 요약해줘",
+                  "내가 자주 하는 활동과 빠진 기록을 알려줘",
+                ].map((example) => <button key={example} onClick={() => void ask(example)} type="button">{example}</button>)}
+              </div>
+              <button className="life-ask-submit" disabled={!question.trim() || isAsking} onClick={() => void ask()} type="button">
+                <Send aria-hidden size={15} />
+                {isAsking ? "기억 읽는 중..." : "기록 기반으로 대화하기"}
+              </button>
+              {askError ? <p className="life-ask-error">{askError}</p> : null}
+              {messages.length > 0 ? (
+                <div className="life-ask-thread" aria-label="최근 대화">
+                  {messages.slice(-6).map((message) => (
+                    <article className={`life-ask-thread__message life-ask-thread__message--${message.role}`} key={message.id}>
+                      <span>{message.role === "user" ? "나" : "dailyOS"}</span>
+                      <p>{message.content}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="life-ask-answer">
+              {answer ? (
+                <div className="life-ask-brief">
+                  <article className="life-ask-overview-card">
+                    <span><MessageCircle aria-hidden size={14} /> {answer.mode === "llm" ? "LLM 답변" : "로컬 기억 답변"}</span>
+                    <strong>{answer.summary}</strong>
+                  </article>
+                  <div className="life-ask-answer__body">{answer.answer}</div>
+                  {answer.evidence.length > 0 ? (
+                    <div className="life-ask-link-group">
+                      <div className="life-ask-link-group__head"><span>근거 기록</span></div>
+                      <div className="life-ask-link-group__items">
+                        {answer.evidence.map((evidence) => (
+                          <button className="life-ask-link-item" key={evidence.id} onClick={() => router.push(createDayRecordHref(evidence.date, evidence.focusId ?? evidence.id))} type="button">
+                            <strong>{evidence.title}</strong>
+                            <span>{evidence.date} · {evidence.label} · {evidence.reason}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {answer.followups.length > 0 ? (
+                    <div className="life-ask-followups">
+                      <div className="life-ask-followups__head"><span>이어 물어보기</span></div>
+                      <div className="life-ask-followups__items">
+                        {answer.followups.map((followup) => <button key={followup} onClick={() => void ask(followup)} type="button">{followup}</button>)}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="life-map-empty life-map-empty--compact">
+                  <Brain aria-hidden size={28} />
+                  <strong>기록을 기억처럼 꺼내 대화합니다.</strong>
+                  <p>활동, 하루기록, 사진, 사람, 장소, 소비, 건강 데이터를 장기 기억으로 묶어 질문에 답해요.</p>
+                </div>
+              )}
+            </section>
+          </div>
+        ) : (
+          <>
         <div className="life-search-controls life-search-controls--compact">
           <label className="life-search-controls__query">
             <Search aria-hidden size={18} />
@@ -105,9 +277,21 @@ export function SearchView() {
           onStartDateChange={setStartDate}
           startDate={startDate}
         />
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function getMemoryStatusLabel(status: "idle" | "syncing" | "ready" | "local" | "error") {
+  return {
+    error: "메모리 동기화 지연",
+    idle: "메모리 준비 중",
+    local: "로컬 메모리 사용",
+    ready: "장기 메모리 동기화됨",
+    syncing: "장기 메모리 동기화 중",
+  }[status];
 }
 
 function getSearchFacts(item: ReturnType<typeof buildRecordSearchItems>[number]) {
