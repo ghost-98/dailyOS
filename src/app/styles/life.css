@@ -2802,8 +2802,12 @@
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: rgba(255, 255, 255, 0.96);
   font: inherit;
+}
+
+.life-search-controls__query input::placeholder {
+  color: rgba(229, 232, 240, 0.52);
 }
 
 .life-search-period-button {
@@ -4983,9 +4987,9 @@
 
 .life-ask-insight-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  max-height: min(36dvh, 360px);
+  max-height: min(30dvh, 300px);
   overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -4993,10 +4997,40 @@
   padding: 12px;
 }
 
-.life-ask-insight-panel > strong {
+.life-ask-insight-panel__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.life-ask-insight-panel__head strong {
   color: var(--text);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.life-ask-insight-panel__head button {
+  min-height: 30px;
+  border: 1px solid rgba(201, 184, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(201, 184, 255, 0.08);
+  color: var(--violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.life-ask-evidence-preview {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .life-ask-link-group {
@@ -5059,6 +5093,11 @@
   min-width: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 10px;
+}
+
+.life-ask-followups--compact {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .life-ask-followups__head {

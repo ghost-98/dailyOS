@@ -24,6 +24,7 @@ export function SearchView() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MemoryConversationMessage[]>([]);
   const [answer, setAnswer] = useState<MemoryChatResponse | null>(null);
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
   const [memoryStatus, setMemoryStatus] = useState<"idle" | "syncing" | "ready" | "local" | "error">("idle");
   const [memoryError, setMemoryError] = useState("");
@@ -113,6 +114,7 @@ export function SearchView() {
       if (!response.ok) throw new Error("기록 기반 답변을 만들지 못했습니다.");
       const nextAnswer = await response.json() as MemoryChatResponse;
       setAnswer(nextAnswer);
+      setIsEvidenceOpen(false);
       const assistantMessage: MemoryConversationMessage = {
         content: nextAnswer.answer,
         createdAt: new Date().toISOString(),
@@ -177,26 +179,48 @@ export function SearchView() {
 
               {answer ? (
                 <div className="life-ask-insight-panel">
-                  <strong>{answer.summary}</strong>
-                  <div className="life-ask-answer__body">{answer.answer}</div>
-                  {answer.evidence.length > 0 ? (
-                    <div className="life-ask-link-group">
-                      <div className="life-ask-link-group__head"><span>근거 기록</span></div>
-                      <div className="life-ask-link-group__items">
-                        {answer.evidence.map((evidence) => (
-                          <button className="life-ask-link-item" key={evidence.id} onClick={() => router.push(createDayRecordHref(evidence.date, evidence.focusId ?? evidence.id))} type="button">
-                            <strong>{evidence.title}</strong>
-                            <span>{evidence.date} · {evidence.label} · {evidence.reason}</span>
-                          </button>
-                        ))}
-                      </div>
+                  <div className="life-ask-insight-panel__head">
+                    <strong>{answer.summary}</strong>
+                    {(answer.evidence.length > 0 || answer.followups.length > 0) ? (
+                      <button onClick={() => setIsEvidenceOpen((current) => !current)} type="button">
+                        {isEvidenceOpen ? "근거 숨기기" : `근거 ${answer.evidence.length}개`}
+                      </button>
+                    ) : null}
+                  </div>
+                  {isEvidenceOpen ? (
+                    <>
+                      {answer.evidence.length > 0 ? (
+                        <div className="life-ask-link-group">
+                          <div className="life-ask-link-group__head"><span>근거 기록</span></div>
+                          <div className="life-ask-link-group__items">
+                            {answer.evidence.map((evidence) => (
+                              <button className="life-ask-link-item" key={evidence.id} onClick={() => router.push(createDayRecordHref(evidence.date, evidence.focusId ?? evidence.id))} type="button">
+                                <strong>{evidence.title}</strong>
+                                <span>{evidence.date} · {evidence.label} · {evidence.reason}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {answer.followups.length > 0 ? (
+                        <div className="life-ask-followups">
+                          <div className="life-ask-followups__head"><span>이어 물어보기</span></div>
+                          <div className="life-ask-followups__items">
+                            {answer.followups.map((followup) => <button key={followup} onClick={() => void ask(followup)} type="button">{followup}</button>)}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : answer.evidence.length > 0 ? (
+                    <div className="life-ask-evidence-preview">
+                      <span>근거: {answer.evidence.slice(0, 2).map((evidence) => evidence.title).join(", ")}</span>
                     </div>
                   ) : null}
-                  {answer.followups.length > 0 ? (
-                    <div className="life-ask-followups">
-                      <div className="life-ask-followups__head"><span>이어 물어보기</span></div>
+                  <div className="life-ask-answer__body">{answer.answer}</div>
+                  {!isEvidenceOpen && answer.followups.length > 0 ? (
+                    <div className="life-ask-followups life-ask-followups--compact">
                       <div className="life-ask-followups__items">
-                        {answer.followups.map((followup) => <button key={followup} onClick={() => void ask(followup)} type="button">{followup}</button>)}
+                        {answer.followups.slice(0, 2).map((followup) => <button key={followup} onClick={() => void ask(followup)} type="button">{followup}</button>)}
                       </div>
                     </div>
                   ) : null}
