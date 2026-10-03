@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Brain, CalendarRange, Camera, CheckCircle2, Clock, Database, Dumbbell, MapPin, MessageCircle, NotebookPen, Search, Send, Tag, UsersRound, UtensilsCrossed } from "lucide-react";
+import { Banknote, Brain, CalendarRange, Camera, CheckCircle2, Clock, Database, Dumbbell, MapPin, NotebookPen, Search, Send, Tag, UsersRound, UtensilsCrossed } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildRecordSearchItems, type RecordSearchFactKind } from "@/features/records/search/recordsInsights";
@@ -77,6 +77,7 @@ export function SearchView() {
     setAskError("");
     setIsAsking(true);
     setMode("ask");
+    setQuestion("");
 
     const optimisticUserMessage: MemoryConversationMessage = {
       content: trimmedQuestion,
@@ -144,52 +145,39 @@ export function SearchView() {
 
         {mode === "ask" ? (
           <div className="life-ask-layout">
-            <section className="life-ask-card">
-              <div className="life-search-meta-row">
+            <section className="life-ask-chat">
+              <div className="life-ask-chat__status">
                 <span><Database aria-hidden size={14} /> {getMemoryStatusLabel(memoryStatus)}</span>
                 <strong>{memoryDocuments.length}개 기억</strong>
               </div>
               {memoryError ? <p className="life-ask-error">{memoryError}</p> : null}
-              <textarea
-                placeholder="예: 요즘 내 생활 패턴에서 이상한 점 있어? 지난달 누구를 자주 만났어? 최근 소비 흐름을 정리해줘."
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                onKeyDown={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void ask();
-                }}
-              />
-              <div className="life-ask-examples">
-                {[
-                  "요즘 내 생활 패턴을 기록 기반으로 정리해줘",
-                  "최근 소비에서 반복되는 흐름을 찾아줘",
-                  "이번 달 사람/장소 중심으로 기억을 요약해줘",
-                  "내가 자주 하는 활동과 빠진 기록을 알려줘",
-                ].map((example) => <button key={example} onClick={() => void ask(example)} type="button">{example}</button>)}
-              </div>
-              <button className="life-ask-submit" disabled={!question.trim() || isAsking} onClick={() => void ask()} type="button">
-                <Send aria-hidden size={15} />
-                {isAsking ? "기억 읽는 중..." : "기록 기반으로 대화하기"}
-              </button>
-              {askError ? <p className="life-ask-error">{askError}</p> : null}
-              {messages.length > 0 ? (
-                <div className="life-ask-thread" aria-label="최근 대화">
-                  {messages.slice(-6).map((message) => (
+
+              <div className="life-ask-thread" aria-label="기록 대화">
+                {messages.length > 0 ? (
+                  messages.slice(-12).map((message) => (
                     <article className={`life-ask-thread__message life-ask-thread__message--${message.role}`} key={message.id}>
                       <span>{message.role === "user" ? "나" : "dailyOS"}</span>
                       <p>{message.content}</p>
                     </article>
-                  ))}
-                </div>
-              ) : null}
-            </section>
-
-            <section className="life-ask-answer">
-              {answer ? (
-                <div className="life-ask-brief">
-                  <article className="life-ask-overview-card">
-                    <span><MessageCircle aria-hidden size={14} /> {answer.mode === "llm" ? "LLM 답변" : "로컬 기억 답변"}</span>
-                    <strong>{answer.summary}</strong>
+                  ))
+                ) : (
+                  <div className="life-map-empty life-map-empty--compact">
+                    <Brain aria-hidden size={28} />
+                    <strong>기록을 기억처럼 꺼내 대화합니다.</strong>
+                    <p>활동, 하루기록, 사진, 사람, 장소, 소비, 건강 데이터를 근거로 답해요.</p>
+                  </div>
+                )}
+                {isAsking ? (
+                  <article className="life-ask-thread__message life-ask-thread__message--assistant">
+                    <span>dailyOS</span>
+                    <p>기록을 살펴보고 있어요...</p>
                   </article>
+                ) : null}
+              </div>
+
+              {answer ? (
+                <div className="life-ask-insight-panel">
+                  <strong>{answer.summary}</strong>
                   <div className="life-ask-answer__body">{answer.answer}</div>
                   {answer.evidence.length > 0 ? (
                     <div className="life-ask-link-group">
@@ -213,13 +201,22 @@ export function SearchView() {
                     </div>
                   ) : null}
                 </div>
-              ) : (
-                <div className="life-map-empty life-map-empty--compact">
-                  <Brain aria-hidden size={28} />
-                  <strong>기록을 기억처럼 꺼내 대화합니다.</strong>
-                  <p>활동, 하루기록, 사진, 사람, 장소, 소비, 건강 데이터를 장기 기억으로 묶어 질문에 답해요.</p>
-                </div>
-              )}
+              ) : null}
+
+              <div className="life-ask-composer" role="form" aria-label="기록 대화 질문 입력">
+                <textarea
+                  placeholder="기록에 대해 물어보세요. 예: 최근에 스페인음식 먹은 곳이 어디였지?"
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  onKeyDown={(event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void ask();
+                  }}
+                />
+                <button className="life-ask-submit" aria-label="질문 보내기" disabled={!question.trim() || isAsking} onClick={() => void ask()} type="button">
+                  <Send aria-hidden size={16} />
+                </button>
+              </div>
+              {askError ? <p className="life-ask-error">{askError}</p> : null}
             </section>
           </div>
         ) : (

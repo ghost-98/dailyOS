@@ -4863,17 +4863,16 @@
 .life-ask-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
   min-width: 0;
+  min-height: min(72dvh, 760px);
 }
 
-.life-ask-card,
-.life-ask-answer {
+.life-ask-chat {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 12px;
   min-width: 0;
-  min-height: 0;
+  min-height: min(72dvh, 760px);
   border: 1px solid rgba(255, 255, 255, 0.11);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
@@ -4881,83 +4880,42 @@
   padding: 14px;
 }
 
-.life-ask-card textarea {
-  width: 100%;
-  min-height: 136px;
-  resize: vertical;
+.life-ask-chat__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.life-ask-followups {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
-  padding: 12px;
-}
-
-.life-ask-followups__head span,
-.life-ask-followups .eyebrow {
+.life-ask-chat__status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 820;
 }
 
-.life-ask-followups__items button {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
-}
-
-.life-ask-examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.life-ask-examples button {
-  max-width: 100%;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
-  color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
-  padding: 8px 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.life-ask-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  border-radius: 14px;
-  background: rgba(201, 184, 255, 0.14);
+.life-ask-chat__status strong {
   color: var(--text);
-  cursor: pointer;
-  font: inherit;
+  font-size: 0.82rem;
   font-weight: 900;
-  padding: 13px 16px;
 }
 
 .life-ask-thread {
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 10px;
   min-width: 0;
-  max-height: 300px;
+  min-height: 0;
   overflow: auto;
+  padding-right: 4px;
 }
 
 .life-ask-thread__message {
   display: grid;
   gap: 5px;
+  width: min(88%, 720px);
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -4966,8 +4924,13 @@
 }
 
 .life-ask-thread__message--user {
+  justify-self: end;
   border-color: rgba(201, 184, 255, 0.18);
   background: rgba(201, 184, 255, 0.08);
+}
+
+.life-ask-thread__message--assistant {
+  justify-self: start;
 }
 
 .life-ask-thread__message span {
@@ -5009,62 +4972,39 @@
 }
 
 .life-ask-answer__body {
-  min-height: 180px;
-  max-height: min(56dvh, 560px);
-  overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: keep-all;
   color: var(--text);
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 650;
-  line-height: 1.75;
-  padding-right: 6px;
+  line-height: 1.6;
 }
 
-.life-ask-brief {
+.life-ask-insight-panel {
   display: grid;
   gap: 12px;
   min-width: 0;
-}
-
-.life-ask-overview-card,
-.life-ask-link-group {
+  max-height: min(36dvh, 360px);
+  overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.035);
   padding: 12px;
 }
 
-.life-ask-overview-card {
-  display: grid;
-  gap: 8px;
-}
-
-.life-ask-overview-card span,
-.life-ask-link-group__head span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 820;
-}
-
-.life-ask-overview-card strong {
+.life-ask-insight-panel > strong {
   color: var(--text);
-  font-size: 0.98rem;
-  line-height: 1.65;
-}
-
-.life-ask-overview-card p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .life-ask-link-group {
   display: grid;
   gap: 10px;
   min-width: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
 }
 
 .life-ask-link-group__head span {
@@ -5117,6 +5057,8 @@
   display: grid;
   gap: 12px;
   min-width: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
 }
 
 .life-ask-followups__head {
@@ -5150,22 +5092,43 @@
 }
 
 .life-ask-followups__items button:hover,
-.life-ask-examples button:hover {
+.life-ask-submit:hover:not(:disabled) {
   border-color: rgba(201, 184, 255, 0.26);
   background: rgba(201, 184, 255, 0.08);
 }
 
-@media (min-width: 960px) {
-  .life-ask-layout {
-    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
-    gap: 18px;
-  }
+.life-ask-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  align-items: end;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(10, 12, 18, 0.72);
+  padding: 8px;
+}
 
-  .life-ask-card,
-  .life-ask-answer {
-    min-height: 420px;
-    padding: 22px;
-  }
+.life-ask-composer textarea {
+  width: 100%;
+  min-height: 42px;
+  max-height: 120px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  padding: 10px 8px;
+}
+
+.life-ask-submit {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(201, 184, 255, 0.28);
+  border-radius: 14px;
+  background: rgba(201, 184, 255, 0.14);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
 }
 
 .life-activity-layout {
