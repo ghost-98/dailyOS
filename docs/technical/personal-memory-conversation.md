@@ -47,6 +47,8 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 문서는 날짜, 제목, 유형, 원문 텍스트, 근거 이동용 `focusId`, 사람/장소/fact 메타데이터를 갖는다.
 
+기록 문서는 원문뿐 아니라 `semanticTags`, `semanticAliases`, `cuisines` 같은 의미 메타데이터도 갖는다. 예를 들어 `빠에야`, `감바스`, `타파스`가 있으면 `스페인음식`, `유럽음식`, `음식` 태그가 같이 저장된다. 질문도 같은 의미 사전으로 확장해서, 사용자가 "스페인음식 먹은 곳"처럼 물어도 관련 음식/장소 기록이 후보에 올라오게 한다.
+
 동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, `GEMINI_API_KEY`가 있으면 바뀐 문서만 Gemini embedding으로 임베딩한다. 기본 모델은 `gemini-embedding-2`이고, 사용할 수 없는 환경에서는 `gemini-embedding-001`, `text-embedding-004` 순서로 재시도한다.
 
 임베딩 재생성 조건:
@@ -77,11 +79,14 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 `selectConversationMemory`는 fallback이자 보조 랭커다. Gemini embedding, Supabase RPC, 네트워크 중 하나가 실패했을 때 질문, 문서, 요약, 최근 대화를 받아 LLM에 넣을 기억을 고른다. 선별 기준은 다음을 섞는다.
 
+- 질문 의미 확장: 음식 국적, 메뉴, 장소 유형, 활동 유형 동의어
 - 질문 단어 매칭
 - 돈/소비/지출, 사람, 장소, 운동/건강 같은 의도 점수
 - 최근성
 - 원본 기록과 요약 기억의 균형
 - 최근 대화 맥락
+
+단, 신뢰도 원칙상 기록, 장소명, 메뉴, 메모, 장소 카테고리 중 어디에도 특정 음식 국적이나 업종 단서가 없으면 시스템은 그 사실을 만들어내지 않는다. 그런 경우까지 안정적으로 답하려면 장소 저장 시점에 provider category, 지도 검색 결과, 또는 LLM 기반 장소 enrichment를 별도 메모리로 저장해야 한다.
 
 LLM context에는 전체 DB가 아니라 관련 원본 기억, 장기 요약, 최근 대화만 들어간다. 이렇게 해야 답변 품질과 비용, 속도를 같이 잡을 수 있다.
 
@@ -90,6 +95,7 @@ LLM context에는 전체 DB가 아니라 관련 원본 기억, 장기 요약, �
 구현 위치:
 
 - `src/app/api/memory/chat/route.ts`
+- `src/features/memory-conversation/memorySemantics.ts`
 - `src/features/memory-conversation/questionRouter.ts`
 - `src/features/memory-conversation/analyticsAnswer.ts`
 
@@ -162,6 +168,7 @@ RPC:
 - LLM은 원천 기록을 생성하지 않는다.
 - 답변은 반드시 기억 문서나 요약 기억을 근거로 한다.
 - 계산 가능한 질문은 LLM보다 deterministic 분석 엔진이 먼저 답한다.
+- 원문에 없는 장소/메뉴 속성은 추측하지 않고, enrichment로 저장된 의미 메타데이터가 있을 때만 사용한다.
 - 원본 기록 링크를 답변과 함께 제공한다.
 - 장기 기억과 embedding은 Supabase에 저장하고, 즉시 대화 품질은 클라이언트가 가진 최신 스냅샷 fallback으로 보장한다.
 - API 키가 없어도 로컬 기억 답변으로 앱 사용 흐름은 유지하지만, 완성형 semantic recall은 `GEMINI_API_KEY`와 pgvector RPC가 있을 때 동작한다.

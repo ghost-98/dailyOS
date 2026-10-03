@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedMemoryQuery, isEmbeddingConfigured, toPgVector } from "@/features/memory-conversation/embedding";
+import { expandMemoryQuestion } from "@/features/memory-conversation/memorySemantics";
 import type { MemoryDocument, MemorySummary } from "@/features/memory-conversation/types";
 
 type MemoryDocumentMatchRow = {
@@ -30,7 +31,7 @@ export async function retrieveSemanticMemory(supabase: SupabaseClient, question:
   if (!isEmbeddingConfigured()) return null;
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) throw userError ?? new Error("로그인이 필요합니다.");
-  const queryEmbedding = toPgVector(await embedMemoryQuery(question));
+  const queryEmbedding = toPgVector(await embedMemoryQuery(expandMemoryQuestion(question)));
 
   const [documentsResult, summariesResult] = await Promise.all([
     supabase.rpc("match_memory_documents", {

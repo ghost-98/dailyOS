@@ -1,5 +1,6 @@
 import { buildRecordPeopleSummaries, buildRecordSearchItems, getTopCounts, parseCompanions, type RecordSearchItem } from "@/features/records/search/recordsInsights";
 import type { RecordDataSnapshot } from "@/features/records/state/recordsDataLoader";
+import { buildMemorySemanticMetadata, expandMemoryQuestion, getDocumentSemanticText } from "@/features/memory-conversation/memorySemantics";
 import type { MemoryDocument, MemorySummary } from "@/features/memory-conversation/types";
 
 const DOCUMENT_LIMIT = 700;
@@ -53,9 +54,10 @@ export function buildMemorySummaries(documents: MemoryDocument[]): MemorySummary
 }
 
 export function selectConversationMemory(question: string, documents: MemoryDocument[], summaries: MemorySummary[], recentMessages: Array<{ content: string; role: string }>) {
-  const terms = getQuestionTerms(question);
+  const expandedQuestion = expandMemoryQuestion(question);
+  const terms = getQuestionTerms(expandedQuestion);
   const scoredDocuments = documents
-    .map((document) => ({ document, score: scoreDocument(question, terms, document) }))
+    .map((document) => ({ document, score: scoreDocument(expandedQuestion, terms, document) }))
     .filter((item) => item.score > 0)
     .sort((left, right) => right.score - left.score || right.document.date.localeCompare(left.document.date))
     .map((item) => item.document);
@@ -67,7 +69,7 @@ export function selectConversationMemory(question: string, documents: MemoryDocu
   ]).slice(0, 46);
 
   const selectedSummaries = summaries
-    .map((summary) => ({ summary, score: scoreText(question, terms, [summary.text, summary.subject, summary.periodStart, summary.periodEnd].filter(Boolean).join(" ")) }))
+    .map((summary) => ({ summary, score: scoreText(expandedQuestion, terms, [summary.text, summary.subject, summary.periodStart, summary.periodEnd].filter(Boolean).join(" ")) }))
     .sort((left, right) => right.score - left.score)
     .slice(0, 8)
     .map((item) => item.summary);
@@ -108,7 +110,8 @@ export function buildLocalMemoryAnswer(question: string, documents: MemoryDocume
 
 function recordSearchItemToMemoryDocument(item: RecordSearchItem): MemoryDocument {
   const facts = item.facts?.map((fact) => fact.text) ?? [];
-  const text = [item.date, item.label, item.title, item.description, ...facts, item.tags.join(" ")].filter(Boolean).join(" · ");
+  const semanticMetadata = buildMemorySemanticMetadata(item);
+  const text = [item.date, item.label, item.title, item.description, ...facts, item.tags.join(" "), semanticMetadata.semanticTags.join(" "), semanticMetadata.semanticAliases.join(" ")].filter(Boolean).join(" · ");
   return {
     date: item.date,
     focusId: item.focusId ?? item.id,
@@ -121,6 +124,7 @@ function recordSearchItemToMemoryDocument(item: RecordSearchItem): MemoryDocumen
       type: item.type,
       people: extractPeople(item),
       places: extractPlaces(item),
+      ...semanticMetadata,
     },
     sourceId: item.id,
     sourceType: item.type,
@@ -223,7 +227,7 @@ function summarizeDocumentGroup(title: string, documents: MemoryDocument[]) {
 }
 
 function scoreDocument(question: string, terms: string[], document: MemoryDocument) {
-  const text = [document.date, document.label, document.title, document.text, JSON.stringify(document.metadata)].join(" ");
+  const text = [document.date, document.label, document.title, getDocumentSemanticText(document), JSON.stringify(document.metadata)].join(" ");
   let score = scoreText(question, terms, text);
   if (question.includes("요즘") || question.includes("최근")) score += Math.max(0, 4 - Math.min(4, dateDistanceScore(document.date)));
   if (isFoodRecallQuestion(question) && document.kind === "activity") score += 5;
