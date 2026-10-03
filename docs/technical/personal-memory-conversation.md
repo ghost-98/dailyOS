@@ -11,6 +11,8 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 → Gemini embedding 생성
 → Supabase memory_* 테이블과 pgvector에 동기화
 → 질문 수신
+→ 질문 의도/도메인/기간 분류
+→ 수치·사람·장소·건강 분석형 질문은 deterministic 분석 엔진 우선 처리
 → 질문 embedding 생성
 → Supabase RPC vector search
 → 구조/키워드 fallback 랭킹
@@ -57,7 +59,16 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 ## 기억 선별
 
-기본 경로는 pgvector 기반 semantic retrieval이다. `POST /api/memory/chat`은 사용자 access token으로 Supabase RPC를 호출한다.
+`POST /api/memory/chat`은 먼저 질문을 분류한다. `questionRouter`는 질문을 다음 축으로 나눈다.
+
+- intent: 분석, 회상, 대화
+- domain: 돈, 사람, 장소, 건강, 활동, 일반
+- date range: 오늘, 어제, 최근 30일, 이번 달, 지난 달, 명시 월, 전체 기간
+- keywords: 검색과 답변 계획에 쓸 핵심어
+
+돈, 사람, 장소, 건강처럼 정확한 계산이나 집계가 필요한 질문은 `analyticsAnswer`가 먼저 처리한다. 예를 들어 "이번 달 지출 얼마야", "요즘 누구를 가장 많이 만났어", "최근 자주 간 곳은 어디야" 같은 질문은 LLM이 추측하지 않고 기록 문서의 금액, 사람, 장소, 날짜를 집계해서 답한다.
+
+분석 엔진으로 충분히 처리되지 않는 질문의 기본 경로는 pgvector 기반 semantic retrieval이다. `POST /api/memory/chat`은 사용자 access token으로 Supabase RPC를 호출한다.
 
 - `match_memory_documents`
 - `match_memory_summaries`
@@ -79,8 +90,12 @@ LLM context에는 전체 DB가 아니라 관련 원본 기억, 장기 요약, �
 구현 위치:
 
 - `src/app/api/memory/chat/route.ts`
+- `src/features/memory-conversation/questionRouter.ts`
+- `src/features/memory-conversation/analyticsAnswer.ts`
 
 API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모리 문서, 요약, 최근 메시지가 들어온다. 서버는 먼저 질문 embedding을 만들고 Supabase RPC로 관련 기억을 검색한다. 검색 결과가 충분하면 그 기억을 LLM context로 사용한다. 검색이 불가능한 경우에만 클라이언트가 보낸 문서와 요약을 fallback 랭킹한다.
+
+분석형 질문은 LLM 호출 전에 deterministic 답변을 우선 반환한다. 이렇게 해야 금액, 빈도, 장소 순위처럼 틀리면 안 되는 질문을 생성 모델의 문장 감각에 맡기지 않는다. 대화형 질문은 질문 처리 계획을 프롬프트에 함께 넣어, 같은 기억이라도 회상형/분석형/상담형 톤을 다르게 잡는다.
 
 환경 변수:
 
@@ -146,6 +161,7 @@ RPC:
 
 - LLM은 원천 기록을 생성하지 않는다.
 - 답변은 반드시 기억 문서나 요약 기억을 근거로 한다.
+- 계산 가능한 질문은 LLM보다 deterministic 분석 엔진이 먼저 답한다.
 - 원본 기록 링크를 답변과 함께 제공한다.
 - 장기 기억과 embedding은 Supabase에 저장하고, 즉시 대화 품질은 클라이언트가 가진 최신 스냅샷 fallback으로 보장한다.
 - API 키가 없어도 로컬 기억 답변으로 앱 사용 흐름은 유지하지만, 완성형 semantic recall은 `GEMINI_API_KEY`와 pgvector RPC가 있을 때 동작한다.
