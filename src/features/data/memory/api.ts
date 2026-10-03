@@ -24,7 +24,8 @@ export async function syncMemoryDocumentsToDb(documents: MemoryDocument[], summa
   });
   if (!response.ok) {
     const result = await response.json().catch(() => null);
-    throw new Error(result?.error ?? "메모리 동기화에 실패했습니다.");
+    const detail = typeof result?.error === "string" ? result.error : `${response.status} ${response.statusText}`;
+    throw new Error(`메모리 동기화에 실패했습니다: ${detail}`);
   }
 }
 

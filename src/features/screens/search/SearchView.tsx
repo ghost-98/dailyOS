@@ -26,6 +26,7 @@ export function SearchView() {
   const [answer, setAnswer] = useState<MemoryChatResponse | null>(null);
   const [isAsking, setIsAsking] = useState(false);
   const [memoryStatus, setMemoryStatus] = useState<"idle" | "syncing" | "ready" | "local" | "error">("idle");
+  const [memoryError, setMemoryError] = useState("");
   const [askError, setAskError] = useState("");
 
   const items = useMemo(
@@ -39,11 +40,15 @@ export function SearchView() {
     if (memoryDocuments.length === 0) return;
     let isMounted = true;
     setMemoryStatus("syncing");
+    setMemoryError("");
     syncMemoryDocumentsToDb(memoryDocuments, memorySummaries)
       .then(() => { if (isMounted) setMemoryStatus("ready"); })
       .catch((error) => {
         console.error("Failed to sync memory documents", error);
-        if (isMounted) setMemoryStatus("local");
+        if (isMounted) {
+          setMemoryStatus("error");
+          setMemoryError(error instanceof Error ? error.message : "메모리 동기화에 실패했습니다.");
+        }
       });
     return () => { isMounted = false; };
   }, [memoryDocuments, memorySummaries]);
@@ -144,6 +149,7 @@ export function SearchView() {
                 <span><Database aria-hidden size={14} /> {getMemoryStatusLabel(memoryStatus)}</span>
                 <strong>{memoryDocuments.length}개 기억</strong>
               </div>
+              {memoryError ? <p className="life-ask-error">{memoryError}</p> : null}
               <textarea
                 placeholder="예: 요즘 내 생활 패턴에서 이상한 점 있어? 지난달 누구를 자주 만났어? 최근 소비 흐름을 정리해줘."
                 value={question}
