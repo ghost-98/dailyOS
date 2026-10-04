@@ -123,7 +123,7 @@ async function generateGeneralProviderAnswer(question: string, messages: MemoryC
   return {
     answer: requireProviderAnswer(parsed.answer),
     evidence: [],
-    followups: sanitizeFollowups(parsed.followups),
+    followups: sanitizeFollowups(parsed.followups, []),
     mode: "llm",
     summary: parsed.summary || "일반 대화",
   };
@@ -289,11 +289,12 @@ function buildGeneralPrompt(question: string, messages: MemoryConversationMessag
 }
 
 function shouldUseMemoryContext(question: string, questionPlan: ReturnType<typeof planMemoryQuestion>) {
-  if (questionPlan.intent === "analytics" || questionPlan.intent === "recall" || questionPlan.needsDeterministicAnswer) return true;
   const normalized = question.toLocaleLowerCase("ko-KR");
-  const addressesAssistant = /(^|\s)(너|넌|너는|자네|dailyos|데일리os|데일리오에스|챗봇|비서)(\s|$)/i.test(normalized);
-  const explicitRecordSignals = ["기록", "내가", "나는", "나랑", "최근", "요즘", "오늘", "어제", "이번", "지난"];
+  const compact = normalized.replace(/\s+/g, "");
+  const addressesAssistant = /(너|넌|너는|니가|넌누구|너는누구|dailyos|데일리os|데일리오에스|챗봇|비서)/i.test(compact);
+  const explicitRecordSignals = ["기록", "내가", "나는", "나랑", "내 ", "최근", "요즘", "오늘", "어제", "이번", "지난"];
   if (addressesAssistant && !explicitRecordSignals.some((signal) => normalized.includes(signal))) return false;
+  if (questionPlan.intent === "analytics" || questionPlan.intent === "recall" || questionPlan.needsDeterministicAnswer) return true;
 
   const memorySignals = [
     "기록",
@@ -361,7 +362,7 @@ function sanitizeEvidence(value: unknown, documents: MemoryDocument[]) {
   });
 }
 
-function sanitizeFollowups(value: unknown) {
-  if (!Array.isArray(value)) return ["근거 기록을 더 자세히 보여줘", "최근 기록만 기준으로 다시 봐줘"];
+function sanitizeFollowups(value: unknown, fallback = ["근거 기록을 더 자세히 보여줘", "최근 기록만 기준으로 다시 봐줘"]) {
+  if (!Array.isArray(value)) return fallback;
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 4);
 }
