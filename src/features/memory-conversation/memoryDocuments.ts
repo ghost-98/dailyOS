@@ -31,7 +31,7 @@ export function buildMemorySummaries(documents: MemoryDocument[]): MemorySummary
     .map(([month, items]) => ({
       id: `month:${month}`,
       kind: "month" as const,
-      periodEnd: `${month}-31`,
+      periodEnd: getMonthEndDate(month),
       periodStart: `${month}-01`,
       text: summarizeDocumentGroup(`${month} 월간 기억`, items.slice(0, 60)),
     }));
@@ -322,6 +322,12 @@ function dateDistanceScore(date: string) {
 
 function normalize(value: string) {
   return value.trim().toLocaleLowerCase("ko-KR");
+}
+
+function getMonthEndDate(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  if (!year || !monthNumber) return `${month}-01`;
+  return new Date(year, monthNumber, 0).toISOString().slice(0, 10);
 }
 
 function getEvidenceReason(question: string, document: MemoryDocument) {

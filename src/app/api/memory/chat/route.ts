@@ -33,8 +33,15 @@ export async function POST(request: Request) {
   const messages = body.messages ?? [];
 
   if (!question) return NextResponse.json({ error: "질문을 입력해 주세요." }, { status: 400 });
-  const generalResponse = buildGeneralConversationResponse(question);
-  if (generalResponse) return NextResponse.json(generalResponse);
+  const questionPlan = planMemoryQuestion(question, documents);
+  if (!shouldUseMemoryContext(question, questionPlan) && isChatProviderConfigured()) {
+    try {
+      return NextResponse.json(await generateGeneralProviderAnswer(question, messages));
+    } catch (error) {
+      console.error("Failed to generate general answer", error);
+      return NextResponse.json(buildGeneralLocalAnswer());
+    }
+  }
 
   if (documents.length === 0 && summaries.length === 0) {
     return NextResponse.json({
@@ -46,7 +53,6 @@ export async function POST(request: Request) {
     } satisfies MemoryChatResponse);
   }
 
-  const questionPlan = planMemoryQuestion(question, documents);
   if (questionPlan.needsDeterministicAnswer) {
     const analyticsResponse = buildAnalyticsMemoryAnswer(question, questionPlan, documents, summaries);
     if (analyticsResponse) return NextResponse.json(analyticsResponse);
@@ -106,6 +112,35 @@ async function generateAutoProviderAnswer(
   return buildLocalMemoryAnswer(question, documents, summaries);
 }
 
+async function generateGeneralProviderAnswer(question: string, messages: MemoryConversationMessage[]): Promise<MemoryChatResponse> {
+  const prompt = buildGeneralPrompt(question, messages);
+  const parsed = memoryChatProvider === "ollama"
+    ? await callOllamaJson(prompt)
+    : memoryChatProvider === "auto"
+      ? await callAutoJson(prompt)
+      : await callGeminiJson(prompt);
+
+  return {
+    answer: parsed.answer || buildGeneralLocalAnswer().answer,
+    evidence: [],
+    followups: sanitizeFollowups(parsed.followups),
+    mode: "llm",
+    summary: parsed.summary || "일반 대화",
+  };
+}
+
+async function callAutoJson(prompt: string) {
+  if (geminiApiKey) {
+    try {
+      return await callGeminiJson(prompt);
+    } catch (error) {
+      console.error("Gemini general answer failed, falling back to local provider", error);
+    }
+  }
+  if (ollamaBaseUrl && ollamaChatModel) return callOllamaJson(prompt);
+  return {};
+}
+
 async function getSemanticMemory(request: Request, question: string) {
   const accessToken = getBearerToken(request);
   if (!accessToken) return null;
@@ -132,23 +167,7 @@ async function generateOllamaAnswer(
   questionPlan: ReturnType<typeof planMemoryQuestion>,
 ): Promise<MemoryChatResponse> {
   const prompt = buildPrompt(question, documents, summaries, messages, questionPlan);
-  const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      format: "json",
-      model: ollamaChatModel,
-      options: { temperature: 0.25 },
-      prompt,
-      stream: false,
-    }),
-  });
-
-  if (!response.ok) throw new Error(`Ollama API error: ${response.status}`);
-  const data = await response.json();
-  const rawText = data?.response;
-  if (typeof rawText !== "string") throw new Error("Ollama 응답이 비어 있습니다.");
-  const parsed = JSON.parse(rawText) as Partial<MemoryChatResponse>;
+  const parsed = await callOllamaJson(prompt);
 
   return {
     answer: parsed.answer || buildLocalMemoryAnswer(question, documents, summaries).answer,
@@ -159,36 +178,33 @@ async function generateOllamaAnswer(
   };
 }
 
-function buildGeneralConversationResponse(question: string): MemoryChatResponse | null {
-  const normalized = question
-    .trim()
-    .toLocaleLowerCase("ko-KR")
-    .replace(/[!?.,~\s]+/g, "");
-  if (!normalized) return null;
+async function callOllamaJson(prompt: string): Promise<Partial<MemoryChatResponse>> {
+  let response: Response;
+  try {
+    response = await fetch(`${ollamaBaseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        format: "json",
+        model: ollamaChatModel,
+        options: { temperature: 0.25 },
+        prompt,
+        stream: false,
+      }),
+    });
+  } catch {
+    throw new Error(`Ollama 대화 서버에 연결할 수 없습니다. ${ollamaBaseUrl}에서 Ollama가 실행 중인지 확인해 주세요.`);
+  }
 
-  const greetingOnly = /^(안녕|안녕하세요|하이|hello|hi)$/.test(normalized);
-  const asksIdentity = /(넌누구|너는누구|누구야|정체가뭐|뭐하는애|뭐하는앱|무엇을할수|뭘할수)/.test(normalized);
-  if (!greetingOnly && !asksIdentity) return null;
-
-  return {
-    answer: greetingOnly
-      ? "안녕하세요. 저는 dailyOS 안에서 당신의 기록을 바탕으로 같이 돌아보고, 찾고, 정리하고, 대화할 수 있게 만든 개인 기록 대화 도우미예요."
-      : "저는 dailyOS의 기록 대화 도우미예요. 활동, 장소, 하루기록, 사진, 소비, 건강 기록을 근거로 질문에 답하고, 최근 흐름이나 패턴을 정리해 줄 수 있어요. 기록에 없는 사실은 있다고 만들지 않고, 부족하면 부족하다고 말하는 쪽으로 설계되어 있어요.",
-    evidence: [],
-    followups: ["최근 기록에서 눈에 띄는 흐름 알려줘", "내가 자주 간 장소 정리해줘", "최근 식사 기록을 기준으로 패턴 봐줘"],
-    mode: "local",
-    summary: "일반 대화",
-  };
+  if (!response.ok) throw new Error(`Ollama API error: ${response.status}`);
+  const data = await response.json();
+  const rawText = data?.response;
+  if (typeof rawText !== "string") throw new Error("Ollama 응답이 비어 있습니다.");
+  return JSON.parse(rawText) as Partial<MemoryChatResponse>;
 }
 
-async function generateGeminiAnswer(
-  question: string,
-  documents: MemoryDocument[],
-  summaries: MemorySummary[],
-  messages: Array<{ content: string; role: string }>,
-  questionPlan: ReturnType<typeof planMemoryQuestion>,
-): Promise<MemoryChatResponse> {
-  const prompt = buildPrompt(question, documents, summaries, messages, questionPlan);
+async function callGeminiJson(prompt: string): Promise<Partial<MemoryChatResponse>> {
+  if (!geminiApiKey) throw new Error("GEMINI_API_KEY가 설정되지 않았습니다.");
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -205,7 +221,18 @@ async function generateGeminiAnswer(
   const data = await response.json();
   const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (typeof rawText !== "string") throw new Error("Gemini 응답이 비어 있습니다.");
-  const parsed = JSON.parse(rawText) as Partial<MemoryChatResponse>;
+  return JSON.parse(rawText) as Partial<MemoryChatResponse>;
+}
+
+async function generateGeminiAnswer(
+  question: string,
+  documents: MemoryDocument[],
+  summaries: MemorySummary[],
+  messages: Array<{ content: string; role: string }>,
+  questionPlan: ReturnType<typeof planMemoryQuestion>,
+): Promise<MemoryChatResponse> {
+  const prompt = buildPrompt(question, documents, summaries, messages, questionPlan);
+  const parsed = await callGeminiJson(prompt);
 
   return {
     answer: parsed.answer || buildLocalMemoryAnswer(question, documents, summaries).answer,
@@ -243,6 +270,69 @@ function buildPrompt(
     "관련 원본 기억:",
     documents.map((document) => `- id=${document.id} / ${document.date} / ${document.label} / ${document.title}\n${document.text}`).join("\n\n"),
   ].join("\n");
+}
+
+function buildGeneralPrompt(question: string, messages: MemoryConversationMessage[]) {
+  return [
+    "너는 dailyOS의 개인 기록 대화 도우미다.",
+    "이번 질문은 특정 개인 기록 조회가 아니라 일반 대화다. 기록을 검색했다고 말하지 말고, 없는 근거를 만들지 않는다.",
+    "너의 역할은 사용자가 dailyOS에 쌓은 활동, 장소, 하루기록, 사진, 소비, 건강 데이터를 나중에 자연어로 돌아보고 분석하도록 돕는 것이다.",
+    "친근하되 과장하지 말고, 한국어로 짧고 자연스럽게 답한다.",
+    "반드시 JSON만 반환한다. 형식: {\"answer\":\"...\",\"summary\":\"...\",\"evidence\":[],\"followups\":[\"...\"]}",
+    "",
+    "최근 대화:",
+    messages.length > 0 ? messages.slice(-8).map((message) => `${message.role}: ${message.content}`).join("\n") : "없음",
+    "",
+    `사용자 질문: ${question}`,
+  ].join("\n");
+}
+
+function shouldUseMemoryContext(question: string, questionPlan: ReturnType<typeof planMemoryQuestion>) {
+  if (questionPlan.intent === "analytics" || questionPlan.intent === "recall" || questionPlan.needsDeterministicAnswer) return true;
+  const normalized = question.toLocaleLowerCase("ko-KR");
+  const addressesAssistant = /(^|\s)(너|넌|너는|자네|dailyos|데일리os|데일리오에스|챗봇|비서)(\s|$)/i.test(normalized);
+  const explicitRecordSignals = ["기록", "내가", "나는", "나랑", "최근", "요즘", "오늘", "어제", "이번", "지난"];
+  if (addressesAssistant && !explicitRecordSignals.some((signal) => normalized.includes(signal))) return false;
+
+  const memorySignals = [
+    "기록",
+    "최근",
+    "요즘",
+    "오늘",
+    "어제",
+    "이번",
+    "지난",
+    "언제",
+    "어디",
+    "누구",
+    "먹",
+    "갔",
+    "방문",
+    "만났",
+    "소비",
+    "지출",
+    "수입",
+    "운동",
+    "몸무게",
+    "사진",
+    "활동",
+    "일정",
+    "할일",
+    "패턴",
+    "분석",
+    "정리",
+  ];
+  return memorySignals.some((signal) => normalized.includes(signal));
+}
+
+function buildGeneralLocalAnswer(): MemoryChatResponse {
+  return {
+    answer: "저는 dailyOS의 개인 기록 대화 도우미예요. 평소에는 가볍게 대화할 수 있고, 질문이 기록과 관련되면 활동, 장소, 하루기록, 소비, 건강 데이터를 근거로 찾아보고 정리해요.",
+    evidence: [],
+    followups: ["최근 기록에서 눈에 띄는 흐름 알려줘", "내가 자주 간 장소 정리해줘", "최근 소비 패턴 분석해줘"],
+    mode: "local",
+    summary: "일반 대화",
+  };
 }
 
 function sanitizeEvidence(value: unknown, documents: MemoryDocument[]) {

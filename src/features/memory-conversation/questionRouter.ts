@@ -73,7 +73,7 @@ function detectDateRange(question: string, documents: MemoryDocument[]) {
   const explicitMonth = question.match(/(20\d{2})[-.년\s]*(0?[1-9]|1[0-2])월?/);
   if (explicitMonth) {
     const month = `${explicitMonth[1]}-${explicitMonth[2].padStart(2, "0")}`;
-    return { end: `${month}-31`, label: `${month}`, start: `${month}-01` };
+    return { end: getMonthEndDate(month), label: `${month}`, start: `${month}-01` };
   }
 
   return { label: "전체 기간" };
@@ -90,7 +90,7 @@ function extractKeywords(question: string) {
 
 function monthRange(date: string, label: string) {
   const month = date.slice(0, 7);
-  return { end: `${month}-31`, label, start: `${month}-01` };
+  return { end: getMonthEndDate(month), label, start: `${month}-01` };
 }
 
 function relativeRange(latest: Date, days: number, label: string) {
@@ -115,6 +115,12 @@ function shiftDate(date: Date, amount: number) {
 
 function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function getMonthEndDate(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  if (!year || !monthNumber) return `${month}-01`;
+  return new Date(year, monthNumber, 0).toISOString().slice(0, 10);
 }
 
 function normalize(value: string) {
