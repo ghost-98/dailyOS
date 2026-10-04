@@ -49,7 +49,7 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 기록 문서는 원문뿐 아니라 `semanticTags`, `semanticAliases`, `cuisines` 같은 의미 메타데이터도 갖는다. 예를 들어 `빠에야`, `감바스`, `타파스`가 있으면 `스페인음식`, `유럽음식`, `음식` 태그가 같이 저장된다. 질문도 같은 의미 사전으로 확장해서, 사용자가 "스페인음식 먹은 곳"처럼 물어도 관련 음식/장소 기록이 후보에 올라오게 한다.
 
-동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, 설정된 embedding provider가 있으면 바뀐 문서만 임베딩한다. 기본값 `MEMORY_EMBEDDING_PROVIDER=auto`는 품질을 우선해 Gemini가 설정되어 있으면 먼저 쓰고, quota/장애가 나면 Ollama로 fallback한다. `MEMORY_EMBEDDING_PROVIDER=ollama`이면 로컬 Ollama embedding만 사용하고, 기본 모델은 현재 DB `vector(768)`에 맞춘 `nomic-embed-text`다. `MEMORY_EMBEDDING_PROVIDER=gemini`이면 `gemini-embedding-2`, `gemini-embedding-001` 순서로 시도한다.
+동기화는 클라이언트가 Supabase 테이블에 직접 쓰지 않고 `POST /api/memory/sync`를 호출한다. 이 서버 API는 사용자 access token으로 RLS를 통과하는 Supabase client를 만들고, 설정된 embedding provider가 있으면 바뀐 문서만 임베딩한다. 기본값은 `MEMORY_EMBEDDING_PROVIDER=ollama`이며, 상용 API 없이 로컬 Ollama embedding만 사용한다. 기본 모델은 현재 DB `vector(768)`에 맞춘 `nomic-embed-text`다. 상용 API를 명시적으로 쓰고 싶을 때만 `MEMORY_EMBEDDING_PROVIDER=gemini` 또는 `auto`로 바꾼다.
 
 임베딩 재생성 조건:
 
@@ -105,18 +105,30 @@ API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모�
 
 환경 변수:
 
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL` optional, 기본값 `gemini-1.5-flash`
-- `MEMORY_CHAT_PROVIDER` optional, `auto`, `gemini`, `ollama`
-- `MEMORY_EMBEDDING_PROVIDER` optional, `auto`, `gemini`, `ollama`
+- `MEMORY_CHAT_PROVIDER` optional, 기본값 `ollama`, 선택값 `ollama`, `auto`, `gemini`
+- `MEMORY_EMBEDDING_PROVIDER` optional, 기본값 `ollama`, 선택값 `ollama`, `auto`, `gemini`
 - `OLLAMA_BASE_URL` optional, 기본값 `http://localhost:11434`
 - `OLLAMA_CHAT_MODEL` optional, 기본값 `qwen3:8b`
 - `OLLAMA_EMBEDDING_MODEL` optional, 기본값 `nomic-embed-text`
+- `GEMINI_API_KEY` optional, 상용 API를 명시적으로 쓸 때만 필요
+- `GEMINI_MODEL` optional, 기본값 `gemini-1.5-flash`
 - `GEMINI_EMBEDDING_MODEL` optional, 미설정 시 `gemini-embedding-2`, `gemini-embedding-001` 순서로 자동 시도
 
 LLM 호출이 실패하거나 provider가 설정되지 않으면 `buildLocalMemoryAnswer`가 같은 기억 선별 결과로 로컬 답변을 만든다. 따라서 API 키가 없어도 기능은 완전히 죽지 않는다. 다만 ChatGPT 수준의 답변 품질은 좋은 chat provider가 있을 때 나오고, 의미 검색 품질은 embedding과 pgvector RPC가 적용된 상태에서 나온다.
 
-품질 우선 설정 예시:
+로컬 전용 설정 예시:
+
+```env
+MEMORY_EMBEDDING_PROVIDER=ollama
+MEMORY_CHAT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=qwen3:8b
+```
+
+라즈베리파이에서 속도와 메모리가 부담되면 `OLLAMA_CHAT_MODEL=qwen3:4b`로 시작한다. 품질이 더 필요하면 같은 네트워크의 더 강한 PC/GPU 서버에서 Ollama를 띄우고 `OLLAMA_BASE_URL`만 그 서버 주소로 바꾼다.
+
+상용 API를 품질 우선 fallback으로 쓰는 설정 예시:
 
 ```env
 MEMORY_EMBEDDING_PROVIDER=auto
@@ -127,17 +139,7 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 OLLAMA_CHAT_MODEL=qwen3:8b
 ```
 
-이 설정은 Gemini를 우선 사용하고 quota/장애가 나면 Ollama로 fallback한다.
-
-로컬 고정 설정 예시:
-
-```env
-MEMORY_EMBEDDING_PROVIDER=ollama
-MEMORY_CHAT_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_EMBEDDING_MODEL=nomic-embed-text
-OLLAMA_CHAT_MODEL=qwen3:8b
-```
+이 설정은 Gemini를 먼저 사용하고 quota/장애가 나면 Ollama로 fallback한다. API 없는 운영을 원하면 이 설정을 쓰지 않는다.
 
 현재 SQL은 `vector(768)` 기준이다. `bge-m3`처럼 1024차원 embedding 모델을 쓰려면 Supabase의 `embedding vector(768)` 컬럼과 RPC 인자 차원도 함께 바꿔야 한다.
 
@@ -189,8 +191,8 @@ RPC:
 
 1. Supabase SQL Editor 또는 migration 적용 절차로 `supabase/migrations/20261003_add_memory_conversation.sql`을 적용한다.
 2. Supabase 프로젝트에서 `vector` 확장이 활성화되는지 확인한다. 마이그레이션에 `create extension if not exists vector;`가 들어 있다.
-3. 상용 API를 쓰려면 `.env.local`에 `GEMINI_API_KEY`를 설정한다.
-4. 로컬 모델을 쓰려면 Ollama 서버를 켜고 `MEMORY_EMBEDDING_PROVIDER=ollama`, `MEMORY_CHAT_PROVIDER=ollama`를 설정한다.
+3. Ollama 서버를 켜고 `MEMORY_EMBEDDING_PROVIDER=ollama`, `MEMORY_CHAT_PROVIDER=ollama`를 설정한다.
+4. 상용 API를 쓰고 싶을 때만 `.env.local`에 `GEMINI_API_KEY`를 설정한다.
 5. 기본 모델을 바꾸고 싶으면 `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`, `OLLAMA_CHAT_MODEL`, `OLLAMA_EMBEDDING_MODEL`을 설정한다. 현재 DB vector 차원은 `768` 기준이다. 다른 차원 모델을 쓰면 SQL의 `vector(768)`도 같이 바꿔야 한다.
 6. 앱에서 `/m/search`의 `기록 대화` 탭을 열면 현재 기록 스냅샷이 서버 동기화 API를 통해 장기 기억과 embedding으로 저장된다.
 
@@ -202,4 +204,4 @@ RPC:
 - 원문에 없는 장소/메뉴 속성은 추측하지 않고, enrichment로 저장된 의미 메타데이터가 있을 때만 사용한다.
 - 원본 기록 링크를 답변과 함께 제공한다.
 - 장기 기억과 embedding은 Supabase에 저장하고, 즉시 대화 품질은 클라이언트가 가진 최신 스냅샷 fallback으로 보장한다.
-- API 키가 없어도 로컬 기억 답변으로 앱 사용 흐름은 유지한다. 로컬 Ollama provider를 설정하면 상용 API 없이도 semantic recall과 LLM 답변을 사용할 수 있다.
+- 기본 구조는 API 키 없이 로컬 Ollama provider로 semantic recall과 LLM 답변을 수행한다. 상용 API는 선택 옵션이다.

@@ -8,7 +8,7 @@ import type { MemoryChatResponse, MemoryConversationMessage, MemoryDocument, Mem
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-const memoryChatProvider = process.env.MEMORY_CHAT_PROVIDER || "auto";
+const memoryChatProvider = process.env.MEMORY_CHAT_PROVIDER || "ollama";
 const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const ollamaChatModel = process.env.OLLAMA_CHAT_MODEL || process.env.LOCAL_CHAT_MODEL || "qwen3:8b";
 

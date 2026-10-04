@@ -4,7 +4,7 @@ const DEFAULT_EMBEDDING_MODELS = ["gemini-embedding-2", "gemini-embedding-001"];
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const configuredEmbeddingModel = process.env.GEMINI_EMBEDDING_MODEL;
-const embeddingProvider = process.env.MEMORY_EMBEDDING_PROVIDER || "auto";
+const embeddingProvider = process.env.MEMORY_EMBEDDING_PROVIDER || "ollama";
 const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const ollamaEmbeddingModel = process.env.OLLAMA_EMBEDDING_MODEL || process.env.LOCAL_EMBEDDING_MODEL || "nomic-embed-text";
 
