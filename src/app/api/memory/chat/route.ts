@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json(await generateGeneralProviderAnswer(question, messages));
     } catch (error) {
       console.error("Failed to generate general answer", error);
-      return NextResponse.json(buildProviderUnavailableAnswer());
+      return NextResponse.json(buildGeneralFallbackAnswer(question));
     }
   }
 
@@ -245,13 +245,22 @@ async function generateGeminiAnswer(
   };
 }
 
-function buildProviderUnavailableAnswer(): MemoryChatResponse {
+function buildGeneralFallbackAnswer(question: string): MemoryChatResponse {
+  const compact = question.replace(/\s+/g, "");
+  const isIdentityQuestion = /(너|넌|너는|dailyos|데일리os|데일리오에스).*(누구|뭐|무엇)|누구야|뭐야/.test(compact.toLocaleLowerCase("ko-KR"));
+  const isMetaTurn = /물어볼게|물어볼께|질문할게|질문할께|물어보려고|질문하려고|궁금한게있어|궁금한게 있어|궁금한 게 있어/.test(question);
+  const answer = isIdentityQuestion
+    ? "저는 dailyOS의 기록 대화 도우미예요. 평소 대화는 가볍게 이어가고, 당신의 활동이나 장소, 소비, 건강 기록이 필요한 질문이면 그 기록을 찾아서 답해요."
+    : isMetaTurn
+      ? "좋아요. 물어보세요. 기록이 필요한 질문이면 제가 가진 dailyOS 기록을 기준으로 찾아보고 답할게요."
+      : "좋아요. 지금 질문은 기록 검색 없이 답할 수 있는 일반 대화로 이해했어요.";
+
   return {
-    answer: "지금 로컬 대화 모델에 연결하지 못했어요. Ollama 서버와 선택한 모델이 실행 중인지 확인한 뒤 다시 물어봐 주세요.",
+    answer,
     evidence: [],
     followups: [],
     mode: "local",
-    summary: "로컬 모델 연결 필요",
+    summary: "일반 대화",
   };
 }
 
