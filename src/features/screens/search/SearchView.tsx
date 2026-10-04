@@ -9,7 +9,7 @@ import { createDayRecordHref } from "@/features/records/navigation/recordDeepLin
 import { PeriodFilterSheet } from "@/components/shared/date/PeriodFilterSheet";
 import { buildMemoryDocuments, buildMemorySummaries } from "@/features/memory-conversation/memoryDocuments";
 import type { MemoryChatResponse, MemoryConversationMessage } from "@/features/memory-conversation/types";
-import { createMemoryConversation, fetchMemoryMessages, saveMemoryMessage, syncMemoryDocumentsToDb } from "@/features/data/memory/api";
+import { syncMemoryDocumentsToDb } from "@/features/data/memory/api";
 import { supabase } from "@/lib/supabase";
 
 export function SearchView() {
@@ -21,7 +21,6 @@ export function SearchView() {
   const [isPeriodOpen, setIsPeriodOpen] = useState(false);
   const [mode, setMode] = useState<"search" | "ask">("search");
   const [question, setQuestion] = useState("");
-  const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MemoryConversationMessage[]>([]);
   const [answer, setAnswer] = useState<MemoryChatResponse | null>(null);
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
@@ -89,14 +88,6 @@ export function SearchView() {
     setMessages((current) => [...current, optimisticUserMessage]);
 
     try {
-      const activeConversationId = conversationId ?? (await createMemoryConversation(trimmedQuestion.slice(0, 48)))?.id ?? null;
-      if (activeConversationId && !conversationId) {
-        setConversationId(activeConversationId);
-        const existingMessages = await fetchMemoryMessages(activeConversationId);
-        if (existingMessages.length > 0) setMessages(existingMessages);
-      }
-      if (activeConversationId) await saveMemoryMessage(activeConversationId, "user", trimmedQuestion);
-
       const accessToken = await getAccessToken();
       const response = await fetch("/api/memory/chat", {
         body: JSON.stringify({
@@ -122,7 +113,6 @@ export function SearchView() {
         role: "assistant",
       };
       setMessages((current) => [...current, assistantMessage]);
-      if (activeConversationId) await saveMemoryMessage(activeConversationId, "assistant", nextAnswer.answer);
     } catch (error) {
       console.error("Failed to ask memory", error);
       setAskError(error instanceof Error ? error.message : "답변 생성에 실패했습니다.");
@@ -177,10 +167,10 @@ export function SearchView() {
                 ) : null}
               </div>
 
-              {answer ? (
+              {answer && (answer.evidence.length > 0 || answer.followups.length > 0) ? (
                 <div className="life-ask-insight-panel">
                   <div className="life-ask-insight-panel__head">
-                    <strong>{answer.summary}</strong>
+                    <strong>답변 근거</strong>
                     {(answer.evidence.length > 0 || answer.followups.length > 0) ? (
                       <button onClick={() => setIsEvidenceOpen((current) => !current)} type="button">
                         {isEvidenceOpen ? "근거 숨기기" : `근거 ${answer.evidence.length}개`}
@@ -216,7 +206,6 @@ export function SearchView() {
                       <span>근거: {answer.evidence.slice(0, 2).map((evidence) => evidence.title).join(", ")}</span>
                     </div>
                   ) : null}
-                  <div className="life-ask-answer__body">{answer.answer}</div>
                 </div>
               ) : null}
 

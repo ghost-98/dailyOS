@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json(await generateGeneralProviderAnswer(question, messages));
     } catch (error) {
       console.error("Failed to generate general answer", error);
-      return NextResponse.json(buildGeneralLocalAnswer());
+      return NextResponse.json(buildProviderUnavailableAnswer());
     }
   }
 
@@ -121,7 +121,7 @@ async function generateGeneralProviderAnswer(question: string, messages: MemoryC
       : await callGeminiJson(prompt);
 
   return {
-    answer: parsed.answer || buildGeneralLocalAnswer().answer,
+    answer: requireProviderAnswer(parsed.answer),
     evidence: [],
     followups: sanitizeFollowups(parsed.followups),
     mode: "llm",
@@ -252,10 +252,11 @@ function buildPrompt(
 ) {
   return [
     "너는 dailyOS의 개인 기록 기반 대화 엔진이다.",
-    "사용자의 기록과 요약 메모리만 근거로 답한다. 근거 없는 사실을 만들지 않는다.",
+    "제공된 기록과 요약 메모리를 근거로 자연스럽게 답한다. 근거 없는 사실을 만들지 않는다.",
+    "답변 본문에는 근거 목록을 길게 반복하지 않는다. 근거는 evidence 필드에 분리해서 담는다.",
     "질문 성격에 따라 답변 방식을 조절한다. 분석형 질문은 숫자, 기간, 사람, 장소, 유형을 먼저 분리해서 근거 중심으로 답한다.",
     "기록이 부족하면 부족하다고 말하되, 가능한 범위에서 패턴과 다음 질문을 제안한다.",
-    "답변은 한국어로 자연스럽고 개인 비서처럼 맥락 있게 작성한다.",
+    "답변은 한국어로 자연스럽고 개인 비서처럼 필요한 말만 한다.",
     "반드시 JSON만 반환한다. 형식: {\"answer\":\"...\",\"summary\":\"...\",\"evidence\":[{\"id\":\"...\",\"title\":\"...\",\"date\":\"...\",\"label\":\"...\",\"reason\":\"...\"}],\"followups\":[\"...\"]}",
     "",
     `질문: ${question}`,
@@ -277,7 +278,7 @@ function buildGeneralPrompt(question: string, messages: MemoryConversationMessag
     "너는 dailyOS의 개인 기록 대화 도우미다.",
     "이번 질문은 특정 개인 기록 조회가 아니라 일반 대화다. 기록을 검색했다고 말하지 말고, 없는 근거를 만들지 않는다.",
     "너의 역할은 사용자가 dailyOS에 쌓은 활동, 장소, 하루기록, 사진, 소비, 건강 데이터를 나중에 자연어로 돌아보고 분석하도록 돕는 것이다.",
-    "친근하되 과장하지 말고, 한국어로 짧고 자연스럽게 답한다.",
+    "친근하되 과장하지 말고, 한국어로 짧고 자연스럽게 답한다. 질문에 필요한 말만 한다.",
     "반드시 JSON만 반환한다. 형식: {\"answer\":\"...\",\"summary\":\"...\",\"evidence\":[],\"followups\":[\"...\"]}",
     "",
     "최근 대화:",
@@ -325,14 +326,19 @@ function shouldUseMemoryContext(question: string, questionPlan: ReturnType<typeo
   return memorySignals.some((signal) => normalized.includes(signal));
 }
 
-function buildGeneralLocalAnswer(): MemoryChatResponse {
+function buildProviderUnavailableAnswer(): MemoryChatResponse {
   return {
-    answer: "저는 dailyOS의 개인 기록 대화 도우미예요. 평소에는 가볍게 대화할 수 있고, 질문이 기록과 관련되면 활동, 장소, 하루기록, 소비, 건강 데이터를 근거로 찾아보고 정리해요.",
+    answer: "지금 로컬 대화 모델에 연결하지 못했어요. Ollama 서버와 선택한 모델이 실행 중인지 확인한 뒤 다시 물어봐 주세요.",
     evidence: [],
-    followups: ["최근 기록에서 눈에 띄는 흐름 알려줘", "내가 자주 간 장소 정리해줘", "최근 소비 패턴 분석해줘"],
+    followups: [],
     mode: "local",
-    summary: "일반 대화",
+    summary: "로컬 모델 연결 필요",
   };
+}
+
+function requireProviderAnswer(answer: unknown) {
+  if (typeof answer === "string" && answer.trim()) return answer;
+  throw new Error("LLM 응답에 answer가 없습니다.");
 }
 
 function sanitizeEvidence(value: unknown, documents: MemoryDocument[]) {

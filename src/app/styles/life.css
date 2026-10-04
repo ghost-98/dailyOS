@@ -4975,16 +4975,6 @@
   font-weight: 800;
 }
 
-.life-ask-answer__body {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: keep-all;
-  color: var(--text);
-  font-size: 0.88rem;
-  font-weight: 650;
-  line-height: 1.6;
-}
-
 .life-ask-insight-panel {
   display: grid;
   gap: 10px;
