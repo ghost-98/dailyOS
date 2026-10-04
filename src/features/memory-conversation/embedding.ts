@@ -111,14 +111,19 @@ async function embedWithGemini(text: string, label: string) {
 }
 
 async function embedWithOllama(text: string, label: string) {
-  const response = await fetch(`${ollamaBaseUrl}/api/embeddings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: ollamaEmbeddingModel,
-      prompt: text.slice(0, MEMORY_EMBEDDING_MAX_INPUT),
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${ollamaBaseUrl}/api/embeddings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ollamaEmbeddingModel,
+        prompt: text.slice(0, MEMORY_EMBEDDING_MAX_INPUT),
+      }),
+    });
+  } catch {
+    throw new MemoryEmbeddingUnavailableError(`Ollama ${label} 임베딩 서버에 연결할 수 없습니다. ${ollamaBaseUrl}에서 Ollama가 실행 중인지 확인해 주세요.`);
+  }
 
   if (!response.ok) {
     throw new MemoryEmbeddingUnavailableError(`Ollama ${label} 임베딩을 사용할 수 없습니다. ${ollamaEmbeddingModel} 모델과 Ollama 서버를 확인해 주세요.`, response.status);

@@ -33,6 +33,9 @@ export async function POST(request: Request) {
   const messages = body.messages ?? [];
 
   if (!question) return NextResponse.json({ error: "질문을 입력해 주세요." }, { status: 400 });
+  const generalResponse = buildGeneralConversationResponse(question);
+  if (generalResponse) return NextResponse.json(generalResponse);
+
   if (documents.length === 0 && summaries.length === 0) {
     return NextResponse.json({
       answer: "아직 대화에 사용할 기록 메모리가 충분하지 않습니다. 기록을 먼저 추가하면 그 기록을 기반으로 답할 수 있어요.",
@@ -153,6 +156,28 @@ async function generateOllamaAnswer(
     followups: sanitizeFollowups(parsed.followups),
     mode: "llm",
     summary: parsed.summary || summaries[0]?.text || "관련 기억을 바탕으로 답변했습니다.",
+  };
+}
+
+function buildGeneralConversationResponse(question: string): MemoryChatResponse | null {
+  const normalized = question
+    .trim()
+    .toLocaleLowerCase("ko-KR")
+    .replace(/[!?.,~\s]+/g, "");
+  if (!normalized) return null;
+
+  const greetingOnly = /^(안녕|안녕하세요|하이|hello|hi)$/.test(normalized);
+  const asksIdentity = /(넌누구|너는누구|누구야|정체가뭐|뭐하는애|뭐하는앱|무엇을할수|뭘할수)/.test(normalized);
+  if (!greetingOnly && !asksIdentity) return null;
+
+  return {
+    answer: greetingOnly
+      ? "안녕하세요. 저는 dailyOS 안에서 당신의 기록을 바탕으로 같이 돌아보고, 찾고, 정리하고, 대화할 수 있게 만든 개인 기록 대화 도우미예요."
+      : "저는 dailyOS의 기록 대화 도우미예요. 활동, 장소, 하루기록, 사진, 소비, 건강 기록을 근거로 질문에 답하고, 최근 흐름이나 패턴을 정리해 줄 수 있어요. 기록에 없는 사실은 있다고 만들지 않고, 부족하면 부족하다고 말하는 쪽으로 설계되어 있어요.",
+    evidence: [],
+    followups: ["최근 기록에서 눈에 띄는 흐름 알려줘", "내가 자주 간 장소 정리해줘", "최근 식사 기록을 기준으로 패턴 봐줘"],
+    mode: "local",
+    summary: "일반 대화",
   };
 }
 
