@@ -39,14 +39,62 @@ nano .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
 NEXT_PUBLIC_NAVER_MAP_CLIENT_ID=
 NAVER_MAPS_API_KEY_ID=
 NAVER_MAPS_API_KEY=
 NAVER_SEARCH_CLIENT_ID=
 NAVER_SEARCH_CLIENT_SECRET=
 ```
+
+## 2-1. 로컬 LLM/Ollama 준비
+
+dailyOS의 기록 대화는 기본적으로 상용 LLM API 없이 Ollama를 사용한다. 라즈베리파이에서 직접 실행하려면 메모리 여유를 봐야 한다. Pi 5 8GB 기준으로는 작은 모델부터 시작하고, 품질을 더 올리고 싶으면 같은 네트워크의 더 강한 PC/GPU 서버에서 Ollama를 띄운 뒤 `OLLAMA_BASE_URL`만 그 서버 주소로 바꾸는 구성이 가장 좋다.
+
+라즈베리파이에 Ollama 설치:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama --version
+```
+
+Pi에서 시작하기 좋은 모델:
+
+```bash
+ollama pull nomic-embed-text
+ollama pull qwen3:4b
+```
+
+더 좋은 품질을 원하고 메모리/속도가 괜찮으면:
+
+```bash
+ollama pull qwen3:8b
+```
+
+Ollama 상태 확인:
+
+```bash
+systemctl status ollama
+curl http://localhost:11434/api/tags
+```
+
+`.env.local`에 로컬 전용 메모리 설정을 추가한다.
+
+```env
+MEMORY_EMBEDDING_PROVIDER=ollama
+MEMORY_CHAT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=qwen3:4b
+```
+
+같은 네트워크의 더 강한 PC에서 Ollama를 돌리는 경우:
+
+```env
+OLLAMA_BASE_URL=http://192.168.0.10:11434
+OLLAMA_CHAT_MODEL=qwen3:8b
+```
+
+이 경우 PC의 Ollama 서버가 외부 접속을 받도록 설정되어 있어야 한다.
 
 ## 3. 빌드와 실행
 
@@ -95,6 +143,13 @@ git pull
 npm ci
 npm run build
 pm2 restart dailyos
+```
+
+로컬 모델 설정을 바꾼 뒤에는 Next 서버를 재시작해야 한다.
+
+```bash
+pm2 restart dailyos
+pm2 logs dailyos
 ```
 
 ## 6. PWA 설치
