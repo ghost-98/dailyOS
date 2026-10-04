@@ -69,15 +69,6 @@ export function decideConversationRoute(question: string, documents: MemoryDocum
   const plan = planMemoryQuestion(question, documents);
   const userMemoryMarkers = getMatchedSignals(normalizedQuestion, USER_MEMORY_MARKERS);
 
-  if (isMetaConversationTurn(normalizedQuestion)) {
-    return {
-      plan,
-      reason: "meta_conversation_turn",
-      route: "general_chat",
-      useMemory: false,
-    };
-  }
-
   if (isAssistantDirectedQuestion(normalizedQuestion) && userMemoryMarkers.length === 0) {
     return {
       plan,
@@ -143,10 +134,6 @@ export function planMemoryQuestion(question: string, documents: MemoryDocument[]
 function isAssistantDirectedQuestion(question: string) {
   const compact = question.replace(/\s+/g, "");
   return /(너|넌|너는|니가|dailyos|데일리os|데일리오에스|챗봇|비서|너뭐|넌뭐)/i.test(compact);
-}
-
-function isMetaConversationTurn(question: string) {
-  return /물어볼게|물어볼께|질문할게|질문할께|물어보려고|질문하려고|궁금한게 있어|궁금한 게 있어|하나 물어|한번 물어/.test(question);
 }
 
 function getMatchedSignals(question: string, signals: string[]) {
