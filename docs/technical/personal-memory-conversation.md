@@ -11,22 +11,20 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 → 선택한 provider로 embedding 생성
 → Supabase memory_* 테이블과 pgvector에 동기화
 → 질문 수신
-→ 질문 의도/도메인/기간 분류
-→ 수치·사람·장소·건강 분석형 질문은 deterministic 분석 엔진 우선 처리
-→ 질문 embedding 생성
-→ Supabase RPC vector search
-→ 구조/키워드 fallback 랭킹
+→ ConversationPolicy가 일반 대화/기억 회상/기억 분석 경로 결정
+→ 일반 대화는 기록 검색 없이 LLM 응답
+→ 기억 분석은 deterministic 분석 엔진 우선 처리
+→ 기억 회상은 질문 embedding 생성 후 Supabase RPC vector search
+→ 검색 실패 시 구조/키워드 fallback 랭킹
 → LLM 또는 로컬 기억 엔진 답변
-→ 답변, 근거 기록, 후속 질문 표시
-→ 대화 메시지 저장
+→ 답변 말풍선과 펼침형 근거 기록 분리 표시
 ```
 
 ## 데이터 계층
 
 - `memory_documents`: 원천 기록을 대화 가능한 문서로 바꾼 장기 기억 단위다. 활동, 일정, 할 일, 하루기록, 사진, 수입, 지출, 건강 기록과 함께 하루/월/사람/장소 요약 문서가 들어간다.
 - `memory_summaries`: 최근 흐름, 월간 흐름, 사람별 흐름처럼 여러 기록을 압축한 요약 기억이다.
-- `memory_conversations`: 사용자가 dailyOS와 나눈 기록 기반 대화 세션이다.
-- `memory_messages`: 세션 안의 사용자/assistant 메시지다.
+`memory_conversations`, `memory_messages` 테이블은 초기 설계에 포함됐지만 현재 화면 흐름에서는 사용하지 않는다. 대화 로그를 장기 기억으로 저장하지 않고, 현재 화면의 최근 메시지만 LLM에 전달한다. 장기 기억은 사용자가 입력한 실제 기록과 그 요약/임베딩만 담당한다.
 
 각 테이블은 `user_id` 기준 RLS를 사용한다. 다른 사용자의 기억이나 대화는 읽거나 쓸 수 없다.
 
@@ -59,14 +57,24 @@ dailyOS의 기반 대화는 단순 키워드 검색이 아니라 사용자의 �
 
 변하지 않은 문서는 embedding 컬럼을 payload에서 생략해서 기존 vector를 보존한다.
 
-## 기억 선별
+## 대화 라우팅과 기억 선별
 
-`POST /api/memory/chat`은 먼저 질문을 분류한다. `questionRouter`는 질문을 다음 축으로 나눈다.
+`POST /api/memory/chat`은 먼저 `conversationPolicy`로 질문을 분류한다. 이 단계의 역할은 LLM에게 모든 것을 맡기기 전에 질문이 어떤 처리 경로를 타야 하는지 결정하는 것이다. 상용 LLM 제품의 retrieval/router 계층과 같은 책임이다.
+
+라우팅 경로:
+
+- `general_chat`: assistant의 정체, 인사, 일반 대화처럼 개인 기록 검색이 필요 없는 질문. 기록을 뒤지지 않고 LLM이 짧게 답한다.
+- `memory_recall`: "언제", "어디", "뭐 먹었지", "누구 만났지"처럼 기록에서 찾아야 하는 질문. semantic retrieval과 fallback 랭킹을 사용한다.
+- `memory_analytics`: "얼마", "몇 번", "가장 많이", "비교", "추세"처럼 계산이나 집계가 필요한 질문. deterministic 분석 엔진을 우선 사용한다.
+
+`conversationPolicy`는 질문을 다음 축으로 나눈다.
 
 - intent: 분석, 회상, 대화
 - domain: 돈, 사람, 장소, 건강, 활동, 일반
 - date range: 오늘, 어제, 최근 30일, 이번 달, 지난 달, 명시 월, 전체 기간
 - keywords: 검색과 답변 계획에 쓸 핵심어
+
+특히 `너는 누구야`, `dailyOS는 뭐야`처럼 assistant에게 향한 질문은 `누구` 같은 단어가 들어 있어도 사람 기록 검색으로 보내지 않는다. 반대로 `내가 최근 누구를 만났지`처럼 사용자 기록 신호가 있으면 기억 회상 경로로 보낸다.
 
 돈, 사람, 장소, 건강처럼 정확한 계산이나 집계가 필요한 질문은 `analyticsAnswer`가 먼저 처리한다. 예를 들어 "이번 달 지출 얼마야", "요즘 누구를 가장 많이 만났어", "최근 자주 간 곳은 어디야" 같은 질문은 LLM이 추측하지 않고 기록 문서의 금액, 사람, 장소, 날짜를 집계해서 답한다.
 
@@ -95,11 +103,22 @@ LLM context에는 전체 DB가 아니라 관련 원본 기억, 장기 요약, �
 구현 위치:
 
 - `src/app/api/memory/chat/route.ts`
+- `src/features/memory-conversation/conversationPolicy.ts`
+- `src/features/memory-conversation/memoryPrompts.ts`
 - `src/features/memory-conversation/memorySemantics.ts`
-- `src/features/memory-conversation/questionRouter.ts`
 - `src/features/memory-conversation/analyticsAnswer.ts`
 
-API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모리 문서, 요약, 최근 메시지가 들어온다. 서버는 먼저 질문 embedding을 만들고 Supabase RPC로 관련 기억을 검색한다. 검색 결과가 충분하면 그 기억을 LLM context로 사용한다. 검색이 불가능한 경우에만 클라이언트가 보낸 문서와 요약을 fallback 랭킹한다.
+API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모리 문서, 요약, 현재 화면 안의 최근 메시지가 들어온다.
+
+`route.ts`는 직접 라우팅 규칙이나 프롬프트 문장을 소유하지 않고 다음 모듈을 조립한다.
+
+- `conversationPolicy`: 질문 처리 경로와 질문 계획 결정
+- `memoryPrompts`: 일반 대화 prompt와 기억 기반 답변 prompt 생성
+- `semanticRetrieval`: pgvector 기반 장기 기억 검색
+- `analyticsAnswer`: deterministic 분석 답변
+- `memoryDocuments`: fallback 기억 선별과 로컬 답변
+
+일반 대화는 `buildGeneralChatPrompt`만 사용하고 기록 검색을 하지 않는다. 기억 회상/분석 질문은 질문 embedding을 만들고 Supabase RPC로 관련 기억을 검색한다. 검색 결과가 충분하면 그 기억을 LLM context로 사용한다. 검색이 불가능한 경우에만 클라이언트가 보낸 문서와 요약을 fallback 랭킹한다.
 
 분석형 질문은 LLM 호출 전에 deterministic 답변을 우선 반환한다. 이렇게 해야 금액, 빈도, 장소 순위처럼 틀리면 안 되는 질문을 생성 모델의 문장 감각에 맡기지 않는다. 대화형 질문은 질문 처리 계획을 프롬프트에 함께 넣어, 같은 기억이라도 회상형/분석형/상담형 톤을 다르게 잡는다.
 
@@ -114,7 +133,7 @@ API는 `POST /api/memory/chat`으로 동작한다. 요청에는 질문, 메모�
 - `GEMINI_MODEL` optional, 기본값 `gemini-1.5-flash`
 - `GEMINI_EMBEDDING_MODEL` optional, 미설정 시 `gemini-embedding-2`, `gemini-embedding-001` 순서로 자동 시도
 
-LLM 호출이 실패하거나 provider가 설정되지 않으면 `buildLocalMemoryAnswer`가 같은 기억 선별 결과로 로컬 답변을 만든다. 따라서 API 키가 없어도 기능은 완전히 죽지 않는다. 다만 ChatGPT 수준의 답변 품질은 좋은 chat provider가 있을 때 나오고, 의미 검색 품질은 embedding과 pgvector RPC가 적용된 상태에서 나온다.
+기억 기반 질문에서 LLM 호출이 실패하거나 provider가 설정되지 않으면 `buildLocalMemoryAnswer`가 같은 기억 선별 결과로 로컬 답변을 만든다. 일반 대화에서는 기록 fallback을 사용하지 않는다. 모델 연결이 실패하면 로컬 대화 모델 연결 문제를 알려준다. 다만 ChatGPT 수준의 답변 품질은 좋은 chat provider가 있을 때 나오고, 의미 검색 품질은 embedding과 pgvector RPC가 적용된 상태에서 나온다.
 
 로컬 전용 설정 예시:
 
@@ -158,11 +177,10 @@ OLLAMA_CHAT_MODEL=qwen3:8b
 
 - 메모리 동기화 상태
 - 질문 입력
-- 예시 질문
 - 최근 대화
-- 답변
-- 근거 기록 카드
-- 후속 질문 버튼
+- 답변 말풍선
+- 접을 수 있는 근거 기록 카드
+- 선택형 후속 질문 버튼
 
 근거 기록 카드는 `createDayRecordHref`를 통해 해당 날짜와 기록으로 이동한다.
 
@@ -199,9 +217,11 @@ RPC:
 ## 설계 원칙
 
 - LLM은 원천 기록을 생성하지 않는다.
-- 답변은 반드시 기억 문서나 요약 기억을 근거로 한다.
+- 일반 대화와 기억 기반 질문을 먼저 분리한다.
+- 기억 기반 답변은 반드시 기억 문서나 요약 기억을 근거로 한다.
 - 계산 가능한 질문은 LLM보다 deterministic 분석 엔진이 먼저 답한다.
 - 원문에 없는 장소/메뉴 속성은 추측하지 않고, enrichment로 저장된 의미 메타데이터가 있을 때만 사용한다.
-- 원본 기록 링크를 답변과 함께 제공한다.
+- 원본 기록 링크는 답변 본문에 섞지 않고 별도 근거 패널로 제공한다.
+- 대화 로그는 장기 기억으로 저장하지 않는다. 장기 기억은 사용자가 입력한 실제 기록과 요약만 담당한다.
 - 장기 기억과 embedding은 Supabase에 저장하고, 즉시 대화 품질은 클라이언트가 가진 최신 스냅샷 fallback으로 보장한다.
 - 기본 구조는 API 키 없이 로컬 Ollama provider로 semantic recall과 LLM 답변을 수행한다. 상용 API는 선택 옵션이다.

@@ -1,4 +1,4 @@
-import type { MemoryQuestionPlan } from "@/features/memory-conversation/questionRouter";
+import type { MemoryQuestionPlan } from "@/features/memory-conversation/conversationPolicy";
 import type { MemoryChatResponse, MemoryDocument, MemoryEvidence, MemorySummary } from "@/features/memory-conversation/types";
 
 type CountItem = {
