@@ -166,7 +166,7 @@ export type LifeMediaUploadInput = {
   longitude?: number;
 };
 
-export type PlaceProvider = "naver" | "manual";
+type PlaceProvider = "naver" | "manual";
 
 export type PlaceRecord = {
   id: string;

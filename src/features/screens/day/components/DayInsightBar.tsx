@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 
-export type DayInsightButton = {
+type DayInsightButton = {
   active?: boolean;
   count: number;
   icon: LucideIcon;

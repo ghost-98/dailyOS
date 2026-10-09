@@ -29,3 +29,9 @@ export function formatActivityTime(activity: Pick<LifeActivityRecord, "endTime" 
 }
 
 import type { LifeActivityRecord } from "@/types/domain";
+
+export function formatRecordContextMeta(date: string, startDate: string, endDate?: string, startTime?: string, endTime?: string, isAllDay = true, companions?: string) {
+  const range = endDate && endDate !== startDate ? `${startDate}~${endDate}` : date;
+  const time = isAllDay ? "하루종일" : endTime ? `${startTime ?? "시간 미정"}-${endTime}` : startTime ?? "시간 미정";
+  return [range, time, companions ? `함께한 사람 · ${companions}` : null].filter(Boolean).join(" · ");
+}

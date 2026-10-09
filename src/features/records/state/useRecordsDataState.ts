@@ -6,7 +6,9 @@ import { createCalendarEventInDb, deleteCalendarEventFromDb, updateCalendarEvent
 import type { CalendarEvent } from "@/features/calendar/data";
 import { createIncomeRecordInDb, deleteIncomeRecordFromDb, fetchExpenseRecordsFromDb, syncLinkedExpenseRecordInDb, updateIncomeRecordInDb } from "@/features/data/ledger/api";
 import { createWeightRecordInDb, createWorkoutSessionInDb, deleteWorkoutSessionFromDb, updateWorkoutSessionInDb } from "@/features/data/health/api";
-import { createDailyLogInDb, createLifeActivityInDb, deleteDailyLogFromDb, deleteLifeActivitiesBySourceFromDb, deleteLifeActivityFromDb, deleteLifePhotoFromDb, updateDailyLogInDb, updateLifeActivitiesBySourceInDb, updateLifeActivityInDb, updateLifePhotoDetailsInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
+import { createDailyLogInDb, deleteDailyLogFromDb, updateDailyLogInDb } from "@/features/data/logs/api";
+import { createLifeActivityInDb, deleteLifeActivitiesBySourceFromDb, deleteLifeActivityFromDb, updateLifeActivitiesBySourceInDb, updateLifeActivityInDb } from "@/features/data/activities/api";
+import { deleteLifePhotoFromDb, updateLifePhotoDetailsInDb, uploadLifePhotosToDb } from "@/features/data/photos/api";
 import { clearRecordDataSnapshotCache, emptyRecordDataSnapshot, loadRecordDataSnapshot, setRecordDataSnapshotCache } from "@/features/records/state/recordsDataLoader";
 import { buildRecordExternalItems } from "@/features/records/state/recordsExternalItems";
 import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";

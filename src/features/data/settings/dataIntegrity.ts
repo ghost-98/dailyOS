@@ -1,9 +1,11 @@
 import { deleteExpenseRecordFromDb } from "@/features/data/ledger/api";
-import { updateDailyLogInDb, updateLifeActivityInDb, updateLifePhotoDetailsInDb } from "@/features/data/records/api";
+import { updateDailyLogInDb } from "@/features/data/logs/api";
+import { updateLifeActivityInDb } from "@/features/data/activities/api";
+import { updateLifePhotoDetailsInDb } from "@/features/data/photos/api";
 import { createDayRecordHref, createRecordFocusId } from "@/features/records/navigation/recordDeepLink";
 import type { RecordDataSnapshot } from "@/features/records/state/recordsDataLoader";
 
-export type DataIntegrityIssue = {
+type DataIntegrityIssue = {
   description: string;
   href?: string;
   id: string;

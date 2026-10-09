@@ -6,7 +6,7 @@ import type { NaverLatLng, NaverLatLngBounds, NaverMap, NaverMarker, NaverPolyli
 import type { PlaceVerificationStatus } from "@/features/data/places/verificationApi";
 import { getPlaceVerificationKey } from "@/components/shared/places/usePlaceVerificationStatuses";
 
-export type DayRouteStop = {
+type DayRouteStop = {
   address?: string;
   id: string;
   label: string;

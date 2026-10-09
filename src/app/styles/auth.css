@@ -355,13 +355,8 @@
   opacity: 0.7;
 }
 
-.auth-loader,
-.auth-submit svg {
+.auth-submit__spinner {
   animation: auth-spin 1s linear infinite;
-}
-
-.auth-submit svg:not(.auth-loader) {
-  animation: none;
 }
 
 .auth-link-button {

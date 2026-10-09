@@ -11,7 +11,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { confirmAction } from "@/lib/actionGuards";
 import { createPersonInDb, deletePersonFromDb, fetchPeopleFromDb, updatePersonInDb } from "@/features/data/people/api";
 import { formatWon } from "@/features/records/format/recordFormatters";
-import { buildRecordPeopleSummaries } from "@/features/records/search/recordsInsights";
+import { buildRecordPeopleSummaries } from "@/features/records/people/recordPeople";
 import { useRecordsDataState } from "@/features/records/state/useRecordsDataState";
 import type { PersonRecord } from "@/types/domain";
 import { createDayRecordHref } from "@/features/records/navigation/recordDeepLink";

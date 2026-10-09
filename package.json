@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:unused": "node scripts/audit-unused.mjs",
+    "test:records": "node scripts/check-refactor.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -22,6 +24,7 @@
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.3",
+    "postcss": "8.4.31",
     "typescript": "^5.7.2"
   }
 }
