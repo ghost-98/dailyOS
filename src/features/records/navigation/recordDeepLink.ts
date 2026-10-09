@@ -1,4 +1,4 @@
-export type RecordFocusType = "activity" | "daily_log" | "event" | "expense" | "income" | "photo" | "todo" | "weight" | "workout";
+type RecordFocusType = "activity" | "daily_log" | "event" | "expense" | "income" | "photo" | "todo" | "weight" | "workout";
 
 const focusPrefixes: Record<RecordFocusType, string> = {
   activity: "activity",

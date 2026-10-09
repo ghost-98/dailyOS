@@ -534,7 +534,7 @@ function AuthScreen() {
 
         {mode === "login" ? (
           <button className="auth-submit" disabled={isSubmitting} onClick={submit} type="button">
-            {isSubmitting ? <Loader2 aria-hidden size={18} /> : <ArrowRight aria-hidden size={18} />}
+            {isSubmitting ? <Loader2 aria-hidden className="auth-submit__spinner" size={18} /> : <ArrowRight aria-hidden size={18} />}
             로그인
           </button>
         ) : (

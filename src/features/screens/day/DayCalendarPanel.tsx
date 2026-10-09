@@ -19,7 +19,7 @@ import type {
   DayWorkoutItem,
 } from "@/features/screens/day/dayDetailTypes";
 import { formatWon } from "@/features/records/format/recordFormatters";
-import { parseCompanions } from "@/features/records/search/recordsInsights";
+import { parseCompanions } from "@/features/records/people/recordPeople";
 import {
   getTimelineTimeLabel,
 } from "@/features/calendar/calendarViewHelpers";

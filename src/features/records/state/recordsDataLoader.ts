@@ -2,7 +2,9 @@ import { fetchCalendarEventsFromDb } from "@/features/data/calendar/api";
 import type { CalendarEvent } from "@/features/calendar/data";
 import { fetchWeightRecordsFromDb, fetchWorkoutSessionsFromDb } from "@/features/data/health/api";
 import { fetchExpenseRecordsFromDb, fetchIncomeRecordsFromDb } from "@/features/data/ledger/api";
-import { fetchDailyLogsFromDb, fetchLifeActivitiesFromDb, fetchLifePhotosFromDb } from "@/features/data/records/api";
+import { fetchDailyLogsFromDb } from "@/features/data/logs/api";
+import { fetchLifeActivitiesFromDb } from "@/features/data/activities/api";
+import { fetchLifePhotosFromDb } from "@/features/data/photos/api";
 import { fetchTasksFromDb } from "@/features/data/tasks/api";
 import type { DailyLogRecord, ExpenseRecord, IncomeRecord, LifeActivityRecord, LifePhotoRecord, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
 

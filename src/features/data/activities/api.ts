@@ -1,0 +1,291 @@
+import { getCurrentUserId } from "@/lib/authUser";
+import { supabase } from "@/lib/supabase";
+import { deleteLinkedExpenseRecordInDb, syncLinkedExpenseRecordInDb } from "@/features/data/ledger/api";
+import type { LifeActivityRecord } from "@/types/domain";
+
+type LifeActivityRow = {
+  id: string;
+  activity_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean | null;
+  title: string;
+  memo: string | null;
+  category: string | null;
+  food: string | null;
+  expense_amount: number | string | null;
+  companions: string | null;
+  place_name: string | null;
+  place_address: string | null;
+  place_latitude: number | string | null;
+  place_longitude: number | string | null;
+  place_provider_name: string | null;
+  place_provider_id: string | null;
+  start_place_name: string | null;
+  start_place_address: string | null;
+  start_place_latitude: number | string | null;
+  start_place_longitude: number | string | null;
+  start_place_provider_name: string | null;
+  start_place_provider_id: string | null;
+  end_place_name: string | null;
+  end_place_address: string | null;
+  end_place_latitude: number | string | null;
+  end_place_longitude: number | string | null;
+  end_place_provider_name: string | null;
+  end_place_provider_id: string | null;
+  transport_mode: string | null;
+  source_id: string | null;
+  source_title: string | null;
+  source_type: "schedule" | "todo" | "event" | null;
+  created_at: string;
+};
+
+const lifeActivityColumns = "id,activity_date,start_time,end_time,is_all_day,title,memo,category,food,expense_amount,companions,place_name,place_address,place_latitude,place_longitude,place_provider_name,place_provider_id,start_place_name,start_place_address,start_place_latitude,start_place_longitude,start_place_provider_name,start_place_provider_id,end_place_name,end_place_address,end_place_latitude,end_place_longitude,end_place_provider_name,end_place_provider_id,transport_mode,source_type,source_id,source_title,created_at";
+
+function mapLifeActivityRow(row: LifeActivityRow): LifeActivityRecord {
+  return {
+    id: row.id,
+    date: row.activity_date,
+    startTime: row.start_time?.slice(0, 5) || undefined,
+    endTime: row.end_time?.slice(0, 5) || undefined,
+    isAllDay: row.is_all_day ?? false,
+    title: row.title,
+    memo: row.memo ?? undefined,
+    category: row.category ?? undefined,
+    food: row.food ?? undefined,
+    expenseAmount: row.expense_amount === null ? undefined : Number(row.expense_amount),
+    companions: row.companions ?? undefined,
+    placeName: row.place_name ?? undefined,
+    placeAddress: row.place_address ?? undefined,
+    placeLatitude: toOptionalNumber(row.place_latitude),
+    placeLongitude: toOptionalNumber(row.place_longitude),
+    placeProviderName: row.place_provider_name ?? undefined,
+    placeProviderId: row.place_provider_id ?? undefined,
+    startPlaceName: row.start_place_name ?? undefined,
+    startPlaceAddress: row.start_place_address ?? undefined,
+    startPlaceLatitude: toOptionalNumber(row.start_place_latitude),
+    startPlaceLongitude: toOptionalNumber(row.start_place_longitude),
+    startPlaceProviderName: row.start_place_provider_name ?? undefined,
+    startPlaceProviderId: row.start_place_provider_id ?? undefined,
+    endPlaceName: row.end_place_name ?? undefined,
+    endPlaceAddress: row.end_place_address ?? undefined,
+    endPlaceLatitude: toOptionalNumber(row.end_place_latitude),
+    endPlaceLongitude: toOptionalNumber(row.end_place_longitude),
+    endPlaceProviderName: row.end_place_provider_name ?? undefined,
+    endPlaceProviderId: row.end_place_provider_id ?? undefined,
+    transportMode: row.transport_mode ?? undefined,
+    sourceId: row.source_id ?? undefined,
+    sourceTitle: row.source_title ?? undefined,
+    sourceType: row.source_type === "schedule" ? "event" : row.source_type ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function mapLifeActivityToPayload(activity: LifeActivityRecord) {
+  return {
+    activity_date: activity.date,
+    start_time: activity.isAllDay ? null : activity.startTime ?? null,
+    end_time: activity.isAllDay ? null : activity.endTime ?? null,
+    is_all_day: activity.isAllDay ?? false,
+    title: activity.title.trim(),
+    memo: activity.memo?.trim() || null,
+    category: activity.category?.trim() || null,
+    food: activity.food?.trim() || null,
+    expense_amount: activity.expenseAmount ?? null,
+    companions: activity.companions?.trim() || null,
+    place_name: activity.placeName?.trim() || null,
+    place_address: activity.placeAddress?.trim() || null,
+    place_latitude: activity.placeLatitude ?? null,
+    place_longitude: activity.placeLongitude ?? null,
+    place_provider_name: activity.placeProviderName?.trim() || null,
+    place_provider_id: activity.placeProviderId ?? null,
+    start_place_name: activity.startPlaceName?.trim() || null,
+    start_place_address: activity.startPlaceAddress?.trim() || null,
+    start_place_latitude: activity.startPlaceLatitude ?? null,
+    start_place_longitude: activity.startPlaceLongitude ?? null,
+    start_place_provider_name: activity.startPlaceProviderName?.trim() || null,
+    start_place_provider_id: activity.startPlaceProviderId ?? null,
+    end_place_name: activity.endPlaceName?.trim() || null,
+    end_place_address: activity.endPlaceAddress?.trim() || null,
+    end_place_latitude: activity.endPlaceLatitude ?? null,
+    end_place_longitude: activity.endPlaceLongitude ?? null,
+    end_place_provider_name: activity.endPlaceProviderName?.trim() || null,
+    end_place_provider_id: activity.endPlaceProviderId ?? null,
+    transport_mode: activity.transportMode?.trim() || null,
+    source_id: activity.sourceId ?? null,
+    source_title: activity.sourceTitle?.trim() || null,
+    source_type: activity.sourceType ?? null,
+  };
+}
+
+function toOptionalNumber(value: number | string | null) {
+  if (value === null) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
+export async function fetchLifeActivitiesFromDb() {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .select(lifeActivityColumns)
+    .eq("user_id", userId)
+    .order("activity_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data as LifeActivityRow[]).map(mapLifeActivityRow);
+}
+
+export async function createLifeActivityInDb(activity: LifeActivityRecord) {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .insert({ ...mapLifeActivityToPayload(activity), user_id: userId })
+    .select(lifeActivityColumns)
+    .single();
+
+  if (error) throw error;
+  const savedActivity = mapLifeActivityRow(data as LifeActivityRow);
+  await syncLinkedExpenseRecordInDb({
+    amount: savedActivity.expenseAmount,
+    date: savedActivity.date,
+    memo: savedActivity.memo,
+    targetId: savedActivity.id,
+    targetType: "activity",
+    title: savedActivity.title,
+  });
+  return savedActivity;
+}
+
+export async function updateLifeActivityInDb(activity: LifeActivityRecord) {
+  if (!supabase) return null;
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .update(mapLifeActivityToPayload(activity))
+    .eq("id", activity.id)
+    .eq("user_id", userId)
+    .select(lifeActivityColumns)
+    .single();
+  if (error) throw error;
+  const savedActivity = mapLifeActivityRow(data as LifeActivityRow);
+  await syncLinkedExpenseRecordInDb({
+    amount: savedActivity.expenseAmount,
+    date: savedActivity.date,
+    memo: savedActivity.memo,
+    targetId: savedActivity.id,
+    targetType: "activity",
+    title: savedActivity.title,
+  });
+  return savedActivity;
+}
+
+export async function updateLifeActivitiesBySourceInDb(source: {
+  sourceId: string;
+  sourceType: "todo" | "event";
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  isAllDay?: boolean;
+  title: string;
+  category: string;
+  companions?: string;
+  expenseAmount?: number;
+  memo?: string;
+  placeAddress?: string;
+  placeLatitude?: number;
+  placeLongitude?: number;
+  placeName?: string;
+  placeProviderId?: string;
+  placeProviderName?: string;
+  previousSourceType?: "todo" | "event";
+}) {
+  if (!supabase) return [];
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from("life_activities")
+    .update({
+      activity_date: source.date,
+      start_time: source.isAllDay ? null : source.startTime ?? null,
+      end_time: source.isAllDay ? null : source.endTime ?? null,
+      is_all_day: source.isAllDay ?? false,
+      title: source.title.trim(),
+      category: source.category,
+      companions: source.companions?.trim() || null,
+      expense_amount: source.expenseAmount ?? null,
+      memo: source.memo?.trim() || null,
+      place_address: source.placeAddress?.trim() || null,
+      place_latitude: source.placeLatitude ?? null,
+      place_longitude: source.placeLongitude ?? null,
+      place_name: source.placeName?.trim() || null,
+      place_provider_id: source.placeProviderId ?? null,
+      place_provider_name: source.placeProviderName?.trim() || null,
+      source_title: source.title.trim(),
+      source_type: source.sourceType,
+    })
+    .eq("source_id", source.sourceId)
+    .eq("source_type", source.previousSourceType ?? source.sourceType)
+    .eq("user_id", userId)
+    .select(lifeActivityColumns);
+
+  if (error) throw error;
+  const savedActivities = (data as LifeActivityRow[]).map(mapLifeActivityRow);
+  await Promise.all(
+    savedActivities.map((activity) =>
+      syncLinkedExpenseRecordInDb({
+        amount: activity.expenseAmount,
+        date: activity.date,
+        memo: activity.memo,
+        targetId: activity.id,
+        targetType: "activity",
+        title: activity.title,
+      }),
+    ),
+  );
+  return savedActivities;
+}
+
+export async function deleteLifeActivityFromDb(id: string) {
+  if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  await deleteLinkedExpenseRecordInDb("activity", id);
+  const { error } = await supabase.from("life_activities").delete().eq("id", id).eq("user_id", userId);
+  if (error) throw error;
+  return true;
+}
+
+export async function deleteLifeActivitiesBySourceFromDb(sourceType: "todo" | "event", sourceId: string) {
+  if (!supabase) return false;
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { data, error: selectError } = await supabase
+    .from("life_activities")
+    .select("id")
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId)
+    .eq("user_id", userId);
+  if (selectError) throw selectError;
+  const activityIds = ((data ?? []) as Array<{ id: string }>).map((activity) => activity.id);
+  await Promise.all(activityIds.map((id) => deleteLinkedExpenseRecordInDb("activity", id)));
+  const { error } = await supabase
+    .from("life_activities")
+    .delete()
+    .eq("source_type", sourceType)
+    .eq("source_id", sourceId)
+    .eq("user_id", userId);
+  if (error) throw error;
+  return true;
+}

@@ -23,12 +23,7 @@ export function isDateInRange(date: string, startDate: string, endDate?: string)
   return startDate <= date && date <= (endDate || startDate);
 }
 
-export function parseOptionalAmount(value: string) {
-  const amount = Number(value);
-  return Number.isFinite(amount) && amount > 0 ? amount : undefined;
-}
-
-export function formatMinutesLabel(minutes: number) {
+function formatMinutesLabel(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const restMinutes = minutes % 60;
   return `${String(hours).padStart(2, "0")}:${String(restMinutes).padStart(2, "0")}`;

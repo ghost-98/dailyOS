@@ -2,7 +2,9 @@ import type { CalendarEvent } from "@/features/calendar/data";
 import { createCalendarEventInDb } from "@/features/data/calendar/api";
 import { createWeightRecordInDb, createWorkoutSessionInDb } from "@/features/data/health/api";
 import { createIncomeRecordInDb } from "@/features/data/ledger/api";
-import { createDailyLogInDb, createLifeActivityInDb, uploadLifePhotosToDb } from "@/features/data/records/api";
+import { createDailyLogInDb } from "@/features/data/logs/api";
+import { createLifeActivityInDb } from "@/features/data/activities/api";
+import { uploadLifePhotosToDb } from "@/features/data/photos/api";
 import { createTaskInDb } from "@/features/data/tasks/api";
 import type { RecordLinkedTarget } from "@/features/records/targets/linkedTarget";
 import type { IncomeRecord, LifeActivityRecord, LifeMediaUploadInput, TaskItem, WeightRecord, WorkoutSession } from "@/types/domain";
@@ -17,7 +19,7 @@ export type OfflineRecordOperation =
   | { kind: "weight"; record: WeightRecord }
   | { kind: "workout"; record: WorkoutSession };
 
-export type OfflineQueueItem = {
+type OfflineQueueItem = {
   createdAt: number;
   id: string;
   operation: OfflineRecordOperation;

@@ -25,7 +25,7 @@ export function OtherView() {
         {otherTabs.map((tab) => {
           const Icon = tab.icon;
           return <button
-            aria-pressed={activeTab === tab.key}
+            aria-selected={activeTab === tab.key}
             className={activeTab === tab.key ? "life-other-switcher__item life-other-switcher__item--active" : "life-other-switcher__item"}
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}

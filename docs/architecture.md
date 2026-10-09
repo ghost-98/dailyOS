@@ -1,6 +1,6 @@
 # dailyOS Architecture
 
-이 문서는 2026-09-05 기준 dailyOS의 현재 구조와 앞으로의 변경 기준을 정리한다.
+이 문서는 2026-10-09 기준 dailyOS의 현재 구조와 변경 기준을 정리한다.
 
 ## 제품 구조
 
@@ -11,7 +11,7 @@ dailyOS는 모바일 우선의 개인 Life Database OS다. 현재 구현은 다�
    - 모바일 경로: `/m/record`
 2. **조회·복원 계층**
    - 하루 타임라인과 상세 패널
-   - 키워드 검색과 자연어 검색
+   - 키워드 검색과 비활성 기록 대화 UI
    - 모바일 경로: `/m/day`, `/m/search`
 3. **보조 관리 계층**
    - 사람, 가계부, 지도, 사진 묶음 조회
@@ -35,7 +35,7 @@ dailyOS는 모바일 우선의 개인 Life Database OS다. 현재 구현은 다�
 
 - 하루: 날짜 기준 통합 복원
 - 검색: 전체 기록의 키워드 검색
-- 자연어 검색: 질문형 조회와 요약 응답
+- 기록 대화: 비활성 UI만 유지하며 서버 연결 없음
 - 사람: 함께한 사람을 축으로 한 조회
 - 장소: 방문 장소와 저장 장소를 분리해 관리
 - 가계부: 일정·활동·이벤트에서 파생된 수입/지출 흐름
@@ -83,27 +83,18 @@ dailyOS는 모바일 우선의 개인 Life Database OS다. 현재 구현은 다�
 현재 검색은 두 층으로 본다.
 
 1. **키워드 검색**
-   - `buildRecordSearchItems`로 기록을 하나의 검색 가능한 아이템 목록으로 만든다.
+   - `records/search/recordSearchItems.ts`의 `buildRecordSearchItems`로 기록을 검색 가능한 아이템 목록으로 만든다.
    - 화면 단에서는 문자열 매칭과 날짜 필터만 사용한다.
-2. **자연어 검색**
-   - 질문 의도, 날짜, 사람, 장소, 금액, 건강, 사진을 해석하는 상위 계층이다.
-   - 자세한 설계는 `docs/natural-language-search.md`를 기준 문서로 둔다.
-
-## 자연어 검색 설계 원칙
-
-- 원천 데이터는 기존 테이블을 그대로 사용하고, 별도 대화 기록 테이블을 먼저 만들지 않는다.
-- 검색 후보는 먼저 결정론적으로 모은다.
-- LLM은 후보를 이해하기 쉬운 형태로 재정렬하거나 요약하는 데만 쓴다.
-- 응답은 반드시 근거 기록을 함께 반환한다.
-- 근거가 부족하면 추측하지 말고 “찾지 못했다”로 응답한다.
-- Gemini 호출은 서버 측 API 경로로 분리한다.
+2. **기록 대화 UI**
+   - `RecordConversationPlaceholder`는 빈 대화 영역과 비활성 입력 UI만 렌더링한다.
+   - 질문 처리, 대화 상태, 모델 호출, 임베딩, 동기화 API는 제거했다.
+   - 사용자 기록은 기존 CRUD 계층에서만 관리하며 별도 메모리 문서로 복제하지 않는다.
 
 ## 현재 리팩터링 기준
 
 - 화면 데이터 로딩은 가능한 한 공통 훅으로 묶는다.
 - 대형 화면은 조합 컴포넌트, 패널, 폼, 상세 뷰로 계속 쪼갠다.
-- 검색 관련 로직은 UI와 분리해서 `recordsInsights` 같은 모듈에 모은다.
-- 자연어 검색은 `질문 해석`, `후보 선택`, `응답 생성`으로 나눈다.
+- 검색 인덱스는 `records/search/recordSearchItems.ts`, 사람 집계는 `records/people/recordPeople.ts`로 책임을 나눈다.
 - 스타일은 `life.css`, `calendar.css`에 계속 누적하지 말고 셸/패널 단위로 분리한다.
 
 ## 유지보수 기준
@@ -113,14 +104,15 @@ dailyOS는 모바일 우선의 개인 Life Database OS다. 현재 구현은 다�
 - 라우트 파일은 얇게 유지하고 실제 로직은 `src/features/*`에 둔다.
 - API 파일의 인증 사용자 조회는 `src/lib/authUser.ts`를 쓴다.
 - 실사용 저장/삭제 액션은 로딩, 성공, 실패 메시지를 화면에 표시한다.
-- 검색 구조를 바꿀 때는 `src/features/records/search/recordsInsights.ts`와 `src/features/screens/search/SearchView.tsx`를 함께 본다.
+- 검색 구조를 바꿀 때는 `records/search/recordSearchItems.ts`와 `screens/search/KeywordSearchPanel.tsx`를 함께 본다.
+- `SearchView`는 모드 전환만 담당하며 검색 스타일은 `src/app/styles/search.css`에 둔다.
 
 ## 실서비스 전 체크리스트
 
 - `npm run typecheck`, `npm run lint`, `npm run build` 통과
 - Supabase SQL 최신본 적용
 - `life-media` 스토리지 버킷과 RLS 정책 확인
-- `.env.local`에 Supabase, Gemini, Naver 키 설정
+- `.env.local`에 Supabase, Naver 키 설정
 - Settings에서 백업 내보내기/가져오기 동작 확인
-- 자연어 검색 응답에 근거 링크가 항상 포함되는지 확인
+- 검색 결과의 하루 상세 링크와 기간 필터 확인
 

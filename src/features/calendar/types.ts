@@ -50,7 +50,6 @@ export type DayTimelineItem =
   | { event: CalendarEvent; id: string; sortMinutes: number; timeLabel: string; type: "event" }
   | { id: string; sortMinutes: number; task: TaskItem; timeLabel: string; type: "todo" }
   | { external: ExternalCalendarItem; id: string; sortMinutes: number; timeLabel: string; type: ExternalCalendarCategory };
-export type DragPlacement = "before" | "after";
 
 
 

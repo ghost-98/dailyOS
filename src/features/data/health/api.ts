@@ -34,7 +34,6 @@ type WorkoutInsert = Omit<WorkoutRow, "id"> & {
   user_id: string;
 };
 
-type WeightUpdate = Partial<Omit<WeightInsert, "user_id">>;
 type WorkoutUpdate = Partial<Omit<WorkoutInsert, "user_id">>;
 
 const weightColumns = "id,record_date,weight_kg,measured_fasted,measured_at,muscle_mass_kg,body_fat_percent,memo";
@@ -76,18 +75,6 @@ function mapWorkoutRow(row: WorkoutRow): WorkoutSession {
 function mapWeightInsert(record: WeightRecord, userId: string): WeightInsert {
   return {
     user_id: userId,
-    record_date: record.date,
-    weight_kg: record.weightKg,
-    measured_fasted: record.measuredFasted,
-    measured_at: record.measuredAtTime ?? null,
-    muscle_mass_kg: record.muscleMassKg ?? null,
-    body_fat_percent: record.bodyFatPercent ?? null,
-    memo: record.memo ?? null,
-  };
-}
-
-function mapWeightUpdate(record: WeightRecord): WeightUpdate {
-  return {
     record_date: record.date,
     weight_kg: record.weightKg,
     measured_fasted: record.measuredFasted,
@@ -155,32 +142,6 @@ export async function createWeightRecordInDb(record: WeightRecord) {
 
   if (error) throw error;
   return mapWeightRow(data as WeightRow);
-}
-
-export async function updateWeightRecordInDb(record: WeightRecord) {
-  if (!supabase) return null;
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
-
-  const { data, error } = await supabase
-    .from("weight_records")
-    .update(mapWeightUpdate(record))
-    .eq("id", record.id)
-    .eq("user_id", userId)
-    .select(weightColumns)
-    .single();
-
-  if (error) throw error;
-  return mapWeightRow(data as WeightRow);
-}
-
-export async function deleteWeightRecordFromDb(id: string) {
-  if (!supabase) return false;
-  const userId = await getCurrentUserId();
-  if (!userId) return false;
-  const { error } = await supabase.from("weight_records").delete().eq("id", id).eq("user_id", userId);
-  if (error) throw error;
-  return true;
 }
 
 export async function fetchWorkoutSessionsFromDb() {

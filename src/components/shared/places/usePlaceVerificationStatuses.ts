@@ -9,19 +9,14 @@ const VERIFICATION_KEY_VERSION = "v5";
 
 export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[]) {
   const [statuses, setStatuses] = useState<Record<string, PlaceVerificationStatus>>({});
-  const targetSignature = useMemo(() => targets.map((target) => [
-    target.key,
-    target.name,
-    target.providerName ?? "",
-    target.providerPlaceId ?? "",
-    target.address ?? "",
-    target.latitude ?? "",
-    target.longitude ?? "",
-  ].join("|")).join("\n"), [targets]);
+  const targetSignature = JSON.stringify(targets);
+  const uniqueTargets = useMemo(() => {
+    const snapshot = JSON.parse(targetSignature) as PlaceVerificationTarget[];
+    return [...new Map(snapshot.map((target) => [target.key, target])).values()];
+  }, [targetSignature]);
 
   useEffect(() => {
     let isMounted = true;
-    const uniqueTargets = [...new Map(targets.map((target) => [target.key, target])).values()];
     if (uniqueTargets.length === 0) {
       setStatuses({});
       return () => { isMounted = false; };
@@ -56,9 +51,12 @@ export function usePlaceVerificationStatuses(targets: PlaceVerificationTarget[])
       };
       await Promise.all(Array.from({ length: Math.min(VERIFICATION_CONCURRENCY, targetsToCheck.length) }, verifyNext));
     };
-    void run();
+    void run().catch((error) => {
+      console.error("Failed to load place verification cache", error);
+      if (isMounted) setStatuses(Object.fromEntries(uniqueTargets.map((target) => [target.key, "error"])));
+    });
     return () => { isMounted = false; };
-  }, [targetSignature]);
+  }, [uniqueTargets]);
 
   return statuses;
 }

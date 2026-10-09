@@ -1,7 +1,7 @@
 import { CalendarDays, Grid2x2, Plus, Search, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type NavItem = {
+type NavItem = {
   href: string;
   icon: LucideIcon;
   key: string;
