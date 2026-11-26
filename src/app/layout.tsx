@@ -19,7 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: 'try{if(localStorage.getItem("dailyos-web-theme")==="dark")document.documentElement.dataset.webTheme="dark"}catch{}' }} />
+      </head>
       <body>{children}</body>
     </html>
   );

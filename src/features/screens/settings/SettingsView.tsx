@@ -1,7 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { AlertTriangle, Bell, CheckCircle2, Database, Download, ExternalLink, LogOut, Mail, Save, ScanSearch, Settings, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, Database, Download, ExternalLink, LogOut, Mail, Save, ScanSearch, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOutDailyOS, useDailyOSUser } from "@/components/auth/AuthGate";
@@ -142,13 +142,7 @@ export function SettingsView() {
   return (
     <div className="settings-page">
       <header className="page-header">
-        <div>
-          <h1>설정</h1>
-          <div className="settings-header-copy">
-            <Settings aria-hidden size={20} />
-            <span>계정, 알림, 백업과 데이터 관리 방식을 조정합니다.</span>
-          </div>
-        </div>
+        <h1>설정</h1>
         <ActionButton className="header-action" onClick={() => void saveAccount()}>
           <Save aria-hidden size={18} />
           저장
@@ -208,7 +202,6 @@ export function SettingsView() {
           )}
           {repairableIssueCount > 0 ? <ActionButton disabled={isRepairingIntegrity} onClick={() => void repairIntegrity()} variant="secondary">연결 오류 {repairableIssueCount}개 정리</ActionButton> : null}
           {integrityMessage ? <p className="settings-message">{integrityMessage}</p> : null}
-          <p className="settings-hint">자동 정리는 원본 기록을 보존합니다. 경로가 비어 있는 사진처럼 판단이 필요한 항목은 직접 확인만 제공합니다.</p>
         </SectionCard>
 
         <SectionCard className="settings-card">
@@ -218,7 +211,7 @@ export function SettingsView() {
           </div>
           <SettingToggle checked={eventAlarm} label="이벤트 알림" onChange={setEventAlarm} />
           <SettingToggle checked={taskAlarm} label="할 일 마감 알림" onChange={setTaskAlarm} />
-          <p className="settings-hint">현재는 화면 설정만 저장합니다. 라즈베리파이 상시 실행 이후 푸시 알림과 연결하면 완성도가 올라갑니다.</p>
+          <p className="settings-hint">푸시 알림 미연결</p>
         </SectionCard>
 
         <SectionCard className="settings-card">
@@ -240,7 +233,7 @@ export function SettingsView() {
             계정 데이터 삭제
           </ActionButton>
           {dataMessage ? <p className="settings-message">{dataMessage}</p> : null}
-          <p className="settings-hint">사진 파일은 Supabase Storage에 남아 있고, 백업 파일에는 사진 메타데이터와 경로가 저장됩니다.</p>
+          <p className="settings-hint">사진 원본은 백업에 포함되지 않습니다.</p>
         </SectionCard>
       </div>
     </div>

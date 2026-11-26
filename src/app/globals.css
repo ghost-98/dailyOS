@@ -9,6 +9,8 @@
 @import "./styles/settings.css";
 @import "./styles/shared.css";
 @import "./styles/responsive.css";
+@import "./styles/desktop.css";
+@import "./styles/archive.css";
 
 :root {
   --bg: #111216;

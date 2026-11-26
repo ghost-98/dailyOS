@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { Camera, Map, UsersRound, WalletCards, type LucideIcon } from "lucide-react";
 import { PeopleView } from "@/features/screens/other/PeopleView";
 import { LedgerView } from "@/features/screens/other/LedgerView";
@@ -16,41 +16,33 @@ const otherTabs: Array<{ icon: LucideIcon; key: OtherTab; label: string }> = [
   { icon: UsersRound, key: "people", label: "사람" },
 ];
 
-export function OtherView() {
-  const [activeTab, setActiveTab] = useState<OtherTab>("people");
+export function OtherView({ view }: { view?: string }) {
+  const activeTab = otherTabs.find(({ key }) => key === view)?.key ?? "people";
 
   return (
-    <div className="life-tab-panel">
-      <div className="life-other-switcher" role="tablist" aria-label="기타 탭">
+    <div className="life-tab-panel other-workspace">
+      <nav className="life-other-switcher" aria-label="보관함 보기">
         {otherTabs.map((tab) => {
           const Icon = tab.icon;
-          return <button
-            aria-selected={activeTab === tab.key}
+          return <Link
+            aria-current={activeTab === tab.key ? "page" : undefined}
             className={activeTab === tab.key ? "life-other-switcher__item life-other-switcher__item--active" : "life-other-switcher__item"}
+            href={`/m/other?view=${tab.key}`}
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            role="tab"
-            type="button"
+            scroll={false}
           >
             <Icon aria-hidden size={16} strokeWidth={2.2} />
             <span>{tab.label}</span>
-          </button>;
+          </Link>;
         })}
+      </nav>
+
+      <div className="other-workspace__content">
+        {activeTab === "people" ? <PeopleView /> : null}
+        {activeTab === "ledger" ? <LedgerView /> : null}
+        {activeTab === "map" ? <OtherMapView /> : null}
+        {activeTab === "gallery" ? <OtherGalleryView /> : null}
       </div>
-
-      {activeTab === "people" ? (
-        <PeopleView />
-      ) : null}
-
-      {activeTab === "ledger" ? <LedgerView /> : null}
-
-      {activeTab === "map" ? (
-        <OtherMapView />
-      ) : null}
-
-      {activeTab === "gallery" ? (
-        <OtherGalleryView />
-      ) : null}
     </div>
   );
 }

@@ -44,10 +44,11 @@ export function OtherMapView() {
 
   return (
     <OtherTabShell
+      className="other-map-workspace"
       actions={(
         <>
           <IconButton
-            label={isPlaceFormOpen ? "내 장소 추가 닫기" : "내 장소 추가"}
+            label={isPlaceFormOpen ? "내 장소 닫기" : "내 장소 열기"}
             onClick={() => setIsPlaceFormOpen((current) => !current)}
             size="sm"
             tone="soft"
@@ -87,17 +88,19 @@ export function OtherMapView() {
         <Search aria-hidden size={16} />
         <input aria-label="지도 기록 검색" placeholder="장소, 주소, 활동 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
+      <div className="other-map-layout">
       <OtherMapCanvas
         onPlaceResolutionChange={setResolutionStatuses}
         onPlaceSelect={(placeId) => {
           setActivePlaceId(placeId);
           setExpandedPlaceIds((current) => new Set(current).add(placeId));
-          placeCardRefs.current.get(placeId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+          placeCardRefs.current.get(placeId)?.scrollIntoView({ block: "nearest", inline: "nearest" });
         }}
         places={places}
         ref={mapRef}
         verificationStatuses={verificationStatuses}
       />
+      <section className="other-map-list-panel" aria-label="기록 장소">
       <div className="other-map-status-summary" role="status">
         <span><MapPin aria-hidden size={14} /> 지도 표시 {places.length - unresolvedPlaceCount}곳</span>
         {unresolvedPlaceCount > 0 ? <span className="other-map-status-summary__warning" title={places.filter((place) => resolutionStatuses[place.id] === "unresolved").map((place) => place.name).join(", ")}><MapPinOff aria-hidden size={14} /> 좌표 확인 안 됨 {unresolvedPlaceCount}곳</span> : null}
@@ -132,6 +135,8 @@ export function OtherMapView() {
             }}
           />;
         })}
+      </div>
+      </section>
       </div>
       {photoViewerItems.length > 0 ? (
         <SlideUpSheet className="life-day-detail-sheet" eyebrow="장소 사진" eyebrowSuffix={`${photoViewerItems.length}장`} onClose={() => setPhotoViewerItems([])}>

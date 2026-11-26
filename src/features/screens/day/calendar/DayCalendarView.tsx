@@ -29,8 +29,6 @@ type CalendarViewProps = {
   dayActions?: DayItemActions;
 };
 
-const initialMonth = new Date();
-
 export function DayCalendarView(props: CalendarViewProps) {
   return <CalendarViewContent {...props} />;
 }
@@ -48,7 +46,8 @@ function CalendarViewContent({
   const { events: loadedEvents, isLoading, setTasks, tasks: loadedTasks } = useCalendarResources();
   const events = controlledEvents ?? loadedEvents;
   const tasks = controlledTasks ?? loadedTasks;
-  const [currentMonth, setCurrentMonth] = useState(initialMonth);
+  const [currentMonth, setCurrentMonth] = useState(() => defaultSelectedDate
+    ? new Date(`${defaultSelectedDate}T00:00:00`) : new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(defaultSelectedDate);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
@@ -97,6 +96,13 @@ function CalendarViewContent({
     setIsCalendarOpen(true);
   };
 
+  function moveDay(offset: -1 | 1) {
+    const date = new Date(`${activeDate}T00:00:00`);
+    date.setDate(date.getDate() + offset);
+    setSelectedDate(formatDateKey(date));
+    setCurrentMonth(date);
+  }
+
   return (
     <div className="calendar-page">
       <div className="calendar-board--mobile-shell">
@@ -113,15 +119,11 @@ function CalendarViewContent({
           }
           dateLabel={formatFullDate(activeDate)}
           isCalendarOpen={isCalendarOpen}
-          onNextDate={() => {
-            const base = new Date(`${activeDate}T00:00:00`);
-            base.setDate(base.getDate() + 1);
-            setSelectedDate(formatDateKey(base));
-          }}
-          onPrevDate={() => {
-            const base = new Date(`${activeDate}T00:00:00`);
-            base.setDate(base.getDate() - 1);
-            setSelectedDate(formatDateKey(base));
+          onNextDate={() => moveDay(1)}
+          onPrevDate={() => moveDay(-1)}
+          onToday={() => {
+            setSelectedDate(todayKey);
+            setCurrentMonth(new Date(`${todayKey}T00:00:00`));
           }}
           onToggleCalendar={toggleMobileCalendar}
         >

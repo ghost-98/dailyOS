@@ -32,6 +32,7 @@ export function DayInsightBar({ buttons }: DayInsightBarProps) {
             type="button"
           >
             <Icon aria-hidden size={20} />
+            <span className="desktop-insight-label" aria-hidden>{button.label}</span>
             <span className="life-calendar-day-insight-bar__count" aria-hidden>
               {button.count}
             </span>

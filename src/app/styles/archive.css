@@ -1,0 +1,93 @@
+.other-workspace__content,
+.other-workspace :is(.other-tab-shell, .other-tab-shell__body, .life-people-list, .other-map-layout, .other-map-list-panel) {
+  min-width: 0;
+}
+
+.other-workspace .life-other-switcher a { text-decoration: none; }
+.other-map-layout, .other-map-list-panel { display: grid; gap: 12px; align-content: start; }
+.other-map-layout > * { min-width: 0; }
+.other-map-list-panel .other-map-status-summary { flex-wrap: wrap; }
+
+.other-workspace :is(.period-summary-bar, .period-summary-bar__summary) { flex-wrap: wrap; }
+.other-workspace .period-summary-bar__summary span { white-space: normal; overflow-wrap: anywhere; }
+.other-workspace .period-summary-bar__actions { margin-inline-start: auto; }
+.other-workspace :is(.map-place-card__toggle > strong, .life-person-card__main > *,
+    .other-ledger-entry-button > div > *, .other-ledger-breakdown article strong, .other-ledger-totals strong) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  text-overflow: clip;
+  line-height: 1.45;
+}
+.other-workspace :is(.other-ledger-entry__amount, .other-ledger-totals strong, .other-ledger-breakdown article b) {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.other-workspace .life-person-card__details[aria-hidden="true"] { visibility: hidden; margin-bottom: 0; border-color: transparent; }
+.other-workspace .life-person-card__details :is(input, textarea, button) { min-width: 0; max-width: 100%; }
+.other-workspace .life-person-card__record-link { display: block; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.other-workspace .life-person-card__metric-grid > span { overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .other-workspace .other-ledger-entry-button {
+    grid-template-columns: 27px minmax(0, 1fr) minmax(0, auto);
+    gap: 7px;
+    padding-inline: 9px;
+  }
+  .other-workspace .other-ledger-entry__amount { max-width: 27vw; white-space: normal; overflow-wrap: anywhere; }
+  .other-workspace .life-person-card__details { margin-inline-start: 0; }
+  .other-workspace .other-map-canvas,
+  .other-workspace .other-map-canvas__map { min-height: 270px; }
+}
+
+@media (min-width: 821px) {
+  .other-workspace { gap: 16px; }
+  .other-workspace .life-other-switcher {
+    justify-self: start;
+    grid-template-columns: repeat(4, auto);
+    gap: 5px;
+    margin-bottom: 0;
+    background: var(--desktop-card);
+    border-color: var(--desktop-border);
+  }
+  .other-workspace .life-other-switcher__item { padding-inline: 17px; font-size: .86rem; }
+  .other-workspace .life-other-switcher__item--active { background: var(--desktop-accent); color: var(--desktop-accent-text); }
+  .other-workspace .other-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); }
+  .other-workspace .other-gallery-grid > button { border-color: var(--line); background: var(--surface-soft); }
+  .other-workspace :is(.other-tab-shell, .life-people-list) {
+    box-shadow: none;
+    border-color: var(--desktop-border);
+    background: var(--desktop-card);
+    min-height: 0;
+  }
+  .other-workspace .ui-tab-panel-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 34px;
+    padding: 0;
+  }
+  .other-workspace .ui-tab-panel-heading__actions { position: static; grid-column: 2; }
+  .other-workspace .ui-tab-panel-heading__title > .eyebrow { display: none; }
+  .other-workspace .ui-tab-panel-heading:not(:has(.ui-tab-panel-heading__actions, .life-people-list__count)) { display: none; }
+  .other-workspace .other-ledger-history__list { max-height: none; overflow: visible; }
+  .other-workspace .other-ledger-totals strong { font-size: clamp(1.05rem, 1.6vw, 1.38rem); }
+  .other-workspace .other-ledger-entry__amount { color: var(--text); }
+  .other-workspace .other-map-canvas, .other-workspace .map-place-card {
+    border-color: var(--line);
+    background: var(--surface-soft);
+  }
+  .other-workspace .other-map-canvas__status { background: var(--surface-soft); color: var(--muted); }
+  .other-workspace .map-place-card--active { border-color: var(--line-strong); background: var(--surface-accent); }
+  .other-workspace .life-person-card__chevron { color: var(--muted); }
+  .other-workspace .life-person-card__summary { padding-inline: 8px; }
+  .other-workspace .life-person-card__details { border-color: var(--line); background: var(--surface-soft); }
+  .other-workspace .life-person-card__details[aria-hidden="true"] { border-color: transparent; }
+}
+
+@media (min-width: 980px) {
+  .other-map-layout { grid-template-columns: minmax(0, 1.5fr) minmax(275px, 1fr); align-items: stretch; }
+  .other-map-layout .other-map-list-panel {
+    grid-template-rows: auto minmax(0, 1fr);
+    height: clamp(360px, 54dvh, 460px);
+  }
+  .other-map-list-panel .other-map-place-list { max-height: none; }
+}

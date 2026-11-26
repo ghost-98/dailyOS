@@ -20,9 +20,12 @@ export function KeywordSearchPanel() {
     [data.activities, data.dailyLogs, data.events, data.expenses, data.incomes, data.lifePhotos, data.tasks, data.weights, data.workouts],
   );
   const normalizedQuery = query.trim().toLowerCase();
-  const filteredItems = normalizedQuery ? items.filter((item) => {
+  const hasFilters = Boolean(normalizedQuery || startDate || endDate);
+  const filteredItems = hasFilters ? items.filter((item) => {
+    if ((startDate && item.date < startDate) || (endDate && item.date > endDate)) return false;
+    if (!normalizedQuery) return true;
     const text = [item.title, item.description, item.date, item.tags.join(" "), item.facts?.map((fact) => fact.text).join(" ")].join(" ").toLowerCase();
-    return text.includes(normalizedQuery) && (!startDate || item.date >= startDate) && (!endDate || item.date <= endDate);
+    return text.includes(normalizedQuery);
   }) : [];
 
   return (
@@ -36,19 +39,12 @@ export function KeywordSearchPanel() {
           <CalendarRange aria-hidden size={16} />
         </button>
       </div>
-      <div className="life-search-meta-row">
-        <span>{startDate || endDate ? `${startDate || "처음"} ~ ${endDate || "현재"}` : "전체"}</span>
+      {hasFilters && <div className="life-search-meta-row">
+        {(startDate || endDate) && <span>{startDate || "처음"} ~ {endDate || "현재"}</span>}
         <strong>{filteredItems.length}개</strong>
-      </div>
-      <div className="life-search-divider" aria-hidden />
+      </div>}
       <div className="life-search-results">
-        {!normalizedQuery ? (
-          <div className="life-map-empty life-map-empty--compact">
-            <Search aria-hidden size={28} />
-            <strong>검색어를 입력해 주세요.</strong>
-            <p>검색어를 넣으면 날짜 조건에 맞는 결과만 보여드려요.</p>
-          </div>
-        ) : filteredItems.length > 0 ? filteredItems.slice(0, 80).map((item) => (
+        {!hasFilters ? null : filteredItems.length > 0 ? filteredItems.slice(0, 80).map((item) => (
           <button className={`life-search-result life-search-result--${item.type}`} key={item.id} onClick={() => router.push(createDayRecordHref(item.date, item.id))} type="button">
             <span className="life-search-result__head">
               <span className="life-search-result__title">
@@ -69,7 +65,6 @@ export function KeywordSearchPanel() {
           <div className="life-map-empty life-map-empty--compact">
             <Search aria-hidden size={28} />
             <strong>검색 결과가 없습니다.</strong>
-            <p>검색어와 기간을 바꿔 다시 찾아보세요.</p>
           </div>
         )}
       </div>

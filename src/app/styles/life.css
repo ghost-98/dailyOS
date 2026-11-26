@@ -2817,7 +2817,11 @@ button:disabled {
   position: relative;
   display: grid;
   min-height: 42px;
-  place-items: center;
+  grid-template-rows: 1fr 12px;
+  justify-items: center;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 0 3px;
   border-radius: 13px;
   font-size: 0.82rem;
   font-weight: 900;
@@ -2844,18 +2848,16 @@ button:disabled {
 }
 
 .life-activity-calendar__day em {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  min-width: 15px;
-  height: 15px;
+  grid-row: 2;
+  min-width: 12px;
+  min-height: 12px;
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.22);
   color: rgb(110, 231, 183);
   font-size: 0.62rem;
   font-style: normal;
   font-weight: 950;
-  line-height: 15px;
+  line-height: 12px;
   text-align: center;
 }
 

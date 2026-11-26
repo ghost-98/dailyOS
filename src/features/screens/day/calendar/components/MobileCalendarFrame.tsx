@@ -14,6 +14,7 @@ type MobileCalendarFrameProps = {
   onNextDate: () => void;
   onPrevDate: () => void;
   onToggleCalendar: () => void;
+  onToday: () => void;
   title?: string;
 };
 
@@ -26,6 +27,7 @@ export function MobileCalendarFrame({
   onNextDate,
   onPrevDate,
   onToggleCalendar,
+  onToday,
   title,
 }: MobileCalendarFrameProps) {
   const gestureRef = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -53,7 +55,7 @@ export function MobileCalendarFrame({
   };
 
   const beginGesture = (event: PointerEvent<HTMLElement>) => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.pointerType === "mouse" && (event.button !== 0 || window.matchMedia("(min-width: 821px)").matches)) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("button, a, input, textarea, select, label")) return;
     if (target?.closest("[data-date-swipe-lock], .life-calendar-day-map, .life-calendar-day-map-shell")) return;
@@ -88,23 +90,27 @@ export function MobileCalendarFrame({
     >
       <div className={`mobile-record-frame__motion ${swipeDirection ? `mobile-record-frame__motion--${swipeDirection}` : ""}`.trim()}>
         {title ? <p className="mobile-record-frame__eyebrow">{title}</p> : null}
+        <header className="desktop-day-heading">
+          <h1>{dateLabel}</h1>
+        </header>
         <div className="mobile-record-frame__topbar">
           <IconButton className="mobile-record-frame__nav" label="이전 날짜" onClick={() => animate("prev", onPrevDate)} size="sm" tone="outline">
             <ChevronLeft aria-hidden size={16} />
           </IconButton>
-          <button className="mobile-record-frame__date" onClick={onToggleCalendar} type="button">
+          <button aria-expanded={isCalendarOpen} className="mobile-record-frame__date" onClick={onToggleCalendar} type="button">
             <strong>{dateLabel}</strong>
           </button>
+          <button className="desktop-today" type="button" onClick={onToday}>오늘</button>
           <div className="mobile-record-frame__actions">
             <IconButton className="mobile-record-frame__nav" label="다음 날짜" onClick={() => animate("next", onNextDate)} size="sm" tone="outline">
               <ChevronRight aria-hidden size={16} />
             </IconButton>
-            <IconButton label={isCalendarOpen ? "달력 접기" : "달력 펼치기"} onClick={onToggleCalendar} size="sm" tone="outline">
+            <IconButton className="mobile-record-frame__calendar-toggle" label={isCalendarOpen ? "달력 접기" : "달력 펼치기"} onClick={onToggleCalendar} size="sm" tone="outline">
               <CalendarDays aria-hidden size={16} />
             </IconButton>
           </div>
         </div>
-        {isCalendarOpen && calendar ? <div className="mobile-record-frame__calendar">{calendar}</div> : null}
+        {calendar ? <div className="mobile-record-frame__calendar" data-open={isCalendarOpen}>{calendar}</div> : null}
         {children}
       </div>
     </div>

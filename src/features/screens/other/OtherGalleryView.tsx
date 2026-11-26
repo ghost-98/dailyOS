@@ -28,6 +28,15 @@ export function OtherGalleryView() {
   const pageCount = Math.max(1, Math.ceil(photos.length / PHOTOS_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const pagedPhotos = photos.slice((currentPage - 1) * PHOTOS_PER_PAGE, currentPage * PHOTOS_PER_PAGE);
+  const selectedIndex = selectedPhoto ? photos.findIndex(({ id }) => id === selectedPhoto.id) : -1;
+
+  function stepPhoto(offset: -1 | 1) {
+    const nextIndex = selectedIndex + offset;
+    const photo = photos[nextIndex];
+    if (!photo) return;
+    setSelectedPhoto(photo);
+    setPage(Math.floor(nextIndex / PHOTOS_PER_PAGE) + 1);
+  }
 
   return (
     <OtherTabShell title="사진">
@@ -44,11 +53,11 @@ export function OtherGalleryView() {
               </button>
             ))}
           </div>
-          <div className="other-gallery-pagination">
+          {pageCount > 1 && <div className="other-gallery-pagination">
             <IconButton label="이전 사진 페이지" disabled={currentPage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} size="sm" tone="soft"><ChevronLeft aria-hidden size={16} /></IconButton>
             <span>{currentPage} / {pageCount}</span>
             <IconButton label="다음 사진 페이지" disabled={currentPage >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} size="sm" tone="soft"><ChevronRight aria-hidden size={16} /></IconButton>
-          </div>
+          </div>}
         </>
       ) : <div className="life-empty-state">{isLoading ? "사진을 불러오는 중..." : "아직 저장된 사진이 없어요."}</div>}
 
@@ -63,7 +72,12 @@ export function OtherGalleryView() {
       />
 
       {selectedPhoto ? (
-        <SlideUpSheet className="life-day-detail-sheet" eyebrow="사진" eyebrowSuffix="1장" onClose={() => setSelectedPhoto(null)}>
+        <SlideUpSheet className="life-day-detail-sheet" eyebrow="사진" eyebrowSuffix={`${selectedIndex + 1} / ${photos.length}`}
+          headerActions={<>
+            <IconButton label="이전 사진" disabled={selectedIndex <= 0} onClick={() => stepPhoto(-1)} size="sm" tone="outline"><ChevronLeft aria-hidden size={16} /></IconButton>
+            <IconButton label="다음 사진" disabled={selectedIndex < 0 || selectedIndex >= photos.length - 1} onClick={() => stepPhoto(1)} size="sm" tone="outline"><ChevronRight aria-hidden size={16} /></IconButton>
+          </>}
+          onClose={() => setSelectedPhoto(null)}>
           <DayPhotoDetail isLoading={false} items={[toDayPhotoItem(selectedPhoto)]} />
         </SlideUpSheet>
       ) : null}

@@ -184,7 +184,7 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
               <span>활동 타임라인</span>
               <span className="life-calendar-day-card__meta">
                 <b>{activityItems.length}건</b>
-                <span className="life-calendar-day-card__meta-value">{timelineWeightLabel}</span>
+                {timelineWeightLabel !== "- kg" && <span className="life-calendar-day-card__meta-value">{timelineWeightLabel}</span>}
               </span>
             </button>
             <div className="life-calendar-day-card__controls">
@@ -212,6 +212,9 @@ export function LifeCalendarDayPanel({ actions, focusItemId, isLoading, items, s
           </div>
           {isTimelineOpen ? (
             <div className="life-calendar-day-timeline">
+              {!isActivityEditMode && !timelineRows.some((row) => row.kind !== "boundary" || row.item) && (
+                <p className="desktop-timeline-empty">{isLoading ? "불러오는 중…" : "활동 기록 없음"}</p>
+              )}
               {timelineRows.length > 0 ? (
                 timelineRows.map((row) => {
                   if (row.kind === "boundary") {
@@ -713,7 +716,8 @@ function renderBoundaryRow({
   const canTogglePlace = hasItem && Boolean(placeLabel);
 
   return (
-    <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${mode}`} key={mode}>
+    <article className={`life-calendar-day-boundary-row life-calendar-day-boundary-row--${mode}`}
+      data-empty={!hasItem && !isActivityEditMode} key={mode}>
       <span className="life-calendar-day-boundary-row__time">{timeLabel}</span>
       <span className="life-calendar-day-boundary-row__icon">
         <BoundaryIcon aria-hidden size={15} />

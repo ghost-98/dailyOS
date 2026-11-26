@@ -38,6 +38,13 @@ const CREATE_CHOICES: Array<{ icon: typeof Activity; key: CreateType; label: str
   { icon: Sunrise, key: "wake", label: "기상" },
 ];
 
+const createGroups: Array<{ label: string; types: CreateType[] }> = [
+  { label: "일정과 활동", types: ["event", "task", "activity"] },
+  { label: "메모와 사진", types: ["log", "photo"] },
+  { label: "건강과 수면", types: ["health", "bedtime", "wake"] },
+  { label: "가계부", types: ["income"] },
+];
+
 const BASE_ACTIVITY_CATEGORIES = ["생활", "이동", "업무", "공부", "만남", "운동", "식사", "소비", "수면", "독서", "영화", "기타"];
 
 export function RecordCreateFlow() {
@@ -75,6 +82,13 @@ export function RecordCreateFlow() {
     router.push("/m/day");
   };
 
+  const renderChoice = ({ key, icon: Icon, label }: (typeof CREATE_CHOICES)[number]) => (
+    <button className="record-create-flow__choice" key={key} type="button" onClick={() => setStep(key)}>
+      <span className="record-create-flow__choice-icon"><Icon aria-hidden size={18} /></span>
+      <strong>{label}</strong>
+    </button>
+  );
+
   const linkTargets: RecordLinkTargetOption[] = [
     ...data.activities.map((item) => ({ date: item.date, id: item.id, title: item.title, type: "activity" as const })),
     ...data.tasks.map((item) => ({ date: item.scheduledDate, id: item.id, title: item.title, type: "todo" as const })),
@@ -100,18 +114,18 @@ export function RecordCreateFlow() {
       <div className="life-axis-view">
         {step === "choose" ? (
           <div className="record-create-flow">
-            <div className="record-create-flow__choices">
-              {CREATE_CHOICES.map((choice) => {
-                const Icon = choice.icon;
-                return (
-                  <button className="record-create-flow__choice" key={choice.key} type="button" onClick={() => setStep(choice.key)}>
-                    <span className="record-create-flow__choice-icon">
-                      <Icon aria-hidden size={18} />
-                    </span>
-                    <strong>{choice.label}</strong>
-                  </button>
-                );
-              })}
+            <div className="record-create-flow__choices record-create-flow__choices--mobile">
+              {CREATE_CHOICES.map(renderChoice)}
+            </div>
+            <div className="desktop-record-groups">
+              {createGroups.map(({ label, types }) => (
+                <section key={label}>
+                  <h2>{label}</h2>
+                  <div className="record-create-flow__choices">
+                    {CREATE_CHOICES.filter(({ key }) => types.includes(key)).map(renderChoice)}
+                  </div>
+                </section>
+              ))}
             </div>
           </div>
         ) : null}

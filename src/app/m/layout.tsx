@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { MobileShell } from "@/components/layout/MobileShell";
+import { AppShell } from "@/components/layout/AppShell";
 
 export default function MobileLayout({ children }: { children: ReactNode }) {
-  return <MobileShell>{children}</MobileShell>;
+  return <AppShell>{children}</AppShell>;
 }
 
 
